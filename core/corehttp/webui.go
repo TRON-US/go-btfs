@@ -1,6 +1,6 @@
 package corehttp
 
-// TODO: move to IPNS
+// TODO: move to BTNS
 const WebUIPath = "/btfs/QmekPMJzf1MFYNY62Gs6GUtV62LkLzP9wzGhL1SMMsHjGn"
 
 // this is a list of all past webUI paths.
