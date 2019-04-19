@@ -1,4 +1,4 @@
-// cmd/ipfs implements the primary CLI binary for ipfs
+// cmd/btfs implements the primary CLI binary for ipfs
 package main
 
 import (
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	util "github.com/ipfs/go-ipfs/cmd/ipfs/util"
+	util "github.com/ipfs/go-ipfs/cmd/btfs/util"
 	oldcmds "github.com/ipfs/go-ipfs/commands"
 	core "github.com/ipfs/go-ipfs/core"
 	corecmds "github.com/ipfs/go-ipfs/core/commands"
@@ -35,7 +35,7 @@ import (
 )
 
 // log is the command logger
-var log = logging.Logger("cmd/ipfs")
+var log = logging.Logger("cmd/btfs")
 
 // declared as a var for testing purposes
 var dnsResolver = madns.DefaultResolver
@@ -128,7 +128,7 @@ func mainRet() int {
 
 	// output depends on executable name passed in os.Args
 	// so we need to make sure it's stable
-	os.Args[0] = "ipfs"
+	//os.Args[0] = "ipfs"
 
 	buildEnv := func(ctx context.Context, req *cmds.Request) (cmds.Environment, error) {
 		checkDebug(req)

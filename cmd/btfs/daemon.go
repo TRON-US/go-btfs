@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	version "github.com/ipfs/go-ipfs"
-	utilmain "github.com/ipfs/go-ipfs/cmd/ipfs/util"
+	utilmain "github.com/ipfs/go-ipfs/cmd/btfs/util"
 	oldcmds "github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	commands "github.com/ipfs/go-ipfs/core/commands"
@@ -121,13 +121,13 @@ or send a SIGTERM signal to it (e.g. with 'kill'). It may take a while for the
 daemon to shutdown gracefully, but it can be killed forcibly by sending a
 second signal.
 
-IPFS_PATH environment variable
+BTFS_PATH environment variable
 
 ipfs uses a repository in the local file system. By default, the repo is
-located at ~/.ipfs. To change the repo location, set the $IPFS_PATH
+located at ~/.btfs. To change the repo location, set the $BTFS_PATH
 environment variable:
 
-  export IPFS_PATH=/path/to/ipfsrepo
+  export BTFS_PATH=/path/to/btfsrepo
 
 Routing
 
@@ -473,7 +473,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 	unrestricted, _ := req.Options[unrestrictedApiAccessKwd].(bool)
 	gatewayOpt := corehttp.GatewayOption(false, corehttp.WebUIPaths...)
 	if unrestricted {
-		gatewayOpt = corehttp.GatewayOption(true, "/ipfs", "/ipns")
+		gatewayOpt = corehttp.GatewayOption(true, "/btfs", "/btns")
 	}
 
 	var opts = []corehttp.ServeOption{
@@ -594,7 +594,7 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 	var opts = []corehttp.ServeOption{
 		corehttp.MetricsCollectionOption("gateway"),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(writable, "/btfs", "/btns"),
 		corehttp.VersionOption(),
 		corehttp.CheckVersionOption(),
 		corehttp.CommandsROOption(cmdctx),
