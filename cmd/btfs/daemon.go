@@ -189,6 +189,9 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
+	// Btfs auto update.
+	go update()
+
 	// Inject metrics before we do anything
 	err := mprome.Inject()
 	if err != nil {
