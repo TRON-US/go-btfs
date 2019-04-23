@@ -1,4 +1,4 @@
-// cmd/btfs implements the primary CLI binary for ipfs
+// cmd/btfs implements the primary CLI binary for btfs
 package main
 
 import (
@@ -104,19 +104,19 @@ func mainRet() int {
 	intrh, ctx := util.SetupInterruptHandler(ctx)
 	defer intrh.Close()
 
-	// Handle `ipfs version` or `ipfs help`
+	// Handle `btfs version` or `btfs help`
 	if len(os.Args) > 1 {
-		// Handle `ipfs --version'
+		// Handle `btfs --version'
 		if os.Args[1] == "--version" {
 			os.Args[1] = "version"
 		}
 
-		//Handle `ipfs help` and `ipfs help <sub-command>`
+		//Handle `btfs help` and `btfs help <sub-command>`
 		if os.Args[1] == "help" {
 			if len(os.Args) > 2 {
 				os.Args = append(os.Args[:1], os.Args[2:]...)
-				// Handle `ipfs help --help`
-				// append `--help`,when the command is not `ipfs help --help`
+				// Handle `btfs help --help`
+				// append `--help`,when the command is not `btfs help --help`
 				if os.Args[1] != "--help" {
 					os.Args = append(os.Args, "--help")
 				}
@@ -239,7 +239,7 @@ func commandDetails(path []string) *cmdDetails {
 }
 
 // commandShouldRunOnDaemon determines, from command details, whether a
-// command ought to be executed on an ipfs daemon.
+// command ought to be executed on an btfs daemon.
 //
 // It returns a client if the command should be executed on a daemon and nil if
 // it should be executed on a client. It returns an error if the command must
@@ -283,7 +283,7 @@ func commandShouldRunOnDaemon(details cmdDetails, req *cmds.Request, cctx *oldcm
 			// check if daemon locked. legacy error text, for now.
 			log.Debugf("Command cannot run on daemon. Checking if daemon is locked")
 			if daemonLocked, _ := fsrepo.LockedByOtherProcess(cctx.ConfigRoot); daemonLocked {
-				return nil, cmds.ClientError("ipfs daemon is running. please stop it to run this command")
+				return nil, cmds.ClientError("btfs daemon is running. please stop it to run this command")
 			}
 			return nil, nil
 		}
@@ -292,7 +292,7 @@ func commandShouldRunOnDaemon(details cmdDetails, req *cmds.Request, cctx *oldcm
 	}
 
 	if details.cannotRunOnClient {
-		return nil, cmds.ClientError("must run on the ipfs daemon")
+		return nil, cmds.ClientError("must run on the btfs daemon")
 	}
 
 	return nil, nil
@@ -368,10 +368,10 @@ func profileIfEnabled() (func(), error) {
 
 var apiFileErrorFmt string = `Failed to parse '%[1]s/api' file.
 	error: %[2]s
-If you're sure go-ipfs isn't running, you can just delete it.
+If you're sure go-btfs isn't running, you can just delete it.
 `
-var checkIPFSUnixFmt = "Otherwise check:\n\tps aux | grep ipfs"
-var checkIPFSWinFmt = "Otherwise check:\n\ttasklist | findstr ipfs"
+var checkIPFSUnixFmt = "Otherwise check:\n\tps aux | grep btfs"
+var checkIPFSWinFmt = "Otherwise check:\n\ttasklist | findstr btfs"
 
 // getAPIClient checks the repo, and the given options, checking for
 // a running API service. if there is one, it returns a client.

@@ -144,7 +144,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p coreiface.Path) (files.Node, er
 	return unixfile.NewUnixfsFile(ctx, ses.dag, nd)
 }
 
-// Ls returns the contents of an IPFS or IPNS object(s) at path p, with the format:
+// Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
 // `<link base58 hash> <link size in bytes> <link name>`
 func (api *UnixfsAPI) Ls(ctx context.Context, p coreiface.Path, opts ...options.UnixfsLsOption) (<-chan coreiface.DirEntry, error) {
 	settings, err := options.UnixfsLsOptions(opts...)

@@ -37,39 +37,39 @@ var LsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List directory contents for Unix filesystem objects.",
 		ShortDescription: `
-Displays the contents of an IPFS or IPNS object(s) at the given path.
+Displays the contents of an BTFS or BTNS object(s) at the given path.
 
 The JSON output contains size information. For files, the child size
 is the total size of the file contents. For directories, the child
-size is the IPFS link size.
+size is the BTFS link size.
 
 This functionality is deprecated, and will be removed in future versions. If
-possible, please use 'ipfs ls' instead.
+possible, please use 'btfs ls' instead.
 `,
 		LongDescription: `
-Displays the contents of an IPFS or IPNS object(s) at the given path.
+Displays the contents of an BTFS or BTNS object(s) at the given path.
 
 The JSON output contains size information. For files, the child size
 is the total size of the file contents. For directories, the child
-size is the IPFS link size.
+size is the BTFS link size.
 
 The path can be a prefixless ref; in this case, we assume it to be an
-/ipfs ref and not /ipns.
+/btfs ref and not /btns.
 
 Example:
 
-    > ipfs file ls QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ
+    > btfs file ls QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ
     cat.jpg
-    > ipfs file ls /ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ
+    > btfs file ls /btfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ
     cat.jpg
 
 This functionality is deprecated, and will be removed in future versions. If
-possible, please use 'ipfs ls' instead.
+possible, please use 'btfs ls' instead.
 `,
 	},
 
 	Arguments: []cmdkit.Argument{
-		cmdkit.StringArg("ipfs-path", true, true, "The path to the IPFS object(s) to list links from.").EnableStdin(),
+		cmdkit.StringArg("ipfs-path", true, true, "The path to the BTFS object(s) to list links from.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		nd, err := cmdenv.GetNode(env)

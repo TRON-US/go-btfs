@@ -35,8 +35,8 @@ const (
 	ipnsPathPrefix = "/btns/"
 )
 
-// gatewayHandler is a HTTP handler that serves IPFS objects (accessible by default at /ipfs/<path>)
-// (it serves requests like GET /ipfs/QmVRzPKPzNtSrEzBFm2UZfxmPAgnaLke4DMcerbsGGSaFe/link)
+// gatewayHandler is a HTTP handler that serves BTFS objects (accessible by default at /btfs/<path>)
+// (it serves requests like GET /btfs/QmVRzPKPzNtSrEzBFm2UZfxmPAgnaLke4DMcerbsGGSaFe/link)
 type gatewayHandler struct {
 	node   *core.IpfsNode
 	config GatewayConfig
@@ -135,7 +135,7 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		}
 	}
 
-	// IPNSHostnameOption might have constructed an IPNS path using the Host header.
+	// IPNSHostnameOption might have constructed an BTNS path using the Host header.
 	// In this case, we need the original path for constructing redirects
 	// and links that match the requested URL.
 	// For example, http://example.net would become /ipns/example.net, and
@@ -149,7 +149,7 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 
 	parsedPath, err := coreiface.ParsePath(urlPath)
 	if err != nil {
-		webError(w, "invalid ipfs path", err, http.StatusBadRequest)
+		webError(w, "invalid btfs path", err, http.StatusBadRequest)
 		return
 	}
 
@@ -193,7 +193,7 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 	//
 	// NOTE: This is not yet widely supported by browsers.
 	if !ipnsHostname {
-		// e.g.: 1="ipfs", 2="QmYuNaKwY...", ...
+		// e.g.: 1="btfs", 2="QmYuNaKwY...", ...
 		pathComponents := strings.SplitN(urlPath, "/", 4)
 
 		var suboriginRaw []byte
@@ -217,8 +217,8 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 
 	// set these headers _after_ the error, for we may just not have it
 	// and dont want the client to cache a 500 response...
-	// and only if it's /ipfs!
-	// TODO: break this out when we split /ipfs /ipns routes.
+	// and only if it's /btfs!
+	// TODO: break this out when we split /btfs /btns routes.
 	modtime := time.Now()
 
 	if f, ok := dr.(files.File); ok {
@@ -300,14 +300,14 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 	// https://github.com/ipfs/go-ipfs/issues/1365
 	var backLink string = prefix + urlPath
 
-	// don't go further up than /ipfs/$hash/
+	// don't go further up than /btfs/$hash/
 	pathSplit := path.SplitList(backLink)
 	switch {
 	// keep backlink
-	case len(pathSplit) == 3: // url: /ipfs/$hash
+	case len(pathSplit) == 3: // url: /btfs/$hash
 
 	// keep backlink
-	case len(pathSplit) == 4 && pathSplit[3] == "": // url: /ipfs/$hash/
+	case len(pathSplit) == 4 && pathSplit[3] == "": // url: /btfs/$hash/
 
 	// add the correct link depending on wether the path ends with a slash
 	default:
@@ -318,7 +318,7 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		}
 	}
 
-	// strip /ipfs/$hash from backlink if IPNSHostnameOption touched the path.
+	// strip /btfs/$hash from backlink if IPNSHostnameOption touched the path.
 	if ipnsHostname {
 		backLink = prefix + "/"
 		if len(pathSplit) > 5 {
@@ -394,7 +394,7 @@ func (i *gatewayHandler) putHandler(w http.ResponseWriter, r *http.Request) {
 
 	rootPath, err := path.ParsePath(r.URL.Path)
 	if err != nil {
-		webError(w, "putHandler: IPFS path not valid", err, http.StatusBadRequest)
+		webError(w, "putHandler: BTFS path not valid", err, http.StatusBadRequest)
 		return
 	}
 

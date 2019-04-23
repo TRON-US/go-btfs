@@ -14,7 +14,7 @@ import (
 )
 
 // IPNSHostnameOption rewrites an incoming request if its Host: header contains
-// an IPNS name.
+// an BTNS name.
 // The rewritten request points at the resolved name on the gateway handler.
 func IPNSHostnameOption() ServeOption {
 	return func(n *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {

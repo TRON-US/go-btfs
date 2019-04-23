@@ -34,7 +34,7 @@ func (e *ipnsEntry) Value() coreiface.Path {
 	return e.value
 }
 
-// Publish announces new IPNS name and returns the new IPNS entry.
+// Publish announces new BTNS name and returns the new BTNS entry.
 func (api *NameAPI) Publish(ctx context.Context, p coreiface.Path, opts ...caopts.NamePublishOption) (coreiface.IpnsEntry, error) {
 	if err := api.checkPublishAllowed(); err != nil {
 		return nil, err

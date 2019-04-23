@@ -31,16 +31,16 @@ const (
 
 var initCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Initializes ipfs config file.",
+		Tagline: "Initializes btfs config file.",
 		ShortDescription: `
-Initializes ipfs configuration files and generates a new keypair.
+Initializes btfs configuration files and generates a new keypair.
 
 If you are going to run BTFS in server environment, you may want to
 initialize it using 'server' profile.
 
-For the list of available profiles see 'ipfs config profile --help'
+For the list of available profiles see 'btfs config profile --help'
 
-ipfs uses a repository in the local file system. By default, the repo is
+btfs uses a repository in the local file system. By default, the repo is
 located at ~/.btfs. To change the repo location, set the $BTFS_PATH
 environment variable:
 
@@ -69,8 +69,8 @@ environment variable:
 
 		log.Info("checking if daemon is running...")
 		if daemonLocked {
-			log.Debug("ipfs daemon is running")
-			e := "ipfs daemon is running. please stop it to run this command"
+			log.Debug("btfs daemon is running")
+			e := "btfs daemon is running. please stop it to run this command"
 			return cmds.ClientError(e)
 		}
 

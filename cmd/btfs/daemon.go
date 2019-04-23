@@ -62,31 +62,31 @@ const (
 
 var daemonCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Run a network-connected IPFS node.",
+		Tagline: "Run a network-connected BTFS node.",
 		ShortDescription: `
-'ipfs daemon' runs a persistent ipfs daemon that can serve commands
-over the network. Most applications that use IPFS will do so by
+'btfs daemon' runs a persistent btfs daemon that can serve commands
+over the network. Most applications that use BTFS will do so by
 communicating with a daemon over the HTTP API. While the daemon is
-running, calls to 'ipfs' commands will be sent over the network to
+running, calls to 'btfs' commands will be sent over the network to
 the daemon.
 `,
 		LongDescription: `
 The daemon will start listening on ports on the network, which are
-documented in (and can be modified through) 'ipfs config Addresses'.
+documented in (and can be modified through) 'btfs config Addresses'.
 For example, to change the 'Gateway' port:
 
-  ipfs config Addresses.Gateway /ip4/127.0.0.1/tcp/8082
+  btfs config Addresses.Gateway /ip4/127.0.0.1/tcp/8082
 
 The API address can be changed the same way:
 
-  ipfs config Addresses.API /ip4/127.0.0.1/tcp/5002
+  btfs config Addresses.API /ip4/127.0.0.1/tcp/5002
 
 Make sure to restart the daemon after changing addresses.
 
 By default, the gateway is only accessible locally. To expose it to
 other computers in the network, use 0.0.0.0 as the ip address:
 
-  ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+  btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 
 Be careful if you expose the API. It is a security risk, as anyone could
 control your node remotely. If you need to control the node remotely,
@@ -95,12 +95,12 @@ make sure to protect the port as you would other services or database
 
 HTTP Headers
 
-ipfs supports passing arbitrary headers to the API and Gateway. You can
+btfs supports passing arbitrary headers to the API and Gateway. You can
 do this by setting headers on the API.HTTPHeaders and Gateway.HTTPHeaders
 keys:
 
-  ipfs config --json API.HTTPHeaders.X-Special-Header '["so special :)"]'
-  ipfs config --json Gateway.HTTPHeaders.X-Special-Header '["so special :)"]'
+  btfs config --json API.HTTPHeaders.X-Special-Header '["so special :)"]'
+  btfs config --json Gateway.HTTPHeaders.X-Special-Header '["so special :)"]'
 
 Note that the value of the keys is an _array_ of strings. This is because
 headers can have more than one value, and it is convenient to pass through
@@ -110,9 +110,9 @@ CORS Headers (for API)
 
 You can setup CORS headers the same way:
 
-  ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["example.com"]'
-  ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
-  ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '["true"]'
+  btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["example.com"]'
+  btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+  btfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '["true"]'
 
 Shutdown
 
@@ -123,7 +123,7 @@ second signal.
 
 BTFS_PATH environment variable
 
-ipfs uses a repository in the local file system. By default, the repo is
+btfs uses a repository in the local file system. By default, the repo is
 located at ~/.btfs. To change the repo location, set the $BTFS_PATH
 environment variable:
 
@@ -131,18 +131,18 @@ environment variable:
 
 Routing
 
-IPFS by default will use a DHT for content routing. There is a highly
+BTFS by default will use a DHT for content routing. There is a highly
 experimental alternative that operates the DHT in a 'client only' mode that
 can be enabled by running the daemon as:
 
-  ipfs daemon --routing=dhtclient
+  btfs daemon --routing=dhtclient
 
 This will later be transitioned into a config option once it gets out of the
 'experimental' stage.
 
 DEPRECATION NOTICE
 
-Previously, ipfs used an environment variable as seen below:
+Previously, btfs used an environment variable as seen below:
 
   export API_ORIGIN="http://localhost:8888/"
 
@@ -153,20 +153,20 @@ Headers.
 	},
 
 	Options: []cmdkit.Option{
-		cmdkit.BoolOption(initOptionKwd, "Initialize ipfs with default settings if not already initialized"),
-		cmdkit.StringOption(initProfileOptionKwd, "Configuration profiles to apply for --init. See ipfs init --help for more"),
+		cmdkit.BoolOption(initOptionKwd, "Initialize btfs with default settings if not already initialized"),
+		cmdkit.StringOption(initProfileOptionKwd, "Configuration profiles to apply for --init. See btfs init --help for more"),
 		cmdkit.StringOption(routingOptionKwd, "Overrides the routing option").WithDefault(routingOptionDefaultKwd),
-		cmdkit.BoolOption(mountKwd, "Mounts IPFS to the filesystem"),
+		cmdkit.BoolOption(mountKwd, "Mounts BTFS to the filesystem"),
 		cmdkit.BoolOption(writableKwd, "Enable writing objects (with POST, PUT and DELETE)"),
-		cmdkit.StringOption(ipfsMountKwd, "Path to the mountpoint for IPFS (if using --mount). Defaults to config setting."),
-		cmdkit.StringOption(ipnsMountKwd, "Path to the mountpoint for IPNS (if using --mount). Defaults to config setting."),
+		cmdkit.StringOption(ipfsMountKwd, "Path to the mountpoint for BTFS (if using --mount). Defaults to config setting."),
+		cmdkit.StringOption(ipnsMountKwd, "Path to the mountpoint for BTNS (if using --mount). Defaults to config setting."),
 		cmdkit.BoolOption(unrestrictedApiAccessKwd, "Allow API access to unlisted hashes"),
 		cmdkit.BoolOption(unencryptTransportKwd, "Disable transport encryption (for debugging protocols)"),
 		cmdkit.BoolOption(enableGCKwd, "Enable automatic periodic repo garbage collection"),
 		cmdkit.BoolOption(adjustFDLimitKwd, "Check and raise file descriptor limits if needed").WithDefault(true),
 		cmdkit.BoolOption(migrateKwd, "If true, assume yes at the migrate prompt. If false, assume no."),
-		cmdkit.BoolOption(enablePubSubKwd, "Instantiate the ipfs daemon with the experimental pubsub feature enabled."),
-		cmdkit.BoolOption(enableIPNSPubSubKwd, "Enable IPNS record distribution through pubsub; enables pubsub."),
+		cmdkit.BoolOption(enablePubSubKwd, "Instantiate the btfs daemon with the experimental pubsub feature enabled."),
+		cmdkit.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
 		cmdkit.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
@@ -207,7 +207,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}()
 
-	// print the ipfs version
+	// print the btfs version
 	printVersion()
 
 	managefd, _ := req.Options[adjustFDLimitKwd].(bool)
@@ -466,7 +466,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		listeners = append(listeners, apiLis)
 	}
 
-	// by default, we don't let you load arbitrary ipfs objects through the api,
+	// by default, we don't let you load arbitrary btfs objects through the api,
 	// because this would open up the api to scripting vulnerabilities.
 	// only the webui objects are allowed.
 	// if you know what you're doing, go ahead and pass --unrestricted-api.
@@ -657,8 +657,8 @@ func mountFuse(req *cmds.Request, cctx *oldcmds.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("IPFS mounted at: %s\n", fsdir)
-	fmt.Printf("IPNS mounted at: %s\n", nsdir)
+	fmt.Printf("BTFS mounted at: %s\n", fsdir)
+	fmt.Printf("BTNS mounted at: %s\n", nsdir)
 	return nil
 }
 
@@ -726,7 +726,7 @@ func YesNoPrompt(prompt string) bool {
 }
 
 func printVersion() {
-	fmt.Printf("go-ipfs version: %s-%s\n", version.CurrentVersionNumber, version.CurrentCommit)
+	fmt.Printf("go-btfs version: %s-%s\n", version.CurrentVersionNumber, version.CurrentCommit)
 	fmt.Printf("Repo version: %d\n", fsrepo.RepoVersion)
 	fmt.Printf("System version: %s\n", runtime.GOARCH+"/"+runtime.GOOS)
 	fmt.Printf("Golang version: %s\n", runtime.Version())

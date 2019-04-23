@@ -16,14 +16,14 @@ import (
 // ErrNoNamesys is an explicit error for when an IPFS node doesn't
 // (yet) have a name system
 var ErrNoNamesys = errors.New(
-	"core/resolve: no Namesys on IpfsNode - can't resolve ipns entry")
+	"core/resolve: no Namesys on IpfsNode - can't resolve btns entry")
 
-// ResolveIPNS resolves /ipns paths
+// ResolveIPNS resolves /btns paths
 func ResolveIPNS(ctx context.Context, nsys namesys.NameSystem, p path.Path) (path.Path, error) {
 	if strings.HasPrefix(p.String(), "/btns/") {
 		evt := log.EventBegin(ctx, "resolveIpnsPath")
 		defer evt.Done()
-		// resolve ipns paths
+		// resolve btns paths
 
 		// TODO(cryptix): we should be able to query the local cache for the path
 		if nsys == nil {
@@ -62,7 +62,7 @@ func ResolveIPNS(ctx context.Context, nsys namesys.NameSystem, p path.Path) (pat
 }
 
 // Resolve resolves the given path by parsing out protocol-specific
-// entries (e.g. /ipns/<node-key>) and then going through the /ipfs/
+// entries (e.g. /btns/<node-key>) and then going through the /ipfs/
 // entries and returning the final node.
 func Resolve(ctx context.Context, nsys namesys.NameSystem, r *resolver.Resolver, p path.Path) (ipld.Node, error) {
 	p, err := ResolveIPNS(ctx, nsys, p)
