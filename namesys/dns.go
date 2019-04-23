@@ -131,7 +131,7 @@ func workDomain(r *DNSResolver, name string, res chan lookupRes) {
 }
 
 func parseEntry(txt string) (path.Path, error) {
-	p, err := path.ParseCidToPath(txt) // bare IPFS multihashes
+	p, err := path.ParseCidToPath(txt) // bare BTFS multihashes
 	if err == nil {
 		return p, nil
 	}

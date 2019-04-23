@@ -27,9 +27,9 @@ func (bs BlockStat) String() string {
 
 var BlockCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Interact with raw IPFS blocks.",
+		Tagline: "Interact with raw BTFS blocks.",
 		ShortDescription: `
-'ipfs block' is a plumbing command used to manipulate raw IPFS blocks.
+'btfs block' is a plumbing command used to manipulate raw BTFS blocks.
 Reads from stdin or writes to stdout, and <key> is a base58 encoded
 multihash.
 `,
@@ -45,10 +45,10 @@ multihash.
 
 var blockStatCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Print information of a raw IPFS block.",
+		Tagline: "Print information of a raw BTFS block.",
 		ShortDescription: `
-'ipfs block stat' is a plumbing command for retrieving information
-on raw IPFS blocks. It outputs the following to stdout:
+'btfs block stat' is a plumbing command for retrieving information
+on raw BTFS blocks. It outputs the following to stdout:
 
 	Key  - the base58 encoded multihash
 	Size - the size of the block in bytes
@@ -91,9 +91,9 @@ on raw IPFS blocks. It outputs the following to stdout:
 
 var blockGetCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Get a raw IPFS block.",
+		Tagline: "Get a raw BTFS block.",
 		ShortDescription: `
-'ipfs block get' is a plumbing command for retrieving raw IPFS blocks.
+'btfs block get' is a plumbing command for retrieving raw BTFS blocks.
 It outputs to stdout, and <key> is a base58 encoded multihash.
 `,
 	},
@@ -129,9 +129,9 @@ const (
 
 var blockPutCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Store input as an IPFS block.",
+		Tagline: "Store input as an BTFS block.",
 		ShortDescription: `
-'ipfs block put' is a plumbing command for storing raw IPFS blocks.
+'btfs block put' is a plumbing command for storing raw BTFS blocks.
 It reads from stdin, and <key> is a base58 encoded multihash.
 
 By default CIDv0 is going to be generated. Setting 'mhtype' to anything other
@@ -140,7 +140,7 @@ than 'sha2-256' or format to anything other than 'v0' will result in CIDv1.
 	},
 
 	Arguments: []cmdkit.Argument{
-		cmdkit.FileArg("data", true, false, "The data to be stored as an IPFS block.").EnableStdin(),
+		cmdkit.FileArg("data", true, false, "The data to be stored as an BTFS block.").EnableStdin(),
 	},
 	Options: []cmdkit.Option{
 		cmdkit.StringOption(blockFormatOptionName, "f", "cid format for blocks to be created with."),
@@ -210,9 +210,9 @@ const (
 
 var blockRmCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Remove IPFS block(s).",
+		Tagline: "Remove BTFS block(s).",
 		ShortDescription: `
-'ipfs block rm' is a plumbing command for removing raw ipfs blocks.
+'btfs block rm' is a plumbing command for removing raw btfs blocks.
 It takes a list of base58 encoded multihashes to remove.
 `,
 	},

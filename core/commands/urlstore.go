@@ -32,13 +32,13 @@ var urlAdd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Add URL via urlstore.",
 		LongDescription: `
-Add URLs to ipfs without storing the data locally.
+Add URLs to btfs without storing the data locally.
 
 The URL provided must be stable and ideally on a web server under your
 control.
 
 The file is added using raw-leaves but otherwise using the default
-settings for 'ipfs add'.
+settings for 'btfs add'.
 
 This command is considered temporary until a better solution can be
 found.  It may disappear or the semantics can change at any
@@ -50,7 +50,7 @@ time.
 		cmdkit.BoolOption(pinOptionName, "Pin this object when adding.").WithDefault(true),
 	},
 	Arguments: []cmdkit.Argument{
-		cmdkit.StringArg("url", true, false, "URL to add to IPFS"),
+		cmdkit.StringArg("url", true, false, "URL to add to BTFS"),
 	},
 	Type: &BlockStat{},
 

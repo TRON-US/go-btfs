@@ -16,7 +16,7 @@ import (
 
 var TarCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Utility functions for tar files in ipfs.",
+		Tagline: "Utility functions for tar files in btfs.",
 	},
 
 	Subcommands: map[string]*cmds.Command{
@@ -27,9 +27,9 @@ var TarCmd = &cmds.Command{
 
 var tarAddCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Import a tar file into ipfs.",
+		Tagline: "Import a tar file into btfs.",
 		ShortDescription: `
-'ipfs tar add' will parse a tar file and create a merkledag structure to
+'btfs tar add' will parse a tar file and create a merkledag structure to
 represent it.
 `,
 	},
@@ -77,14 +77,14 @@ represent it.
 
 var tarCatCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Export a tar file from IPFS.",
+		Tagline: "Export a tar file from BTFS.",
 		ShortDescription: `
-'ipfs tar cat' will export a tar file from a previously imported one in IPFS.
+'btfs tar cat' will export a tar file from a previously imported one in BTFS.
 `,
 	},
 
 	Arguments: []cmdkit.Argument{
-		cmdkit.StringArg("path", true, false, "ipfs path of archive to export.").EnableStdin(),
+		cmdkit.StringArg("path", true, false, "btfs path of archive to export.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		nd, err := cmdenv.GetNode(env)

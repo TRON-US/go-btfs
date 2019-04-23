@@ -24,8 +24,8 @@ import (
 
 var ErrNotDHT = errors.New("routing service is not a DHT")
 
-// TODO: Factor into `ipfs dht` and `ipfs routing`.
-// Everything *except `query` goes into `ipfs routing`.
+// TODO: Factor into `btfs dht` and `btfs routing`.
+// Everything *except `query` goes into `btfs routing`.
 
 var DhtCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
@@ -515,9 +515,9 @@ Keys have two parts: a keytype (foo) and the key name (bar). IPNS uses the
 /ipns keytype, and expects the key name to be a Peer ID. IPNS entries are
 specifically formatted (protocol buffer).
 
-You may only use keytypes that are supported in your ipfs binary: currently
+You may only use keytypes that are supported in your btfs binary: currently
 this is only /ipns. Unless you have a relatively deep understanding of the
-go-ipfs routing internals, you likely want to be using 'ipfs name publish' instead
+go-ipfs routing internals, you likely want to be using 'btfs name publish' instead
 of this.
 
 Value is arbitrary text. Standard input can be used to provide value.

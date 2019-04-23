@@ -22,35 +22,35 @@ var DNSCmd = &cmds.Command{
 		ShortDescription: `
 Multihashes are hard to remember, but domain names are usually easy to
 remember.  To create memorable aliases for multihashes, DNS TXT
-records can point to other DNS links, IPFS objects, IPNS keys, etc.
+records can point to other DNS links, BTFS objects, IPNS keys, etc.
 This command resolves those links to the referenced object.
 `,
 		LongDescription: `
 Multihashes are hard to remember, but domain names are usually easy to
 remember.  To create memorable aliases for multihashes, DNS TXT
-records can point to other DNS links, IPFS objects, IPNS keys, etc.
+records can point to other DNS links, BTFS objects, IPNS keys, etc.
 This command resolves those links to the referenced object.
 
 Note: This command can only recursively resolve DNS links,
 it will fail to recursively resolve through IPNS keys etc.
-For general-purpose recursive resolution, use ipfs name resolve -r.
+For general-purpose recursive resolution, use btfs name resolve -r.
 
 For example, with this DNS TXT record:
 
 	> dig +short TXT _dnslink.ipfs.io
-	dnslink=/ipfs/QmRzTuh2Lpuz7Gr39stNr6mTFdqAghsZec1JoUnfySUzcy
+	dnslink=/btfs/QmRzTuh2Lpuz7Gr39stNr6mTFdqAghsZec1JoUnfySUzcy
 
 The resolver will give:
 
-	> ipfs dns ipfs.io
-	/ipfs/QmRzTuh2Lpuz7Gr39stNr6mTFdqAghsZec1JoUnfySUzcy
+	> btfs dns ipfs.io
+	/btfs/QmRzTuh2Lpuz7Gr39stNr6mTFdqAghsZec1JoUnfySUzcy
 
 The resolver can recursively resolve:
 
 	> dig +short TXT recursive.ipfs.io
 	dnslink=/ipns/ipfs.io
-	> ipfs dns -r recursive.ipfs.io
-	/ipfs/QmRzTuh2Lpuz7Gr39stNr6mTFdqAghsZec1JoUnfySUzcy
+	> btfs dns -r recursive.ipfs.io
+	/btfs/QmRzTuh2Lpuz7Gr39stNr6mTFdqAghsZec1JoUnfySUzcy
 `,
 	},
 

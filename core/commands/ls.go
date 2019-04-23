@@ -59,7 +59,7 @@ The JSON output contains type information.
 	},
 
 	Arguments: []cmdkit.Argument{
-		cmdkit.StringArg("ipfs-path", true, true, "The path to the IPFS object(s) to list links from.").EnableStdin(),
+		cmdkit.StringArg("ipfs-path", true, true, "The path to the BTFS object(s) to list links from.").EnableStdin(),
 	},
 	Options: []cmdkit.Option{
 		cmdkit.BoolOption(lsHeadersOptionNameTime, "v", "Print table headers (Hash, Size, Name)."),

@@ -22,12 +22,12 @@ const (
 
 var CatCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline:          "Show IPFS object data.",
-		ShortDescription: "Displays the data contained by an IPFS or IPNS object(s) at the given path.",
+		Tagline:          "Show BTFS object data.",
+		ShortDescription: "Displays the data contained by an BTFS or BTNS object(s) at the given path.",
 	},
 
 	Arguments: []cmdkit.Argument{
-		cmdkit.StringArg("ipfs-path", true, true, "The path to the IPFS object(s) to be outputted.").EnableStdin(),
+		cmdkit.StringArg("ipfs-path", true, true, "The path to the BTFS object(s) to be outputted.").EnableStdin(),
 	},
 	Options: []cmdkit.Option{
 		cmdkit.Int64Option(offsetOptionName, "o", "Byte offset to begin reading from."),

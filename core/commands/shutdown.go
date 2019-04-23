@@ -9,7 +9,7 @@ import (
 
 var daemonShutdownCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Shut down the ipfs daemon",
+		Tagline: "Shut down the btfs daemon",
 	},
 	Run: func(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) error {
 		nd, err := cmdenv.GetNode(env)
@@ -22,7 +22,7 @@ var daemonShutdownCmd = &cmds.Command{
 		}
 
 		if err := nd.Process().Close(); err != nil {
-			log.Error("error while shutting down ipfs daemon:", err)
+			log.Error("error while shutting down btfs daemon:", err)
 		}
 
 		return nil

@@ -195,7 +195,7 @@ func (s *Root) Lookup(ctx context.Context, name string) (fs.Node, error) {
 		}
 	}
 
-	// other links go through ipns resolution and are symlinked into the ipfs mountpoint
+	// other links go through btns resolution and are symlinked into the btfs mountpoint
 	ipnsName := "/btns/" + name
 	resolved, err := s.Ipfs.Namesys.Resolve(s.Ipfs.Context(), ipnsName)
 	if err != nil {
