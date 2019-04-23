@@ -30,8 +30,8 @@ This functionality is deprecated, and will be removed in future versions.
 Instead, try either adding headers to the config, or passing them via
 cli arguments:
 
-	ipfs config API.HTTPHeaders --json '{"Access-Control-Allow-Origin": ["*"]}'
-	ipfs daemon
+	btfs config API.HTTPHeaders --json '{"Access-Control-Allow-Origin": ["*"]}'
+	btfs daemon
 `
 
 // APIPath is the path at which the API is mounted.
@@ -153,7 +153,7 @@ func CommandsROOption(cctx oldcmds.Context) ServeOption {
 	return commandsOption(cctx, corecommands.RootRO)
 }
 
-// CheckVersionOption returns a ServeOption that checks whether the client ipfs version matches. Does nothing when the user agent string does not contain `/go-ipfs/`
+// CheckVersionOption returns a ServeOption that checks whether the client btfs version matches. Does nothing when the user agent string does not contain `/go-ipfs/`
 func CheckVersionOption() ServeOption {
 	daemonVersion := version.ApiVersion
 

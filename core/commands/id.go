@@ -20,13 +20,13 @@ import (
 	identify "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 
-const offlineIdErrorMessage = `'ipfs id' currently cannot query information on remote
+const offlineIdErrorMessage = `'btfs id' currently cannot query information on remote
 peers without a running daemon; we are working to fix this.
-In the meantime, if you want to query remote peers using 'ipfs id',
+In the meantime, if you want to query remote peers using 'btfs id',
 please run the daemon:
 
-    ipfs daemon &
-    ipfs id QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+    btfs daemon &
+    btfs id QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 `
 
 type IdOutput struct {
@@ -43,12 +43,12 @@ const (
 
 var IDCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Show ipfs node id info.",
+		Tagline: "Show btfs node id info.",
 		ShortDescription: `
 Prints out information about the specified peer.
 If no peer is specified, prints out information for local peers.
 
-'ipfs id' supports the format option for output with the following keys:
+'btfs id' supports the format option for output with the following keys:
 <id> : The peers id.
 <aver>: Agent version.
 <pver>: Protocol version.
@@ -57,7 +57,7 @@ If no peer is specified, prints out information for local peers.
 
 EXAMPLE:
 
-    ipfs id Qmece2RkXhsKe5CRooNisBTh4SK119KrXXGmoK6V3kb8aH -f="<addrs>\n"
+    btfs id Qmece2RkXhsKe5CRooNisBTh4SK119KrXXGmoK6V3kb8aH -f="<addrs>\n"
 `,
 	},
 	Arguments: []cmdkit.Argument{

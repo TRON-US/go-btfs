@@ -19,7 +19,7 @@ const (
 
 var ActiveReqsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "List commands run on this IPFS node.",
+		Tagline: "List commands run on this BTFS node.",
 		ShortDescription: `
 Lists running and recently run commands.
 `,

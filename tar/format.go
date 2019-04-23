@@ -1,4 +1,4 @@
-package tarfmt
+ package tarfmt
 
 import (
 	"archive/tar"
@@ -200,7 +200,7 @@ func (tr *tarReader) Read(b []byte) (int, error) {
 // of ImportTar.
 func ExportTar(ctx context.Context, root *dag.ProtoNode, ds ipld.DAGService) (io.Reader, error) {
 	if string(root.Data()) != "ipfs/tar" {
-		return nil, errors.New("not an IPFS tarchive")
+		return nil, errors.New("not an BTFS tarchive")
 	}
 	return &tarReader{
 		links: root.Links(),

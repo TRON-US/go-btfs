@@ -17,9 +17,9 @@ import (
 
 var PubsubCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "An experimental publish-subscribe system on ipfs.",
+		Tagline: "An experimental publish-subscribe system on btfs.",
 		ShortDescription: `
-ipfs pubsub allows you to publish messages to a given topic, and also to
+btfs pubsub allows you to publish messages to a given topic, and also to
 subscribe to new messages on a given topic.
 
 This is an experimental feature. It is not intended in its current state
@@ -51,7 +51,7 @@ var PubsubSubCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Subscribe to messages on a given topic.",
 		ShortDescription: `
-ipfs pubsub sub subscribes to messages on a given topic.
+btfs pubsub sub subscribes to messages on a given topic.
 
 This is an experimental feature. It is not intended in its current state
 to be used in a production environment.
@@ -59,7 +59,7 @@ to be used in a production environment.
 To use, the daemon must be run with '--enable-pubsub-experiment'.
 `,
 		LongDescription: `
-ipfs pubsub sub subscribes to messages on a given topic.
+btfs pubsub sub subscribes to messages on a given topic.
 
 This is an experimental feature. It is not intended in its current state
 to be used in a production environment.
@@ -140,7 +140,7 @@ var PubsubPubCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Publish a message to a given pubsub topic.",
 		ShortDescription: `
-ipfs pubsub pub publishes a message to a specified topic.
+btfs pubsub pub publishes a message to a specified topic.
 
 This is an experimental feature. It is not intended in its current state
 to be used in a production environment.
@@ -179,7 +179,7 @@ var PubsubLsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List subscribed topics by name.",
 		ShortDescription: `
-ipfs pubsub ls lists out the names of topics you are currently subscribed to.
+btfs pubsub ls lists out the names of topics you are currently subscribed to.
 
 This is an experimental feature. It is not intended in its current state
 to be used in a production environment.
@@ -220,7 +220,7 @@ var PubsubPeersCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List peers we are currently pubsubbing with.",
 		ShortDescription: `
-ipfs pubsub peers with no arguments lists out the pubsub peers you are
+btfs pubsub peers with no arguments lists out the pubsub peers you are
 currently connected to. If given a topic, it will list connected
 peers who are subscribed to the named topic.
 

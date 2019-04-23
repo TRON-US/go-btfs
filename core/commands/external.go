@@ -28,7 +28,7 @@ func ExternalBinary() *cmds.Command {
 						buf := new(bytes.Buffer)
 						fmt.Fprintf(buf, "%s is an 'external' command.\n", binname)
 						fmt.Fprintf(buf, "It does not currently appear to be installed.\n")
-						fmt.Fprintf(buf, "Please refer to the ipfs documentation for instructions.\n")
+						fmt.Fprintf(buf, "Please refer to the btfs documentation for instructions.\n")
 						return res.Emit(buf)
 					}
 				}
