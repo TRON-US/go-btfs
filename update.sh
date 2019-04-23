@@ -22,7 +22,7 @@ while [[ -n "$1" ]] ;do
 done
 
 rm ${DefaultProjectPath}version.txt
-mv ${DefaultDownloadPath}new_version.txt ${DefaultProjectPath}version.txt
+mv ${DefaultDownloadPath}version-latest.txt ${DefaultProjectPath}version.txt
 rm ${DefaultDownloadPath}btfs.bk
 mv ${DefaultProjectPath}btfs ${DefaultDownloadPath}btfs.bk
 mv ${DefaultDownloadPath}btfs-latest ${DefaultProjectPath}btfs

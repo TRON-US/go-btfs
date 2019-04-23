@@ -1,3 +1,4 @@
+// This auto update project just for ubuntu operating system.
 package main
 
 import (
@@ -18,11 +19,11 @@ import (
 const (
 	DefaultDownloadPath = "/tmp"
 
-	NewVersionFile   = "new_version.txt"
-	NowVersionFile   = "version.txt"
-	UpdateShell      = "update.sh"
-	LatestBtfsBinary = "btfs-latest"
-	NowBtfsBinary    = "btfs"
+	NewVersionFile     = "version-latest.txt"
+	CurrentVersionFile = "version.txt"
+	UpdateShell        = "update.sh"
+	LatestBtfsBinary   = "btfs-latest"
+	CurrentBtfsBinary  = "btfs"
 
 	rm   = "rm"
 	wget = "wget"
@@ -30,12 +31,26 @@ const (
 	bash = "bash"
 )
 
+// You can add multiple addresses inside this array.
 var url = [1]string{
 	"http://13.59.36.232:8080/btns/QmaCa4qNJizZD5uwmprNoZ4MSHsGosK4oLDL6eqnVLQhTC/",
 }
 
 // Auto update function.
 func update() {
+	// Get current program execution path.
+	defaultBtfsPath, err := getCurrentPath()
+	if err != nil {
+		log.Errorf("Get current program execution path error, reasons: [%v]", err)
+		return
+	}
+
+	newVersionPath := fmt.Sprint(DefaultDownloadPath, "/", NewVersionFile)
+	nowVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
+	nowBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, "/", CurrentBtfsBinary)
+	latestBtfsBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", LatestBtfsBinary)
+	updateShellPath := fmt.Sprint(DefaultDownloadPath, "/", UpdateShell)
+
 	for {
 		log.Info("BTFS node AutoUpdater begin.")
 
@@ -43,17 +58,6 @@ func update() {
 
 		rand.Seed(time.Now().UnixNano())
 		randNum := rand.Intn(len(url))
-
-		// Get current program execution path.
-		defaultBtfsPath, err := getCurrentPath()
-		if err != nil {
-			log.Errorf("Get current program execution path error, reasons: [%v]", err)
-			continue
-		}
-
-		newVersionPath := fmt.Sprint(DefaultDownloadPath, "/", NewVersionFile)
-		nowVersionPath := fmt.Sprint(defaultBtfsPath, NowVersionFile)
-		nowBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, NowBtfsBinary)
 
 		if pathExists(newVersionPath) {
 			// Delete the btfs-latest file.
@@ -74,7 +78,7 @@ func update() {
 		}
 
 		var nowVersion string
-		// Get now version string.
+		// Get current version string.
 		nowVersion, err = getVersion(nowVersionPath)
 		if err != nil {
 			nowVersion = "0.0.0"
@@ -88,12 +92,9 @@ func update() {
 		}
 
 		if flg <= 0 {
-			log.Info("Btfs binary from btns version level is small than now version.")
+			log.Info("Btfs binary from btns version level is small than current version.")
 			continue
 		}
-
-		latestBtfsBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", LatestBtfsBinary)
-		updateShellPath := fmt.Sprint(DefaultDownloadPath, "/", UpdateShell)
 
 		// Determine if the btfs-latest file exists.
 		if pathExists(latestBtfsBinaryPath) {
@@ -107,7 +108,7 @@ func update() {
 			if execCommand(cmp, latestBtfsBinaryPath, nowBtfsBinaryPath) {
 				log.Info("same")
 			} else {
-				log.Info("different test")
+				log.Info("different")
 				if pathExists(updateShellPath) {
 					// Delete the btfs-latest file.
 					execCommand(rm, updateShellPath)
@@ -120,7 +121,7 @@ func update() {
 				}
 
 				// Start the btfs-updater binary process.
-				cmd := exec.Command(bash, updateShellPath, "-p", defaultBtfsPath, "-d", fmt.Sprint(DefaultDownloadPath, "/"))
+				cmd := exec.Command(bash, updateShellPath, "-p", fmt.Sprint(defaultBtfsPath, "/"), "-d", fmt.Sprint(DefaultDownloadPath, "/"))
 				err := cmd.Start()
 				if err != nil {
 					log.Error(err)
@@ -157,7 +158,7 @@ func pathExists(path string) bool {
 	return false
 }
 
-// Get version from file.
+// Get version from file, e.g.(1.0.0).
 func getVersion(file string) (string, error) {
 	// Read file.
 	versionFile, err := os.Open(file)
@@ -224,20 +225,10 @@ func versionCompare(version1, version2 string) (int, error) {
 
 // Get current program execution path.
 func getCurrentPath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
+	ex, err := os.Executable()
 	if err != nil {
 		return "", err
 	}
-	path, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
-	}
-	i := strings.LastIndex(path, "/")
-	if i < 0 {
-		i = strings.LastIndex(path, "\\")
-	}
-	if i < 0 {
-		return "", errors.New(`error: Can't find "/" or "\".`)
-	}
-	return string(path[0 : i+1]), nil
+	exPath := filepath.Dir(ex)
+	return exPath, nil
 }
