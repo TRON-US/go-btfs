@@ -189,7 +189,7 @@ func (api *KeyAPI) Rename(ctx context.Context, oldName string, newName string, o
 	return &key{newName, pid}, overwrite, ks.Delete(oldName)
 }
 
-// Remove removes keys from keystore. Returns ipns path of the removed key.
+// Remove removes keys from keystore. Returns btns path of the removed key.
 func (api *KeyAPI) Remove(ctx context.Context, name string) (coreiface.Key, error) {
 	ks := api.repo.Keystore()
 

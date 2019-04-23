@@ -9,14 +9,14 @@ import (
 )
 
 // This is the CLI root, used for executing commands accessible to CLI clients.
-// Some subcommands (like 'ipfs daemon' or 'ipfs init') are only accessible here,
+// Some subcommands (like 'btfs daemon' or 'btfs init') are only accessible here,
 // and can't be called through the HTTP API.
 var Root = &cmds.Command{
 	Options:  commands.Root.Options,
 	Helptext: commands.Root.Helptext,
 }
 
-// commandsClientCmd is the "ipfs commands" command for local cli
+// commandsClientCmd is the "btfs commands" command for local cli
 var commandsClientCmd = commands.CommandsCmd(Root)
 
 // Commands in localCommands should always be run locally (even if daemon is running).

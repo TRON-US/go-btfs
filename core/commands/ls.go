@@ -49,7 +49,7 @@ var LsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List directory contents for Unix filesystem objects.",
 		ShortDescription: `
-Displays the contents of an IPFS or IPNS object(s) at the given path, with
+Displays the contents of an BTFS or BTNS object(s) at the given path, with
 the following format:
 
   <link base58 hash> <link size in bytes> <link name>

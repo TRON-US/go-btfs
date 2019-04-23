@@ -1,7 +1,7 @@
 /*
-IPFS is a global, versioned, peer-to-peer filesystem
+BTFS is a global, versioned, peer-to-peer filesystem
 
-There are sub-packages within the ipfs package for various low-level
+There are sub-packages within the btfs package for various low-level
 utilities, which are in turn assembled into:
 
 core/...:

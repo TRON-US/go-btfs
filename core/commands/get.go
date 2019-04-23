@@ -35,7 +35,7 @@ var GetCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Download IPFS objects.",
 		ShortDescription: `
-Stores to disk the data contained an IPFS or IPNS object(s) at the given path.
+Stores to disk the data contained an BTFS or BTNS object(s) at the given path.
 
 By default, the output will be stored at './<ipfs-path>', but an alternate
 path can be specified with '--output=<path>' or '-o=<path>'.

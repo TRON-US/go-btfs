@@ -79,7 +79,7 @@ import (
 	mamask "github.com/whyrusleeping/multiaddr-filter"
 )
 
-const IpnsValidatorTag = "ipns"
+const IpnsValidatorTag = "btns"
 
 const kReprovideFrequency = time.Hour * 12
 const discoveryConnTimeout = time.Second * 30
@@ -88,10 +88,10 @@ const DefaultIpnsCacheSize = 128
 var log = logging.Logger("core")
 
 func init() {
-	identify.ClientVersion = "go-ipfs/" + version.CurrentVersionNumber + "/" + version.CurrentCommit
+	identify.ClientVersion = "go-btfs/" + version.CurrentVersionNumber + "/" + version.CurrentCommit
 }
 
-// IpfsNode is IPFS Core module. It represents an IPFS instance.
+// IpfsNode is BTFS Core module. It represents an BTFS instance.
 type IpfsNode struct {
 
 	// Self
@@ -589,7 +589,7 @@ func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, routingOptio
 	// setup name system
 	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
 
-	// setup ipns republishing
+	// setup btns republishing
 	return n.setupIpnsRepublisher()
 }
 
@@ -621,11 +621,11 @@ func (n *IpfsNode) setupIpnsRepublisher() error {
 	if cfg.Ipns.RepublishPeriod != "" {
 		d, err := time.ParseDuration(cfg.Ipns.RepublishPeriod)
 		if err != nil {
-			return fmt.Errorf("failure to parse config setting IPNS.RepublishPeriod: %s", err)
+			return fmt.Errorf("failure to parse config setting BTNS.RepublishPeriod: %s", err)
 		}
 
 		if !u.Debug && (d < time.Minute || d > (time.Hour*24)) {
-			return fmt.Errorf("config setting IPNS.RepublishPeriod is not between 1min and 1day: %s", d)
+			return fmt.Errorf("config setting BTNS.RepublishPeriod is not between 1min and 1day: %s", d)
 		}
 
 		n.IpnsRepub.Interval = d
@@ -634,7 +634,7 @@ func (n *IpfsNode) setupIpnsRepublisher() error {
 	if cfg.Ipns.RecordLifetime != "" {
 		d, err := time.ParseDuration(cfg.Ipns.RecordLifetime)
 		if err != nil {
-			return fmt.Errorf("failure to parse config setting IPNS.RecordLifetime: %s", err)
+			return fmt.Errorf("failure to parse config setting BTNS.RecordLifetime: %s", err)
 		}
 
 		n.IpnsRepub.RecordLifetime = d
