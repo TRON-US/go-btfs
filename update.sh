@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sleep 20s
+sleep 5s
 
 DefaultProjectPath=/usr/local/bin/
 DefaultDownloadPath=/tmp/
