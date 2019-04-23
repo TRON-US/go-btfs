@@ -224,7 +224,7 @@ func (gc *GC) maybeGC(ctx context.Context, offset uint64) error {
 		if err := GarbageCollect(gc.Node, ctx); err != nil {
 			return err
 		}
-		log.Infof("Repo GC done. See `ipfs repo stat` to see how much space got freed.\n")
+		log.Infof("Repo GC done. See `btfs repo stat` to see how much space got freed.\n")
 	}
 	return nil
 }

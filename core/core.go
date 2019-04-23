@@ -3,7 +3,7 @@ Package core implements the IpfsNode object and related methods.
 
 Packages underneath core/ provide a (relatively) stable, low-level API
 to carry out most IPFS-related tasks.  For more details on the other
-interfaces and how core/... fits into the bigger IPFS picture, see:
+interfaces and how core/... fits into the bigger BTFS picture, see:
 
   $ godoc github.com/ipfs/go-ipfs
 */
@@ -766,10 +766,10 @@ func (n *IpfsNode) loadID() error {
 
 	cid := cfg.Identity.PeerID
 	if cid == "" {
-		return errors.New("identity was not set in config (was 'ipfs init' run?)")
+		return errors.New("identity was not set in config (was 'btfs init' run?)")
 	}
 	if len(cid) == 0 {
-		return errors.New("no peer ID in config! (was 'ipfs init' run?)")
+		return errors.New("no peer ID in config! (was 'btfs init' run?)")
 	}
 
 	id, err := peer.IDB58Decode(cid)

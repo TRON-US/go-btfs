@@ -109,7 +109,7 @@ The CLI will exit with one of the following values:
 	},
 }
 
-// commandsDaemonCmd is the "ipfs commands" command for daemon
+// commandsDaemonCmd is the "btfs commands" command for daemon
 var CommandsDaemonCmd = CommandsCmd(Root)
 
 var rootSubcommands = map[string]*cmds.Command{
@@ -157,10 +157,10 @@ var RootRO = &cmds.Command{}
 
 var CommandsDaemonROCmd = CommandsCmd(RootRO)
 
-// RefsROCmd is `ipfs refs` command
+// RefsROCmd is `btfs refs` command
 var RefsROCmd = &cmds.Command{}
 
-// VersionROCmd is `ipfs version` command (without deps).
+// VersionROCmd is `btfs version` command (without deps).
 var VersionROCmd = &cmds.Command{}
 
 var rootROSubcommands = map[string]*cmds.Command{

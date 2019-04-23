@@ -28,7 +28,7 @@ const (
 
 var ResolveCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Resolve the value of names to IPFS.",
+		Tagline: "Resolve the value of names to BTFS.",
 		ShortDescription: `
 There are a number of mutable name protocols that can link among
 themselves and into IPNS. This command accepts any of these
@@ -37,31 +37,31 @@ identifiers and resolves them to the referenced item.
 		LongDescription: `
 There are a number of mutable name protocols that can link among
 themselves and into IPNS. For example IPNS references can (currently)
-point at an IPFS object, and DNS links can point at other DNS links, IPNS
-entries, or IPFS objects. This command accepts any of these
+point at an BTFS object, and DNS links can point at other DNS links, IPNS
+entries, or BTFS objects. This command accepts any of these
 identifiers and resolves them to the referenced item.
 
 EXAMPLES
 
 Resolve the value of your identity:
 
-  $ ipfs resolve /ipns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
-  /ipfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
+  $ btfs resolve /ipns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  /btfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
 
 Resolve the value of another name:
 
-  $ ipfs resolve /ipns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
+  $ btfs resolve /ipns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
   /ipns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
 
 Resolve the value of another name recursively:
 
-  $ ipfs resolve -r /ipns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
-  /ipfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
+  $ btfs resolve -r /ipns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
+  /btfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
 
-Resolve the value of an IPFS DAG path:
+Resolve the value of an BTFS DAG path:
 
-  $ ipfs resolve /ipfs/QmeZy1fGbwgVSrqbfh9fKQrAWgeyRnj7h8fsHS1oy3k99x/beep/boop
-  /ipfs/QmYRMjyvAiHKN9UTi8Bzt1HUspmSRD8T8DwxfSMzLgBon1
+  $ btfs resolve /btfs/QmeZy1fGbwgVSrqbfh9fKQrAWgeyRnj7h8fsHS1oy3k99x/beep/boop
+  /btfs/QmYRMjyvAiHKN9UTi8Bzt1HUspmSRD8T8DwxfSMzLgBon1
 
 `,
 	},
@@ -70,7 +70,7 @@ Resolve the value of an IPFS DAG path:
 		cmdkit.StringArg("name", true, false, "The name to resolve.").EnableStdin(),
 	},
 	Options: []cmdkit.Option{
-		cmdkit.BoolOption(resolveRecursiveOptionName, "r", "Resolve until the result is an IPFS name.").WithDefault(true),
+		cmdkit.BoolOption(resolveRecursiveOptionName, "r", "Resolve until the result is an BTFS name.").WithDefault(true),
 		cmdkit.IntOption(resolveDhtRecordCountOptionName, "dhtrc", "Number of records to request for DHT resolution."),
 		cmdkit.StringOption(resolveDhtTimeoutOptionName, "dhtt", "Max time to collect values during DHT resolution eg \"30s\". Pass 0 for no timeout."),
 	},
@@ -129,7 +129,7 @@ Resolve the value of an IPFS DAG path:
 			return cmds.EmitOnce(res, &ncmd.ResolvedPath{Path: path.Path(p.String())})
 		}
 
-		// else, ipfs path or ipns with recursive flag
+		// else, btfs path or ipns with recursive flag
 		p, err := coreiface.ParsePath(name)
 		if err != nil {
 			return err

@@ -20,7 +20,7 @@ var LogCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Interact with the daemon log output.",
 		ShortDescription: `
-'ipfs log' contains utility commands to affect or read the logging
+'btfs log' contains utility commands to affect or read the logging
 output of a running daemon.
 
 There are also two environmental variables that direct the logging 
@@ -84,7 +84,7 @@ var logLsCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "List the logging subsystems.",
 		ShortDescription: `
-'ipfs log ls' is a utility command used to list the logging
+'btfs log ls' is a utility command used to list the logging
 subsystems of a running daemon.
 `,
 	},

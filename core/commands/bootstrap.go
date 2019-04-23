@@ -24,7 +24,7 @@ var BootstrapCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Show or edit the list of bootstrap peers.",
 		ShortDescription: `
-Running 'ipfs bootstrap' with no arguments will run 'ipfs bootstrap list'.
+Running 'btfs bootstrap' with no arguments will run 'btfs bootstrap list'.
 ` + bootstrapSecurityWarning,
 	},
 
