@@ -19,7 +19,7 @@ import (
 const (
 	DefaultDownloadPath = "/tmp"
 
-	NewVersionFile     = "version-latest.txt"
+	LatestVersionFile  = "version-latest.txt"
 	CurrentVersionFile = "version.txt"
 	UpdateShell        = "update.sh"
 	LatestBtfsBinary   = "btfs-latest"
@@ -45,7 +45,7 @@ func update() {
 		return
 	}
 
-	newVersionPath := fmt.Sprint(DefaultDownloadPath, "/", NewVersionFile)
+	newVersionPath := fmt.Sprint(DefaultDownloadPath, "/", LatestVersionFile)
 	nowVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
 	nowBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, "/", CurrentBtfsBinary)
 	latestBtfsBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", LatestBtfsBinary)
@@ -65,7 +65,7 @@ func update() {
 		}
 
 		// Get binary version.
-		if !execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], NewVersionFile)) {
+		if !execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], LatestVersionFile)) {
 			log.Error("Download version.txt file failed.")
 			continue
 		}
@@ -106,6 +106,7 @@ func update() {
 		if execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], LatestBtfsBinary)) {
 			// Determine if it's a new version.
 			if execCommand(cmp, latestBtfsBinaryPath, nowBtfsBinaryPath) {
+				// TODO
 				log.Info("same")
 			} else {
 				log.Info("different")
