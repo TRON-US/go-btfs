@@ -18,8 +18,6 @@ import (
 )
 
 const (
-	DefaultDownloadPath = "/tmp"
-
 	LatestVersionFile  = "version-latest.txt"
 	CurrentVersionFile = "version.txt"
 	UpdateBinary       = "update"
@@ -33,6 +31,9 @@ var url = [1]string{
 
 // Auto update function.
 func update() {
+	// Get file download path.
+	defaultDownloadPath := os.TempDir()
+
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
 	if err != nil {
@@ -40,10 +41,10 @@ func update() {
 		return
 	}
 
-	latestVersionPath := fmt.Sprint(DefaultDownloadPath, "/", LatestVersionFile)
+	latestVersionPath := fmt.Sprint(defaultDownloadPath, "/", LatestVersionFile)
 	currentVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
-	latestBtfsBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", LatestBtfsBinary)
-	updateBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", UpdateBinary)
+	latestBtfsBinaryPath := fmt.Sprint(defaultDownloadPath, "/", LatestBtfsBinary)
+	updateBinaryPath := fmt.Sprint(defaultDownloadPath, "/", UpdateBinary)
 
 	for {
 		log.Info("BTFS node AutoUpdater begin.")
@@ -128,8 +129,14 @@ func update() {
 			continue
 		}
 
+		err = os.Chmod(updateBinaryPath, 775)
+		if err != nil {
+			log.Error("Chmod file 775 error, reasons: [%v]", err)
+			continue
+		}
+
 		// Start the btfs-updater binary process.
-		cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(DefaultDownloadPath, "/"))
+		cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
 		err = cmd.Start()
 		if err != nil {
 			log.Error(err)

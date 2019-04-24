@@ -11,7 +11,7 @@ import (
 func main() {
 	time.Sleep(time.Second * 5)
 	defaultProjectPath := *flag.String("project", "/usr/local/bin/", "default project path")
-	defaultDownloadPath := *flag.String("download", "/tmp/", "default download path")
+	defaultDownloadPath := *flag.String("download", fmt.Sprint(os.TempDir(), "/"), "default download path")
 
 	flag.Parse()
 
@@ -42,6 +42,11 @@ func main() {
 	}
 
 	err = os.Rename(latestBtfsBinaryPath, btfsBinaryPath)
+	if err != nil {
+		return
+	}
+
+	err = os.Chmod(btfsBinaryPath, 775)
 	if err != nil {
 		return
 	}
