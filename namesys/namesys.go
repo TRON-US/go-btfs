@@ -16,14 +16,14 @@ import (
 	mh "github.com/multiformats/go-multihash"
 )
 
-// mpns (a multi-protocol NameSystem) implements generic IPFS naming.
+// mpns (a multi-protocol NameSystem) implements generic BTFS naming.
 //
 // Uses several Resolvers:
-// (a) IPFS routing naming: SFS-like PKI names.
+// (a) BTFS routing naming: SFS-like PKI names.
 // (b) dns domains: resolves using links in DNS TXT records
 // (c) proquints: interprets string as the raw byte data.
 //
-// It can only publish to: (a) IPFS routing naming.
+// It can only publish to: (a) BTFS routing naming.
 //
 type mpns struct {
 	dnsResolver, proquintResolver, ipnsResolver resolver
@@ -32,7 +32,7 @@ type mpns struct {
 	cache *lru.Cache
 }
 
-// NewNameSystem will construct the IPFS naming system based on Routing
+// NewNameSystem will construct the BTFS naming system based on Routing
 func NewNameSystem(r routing.ValueStore, ds ds.Datastore, cachesize int) NameSystem {
 	var cache *lru.Cache
 	if cachesize > 0 {
@@ -52,12 +52,12 @@ const DefaultResolverCacheTTL = time.Minute
 
 // Resolve implements Resolver.
 func (ns *mpns) Resolve(ctx context.Context, name string, options ...opts.ResolveOpt) (path.Path, error) {
-	if strings.HasPrefix(name, "/ipfs/") {
+	if strings.HasPrefix(name, "/btfs/") {
 		return path.ParsePath(name)
 	}
 
 	if !strings.HasPrefix(name, "/") {
-		return path.ParsePath("/ipfs/" + name)
+		return path.ParsePath("/btfs/" + name)
 	}
 
 	return resolve(ctx, ns, name, opts.ProcessOpts(options))
@@ -65,14 +65,14 @@ func (ns *mpns) Resolve(ctx context.Context, name string, options ...opts.Resolv
 
 func (ns *mpns) ResolveAsync(ctx context.Context, name string, options ...opts.ResolveOpt) <-chan Result {
 	res := make(chan Result, 1)
-	if strings.HasPrefix(name, "/ipfs/") {
+	if strings.HasPrefix(name, "/btfs/") {
 		p, err := path.ParsePath(name)
 		res <- Result{p, err}
 		return res
 	}
 
 	if !strings.HasPrefix(name, "/") {
-		p, err := path.ParsePath("/ipfs/" + name)
+		p, err := path.ParsePath("/btfs/" + name)
 		res <- Result{p, err}
 		return res
 	}

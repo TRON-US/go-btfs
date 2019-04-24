@@ -20,12 +20,12 @@ import (
 
 var log = logging.Logger("namesys")
 
-// IpnsResolver implements NSResolver for the main IPFS SFS-like naming
+// IpnsResolver implements NSResolver for the main BTFS SFS-like naming
 type IpnsResolver struct {
 	routing routing.ValueStore
 }
 
-// NewIpnsResolver constructs a name resolver using the IPFS Routing system
+// NewIpnsResolver constructs a name resolver using the BTFS Routing system
 // to implement SFS-like naming on top.
 func NewIpnsResolver(route routing.ValueStore) *IpnsResolver {
 	if route == nil {
@@ -46,7 +46,7 @@ func (r *IpnsResolver) ResolveAsync(ctx context.Context, name string, options ..
 	return resolveAsync(ctx, r, name, opts.ProcessOpts(options))
 }
 
-// resolveOnce implements resolver. Uses the IPFS routing system to
+// resolveOnce implements resolver. Uses the BTFS routing system to
 // resolve SFS-like names.
 func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, options opts.ResolveOpts) <-chan onceResult {
 	out := make(chan onceResult, 1)
@@ -68,7 +68,7 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 		return out
 	}
 
-	// Name should be the hash of a public key retrievable from ipfs.
+	// Name should be the hash of a public key retrievable from btfs.
 	// We retrieve the public key here to make certain that it's in the peer
 	// store before calling GetValue() on the DHT - the DHT will call the
 	// ipns validator, which in turn will get the public key from the peer

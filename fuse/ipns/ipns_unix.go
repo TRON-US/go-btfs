@@ -1,7 +1,7 @@
 // +build !nofuse
 
 // package fuse/ipns implements a fuse filesystem that interfaces
-// with ipns, the naming system for ipfs.
+// with btns, the naming system for btfs.
 package ipns
 
 import (
@@ -74,7 +74,7 @@ type Root struct {
 	Ipfs *core.IpfsNode
 	Keys map[string]ci.PrivKey
 
-	// Used for symlinking into ipfs
+	// Used for symlinking into btfs
 	IpfsRoot  string
 	IpnsRoot  string
 	LocalDirs map[string]fs.Node
@@ -204,7 +204,7 @@ func (s *Root) Lookup(ctx context.Context, name string) (fs.Node, error) {
 	}
 
 	segments := resolved.Segments()
-	if segments[0] == "ipfs" {
+	if segments[0] == "btfs" {
 		p := path.Join(resolved.Segments()[1:])
 		return &Link{s.IpfsRoot + "/" + p}, nil
 	}
