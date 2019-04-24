@@ -185,7 +185,7 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 
 	if node.PeerHost != nil {
 		for _, a := range node.PeerHost.Addrs() {
-			s := a.String() + "/ipfs/" + info.ID
+			s := a.String() + "/btfs/" + info.ID
 			info.Addresses = append(info.Addresses, s)
 		}
 	}
