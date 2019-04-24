@@ -137,8 +137,9 @@ var swarmPeersCmd = &cmds.Command{
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, ci *connInfos) error {
+			pipfs := ma.ProtocolWithCode(ma.P_BTFS).Name
 			for _, info := range ci.Peers {
-				fmt.Fprintf(w, "%s/%s/%s", info.Addr, "btfs", info.Peer)
+				fmt.Fprintf(w, "%s/%s/%s", info.Addr, pipfs, info.Peer)
 				if info.Latency != "" {
 					fmt.Fprintf(w, " %s", info.Latency)
 				}
