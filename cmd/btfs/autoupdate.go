@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,8 +26,6 @@ const (
 	LatestBtfsBinary   = "btfs-latest"
 	CurrentBtfsBinary  = "btfs"
 
-	rm   = "rm"
-	wget = "wget"
 	cmp  = "cmp"
 	bash = "bash"
 )
@@ -61,12 +60,17 @@ func update() {
 
 		if pathExists(latestVersionPath) {
 			// Delete the btfs-latest file.
-			execCommand(rm, latestVersionPath)
+			err = os.Remove(latestVersionPath)
+			if err != nil {
+				log.Errorf("Remove version-latest.txt file error, reasons: [%v]", err)
+				continue
+			}
 		}
 
 		// Get binary version.
-		if !execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], LatestVersionFile)) {
-			log.Error("Download version.txt file failed.")
+		err := download(latestVersionPath, fmt.Sprint(url[randNum], LatestVersionFile))
+		if err != nil {
+			log.Error("Download version-latest.txt file failed.")
 			continue
 		}
 
@@ -99,38 +103,52 @@ func update() {
 		// Determine if the btfs-latest file exists.
 		if pathExists(latestBtfsBinaryPath) {
 			// Delete the btfs-latest file.
-			execCommand(rm, latestBtfsBinaryPath)
+			err = os.Remove(latestBtfsBinaryPath)
+			if err != nil {
+				log.Errorf("Remove btfs-latest file error, reasons: [%v]", err)
+				continue
+			}
 		}
 
 		// Get the btfs-latest file from btns.
-		if execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], LatestBtfsBinary)) {
-			// Determine if it's a latest version.
-			if execCommand(cmp, latestBtfsBinaryPath, currentBtfsBinaryPath) {
-				// TODO
-				log.Info("same")
-			} else {
-				log.Info("different")
-				if pathExists(updateShellPath) {
-					// Delete the btfs-latest file.
-					execCommand(rm, updateShellPath)
-				}
-
-				// Get the update.sh file from btns.
-				if !execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], UpdateShell)) {
-					log.Error("Download update.sh file failed.")
-					continue
-				}
-
-				// Start the btfs-updater binary process.
-				cmd := exec.Command(bash, updateShellPath, "-p", fmt.Sprint(defaultBtfsPath, "/"), "-d", fmt.Sprint(DefaultDownloadPath, "/"))
-				err := cmd.Start()
-				if err != nil {
-					log.Error(err)
-					continue
-				}
-				os.Exit(0)
-			}
+		err = download(latestBtfsBinaryPath, fmt.Sprint(url[randNum], LatestBtfsBinary))
+		if err != nil {
+			log.Error("Download btfs-latest file failed.")
+			continue
 		}
+
+		// Determine if it's a latest version.
+		if execCommand(cmp, latestBtfsBinaryPath, currentBtfsBinaryPath) {
+			// TODO
+			log.Info("same")
+		} else {
+			log.Info("different")
+			if pathExists(updateShellPath) {
+				// Delete the btfs-latest file.
+				err = os.Remove(updateShellPath)
+				if err != nil {
+					log.Errorf("Remove update.sh file error, reasons: [%v]", err)
+					continue
+				}
+			}
+
+			// Get the update.sh file from btns.
+			err = download(updateShellPath, fmt.Sprint(url[randNum], UpdateShell))
+			if err != nil {
+				log.Error("Download update.sh file failed.")
+				continue
+			}
+
+			// Start the btfs-updater binary process.
+			cmd := exec.Command(bash, updateShellPath, "-p", fmt.Sprint(defaultBtfsPath, "/"), "-d", fmt.Sprint(DefaultDownloadPath, "/"))
+			err := cmd.Start()
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			os.Exit(0)
+		}
+
 		log.Info("BTFS node AutoUpdater end.")
 	}
 }
@@ -232,4 +250,31 @@ func getCurrentPath() (string, error) {
 	}
 	exPath := filepath.Dir(ex)
 	return exPath, nil
+}
+
+// http get download function.
+func download(downloadPath, url string) error {
+	// http get.
+	res, err := http.Get(url)
+	if err != nil {
+		log.Errorf("Http get error, reasons: [%v]", err)
+		return err
+	}
+
+	// Create file on local.
+	f, err := os.Create(downloadPath)
+	if err != nil {
+		log.Errorf("Create file error, reasons: [%v]", err)
+		return err
+	}
+
+	// Copy file from response body to local file.
+	written, err := io.Copy(f, res.Body)
+	if err != nil {
+		log.Errorf("Copy file error, reasons: [%v]", err)
+		return err
+	}
+
+	log.Infof("Download success, file size :[%f]M", float32(written)/(1024*1024))
+	return nil
 }
