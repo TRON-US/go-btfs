@@ -45,9 +45,9 @@ func update() {
 		return
 	}
 
-	newVersionPath := fmt.Sprint(DefaultDownloadPath, "/", LatestVersionFile)
-	nowVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
-	nowBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, "/", CurrentBtfsBinary)
+	latestVersionPath := fmt.Sprint(DefaultDownloadPath, "/", LatestVersionFile)
+	currentVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
+	currentBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, "/", CurrentBtfsBinary)
 	latestBtfsBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", LatestBtfsBinary)
 	updateShellPath := fmt.Sprint(DefaultDownloadPath, "/", UpdateShell)
 
@@ -59,9 +59,9 @@ func update() {
 		rand.Seed(time.Now().UnixNano())
 		randNum := rand.Intn(len(url))
 
-		if pathExists(newVersionPath) {
+		if pathExists(latestVersionPath) {
 			// Delete the btfs-latest file.
-			execCommand(rm, newVersionPath)
+			execCommand(rm, latestVersionPath)
 		}
 
 		// Get binary version.
@@ -70,22 +70,22 @@ func update() {
 			continue
 		}
 
-		// Get new version string.
-		newVersion, err := getVersion(newVersionPath)
+		// Get latest version string.
+		latestVersion, err := getVersion(latestVersionPath)
 		if err != nil {
-			log.Error("Open new version file error.")
+			log.Error("Open latest version file error.")
 			continue
 		}
 
-		var nowVersion string
+		var currentVersion string
 		// Get current version string.
-		nowVersion, err = getVersion(nowVersionPath)
+		currentVersion, err = getVersion(currentVersionPath)
 		if err != nil {
-			nowVersion = "0.0.0"
+			currentVersion = "0.0.0"
 		}
 
 		// Compare version.
-		flg, err := versionCompare(newVersion, nowVersion)
+		flg, err := versionCompare(latestVersion, currentVersion)
 		if err != nil {
 			log.Errorf("Version compare error, reasons: [%v]", err)
 			continue
@@ -104,8 +104,8 @@ func update() {
 
 		// Get the btfs-latest file from btns.
 		if execCommand(wget, "-P", DefaultDownloadPath, fmt.Sprint(url[randNum], LatestBtfsBinary)) {
-			// Determine if it's a new version.
-			if execCommand(cmp, latestBtfsBinaryPath, nowBtfsBinaryPath) {
+			// Determine if it's a latest version.
+			if execCommand(cmp, latestBtfsBinaryPath, currentBtfsBinaryPath) {
 				// TODO
 				log.Info("same")
 			} else {
