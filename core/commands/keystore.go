@@ -16,15 +16,15 @@ var KeyCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Create and list IPNS name keypairs",
 		ShortDescription: `
-'ipfs key gen' generates a new keypair for usage with IPNS and 'ipfs name
+'btfs key gen' generates a new keypair for usage with BTNS and 'btfs name
 publish'.
 
-  > ipfs key gen --type=rsa --size=2048 mykey
-  > ipfs name publish --key=mykey QmSomeHash
+  > btfs key gen --type=rsa --size=2048 mykey
+  > btfs name publish --key=mykey QmSomeHash
 
-'ipfs key list' lists the available keys.
+'btfs key list' lists the available keys.
 
-  > ipfs key list
+  > btfs key list
   self
   mykey
 		`,

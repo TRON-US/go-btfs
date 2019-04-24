@@ -42,15 +42,15 @@ var migrationInstructions = `See https://github.com/ipfs/fs-repo-migrations/blob
 Sorry for the inconvenience. In the future, these will run automatically.`
 
 var programTooLowMessage = `Your programs version (%d) is lower than your repos (%d).
-Please update ipfs to a version that supports the existing repo, or run
+Please update btfs to a version that supports the existing repo, or run
 a migration in reverse.
 
 See https://github.com/ipfs/fs-repo-migrations/blob/master/run.md for details.`
 
 var (
 	ErrNoVersion     = errors.New("no version file found, please run 0-to-1 migration tool.\n" + migrationInstructions)
-	ErrOldRepo       = errors.New("ipfs repo found in old '~/.go-ipfs' location, please run migration tool.\n" + migrationInstructions)
-	ErrNeedMigration = errors.New("ipfs repo needs migration")
+	ErrOldRepo       = errors.New("btfs repo found in old '~/.go-btfs' location, please run migration tool.\n" + migrationInstructions)
+	ErrNeedMigration = errors.New("btfs repo needs migration")
 )
 
 type NoRepoError struct {
@@ -60,7 +60,7 @@ type NoRepoError struct {
 var _ error = NoRepoError{}
 
 func (err NoRepoError) Error() string {
-	return fmt.Sprintf("no IPFS repo found in %s.\nplease run: 'ipfs init'", err.Path)
+	return fmt.Sprintf("no BTFS repo found in %s.\nplease run: 'btfs init'", err.Path)
 }
 
 const apiFile = "api"
@@ -80,16 +80,16 @@ var (
 	// this can be removed. Right now, this makes ConfigCmd.Run
 	// function try to open the repo twice:
 	//
-	//     $ ipfs daemon &
-	//     $ ipfs config foo
+	//     $ btfs daemon &
+	//     $ btfs config foo
 	//
 	// The reason for the above is that in standalone mode without the
-	// daemon, `ipfs config` tries to save work by not building the
+	// daemon, `btfs config` tries to save work by not building the
 	// full IpfsNode, but accessing the Repo directly.
 	onlyOne repo.OnlyOne
 )
 
-// FSRepo represents an IPFS FileSystem Repo. It is safe for use by multiple
+// FSRepo represents an BTFS FileSystem Repo. It is safe for use by multiple
 // callers.
 type FSRepo struct {
 	// has Close been called already

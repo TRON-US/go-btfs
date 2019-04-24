@@ -13,7 +13,7 @@ import (
 	resolver "github.com/ipfs/go-path/resolver"
 )
 
-// ErrNoNamesys is an explicit error for when an IPFS node doesn't
+// ErrNoNamesys is an explicit error for when an BTFS node doesn't
 // (yet) have a name system
 var ErrNoNamesys = errors.New(
 	"core/resolve: no Namesys on IpfsNode - can't resolve btns entry")
@@ -62,7 +62,7 @@ func ResolveIPNS(ctx context.Context, nsys namesys.NameSystem, p path.Path) (pat
 }
 
 // Resolve resolves the given path by parsing out protocol-specific
-// entries (e.g. /btns/<node-key>) and then going through the /ipfs/
+// entries (e.g. /btns/<node-key>) and then going through the /btfs/
 // entries and returning the final node.
 func Resolve(ctx context.Context, nsys namesys.NameSystem, r *resolver.Resolver, p path.Path) (ipld.Node, error) {
 	p, err := ResolveIPNS(ctx, nsys, p)
@@ -70,6 +70,6 @@ func Resolve(ctx context.Context, nsys namesys.NameSystem, r *resolver.Resolver,
 		return nil, err
 	}
 
-	// ok, we have an IPFS path now (or what we'll treat as one)
+	// ok, we have an BTFS path now (or what we'll treat as one)
 	return r.ResolvePath(ctx, p)
 }

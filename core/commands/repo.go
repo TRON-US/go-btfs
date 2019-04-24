@@ -30,9 +30,9 @@ type RepoVersion struct {
 
 var RepoCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Manipulate the IPFS repo.",
+		Tagline: "Manipulate the BTFS repo.",
 		ShortDescription: `
-'ipfs repo' is a plumbing command used to manipulate the repo.
+'btfs repo' is a plumbing command used to manipulate the repo.
 `,
 	},
 
@@ -60,7 +60,7 @@ var repoGcCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Perform a garbage collection sweep on the repo.",
 		ShortDescription: `
-'ipfs repo gc' is a plumbing command that will sweep the local
+'btfs repo gc' is a plumbing command that will sweep the local
 set of stored objects and remove ones that are not pinned in
 order to reclaim hard disk space.
 `,
@@ -140,7 +140,7 @@ var repoStatCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Get stats for the currently used repo.",
 		ShortDescription: `
-'ipfs repo stat' provides information about the local set of
+'btfs repo stat' provides information about the local set of
 stored objects. It outputs:
 
 RepoSize        int Size in bytes that the repo is currently taking.
@@ -217,8 +217,8 @@ var repoFsckCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Remove repo lockfiles.",
 		ShortDescription: `
-'ipfs repo fsck' is a plumbing command that will remove repo and level db
-lockfiles, as well as the api file. This command can only run when no ipfs
+'btfs repo fsck' is a plumbing command that will remove repo and level db
+lockfiles, as well as the api file. This command can only run when no btfs
 daemons are running.
 `,
 	},
@@ -380,7 +380,7 @@ var repoVersionCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Show the repo version.",
 		ShortDescription: `
-'ipfs repo version' returns the current repo version.
+'btfs repo version' returns the current repo version.
 `,
 	},
 
@@ -400,7 +400,7 @@ var repoVersionCmd = &cmds.Command{
 			if quiet {
 				fmt.Fprintf(w, "fs-repo@%s\n", out.Version)
 			} else {
-				fmt.Fprintf(w, "ipfs repo version fs-repo@%s\n", out.Version)
+				fmt.Fprintf(w, "btfs repo version fs-repo@%s\n", out.Version)
 			}
 			return nil
 		}),

@@ -39,25 +39,25 @@ const (
 
 var ConfigCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Get and set ipfs config values.",
+		Tagline: "Get and set btfs config values.",
 		ShortDescription: `
-'ipfs config' controls configuration variables. It works like 'git config'.
-The configuration values are stored in a config file inside your ipfs
+'btfs config' controls configuration variables. It works like 'git config'.
+The configuration values are stored in a config file inside your btfs
 repository.`,
 		LongDescription: `
-'ipfs config' controls configuration variables. It works
+'btfs config' controls configuration variables. It works
 much like 'git config'. The configuration values are stored in a config
-file inside your IPFS repository.
+file inside your BTFS repository.
 
 Examples:
 
 Get the value of the 'Datastore.Path' key:
 
-  $ ipfs config Datastore.Path
+  $ btfs config Datastore.Path
 
 Set the value of the 'Datastore.Path' key:
 
-  $ ipfs config Datastore.Path ~/.ipfs/datastore
+  $ btfs config Datastore.Path ~/.btfs/datastore
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
@@ -236,7 +236,7 @@ var configEditCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Open the config file for editing in $EDITOR.",
 		ShortDescription: `
-To use 'ipfs config edit', you must have the $EDITOR environment
+To use 'btfs config edit', you must have the $EDITOR environment
 variable set to your preferred text editor.
 `,
 	},

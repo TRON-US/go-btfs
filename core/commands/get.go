@@ -33,11 +33,11 @@ const (
 
 var GetCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Download IPFS objects.",
+		Tagline: "Download BTFS objects.",
 		ShortDescription: `
 Stores to disk the data contained an BTFS or BTNS object(s) at the given path.
 
-By default, the output will be stored at './<ipfs-path>', but an alternate
+By default, the output will be stored at './<btfs-path>', but an alternate
 path can be specified with '--output=<path>' or '-o=<path>'.
 
 To output a TAR archive instead of unpacked files, use '--archive' or '-a'.
@@ -48,7 +48,7 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 	},
 
 	Arguments: []cmdkit.Argument{
-		cmdkit.StringArg("ipfs-path", true, false, "The path to the IPFS object(s) to be outputted.").EnableStdin(),
+		cmdkit.StringArg("ipfs-path", true, false, "The path to the BTFS object(s) to be outputted.").EnableStdin(),
 	},
 	Options: []cmdkit.Option{
 		cmdkit.StringOption(outputOptionName, "o", "The path where the output should be stored."),
