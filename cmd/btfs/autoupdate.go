@@ -22,12 +22,8 @@ const (
 
 	LatestVersionFile  = "version-latest.txt"
 	CurrentVersionFile = "version.txt"
-	UpdateShell        = "update.sh"
+	UpdateBinary       = "update"
 	LatestBtfsBinary   = "btfs-latest"
-	CurrentBtfsBinary  = "btfs"
-
-	cmp  = "cmp"
-	bash = "bash"
 )
 
 // You can add multiple addresses inside this array.
@@ -46,9 +42,8 @@ func update() {
 
 	latestVersionPath := fmt.Sprint(DefaultDownloadPath, "/", LatestVersionFile)
 	currentVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
-	currentBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, "/", CurrentBtfsBinary)
 	latestBtfsBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", LatestBtfsBinary)
-	updateShellPath := fmt.Sprint(DefaultDownloadPath, "/", UpdateShell)
+	updateBinaryPath := fmt.Sprint(DefaultDownloadPath, "/", UpdateBinary)
 
 	for {
 		log.Info("BTFS node AutoUpdater begin.")
@@ -117,52 +112,31 @@ func update() {
 			continue
 		}
 
-		// Determine if it's a latest version.
-		if execCommand(cmp, latestBtfsBinaryPath, currentBtfsBinaryPath) {
-			// TODO
-			log.Info("same")
-		} else {
-			log.Info("different")
-			if pathExists(updateShellPath) {
-				// Delete the btfs-latest file.
-				err = os.Remove(updateShellPath)
-				if err != nil {
-					log.Errorf("Remove update.sh file error, reasons: [%v]", err)
-					continue
-				}
-			}
-
-			// Get the update.sh file from btns.
-			err = download(updateShellPath, fmt.Sprint(url[randNum], UpdateShell))
+		if pathExists(updateBinaryPath) {
+			// Delete the btfs-latest file.
+			err = os.Remove(updateBinaryPath)
 			if err != nil {
-				log.Error("Download update.sh file failed.")
+				log.Errorf("Remove update.sh file error, reasons: [%v]", err)
 				continue
 			}
-
-			// Start the btfs-updater binary process.
-			cmd := exec.Command(bash, updateShellPath, "-p", fmt.Sprint(defaultBtfsPath, "/"), "-d", fmt.Sprint(DefaultDownloadPath, "/"))
-			err := cmd.Start()
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			os.Exit(0)
 		}
 
-		log.Info("BTFS node AutoUpdater end.")
-	}
-}
+		// Get the update.sh file from btns.
+		err = download(updateBinaryPath, fmt.Sprint(url[randNum], UpdateBinary))
+		if err != nil {
+			log.Error("Download update.sh file failed.")
+			continue
+		}
 
-// Execute external methods.
-func execCommand(name string, arg ...string) bool {
-	cmd := exec.Command(name, arg...)
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Errorf("Function %s exec err, reasons: [%v]", name, err)
-		return false
+		// Start the btfs-updater binary process.
+		cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(DefaultDownloadPath, "/"))
+		err = cmd.Start()
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		os.Exit(0)
 	}
-
-	return true
 }
 
 // Determine if the path file exists.
