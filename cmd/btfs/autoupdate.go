@@ -113,8 +113,8 @@ func update() {
 			continue
 		}
 
+		// Delete the btfs-latest file if exists.
 		if pathExists(updateBinaryPath) {
-			// Delete the btfs-latest file.
 			err = os.Remove(updateBinaryPath)
 			if err != nil {
 				log.Errorf("Remove update.sh file error, reasons: [%v]", err)
@@ -129,14 +129,15 @@ func update() {
 			continue
 		}
 
-		err = os.Chmod(updateBinaryPath, 775)
+		// Add executable permissions to update binary.
+		err = os.Chmod(updateBinaryPath, 0775)
 		if err != nil {
 			log.Error("Chmod file 775 error, reasons: [%v]", err)
 			continue
 		}
 
 		// Start the btfs-updater binary process.
-		cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
+		cmd := exec.Command("sudo", updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
 		err = cmd.Start()
 		if err != nil {
 			log.Error(err)
