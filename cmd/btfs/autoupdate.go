@@ -53,6 +53,7 @@ func update() {
 
 		time.Sleep(time.Second * 20)
 
+		// Chose random host from the list of btns.
 		rand.Seed(time.Now().UnixNano())
 		randNum := rand.Intn(len(url))
 
