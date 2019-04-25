@@ -3,6 +3,8 @@ package main
 
 import (
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math/rand"
@@ -71,7 +73,7 @@ func update() {
 		}
 
 		// Get latest version string.
-		latestVersion, err := getVersion(latestVersionPath)
+		latestVersion, latestVersionMd5Hash, err := getFileMessage(latestVersionPath)
 		if err != nil {
 			log.Error("Open latest version file error.")
 			continue
@@ -79,7 +81,7 @@ func update() {
 
 		var currentVersion string
 		// Get current version string.
-		currentVersion, err = getVersion(currentVersionPath)
+		currentVersion, _, err = getFileMessage(currentVersionPath)
 		if err != nil {
 			currentVersion = "0.0.0"
 		}
@@ -110,6 +112,18 @@ func update() {
 		err = download(latestBtfsBinaryPath, fmt.Sprint(url[randNum], LatestBtfsBinary))
 		if err != nil {
 			log.Error("Download btfs-latest file failed.")
+			continue
+		}
+
+		// Md5 encode file.
+		latestMd5Hash, err := md5Encode(latestBtfsBinaryPath)
+		if err != nil {
+			log.Error("Md5 encode file failed.")
+			continue
+		}
+
+		if latestMd5Hash != latestVersionMd5Hash {
+			log.Error("Md5 verify failed.")
 			continue
 		}
 
@@ -160,12 +174,12 @@ func pathExists(path string) bool {
 }
 
 // Get version from file, e.g.(1.0.0).
-func getVersion(file string) (string, error) {
+func getFileMessage(file string) (string, string, error) {
 	// Read file.
 	versionFile, err := os.Open(file)
 	if err != nil {
 		log.Errorf("Open file failed, reasons: [%v]", err)
-		return "", err
+		return "", "", err
 	}
 	defer func() {
 		_ = versionFile.Close()
@@ -178,10 +192,17 @@ func getVersion(file string) (string, error) {
 	version, _, c := buffer.ReadLine()
 	if c == io.EOF {
 		log.Error("Version line is nil")
-		return "", errors.New("version line is nil")
+		return "", "", errors.New("version line is nil")
 	}
 
-	return string(version), nil
+	// Read line.
+	md5Hash, _, c := buffer.ReadLine()
+	if c == io.EOF {
+		log.Error("Md5 line is nil")
+		return "", "", errors.New("md5 line is nil")
+	}
+
+	return string(version), string(md5Hash), nil
 }
 
 // Compare version.
@@ -259,4 +280,33 @@ func download(downloadPath, url string) error {
 
 	log.Infof("Download success, file size :[%f]M", float32(written)/(1024*1024))
 	return nil
+}
+
+// Md5 encode file by file path.
+func md5Encode(name string) (string, error) {
+	// Open file.
+	file, err := os.Open(name)
+	if err != nil {
+		log.Errorf("Open file failed, reasons: [%v]", err)
+		return "", err
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	// New reader of file.
+	buffer := bufio.NewReader(file)
+
+	// New md5.
+	md5Hash := md5.New()
+
+	// Copy file stream to md5 hash.
+	_, err = io.Copy(md5Hash, buffer)
+	if err != nil {
+		return "", err
+	}
+
+	// Get hex string md5 of file.
+	MD5Str := hex.EncodeToString(md5Hash.Sum(nil))
+	return MD5Str, nil
 }
