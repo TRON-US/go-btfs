@@ -5,21 +5,45 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 )
 
 func main() {
 	time.Sleep(time.Second * 5)
-	defaultProjectPath := *flag.String("project", "/usr/local/bin/", "default project path")
-	defaultDownloadPath := *flag.String("download", fmt.Sprint(os.TempDir(), "/"), "default download path")
+	defaultProjectPath := flag.String("project", "", "default project path")
+	defaultDownloadPath := flag.String("download", "", "default download path")
 
 	flag.Parse()
 
-	currentVersionPath := fmt.Sprint(defaultProjectPath, "version.txt")
-	latestVersionPath := fmt.Sprint(defaultDownloadPath, "version-latest.txt")
-	btfsBackupPath := fmt.Sprint(defaultDownloadPath, "btfs.bk")
-	btfsBinaryPath := fmt.Sprint(defaultProjectPath, "btfs")
-	latestBtfsBinaryPath := fmt.Sprint(defaultDownloadPath, "btfs-latest")
+	if *defaultProjectPath == "" || *defaultDownloadPath == "" {
+		fmt.Println("Request param is nil.")
+		return
+	}
+
+	var currentVersionPath string
+	var latestVersionPath string
+	var btfsBackupPath string
+	var btfsBinaryPath string
+	var latestBtfsBinaryPath string
+
+	// Select binary files based on operating system.
+	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
+		currentVersionPath = fmt.Sprint(*defaultProjectPath, "version.txt")
+		latestVersionPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("version-%s-%s.txt", runtime.GOOS, runtime.GOARCH))
+		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.bk")
+		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs")
+		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s", runtime.GOOS, runtime.GOARCH))
+	} else if runtime.GOOS == "windows" && runtime.GOARCH == "386" {
+		currentVersionPath = fmt.Sprint(*defaultProjectPath, "version.txt")
+		latestVersionPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("version-%s-%s.txt", runtime.GOOS, runtime.GOARCH))
+		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.exe.bk")
+		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs.exe")
+		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s.exe", runtime.GOOS, runtime.GOARCH))
+	} else {
+		fmt.Printf("Operating system [%s], arch [%s] does not support automatic updates\n", runtime.GOOS, runtime.GOARCH)
+		return
+	}
 
 	var err error
 
@@ -51,23 +75,32 @@ func main() {
 	// Backup btfs binary file.
 	err = os.Rename(btfsBinaryPath, btfsBackupPath)
 	if err != nil {
+		fmt.Printf("Move file error, reasons: [%v]\n", err)
 		return
 	}
 
 	// Move latest btfs binary file to current btfs binary file.
 	err = os.Rename(latestBtfsBinaryPath, btfsBinaryPath)
 	if err != nil {
+		fmt.Printf("Move file error, reasons: [%v]\n", err)
 		return
 	}
 
 	// Add executable permissions to btfs binary.
 	err = os.Chmod(btfsBinaryPath, 0775)
 	if err != nil {
+		fmt.Printf("Chmod file error, reasons: [%v]\n", err)
 		return
 	}
 
-	cmd := exec.Command("sudo", btfsBinaryPath, "daemon")
-	err = cmd.Start()
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command(btfsBinaryPath, "daemon")
+		err = cmd.Start()
+	} else {
+		fmt.Println(btfsBinaryPath)
+		cmd := exec.Command("sudo", btfsBinaryPath, "daemon")
+		err = cmd.Start()
+	}
 }
 
 // Determine if the path file exists.

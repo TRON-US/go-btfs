@@ -1,4 +1,4 @@
-// This auto update project just for ubuntu operating system.
+// This auto update project linux, mac OS or windows operating system.
 package main
 
 import (
@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -20,10 +21,10 @@ import (
 )
 
 const (
-	LatestVersionFile  = "version-latest.txt"
+	LatestVersionFile  = "version-%s-%s.txt"
 	CurrentVersionFile = "version.txt"
-	UpdateBinary       = "update"
-	LatestBtfsBinary   = "btfs-latest"
+	UpdateBinary       = "update-%s-%s"
+	LatestBtfsBinary   = "btfs-%s-%s"
 )
 
 // You can add multiple addresses inside this array.
@@ -33,8 +34,11 @@ var url = [1]string{
 
 // Auto update function.
 func update() {
-	// Get file download path.
-	defaultDownloadPath := os.TempDir()
+	// Get download path.
+	var defaultDownloadPath = os.TempDir()
+	if defaultDownloadPath[len(defaultDownloadPath)-1:] == "/" {
+		defaultDownloadPath = defaultDownloadPath[:len(defaultDownloadPath)-1]
+	}
 
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
@@ -43,10 +47,28 @@ func update() {
 		return
 	}
 
-	latestVersionPath := fmt.Sprint(defaultDownloadPath, "/", LatestVersionFile)
+	var latestVersionFile string
+	var updateBinary string
+	var latestBtfsBinary string
+
+	// Select binary files based on operating system.
+	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
+		latestVersionFile = fmt.Sprintf(LatestVersionFile, runtime.GOOS, runtime.GOARCH)
+		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH)
+		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH)
+	} else if runtime.GOOS == "windows" && runtime.GOARCH == "386" {
+		latestVersionFile = fmt.Sprintf(LatestVersionFile, runtime.GOOS, runtime.GOARCH)
+		updateBinary = fmt.Sprint(fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH), ".exe")
+		latestBtfsBinary = fmt.Sprint(fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH), ".exe")
+	} else {
+		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
+		return
+	}
+
+	latestVersionPath := fmt.Sprint(defaultDownloadPath, "/", latestVersionFile)
 	currentVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
-	latestBtfsBinaryPath := fmt.Sprint(defaultDownloadPath, "/", LatestBtfsBinary)
-	updateBinaryPath := fmt.Sprint(defaultDownloadPath, "/", UpdateBinary)
+	latestBtfsBinaryPath := fmt.Sprint(defaultDownloadPath, "/", latestBtfsBinary)
+	updateBinaryPath := fmt.Sprint(defaultDownloadPath, "/", updateBinary)
 
 	for {
 		log.Info("BTFS node AutoUpdater begin.")
@@ -58,25 +80,25 @@ func update() {
 		randNum := rand.Intn(len(url))
 
 		if pathExists(latestVersionPath) {
-			// Delete the btfs-latest file.
+			// Delete the latest btfs version file.
 			err = os.Remove(latestVersionPath)
 			if err != nil {
-				log.Errorf("Remove version-latest.txt file error, reasons: [%v]", err)
+				log.Errorf("Remove latest btfs version file error, reasons: [%v]", err)
 				continue
 			}
 		}
 
-		// Get binary version.
-		err := download(latestVersionPath, fmt.Sprint(url[randNum], LatestVersionFile))
+		// Get latest btfs version file.
+		err := download(latestVersionPath, fmt.Sprint(url[randNum], latestVersionFile))
 		if err != nil {
-			log.Error("Download version-latest.txt file failed.")
+			log.Errorf("Download latest btfs version file error, reasons: [%v]", err)
 			continue
 		}
 
-		// Get latest version string.
+		// Get latest btfs version string.
 		latestVersion, latestVersionMd5Hash, err := getFileMessage(latestVersionPath)
 		if err != nil {
-			log.Error("Open latest version file error.")
+			log.Error("Open latest btfs version file error.")
 			continue
 		}
 
@@ -99,20 +121,20 @@ func update() {
 			continue
 		}
 
-		// Determine if the btfs-latest file exists.
+		// Determine if the btfs latest binary file exists.
 		if pathExists(latestBtfsBinaryPath) {
-			// Delete the btfs-latest file.
+			// Delete the btfs latest binary file.
 			err = os.Remove(latestBtfsBinaryPath)
 			if err != nil {
-				log.Errorf("Remove btfs-latest file error, reasons: [%v]", err)
+				log.Errorf("Remove btfs latest binary file error, reasons: [%v]", err)
 				continue
 			}
 		}
 
-		// Get the btfs-latest file from btns.
-		err = download(latestBtfsBinaryPath, fmt.Sprint(url[randNum], LatestBtfsBinary))
+		// Get the btfs latest binary file from btns.
+		err = download(latestBtfsBinaryPath, fmt.Sprint(url[randNum], latestBtfsBinary))
 		if err != nil {
-			log.Error("Download btfs-latest file failed.")
+			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
 			continue
 		}
 
@@ -128,35 +150,45 @@ func update() {
 			continue
 		}
 
-		// Delete the btfs-latest file if exists.
+		// Delete the update binary file if exists.
 		if pathExists(updateBinaryPath) {
 			err = os.Remove(updateBinaryPath)
 			if err != nil {
-				log.Errorf("Remove update.sh file error, reasons: [%v]", err)
+				log.Errorf("Remove update binary file error, reasons: [%v]", err)
 				continue
 			}
 		}
 
-		// Get the update.sh file from btns.
-		err = download(updateBinaryPath, fmt.Sprint(url[randNum], UpdateBinary))
+		// Get the update binary file from btns.
+		err = download(updateBinaryPath, fmt.Sprint(url[randNum], updateBinary))
 		if err != nil {
-			log.Error("Download update.sh file failed.")
+			log.Error("Download update binary file failed.")
 			continue
 		}
 
-		// Add executable permissions to update binary.
+		// Add executable permissions to update binary file.
 		err = os.Chmod(updateBinaryPath, 0775)
 		if err != nil {
 			log.Error("Chmod file 775 error, reasons: [%v]", err)
 			continue
 		}
 
-		// Start the btfs-updater binary process.
-		cmd := exec.Command("sudo", updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
-		err = cmd.Start()
-		if err != nil {
-			log.Error(err)
-			continue
+		if runtime.GOOS == "windows" {
+			// Start the btfs-updater binary process.
+			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
+			err = cmd.Start()
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+		} else {
+			// Start the btfs-updater binary process.
+			cmd := exec.Command("sudo", updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
+			err = cmd.Start()
+			if err != nil {
+				log.Error(err)
+				continue
+			}
 		}
 		os.Exit(0)
 	}
@@ -307,7 +339,5 @@ func md5Encode(name string) (string, error) {
 		return "", err
 	}
 
-	// Get hex string md5 of file.
-	MD5Str := hex.EncodeToString(md5Hash.Sum(nil))
-	return MD5Str, nil
+	return hex.EncodeToString(md5Hash.Sum(nil)), nil
 }
