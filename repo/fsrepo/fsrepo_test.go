@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipfs/go-ipfs/thirdparty/assert"
+	"github.com/TRON-US/go-btfs/thirdparty/assert"
 
 	datastore "github.com/ipfs/go-datastore"
 	config "github.com/ipfs/go-ipfs-config"

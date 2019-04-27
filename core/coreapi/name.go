@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipfs/go-ipfs/keystore"
-	"github.com/ipfs/go-ipfs/namesys"
+	"github.com/TRON-US/go-btfs/keystore"
+	"github.com/TRON-US/go-btfs/namesys"
 
 	ipath "github.com/ipfs/go-path"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"

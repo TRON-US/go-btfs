@@ -3,11 +3,11 @@ package commands
 import (
 	"errors"
 
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	dag "github.com/ipfs/go-ipfs/core/commands/dag"
-	name "github.com/ipfs/go-ipfs/core/commands/name"
-	ocmd "github.com/ipfs/go-ipfs/core/commands/object"
-	unixfs "github.com/ipfs/go-ipfs/core/commands/unixfs"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	dag "github.com/TRON-US/go-btfs/core/commands/dag"
+	name "github.com/TRON-US/go-btfs/core/commands/name"
+	ocmd "github.com/TRON-US/go-btfs/core/commands/object"
+	unixfs "github.com/TRON-US/go-btfs/core/commands/unixfs"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"

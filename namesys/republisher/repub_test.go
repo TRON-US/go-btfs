@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core"
-	mock "github.com/ipfs/go-ipfs/core/mock"
-	namesys "github.com/ipfs/go-ipfs/namesys"
-	. "github.com/ipfs/go-ipfs/namesys/republisher"
+	"github.com/TRON-US/go-btfs/core"
+	mock "github.com/TRON-US/go-btfs/core/mock"
+	namesys "github.com/TRON-US/go-btfs/namesys"
+	. "github.com/TRON-US/go-btfs/namesys/republisher"
 	path "github.com/ipfs/go-path"
 
 	goprocess "github.com/jbenet/goprocess"

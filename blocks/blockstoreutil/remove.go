@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ipfs/go-ipfs/pin"
+	"github.com/TRON-US/go-btfs/pin"
 
 	cid "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"

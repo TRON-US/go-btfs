@@ -3,7 +3,7 @@ package reprovide
 import (
 	"context"
 
-	pin "github.com/ipfs/go-ipfs/pin"
+	pin "github.com/TRON-US/go-btfs/pin"
 
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"

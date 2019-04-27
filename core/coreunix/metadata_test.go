@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	bserv "github.com/ipfs/go-blockservice"
-	core "github.com/ipfs/go-ipfs/core"
+	core "github.com/TRON-US/go-btfs/core"
 	merkledag "github.com/ipfs/go-merkledag"
 	ft "github.com/ipfs/go-unixfs"
 	importer "github.com/ipfs/go-unixfs/importer"

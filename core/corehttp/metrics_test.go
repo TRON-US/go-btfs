@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	core "github.com/ipfs/go-ipfs/core"
+	core "github.com/TRON-US/go-btfs/core"
 
 	inet "github.com/libp2p/go-libp2p-net"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"

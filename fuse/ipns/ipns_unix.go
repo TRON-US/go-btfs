@@ -11,8 +11,8 @@ import (
 	"io"
 	"os"
 
-	core "github.com/ipfs/go-ipfs/core"
-	namesys "github.com/ipfs/go-ipfs/namesys"
+	core "github.com/TRON-US/go-btfs/core"
+	namesys "github.com/TRON-US/go-btfs/namesys"
 	dag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"
 	ft "github.com/ipfs/go-unixfs"

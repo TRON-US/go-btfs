@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	namesys "github.com/ipfs/go-ipfs/namesys"
+	namesys "github.com/TRON-US/go-btfs/namesys"
 
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
