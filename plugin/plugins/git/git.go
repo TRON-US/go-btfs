@@ -6,8 +6,8 @@ import (
 	"io"
 	"math"
 
-	"github.com/ipfs/go-ipfs/core/coredag"
-	"github.com/ipfs/go-ipfs/plugin"
+	"github.com/TRON-US/go-btfs/core/coredag"
+	"github.com/TRON-US/go-btfs/plugin"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipld-format"

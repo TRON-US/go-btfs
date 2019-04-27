@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	mock "github.com/ipfs/go-ipfs/core/mock"
-	"github.com/ipfs/go-ipfs/thirdparty/unit"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/coreapi"
+	mock "github.com/TRON-US/go-btfs/core/mock"
+	"github.com/TRON-US/go-btfs/thirdparty/unit"
 
 	files "github.com/ipfs/go-ipfs-files"
 	logging "github.com/ipfs/go-log"

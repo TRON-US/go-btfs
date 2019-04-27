@@ -5,7 +5,7 @@ package node
 import (
 	"errors"
 
-	core "github.com/ipfs/go-ipfs/core"
+	core "github.com/TRON-US/go-btfs/core"
 )
 
 func Mount(node *core.IpfsNode, fsdir, nsdir string) error {

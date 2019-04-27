@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	pb "github.com/ipfs/go-ipfs/filestore/pb"
+	pb "github.com/TRON-US/go-btfs/filestore/pb"
 
 	cid "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"

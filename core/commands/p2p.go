@@ -10,9 +10,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	core "github.com/ipfs/go-ipfs/core"
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	p2p "github.com/ipfs/go-ipfs/p2p"
+	core "github.com/TRON-US/go-btfs/core"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	p2p "github.com/TRON-US/go-btfs/p2p"
 
 	ipfsaddr "github.com/ipfs/go-ipfs-addr"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"

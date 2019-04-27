@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/dagutils"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/dagutils"
 
 	"github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"

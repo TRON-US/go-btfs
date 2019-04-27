@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	namesys "github.com/ipfs/go-ipfs/namesys"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	namesys "github.com/TRON-US/go-btfs/namesys"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"

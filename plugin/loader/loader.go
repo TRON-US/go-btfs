@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	coredag "github.com/ipfs/go-ipfs/core/coredag"
-	plugin "github.com/ipfs/go-ipfs/plugin"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	coredag "github.com/TRON-US/go-btfs/core/coredag"
+	plugin "github.com/TRON-US/go-btfs/plugin"
+	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"

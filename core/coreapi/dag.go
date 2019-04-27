@@ -3,7 +3,7 @@ package coreapi
 import (
 	"context"
 
-	"github.com/ipfs/go-ipfs/pin"
+	"github.com/TRON-US/go-btfs/pin"
 
 	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
