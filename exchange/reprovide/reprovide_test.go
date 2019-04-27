@@ -12,7 +12,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	testutil "github.com/libp2p/go-testutil"
 
-	. "github.com/ipfs/go-ipfs/exchange/reprovide"
+	. "github.com/TRON-US/go-btfs/exchange/reprovide"
 )
 
 func TestReprovide(t *testing.T) {

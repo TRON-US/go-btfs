@@ -1,4 +1,4 @@
-module github.com/ipfs/go-ipfs
+module github.com/TRON-US/go-btfs
 
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
@@ -9,7 +9,6 @@ require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
-	github.com/fatih/color v1.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gogo/protobuf v1.2.1
 	github.com/hashicorp/go-multierror v1.0.0
@@ -28,6 +27,7 @@ require (
 	github.com/ipfs/go-ds-leveldb v0.0.2
 	github.com/ipfs/go-ds-measure v0.0.1
 	github.com/ipfs/go-fs-lock v0.0.1
+	github.com/ipfs/go-ipfs v0.4.20
 	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-blocksutil v0.0.1
@@ -90,8 +90,6 @@ require (
 	github.com/libp2p/go-maddr-filter v0.0.1
 	github.com/libp2p/go-stream-muxer v0.0.1
 	github.com/libp2p/go-testutil v0.0.1
-	github.com/mattn/go-runewidth v0.0.4 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mr-tron/base58 v1.1.0
 	github.com/multiformats/go-multiaddr v0.0.1
@@ -110,10 +108,7 @@ require (
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c
 	golang.org/x/sys v0.0.0-20190302025703-b6889370fb10
-	golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e // indirect
-	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gotest.tools/gotestsum v0.3.3
 )
 

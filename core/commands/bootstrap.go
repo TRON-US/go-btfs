@@ -5,9 +5,9 @@ import (
 	"io"
 	"sort"
 
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	repo "github.com/ipfs/go-ipfs/repo"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	repo "github.com/TRON-US/go-btfs/repo"
+	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"

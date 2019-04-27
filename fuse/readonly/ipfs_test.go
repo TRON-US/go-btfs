@@ -18,9 +18,9 @@ import (
 
 	"bazil.org/fuse"
 
-	core "github.com/ipfs/go-ipfs/core"
-	coreapi "github.com/ipfs/go-ipfs/core/coreapi"
-	coremock "github.com/ipfs/go-ipfs/core/mock"
+	core "github.com/TRON-US/go-btfs/core"
+	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
+	coremock "github.com/TRON-US/go-btfs/core/mock"
 
 	fstest "bazil.org/fuse/fs/fstestutil"
 	chunker "github.com/ipfs/go-ipfs-chunker"

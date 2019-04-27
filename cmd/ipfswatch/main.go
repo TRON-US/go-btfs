@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"syscall"
 
-	commands "github.com/ipfs/go-ipfs/commands"
-	core "github.com/ipfs/go-ipfs/core"
-	coreapi "github.com/ipfs/go-ipfs/core/coreapi"
-	corehttp "github.com/ipfs/go-ipfs/core/corehttp"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	commands "github.com/TRON-US/go-btfs/commands"
+	core "github.com/TRON-US/go-btfs/core"
+	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
+	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
+	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	fsnotify "github.com/fsnotify/fsnotify"
 	config "github.com/ipfs/go-ipfs-config"

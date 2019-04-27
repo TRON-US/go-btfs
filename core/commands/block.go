@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	util "github.com/ipfs/go-ipfs/blocks/blockstoreutil"
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"io"
 
-	filestore "github.com/ipfs/go-ipfs/filestore"
-	keystore "github.com/ipfs/go-ipfs/keystore"
+	filestore "github.com/TRON-US/go-btfs/filestore"
+	keystore "github.com/TRON-US/go-btfs/keystore"
 
 	ds "github.com/ipfs/go-datastore"
 	config "github.com/ipfs/go-ipfs-config"

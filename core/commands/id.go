@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
-	core "github.com/ipfs/go-ipfs/core"
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	core "github.com/TRON-US/go-btfs/core"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"

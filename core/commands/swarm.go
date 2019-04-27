@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	commands "github.com/ipfs/go-ipfs/commands"
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	repo "github.com/ipfs/go-ipfs/repo"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	commands "github.com/TRON-US/go-btfs/commands"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	repo "github.com/TRON-US/go-btfs/repo"
+	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"

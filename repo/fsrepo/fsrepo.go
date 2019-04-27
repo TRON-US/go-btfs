@@ -11,12 +11,12 @@ import (
 	"strings"
 	"sync"
 
-	filestore "github.com/ipfs/go-ipfs/filestore"
-	keystore "github.com/ipfs/go-ipfs/keystore"
-	repo "github.com/ipfs/go-ipfs/repo"
-	"github.com/ipfs/go-ipfs/repo/common"
-	mfsr "github.com/ipfs/go-ipfs/repo/fsrepo/migrations"
-	dir "github.com/ipfs/go-ipfs/thirdparty/dir"
+	filestore "github.com/TRON-US/go-btfs/filestore"
+	keystore "github.com/TRON-US/go-btfs/keystore"
+	repo "github.com/TRON-US/go-btfs/repo"
+	"github.com/TRON-US/go-btfs/repo/common"
+	mfsr "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
+	dir "github.com/TRON-US/go-btfs/thirdparty/dir"
 
 	ds "github.com/ipfs/go-datastore"
 	measure "github.com/ipfs/go-ds-measure"

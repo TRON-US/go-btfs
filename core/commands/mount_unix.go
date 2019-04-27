@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	nodeMount "github.com/ipfs/go-ipfs/fuse/node"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	math2 "github.com/ipfs/go-ipfs/thirdparty/math2"
+	math2 "github.com/TRON-US/go-btfs/thirdparty/math2"
 	lgbl "github.com/libp2p/go-libp2p-loggables"
 
 	config "github.com/ipfs/go-ipfs-config"
