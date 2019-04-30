@@ -56,24 +56,34 @@ func update() {
 	var updateBinary string
 	var latestBtfsBinary string
 
+	var latestConfigPath string
+	var currentConfigPath string
+	var latestBtfsBinaryPath string
+	var updateBinaryPath string
+
 	// Select binary files based on operating system.
 	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH)
 		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH)
-	} else if runtime.GOOS == "windows" && runtime.GOARCH == "386" {
+
+		latestConfigPath = fmt.Sprint(defaultDownloadPath, "/", latestConfigFile)
+		currentConfigPath = fmt.Sprint(defaultBtfsPath, "/", CurrentConfigFile)
+		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, "/", latestBtfsBinary)
+		updateBinaryPath = fmt.Sprint(defaultDownloadPath, "/", updateBinary)
+	} else if (runtime.GOOS == "windows" && runtime.GOARCH == "386") || (runtime.GOOS == "windows" && runtime.GOARCH == "amd64") {
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprint(fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH), ".exe")
 		latestBtfsBinary = fmt.Sprint(fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH), ".exe")
+
+		latestConfigPath = fmt.Sprint(defaultDownloadPath, "\\", latestConfigFile)
+		currentConfigPath = fmt.Sprint(defaultBtfsPath, "\\", CurrentConfigFile)
+		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, "\\", latestBtfsBinary)
+		updateBinaryPath = fmt.Sprint(defaultDownloadPath, "\\", updateBinary)
 	} else {
 		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
 		return
 	}
-
-	latestConfigPath := fmt.Sprint(defaultDownloadPath, "/", latestConfigFile)
-	currentConfigPath := fmt.Sprint(defaultBtfsPath, "/", CurrentConfigFile)
-	latestBtfsBinaryPath := fmt.Sprint(defaultDownloadPath, "/", latestBtfsBinary)
-	updateBinaryPath := fmt.Sprint(defaultDownloadPath, "/", updateBinary)
 
 	// Get current config file.
 	currentConfig, err := getConfigure(currentConfigPath)
@@ -181,7 +191,7 @@ func update() {
 
 		if runtime.GOOS == "windows" {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
+			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "\\"), "-download", fmt.Sprint(defaultDownloadPath, "\\"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
@@ -292,6 +302,10 @@ func download(downloadPath, url string) error {
 		log.Errorf("Create file error, reasons: [%v]", err)
 		return err
 	}
+
+	defer func() {
+		_ = f.Close()
+	}()
 
 	// Copy file from response body to local file.
 	written, err := io.Copy(f, res.Body)
