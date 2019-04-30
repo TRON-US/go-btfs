@@ -124,7 +124,7 @@ Daemon is ready
 
 
 #### Running a btfs node on btfs private net:
-Put the swarm.key in /.btfs, and then run the node
+Put the swarm.key in /.btfs, and then run the node. [How to generate swarm.key](https://github.com/Kubuxu/go-ipfs-swarm-key-gen)
 ```
 mv swarm.key /.btfs
 btfs daemon
@@ -146,39 +146,6 @@ dependencies as well.
 - For more details on setting up FUSE (so that you can mount the filesystem), see the docs folder.
 - Shell command completion is available in `misc/completion/btfs-completion.bash`. Read [docs/command-completion.md](docs/command-completion.md) to learn how to install it.
 
-### Updating go-btfs
-
-#### Using btfs-update
-
-BTFS has an updating tool that can be accessed through `btfs update`. The tool is
-not installed alongside BTFS in order to keep that logic independent of the main
-codebase. To install `btfs update`, [download it here](https://btfs.io/ipns/dist.btfs.io/#btfs-update).
-
-#### Downloading BTFS builds using BTFS
-
-List the available versions of go-btfs:
-
-```
-$ btfs cat /ipns/dist.btfs.io/go-btfs/versions
-```
-
-Then, to view available builds for a version from the previous command ($VERSION):
-
-```
-$ btfs ls /ipns/dist.btfs.io/go-btfs/$VERSION
-```
-
-To download a given build of a version:
-
-```
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_darwin-386.tar.gz # darwin 32-bit build
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_darwin-amd64.tar.gz # darwin 64-bit build
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_freebsd-amd64.tar.gz # freebsd 64-bit build
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_linux-386.tar.gz # linux 32-bit build
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_linux-amd64.tar.gz # linux 64-bit build
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_linux-arm.tar.gz # linux arm build
-$ btfs get /ipns/dist.btfs.io/go-btfs/$VERSION/go-btfs_$VERSION_windows-amd64.zip # windows 64-bit build
-```
 
 ## Usage
 
@@ -295,3 +262,9 @@ If you make changes to the protocol buffers, you will need to install the [proto
 ## License
 
 [MIT](./LICENSE)
+
+
+## TODO
+### Updating go-btfs
+
+
