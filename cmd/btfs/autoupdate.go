@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,19 +18,24 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 const (
-	LatestVersionFile  = "version-%s-%s.txt"
-	CurrentVersionFile = "version.txt"
-	UpdateBinary       = "update-%s-%s"
-	LatestBtfsBinary   = "btfs-%s-%s"
+	LatestConfigFile  = "config_%s_%s.yaml"
+	CurrentConfigFile = "config.yaml"
+	UpdateBinary      = "update-%s-%s"
+	LatestBtfsBinary  = "btfs-%s-%s"
 )
 
-// You can add multiple addresses inside this array.
-var url = [1]string{
-	"http://13.59.36.232:8080/btns/QmaCa4qNJizZD5uwmprNoZ4MSHsGosK4oLDL6eqnVLQhTC/",
+type Config struct {
+	Version       string `yaml:"version"`
+	Md5Check      string `yaml:"md5"`
+	AutoupdateFlg bool   `yaml:"autoupdateFlg"`
+	SleepTime     int    `yaml:"sleepTime"`
 }
+
+var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-autoupdate-config/test/"
 
 // Auto update function.
 func update() {
@@ -47,17 +52,17 @@ func update() {
 		return
 	}
 
-	var latestVersionFile string
+	var latestConfigFile string
 	var updateBinary string
 	var latestBtfsBinary string
 
 	// Select binary files based on operating system.
 	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
-		latestVersionFile = fmt.Sprintf(LatestVersionFile, runtime.GOOS, runtime.GOARCH)
+		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH)
 		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH)
 	} else if runtime.GOOS == "windows" && runtime.GOARCH == "386" {
-		latestVersionFile = fmt.Sprintf(LatestVersionFile, runtime.GOOS, runtime.GOARCH)
+		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprint(fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH), ".exe")
 		latestBtfsBinary = fmt.Sprint(fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH), ".exe")
 	} else {
@@ -65,52 +70,53 @@ func update() {
 		return
 	}
 
-	latestVersionPath := fmt.Sprint(defaultDownloadPath, "/", latestVersionFile)
-	currentVersionPath := fmt.Sprint(defaultBtfsPath, "/", CurrentVersionFile)
+	latestConfigPath := fmt.Sprint(defaultDownloadPath, "/", latestConfigFile)
+	currentConfigPath := fmt.Sprint(defaultBtfsPath, "/", CurrentConfigFile)
 	latestBtfsBinaryPath := fmt.Sprint(defaultDownloadPath, "/", latestBtfsBinary)
 	updateBinaryPath := fmt.Sprint(defaultDownloadPath, "/", updateBinary)
+
+	// Get current config file.
+	currentConfig, err := getConfigure(currentConfigPath)
+	if err != nil {
+		log.Errorf("Get current config file error, reasons: [%v]", err)
+		return
+	}
+
+	if !currentConfig.AutoupdateFlg {
+		log.Info("Automatic update is not turned on, automatic update program exits")
+		return
+	}
 
 	for {
 		log.Info("BTFS node AutoUpdater begin.")
 
-		time.Sleep(time.Second * 20)
+		time.Sleep(time.Second * time.Duration(currentConfig.SleepTime))
 
-		// Chose random host from the list of btns.
-		rand.Seed(time.Now().UnixNano())
-		randNum := rand.Intn(len(url))
-
-		if pathExists(latestVersionPath) {
-			// Delete the latest btfs version file.
-			err = os.Remove(latestVersionPath)
+		if pathExists(latestConfigPath) {
+			// Delete the latest btfs config file.
+			err = os.Remove(latestConfigPath)
 			if err != nil {
-				log.Errorf("Remove latest btfs version file error, reasons: [%v]", err)
+				log.Errorf("Remove latest btfs config file error, reasons: [%v]", err)
 				continue
 			}
 		}
 
-		// Get latest btfs version file.
-		err := download(latestVersionPath, fmt.Sprint(url[randNum], latestVersionFile))
+		// Get latest btfs config file.
+		err := download(latestConfigPath, fmt.Sprint(configRepoUrl, latestConfigFile))
 		if err != nil {
-			log.Errorf("Download latest btfs version file error, reasons: [%v]", err)
+			log.Errorf("Download latest btfs config file error, reasons: [%v]", err)
 			continue
 		}
 
-		// Get latest btfs version string.
-		latestVersion, latestVersionMd5Hash, err := getFileMessage(latestVersionPath)
+		// Get latest config file.
+		latestConfig, err := getConfigure(latestConfigPath)
 		if err != nil {
-			log.Error("Open latest btfs version file error.")
+			log.Errorf("Get latest config file error, reasons: [%v]", err)
 			continue
-		}
-
-		var currentVersion string
-		// Get current version string.
-		currentVersion, _, err = getFileMessage(currentVersionPath)
-		if err != nil {
-			currentVersion = "0.0.0"
 		}
 
 		// Compare version.
-		flg, err := versionCompare(latestVersion, currentVersion)
+		flg, err := versionCompare(latestConfig.Version, currentConfig.Version)
 		if err != nil {
 			log.Errorf("Version compare error, reasons: [%v]", err)
 			continue
@@ -132,7 +138,7 @@ func update() {
 		}
 
 		// Get the btfs latest binary file from btns.
-		err = download(latestBtfsBinaryPath, fmt.Sprint(url[randNum], latestBtfsBinary))
+		err = download(latestBtfsBinaryPath, fmt.Sprint(configRepoUrl, latestBtfsBinary))
 		if err != nil {
 			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
 			continue
@@ -145,7 +151,7 @@ func update() {
 			continue
 		}
 
-		if latestMd5Hash != latestVersionMd5Hash {
+		if latestMd5Hash != latestConfig.Md5Check {
 			log.Error("Md5 verify failed.")
 			continue
 		}
@@ -160,7 +166,7 @@ func update() {
 		}
 
 		// Get the update binary file from btns.
-		err = download(updateBinaryPath, fmt.Sprint(url[randNum], updateBinary))
+		err = download(updateBinaryPath, fmt.Sprint(configRepoUrl, updateBinary))
 		if err != nil {
 			log.Error("Download update binary file failed.")
 			continue
@@ -206,36 +212,19 @@ func pathExists(path string) bool {
 	return false
 }
 
-// Get version from file, e.g.(1.0.0).
-func getFileMessage(file string) (string, string, error) {
-	// Read file.
-	versionFile, err := os.Open(file)
+// Get config struct from yaml file.
+func getConfigure(fileName string) (*Config, error) {
+	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		log.Errorf("Open file failed, reasons: [%v]", err)
-		return "", "", err
-	}
-	defer func() {
-		_ = versionFile.Close()
-	}()
-
-	// New reader of file.
-	buffer := bufio.NewReader(versionFile)
-
-	// Read line.
-	version, _, c := buffer.ReadLine()
-	if c == io.EOF {
-		log.Error("Version line is nil")
-		return "", "", errors.New("version line is nil")
+		return nil, err
 	}
 
-	// Read line.
-	md5Hash, _, c := buffer.ReadLine()
-	if c == io.EOF {
-		log.Error("Md5 line is nil")
-		return "", "", errors.New("md5 line is nil")
+	conf := new(Config)
+	err = yaml.Unmarshal(yamlFile, conf)
+	if err != nil {
+		return nil, err
 	}
-
-	return string(version), string(md5Hash), nil
+	return conf, nil
 }
 
 // Compare version.
