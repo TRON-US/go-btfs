@@ -27,9 +27,6 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
 
 
 ## Install
-
-The canonical download instructions for BTFS are over at: https://docs.btfs.io/introduction/install/. It is **highly suggested** you follow those instructions if you are not interested in working on BTFS development.
-
 ### System Requirements
 
 BTFS can run on most Linux, macOS, and Windows systems. We recommend running it on a machine with at least 2 GB of RAM (it’ll do fine with only one CPU core), but it should run fine with as little as 1 GB of RAM. On systems with less memory, it may not be completely stable.
