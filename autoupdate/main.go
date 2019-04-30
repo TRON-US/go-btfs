@@ -34,7 +34,7 @@ func main() {
 		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.bk")
 		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs")
 		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s", runtime.GOOS, runtime.GOARCH))
-	} else if runtime.GOOS == "windows" && runtime.GOARCH == "386" {
+	} else if (runtime.GOOS == "windows" && runtime.GOARCH == "386") || (runtime.GOOS == "windows" && runtime.GOARCH == "amd64") {
 		currentConfigPath = fmt.Sprint(*defaultProjectPath, "config.yaml")
 		latestConfigPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
 		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.exe.bk")
