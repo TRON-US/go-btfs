@@ -127,22 +127,6 @@ btfs daemon
 ```
 
 
-#### Troubleshooting
-
-- Separate [instructions are available for building on Windows](docs/windows.md).
-- Also, [instructions for OpenBSD](docs/openbsd.md).
-- `git` is required in order for `go get` to fetch all dependencies.
-- Package managers often contain out-of-date `golang` packages.
-  Ensure that `go version` reports at least 1.10. See above for how to install go.
-- If you are interested in development, please install the development
-dependencies as well.
-- _WARNING_: Older versions of OSX FUSE (for Mac OS X) can cause kernel panics when mounting!-
-  We strongly recommend you use the [latest version of OSX FUSE](http://osxfuse.github.io/).
-  (See https://github.com/btfs/go-btfs/issues/177)
-- For more details on setting up FUSE (so that you can mount the filesystem), see the docs folder.
-- Shell command completion is available in `misc/completion/btfs-completion.bash`. Read [docs/command-completion.md](docs/command-completion.md) to learn how to install it.
-
-
 ## Usage
 
 ```
@@ -253,4 +237,5 @@ If you make changes to the protocol buffers, you will need to install the [proto
 
 ## TODO
 ### Updating go-btfs
+### Troubleshooting
 
