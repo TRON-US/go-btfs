@@ -9,24 +9,23 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
 
 - [Install](#install)
   - [System Requirements](#system-requirements)
-  - [Install prebuilt packages](#install-prebuilt-packages)
-  - [From Linux package managers](#from-linux-package-managers)
   - [Build from Source](#build-from-source)
     - [Install Go](#install-go)
+    - [Environment Setting](#environment-setting)
     - [Download and Compile BTFS](#download-and-compile-btfs)
+    - [Running a BTFS Node On Local](#running-a-btfs-node-on-local)
+    - [Running a BTFS Node On BTFS Private Net](#running-a-btfs-node-on-btfs-private-net)
     - [Troubleshooting](#troubleshooting)
   - [Development Dependencies](#development-dependencies)
-  - [Updating](#updating-go-btfs)
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
-  - [Docker usage](#docker-usage)
-  - [Troubleshooting](#troubleshooting-1)
 - [Packages](#packages)
 - [License](#license)
 
 
 ## Install
+
 ### System Requirements
 
 BTFS can run on most Linux, macOS, and Windows systems. We recommend running it on a machine with at least 2 GB of RAM (it’ll do fine with only one CPU core), but it should run fine with as little as 1 GB of RAM. On systems with less memory, it may not be completely stable.
@@ -58,7 +57,7 @@ export PATH=$PATH:$GOPATH/bin
 (If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
 
 
-#### Environment setting
+#### Environment Setting
 
 ```
 export GO111MODULE=on
@@ -97,7 +96,7 @@ to get started, enter:
 ```
 
 
-#### Running a btfs node on local:
+#### Running a BTFS Node On Local
 ```
 $ btfs daemon
 Initializing daemon...
@@ -120,7 +119,7 @@ Daemon is ready
 ```
 
 
-#### Running a btfs node on btfs private net:
+#### Running a BTFS Node On BTFS Private Net
 Put the swarm.key in /.btfs, and then run the node. [How to generate swarm.key](https://github.com/Kubuxu/go-ipfs-swarm-key-gen)
 ```
 mv swarm.key /.btfs
@@ -204,14 +203,14 @@ SUBCOMMANDS
     export BTFS_PATH=/path/to/btfsrepo
 ```
 
-## Getting Started
 
-See also: http://btfs.io/docs/getting-started/
+## Getting Started
 
 To start using BTFS, you must first initialize BTFS's config files on your
 system, this is done with `btfs init`. See `btfs init --help` for information on
 the optional arguments it takes. After initialization is complete, you can use
 `btfs mount`, `btfs add` and any of the other commands to explore!
+
 
 ### Some things to try
 
@@ -222,15 +221,6 @@ Basic proof of 'btfs working' locally:
 	# This should output a hash string that looks something like:
 	# QmT78zSuBmuS4z925WZfrqQ1qHaJ56DQaTfyMUF7F8ff5o
 	btfs cat <that hash>
-
-
-### Troubleshooting
-
-If you have previously installed BTFS before and you are running into problems getting a newer version to work, try deleting (or backing up somewhere else) your BTFS config directory (~/.btfs by default) and rerunning `btfs init`. This will reinitialize the config file to its defaults and clear out the local datastore of any bad entries.
-
-Please direct general questions and help requests to our [forum](https://discuss.btfs.io) or our IRC channel (freenode #btfs).
-
-If you believe you've found a bug, check the [issues list](https://github.com/btfs/go-btfs/issues) and, if you don't see your problem there, either come talk to us on IRC (freenode #btfs) or file an issue of your own!
 
 
 ## Development
@@ -263,5 +253,4 @@ If you make changes to the protocol buffers, you will need to install the [proto
 
 ## TODO
 ### Updating go-btfs
-
 
