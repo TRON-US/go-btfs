@@ -29,14 +29,14 @@ func main() {
 
 	// Select binary files based on operating system.
 	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
-		currentVersionPath = fmt.Sprint(*defaultProjectPath, "version.txt")
-		latestVersionPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("version-%s-%s.txt", runtime.GOOS, runtime.GOARCH))
+		currentVersionPath = fmt.Sprint(*defaultProjectPath, "config.yaml")
+		latestVersionPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
 		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.bk")
 		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs")
 		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s", runtime.GOOS, runtime.GOARCH))
 	} else if runtime.GOOS == "windows" && runtime.GOARCH == "386" {
-		currentVersionPath = fmt.Sprint(*defaultProjectPath, "version.txt")
-		latestVersionPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("version-%s-%s.txt", runtime.GOOS, runtime.GOARCH))
+		currentVersionPath = fmt.Sprint(*defaultProjectPath, "config.yaml")
+		latestVersionPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
 		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.exe.bk")
 		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs.exe")
 		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s.exe", runtime.GOOS, runtime.GOARCH))
@@ -47,16 +47,16 @@ func main() {
 
 	var err error
 
-	// Delete current version file if exists.
+	// Delete current config file if exists.
 	if pathExists(currentVersionPath) {
 		err = os.Remove(currentVersionPath)
 		if err != nil {
-			fmt.Printf("Delete current version file error, reasons: [%v]\n", err)
+			fmt.Printf("Delete current config file error, reasons: [%v]\n", err)
 			return
 		}
 	}
 
-	// Move latest version file to current version file.
+	// Move latest config file to current config file.
 	err = os.Rename(latestVersionPath, currentVersionPath)
 	if err != nil {
 		fmt.Printf("Move file error, reasons: [%v]\n", err)
