@@ -9,7 +9,7 @@ import (
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 var KeyCmd = &cmds.Command{

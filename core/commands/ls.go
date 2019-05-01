@@ -13,8 +13,8 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	unixfs "github.com/ipfs/go-unixfs"
 	unixfs_pb "github.com/ipfs/go-unixfs/pb"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 // LsLink contains printable data for a single ipld link in ls output

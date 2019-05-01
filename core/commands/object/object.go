@@ -15,8 +15,8 @@ import (
 	"github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 type Node struct {

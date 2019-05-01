@@ -15,8 +15,8 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
-	path "github.com/ipfs/go-path"
-	iface "github.com/ipfs/interface-go-ipfs-core"
+	path "github.com/TRON-US/go-path"
+	iface "github.com/TRON-US/interface-go-btfs-core"
 	mh "github.com/multiformats/go-multihash"
 )
 

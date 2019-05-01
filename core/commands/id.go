@@ -189,7 +189,7 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 			info.Addresses = append(info.Addresses, s)
 		}
 	}
-	info.ProtocolVersion = identify.LibP2PVersion
+	info.ProtocolVersion = "btfs/0.1.0"
 	info.AgentVersion = identify.ClientVersion
 	return info, nil
 }

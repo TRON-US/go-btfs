@@ -6,7 +6,7 @@ import (
 
 	bserv "github.com/ipfs/go-blockservice"
 	dag "github.com/ipfs/go-merkledag"
-	path "github.com/ipfs/go-path"
+	path "github.com/TRON-US/go-path"
 
 	ds "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"

@@ -3,17 +3,16 @@ package fsrepo
 import (
 	"os"
 
-	config "github.com/ipfs/go-ipfs-config"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 )
 
 // BestKnownPath returns the best known fsrepo path. If the ENV override is
 // present, this function returns that value. Otherwise, it returns the default
 // repo path.
 func BestKnownPath() (string, error) {
-	ipfsPath := config.DefaultPathRoot
-	if os.Getenv(config.EnvDir) != "" {
-		ipfsPath = os.Getenv(config.EnvDir)
+	ipfsPath := "~/.btfs"
+	if os.Getenv("BTFS_PATH") != "" {
+		ipfsPath = os.Getenv("BTFS_PATH")
 	}
 	ipfsPath, err := homedir.Expand(ipfsPath)
 	if err != nil {

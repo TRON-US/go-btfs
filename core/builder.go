@@ -28,7 +28,7 @@ import (
 	ipns "github.com/ipfs/go-ipns"
 	dag "github.com/ipfs/go-merkledag"
 	metrics "github.com/ipfs/go-metrics-interface"
-	resolver "github.com/ipfs/go-path/resolver"
+	resolver "github.com/TRON-US/go-path/resolver"
 	uio "github.com/ipfs/go-unixfs/io"
 	goprocessctx "github.com/jbenet/goprocess/context"
 	libp2p "github.com/libp2p/go-libp2p"
