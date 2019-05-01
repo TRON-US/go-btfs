@@ -91,7 +91,7 @@ func update() {
 	}
 
 	if !currentConfig.AutoupdateFlg {
-		fmt.Println("Automatic update is not turned on, automatic update program exits")
+		fmt.Println("Automatic update is not turned on")
 		return
 	}
 
@@ -129,7 +129,6 @@ func update() {
 		}
 
 		if flg <= 0 {
-			fmt.Println("Btfs binary from btns version level is small than current version.")
 			continue
 		}
 
