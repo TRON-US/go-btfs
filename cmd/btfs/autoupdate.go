@@ -24,8 +24,8 @@ import (
 const (
 	LatestConfigFile  = "config_%s_%s.yaml"
 	CurrentConfigFile = "config.yaml"
-	UpdateBinary      = "update-%s-%s"
-	LatestBtfsBinary  = "btfs-%s-%s"
+	UpdateBinary      = "update-%s-%s%s"
+	LatestBtfsBinary  = "btfs-%s-%s%s"
 )
 
 type Config struct {
@@ -62,24 +62,22 @@ func update() {
 	var updateBinaryPath string
 
 	// Select binary files based on operating system.
-	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
-		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
-		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH)
-		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH)
+	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
+		ext := ""
+		sep := "/"
+		if runtime.GOOS == "windows" {
+			ext = ".exe"
+			sep = "\\"
+		}
 
-		latestConfigPath = fmt.Sprint(defaultDownloadPath, "/", latestConfigFile)
-		currentConfigPath = fmt.Sprint(defaultBtfsPath, "/", CurrentConfigFile)
-		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, "/", latestBtfsBinary)
-		updateBinaryPath = fmt.Sprint(defaultDownloadPath, "/", updateBinary)
-	} else if (runtime.GOOS == "windows" && runtime.GOARCH == "386") || (runtime.GOOS == "windows" && runtime.GOARCH == "amd64") {
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
-		updateBinary = fmt.Sprint(fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH), ".exe")
-		latestBtfsBinary = fmt.Sprint(fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH), ".exe")
+		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, ext)
+		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext)
 
-		latestConfigPath = fmt.Sprint(defaultDownloadPath, "\\", latestConfigFile)
-		currentConfigPath = fmt.Sprint(defaultBtfsPath, "\\", CurrentConfigFile)
-		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, "\\", latestBtfsBinary)
-		updateBinaryPath = fmt.Sprint(defaultDownloadPath, "\\", updateBinary)
+		latestConfigPath = fmt.Sprint(defaultDownloadPath, sep, latestConfigFile)
+		currentConfigPath = fmt.Sprint(defaultBtfsPath, sep, CurrentConfigFile)
+		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, sep, latestBtfsBinary)
+		updateBinaryPath = fmt.Sprint(defaultDownloadPath, sep, updateBinary)
 	} else {
 		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
 		return

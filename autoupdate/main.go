@@ -28,18 +28,17 @@ func main() {
 	var latestBtfsBinaryPath string
 
 	// Select binary files based on operating system.
-	if (runtime.GOOS == "darwin" && runtime.GOARCH == "amd64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
+	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
+		ext := ""
+		if runtime.GOOS == "windows" {
+			ext = ".exe"
+		}
+
 		currentConfigPath = fmt.Sprint(*defaultProjectPath, "config.yaml")
 		latestConfigPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
-		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.bk")
-		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs")
-		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s", runtime.GOOS, runtime.GOARCH))
-	} else if (runtime.GOOS == "windows" && runtime.GOARCH == "386") || (runtime.GOOS == "windows" && runtime.GOARCH == "amd64") {
-		currentConfigPath = fmt.Sprint(*defaultProjectPath, "config.yaml")
-		latestConfigPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
-		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, "btfs.exe.bk")
-		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, "btfs.exe")
-		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s.exe", runtime.GOOS, runtime.GOARCH))
+		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs%s.bk", ext))
+		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, fmt.Sprintf("btfs%s", ext))
+		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext))
 	} else {
 		fmt.Printf("Operating system [%s], arch [%s] does not support automatic updates\n", runtime.GOOS, runtime.GOARCH)
 		return
