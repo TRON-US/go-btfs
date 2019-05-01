@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-ipfs-cmdkit"
 	"github.com/ipfs/go-ipfs-cmds"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-path"
+	"github.com/TRON-US/go-path"
 )
 
 var TarCmd = &cmds.Command{

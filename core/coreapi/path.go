@@ -9,10 +9,10 @@ import (
 
 	"github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
-	ipfspath "github.com/ipfs/go-path"
-	"github.com/ipfs/go-path/resolver"
+	ipfspath "github.com/TRON-US/go-path"
+	"github.com/TRON-US/go-path/resolver"
 	uio "github.com/ipfs/go-unixfs/io"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 )
 
 // ResolveNode resolves the path `p` using Unixfs resolver, gets and returns the

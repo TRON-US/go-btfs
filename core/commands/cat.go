@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/interface-go-ipfs-core"
+	"github.com/TRON-US/interface-go-btfs-core"
 )
 
 const (
