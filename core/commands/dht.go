@@ -14,7 +14,7 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	path "github.com/ipfs/go-path"
+	path "github.com/TRON-US/go-path"
 	peer "github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	routing "github.com/libp2p/go-libp2p-routing"

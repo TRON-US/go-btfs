@@ -9,7 +9,7 @@ import (
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 )
 
 const (

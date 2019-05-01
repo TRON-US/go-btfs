@@ -15,7 +15,7 @@ import (
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
-	path "github.com/ipfs/go-path"
+	path "github.com/TRON-US/go-path"
 )
 
 var refsEncoderMap = cmds.EncoderMap{

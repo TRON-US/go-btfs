@@ -20,8 +20,8 @@ import (
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	dag "github.com/ipfs/go-merkledag"
 	verifcid "github.com/ipfs/go-verifcid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 var PinCmd = &cmds.Command{
