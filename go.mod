@@ -4,11 +4,8 @@ require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
 	github.com/Kubuxu/go-os-helper v0.0.1
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
-	github.com/TRON-US/go-btfs-config v0.0.2-20190426
-	github.com/TRON-US/go-libp2p v0.0.18-20190426
-	github.com/TRON-US/go-multiaddr v0.0.2-20190426
+	github.com/TRON-US/go-mfs v0.0.6-20190501
 	github.com/TRON-US/go-path v0.0.3-20190426
-	github.com/TRON-US/interface-go-btfs-core v0.0.7-20190426
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cenkalti/backoff v2.1.1+incompatible
@@ -56,9 +53,11 @@ require (
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/ipfs/go-metrics-prometheus v0.0.2
 	github.com/ipfs/go-mfs v0.0.4
+	github.com/ipfs/go-path v0.0.3
 	github.com/ipfs/go-unixfs v0.0.4
 	github.com/ipfs/go-verifcid v0.0.1
 	github.com/ipfs/hang-fds v0.0.1
+	github.com/ipfs/interface-go-ipfs-core v0.0.6
 	github.com/ipfs/iptb v1.4.0
 	github.com/ipfs/iptb-plugins v0.0.2
 	github.com/jbenet/go-is-domain v1.0.2
@@ -66,6 +65,7 @@ require (
 	github.com/jbenet/go-random-files v0.0.0-20190219210431-31b3f20ebded
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2
 	github.com/jbenet/goprocess v0.0.0-20160826012719-b497e2f366b8
+	github.com/libp2p/go-libp2p v0.0.12
 	github.com/libp2p/go-libp2p-autonat-svc v0.0.5
 	github.com/libp2p/go-libp2p-circuit v0.0.4
 	github.com/libp2p/go-libp2p-connmgr v0.0.1
@@ -94,6 +94,7 @@ require (
 	github.com/libp2p/go-testutil v0.0.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mr-tron/base58 v1.1.0
+	github.com/multiformats/go-multiaddr v0.0.1
 	github.com/multiformats/go-multiaddr-dns v0.0.2
 	github.com/multiformats/go-multiaddr-net v0.0.1
 	github.com/multiformats/go-multibase v0.0.1
