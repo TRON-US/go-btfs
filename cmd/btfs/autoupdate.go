@@ -93,13 +93,11 @@ func update() {
 	}
 
 	if !currentConfig.AutoupdateFlg {
-		log.Info("Automatic update is not turned on, automatic update program exits")
+		log.Error("Automatic update is not turned on, automatic update program exits")
 		return
 	}
 
 	for {
-		log.Info("BTFS node AutoUpdater begin.")
-
 		time.Sleep(time.Second * time.Duration(currentConfig.SleepTime))
 
 		if pathExists(latestConfigPath) {
@@ -133,7 +131,7 @@ func update() {
 		}
 
 		if flg <= 0 {
-			log.Info("Btfs binary from btns version level is small than current version.")
+			log.Error("Btfs binary from btns version level is small than current version.")
 			continue
 		}
 
@@ -147,12 +145,16 @@ func update() {
 			}
 		}
 
+		log.Error("BTFS auto update begin.")
+
 		// Get the btfs latest binary file from btns.
 		err = download(latestBtfsBinaryPath, fmt.Sprint(configRepoUrl, latestBtfsBinary))
 		if err != nil {
 			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
 			continue
 		}
+
+		log.Error("Download btfs binary file success!")
 
 		// Md5 encode file.
 		latestMd5Hash, err := md5Encode(latestBtfsBinaryPath)
@@ -165,6 +167,8 @@ func update() {
 			log.Error("Md5 verify failed.")
 			continue
 		}
+
+		log.Error("Md5 check btfs binary file success!")
 
 		// Delete the update binary file if exists.
 		if pathExists(updateBinaryPath) {
@@ -181,6 +185,8 @@ func update() {
 			log.Error("Download update binary file failed.")
 			continue
 		}
+
+		log.Error("Download update binary file success!")
 
 		// Add executable permissions to update binary file.
 		err = os.Chmod(updateBinaryPath, 0775)
@@ -206,6 +212,7 @@ func update() {
 				continue
 			}
 		}
+		log.Error("Btfs auto update success, program exit.")
 		os.Exit(0)
 	}
 }
