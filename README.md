@@ -211,8 +211,8 @@ Basic proof of 'btfs working' locally:
 
 Some places to get you started on the codebase:
 
-- Main file: [./cmd/btfs/main.go](https://github.com/btfs/go-btfs/blob/master/cmd/btfs/main.go)
-- CLI Commands: [./core/commands/](https://github.com/btfs/go-btfs/tree/master/core/commands)
+- Main file: [./cmd/btfs/main.go](https://github.com/TRON-US/go-btfs/blob/master/cmd/btfs/main.go)
+- CLI Commands: [./core/commands/](https://github.com/TRON-US/go-btfs/tree/master/core/commands)
 - libp2p
   - libp2p: https://github.com/libp2p/go-libp2p
   - DHT: https://github.com/libp2p/go-libp2p-kad-dht
