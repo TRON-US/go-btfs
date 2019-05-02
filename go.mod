@@ -111,7 +111,6 @@ require (
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c
 	golang.org/x/sys v0.0.0-20190302025703-b6889370fb10
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/yaml.v2 v2.2.1
 	gotest.tools/gotestsum v0.3.3
 )
