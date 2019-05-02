@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	core "github.com/ipfs/go-ipfs/core"
+	core "github.com/TRON-US/go-btfs/core"
 
 	"github.com/blang/semver"
 	unix "golang.org/x/sys/unix"

@@ -7,13 +7,13 @@ import (
 	"io"
 	"io/ioutil"
 
-	util "github.com/ipfs/go-ipfs/blocks/blockstoreutil"
-	pin "github.com/ipfs/go-ipfs/pin"
+	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
+	pin "github.com/TRON-US/go-btfs/pin"
 
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	caopts "github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 type BlockAPI CoreAPI

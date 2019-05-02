@@ -8,13 +8,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/coreapi"
 
 	cid "github.com/ipfs/go-cid"
 	files "github.com/ipfs/go-ipfs-files"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 
 	// this import keeps gx from thinking the dep isn't used
 	_ "github.com/ipfs/dir-index-html"

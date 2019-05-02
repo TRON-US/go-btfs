@@ -6,14 +6,14 @@ import (
 	"sync"
 	"time"
 
-	pin "github.com/ipfs/go-ipfs/pin"
+	pin "github.com/TRON-US/go-btfs/pin"
 
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsquery "github.com/ipfs/go-datastore/query"
 	ipns "github.com/ipfs/go-ipns"
 	pb "github.com/ipfs/go-ipns/pb"
-	path "github.com/ipfs/go-path"
+	path "github.com/TRON-US/go-path"
 	ft "github.com/ipfs/go-unixfs"
 	ci "github.com/libp2p/go-libp2p-crypto"
 	peer "github.com/libp2p/go-libp2p-peer"

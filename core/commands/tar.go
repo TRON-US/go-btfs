@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	tar "github.com/ipfs/go-ipfs/tar"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	tar "github.com/TRON-US/go-btfs/tar"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
 	"github.com/ipfs/go-ipfs-cmds"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-path"
+	"github.com/TRON-US/go-path"
 )
 
 var TarCmd = &cmds.Command{

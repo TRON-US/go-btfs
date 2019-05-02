@@ -6,14 +6,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core"
-	gc "github.com/ipfs/go-ipfs/pin/gc"
-	repo "github.com/ipfs/go-ipfs/repo"
+	"github.com/TRON-US/go-btfs/core"
+	gc "github.com/TRON-US/go-btfs/pin/gc"
+	repo "github.com/TRON-US/go-btfs/repo"
 
 	humanize "github.com/dustin/go-humanize"
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
-	mfs "github.com/ipfs/go-mfs"
+	mfs "github.com/TRON-US/go-mfs"
 )
 
 var log = logging.Logger("corerepo")

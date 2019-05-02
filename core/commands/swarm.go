@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	commands "github.com/ipfs/go-ipfs/commands"
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	repo "github.com/ipfs/go-ipfs/repo"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	commands "github.com/TRON-US/go-btfs/commands"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	repo "github.com/TRON-US/go-btfs/repo"
+	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
@@ -137,9 +137,8 @@ var swarmPeersCmd = &cmds.Command{
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, ci *connInfos) error {
-			pipfs := ma.ProtocolWithCode(ma.P_BTFS).Name
 			for _, info := range ci.Peers {
-				fmt.Fprintf(w, "%s/%s/%s", info.Addr, pipfs, info.Peer)
+				fmt.Fprintf(w, "%s/%s/%s", info.Addr, "btfs", info.Peer)
 				if info.Latency != "" {
 					fmt.Fprintf(w, " %s", info.Latency)
 				}

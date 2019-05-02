@@ -11,15 +11,15 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/ipfs/go-ipfs/dagutils"
-	"github.com/ipfs/go-ipfs/pin"
+	"github.com/TRON-US/go-btfs/dagutils"
+	"github.com/TRON-US/go-btfs/pin"
 
 	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	ft "github.com/ipfs/go-unixfs"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	caopts "github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 const inputLimit = 2 << 20

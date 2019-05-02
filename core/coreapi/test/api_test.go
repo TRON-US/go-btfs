@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipfs/go-ipfs/filestore"
+	"github.com/TRON-US/go-btfs/filestore"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	mock "github.com/ipfs/go-ipfs/core/mock"
-	"github.com/ipfs/go-ipfs/keystore"
-	"github.com/ipfs/go-ipfs/repo"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/coreapi"
+	mock "github.com/TRON-US/go-btfs/core/mock"
+	"github.com/TRON-US/go-btfs/keystore"
+	"github.com/TRON-US/go-btfs/repo"
 
 	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"

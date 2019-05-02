@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core"
+	"github.com/TRON-US/go-btfs/commands"
+	"github.com/TRON-US/go-btfs/core"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	config "github.com/ipfs/go-ipfs-config"
 	logging "github.com/ipfs/go-log"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 var log = logging.Logger("core/commands/cmdenv")

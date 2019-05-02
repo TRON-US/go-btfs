@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipfs/go-ipfs/core"
+	"github.com/TRON-US/go-btfs/core"
 
-	"github.com/ipfs/go-ipfs/core/coreunix"
+	"github.com/TRON-US/go-btfs/core/coreunix"
 
 	blockservice "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -17,12 +17,12 @@ import (
 	dag "github.com/ipfs/go-merkledag"
 	merkledag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
-	mfs "github.com/ipfs/go-mfs"
+	mfs "github.com/TRON-US/go-mfs"
 	ft "github.com/ipfs/go-unixfs"
 	unixfile "github.com/ipfs/go-unixfs/file"
 	uio "github.com/ipfs/go-unixfs/io"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 type UnixfsAPI CoreAPI

@@ -5,11 +5,11 @@ import (
 	"io"
 	"text/tabwriter"
 
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 var KeyCmd = &cmds.Command{

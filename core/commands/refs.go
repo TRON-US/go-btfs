@@ -7,15 +7,15 @@ import (
 	"io"
 	"strings"
 
-	core "github.com/ipfs/go-ipfs/core"
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	core "github.com/TRON-US/go-btfs/core"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
-	path "github.com/ipfs/go-path"
+	path "github.com/TRON-US/go-path"
 )
 
 var refsEncoderMap = cmds.EncoderMap{

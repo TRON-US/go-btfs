@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/dustin/go-humanize"
 	bservice "github.com/ipfs/go-blockservice"
@@ -23,9 +23,9 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-mfs"
+	"github.com/TRON-US/go-mfs"
 	ft "github.com/ipfs/go-unixfs"
-	"github.com/ipfs/interface-go-ipfs-core"
+	"github.com/TRON-US/interface-go-btfs-core"
 	mh "github.com/multiformats/go-multihash"
 )
 

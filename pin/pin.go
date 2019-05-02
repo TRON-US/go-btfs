@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-ipfs/dagutils"
+	"github.com/TRON-US/go-btfs/dagutils"
 	mdag "github.com/ipfs/go-merkledag"
 
 	cid "github.com/ipfs/go-cid"

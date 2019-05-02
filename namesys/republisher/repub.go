@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	keystore "github.com/ipfs/go-ipfs/keystore"
-	namesys "github.com/ipfs/go-ipfs/namesys"
-	path "github.com/ipfs/go-path"
+	keystore "github.com/TRON-US/go-btfs/keystore"
+	namesys "github.com/TRON-US/go-btfs/namesys"
+	path "github.com/TRON-US/go-path"
 
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"

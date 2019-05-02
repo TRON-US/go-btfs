@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	cmdenv "github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	filestore "github.com/ipfs/go-ipfs/filestore"
-	pin "github.com/ipfs/go-ipfs/pin"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	filestore "github.com/TRON-US/go-btfs/filestore"
+	pin "github.com/TRON-US/go-btfs/pin"
 
 	cid "github.com/ipfs/go-cid"
 	chunk "github.com/ipfs/go-ipfs-chunker"

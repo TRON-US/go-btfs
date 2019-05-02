@@ -3,9 +3,9 @@ package coremock
 import (
 	"context"
 
-	commands "github.com/ipfs/go-ipfs/commands"
-	core "github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/repo"
+	commands "github.com/TRON-US/go-btfs/commands"
+	core "github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/repo"
 
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"

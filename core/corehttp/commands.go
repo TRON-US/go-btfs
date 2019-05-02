@@ -10,14 +10,14 @@ import (
 	"strings"
 
 	version "github.com/ipfs/go-ipfs"
-	oldcmds "github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core"
-	corecommands "github.com/ipfs/go-ipfs/core/commands"
+	oldcmds "github.com/TRON-US/go-btfs/commands"
+	"github.com/TRON-US/go-btfs/core"
+	corecommands "github.com/TRON-US/go-btfs/core/commands"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	cmdsHttp "github.com/ipfs/go-ipfs-cmds/http"
 	config "github.com/ipfs/go-ipfs-config"
-	path "github.com/ipfs/go-path"
+	path "github.com/TRON-US/go-path"
 )
 
 var (

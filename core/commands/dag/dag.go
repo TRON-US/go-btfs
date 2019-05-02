@@ -6,8 +6,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
-	"github.com/ipfs/go-ipfs/core/coredag"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/coredag"
 
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
@@ -15,8 +15,8 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
-	path "github.com/ipfs/go-path"
-	iface "github.com/ipfs/interface-go-ipfs-core"
+	path "github.com/TRON-US/go-path"
+	iface "github.com/TRON-US/interface-go-btfs-core"
 	mh "github.com/multiformats/go-multihash"
 )
 

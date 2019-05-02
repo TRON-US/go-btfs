@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ipfs/go-ipfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
 	"github.com/ipfs/go-ipfs-cmds"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 var ObjectPatchCmd = &cmds.Command{

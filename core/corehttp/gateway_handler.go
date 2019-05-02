@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/dagutils"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/dagutils"
 
 	"github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
@@ -21,11 +21,11 @@ import (
 	"github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-path"
-	"github.com/ipfs/go-path/resolver"
+	"github.com/TRON-US/go-path"
+	"github.com/TRON-US/go-path/resolver"
 	ft "github.com/ipfs/go-unixfs"
 	"github.com/ipfs/go-unixfs/importer"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/libp2p/go-libp2p-routing"
 	"github.com/multiformats/go-multibase"
 )

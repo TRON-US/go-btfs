@@ -3,8 +3,8 @@ package core_test
 import (
 	"testing"
 
-	core "github.com/ipfs/go-ipfs/core"
-	coremock "github.com/ipfs/go-ipfs/core/mock"
+	core "github.com/TRON-US/go-btfs/core"
+	coremock "github.com/TRON-US/go-btfs/core/mock"
 	path "github.com/ipfs/go-path"
 )
 
