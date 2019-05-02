@@ -13,6 +13,7 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
     - [Install Go](#install-go)
     - [Environment Setting](#environment-setting)
     - [Download and Compile BTFS](#download-and-compile-btfs)
+    - [Auto Updating Setting](auto-updating-setting)
     - [Running a BTFS Node On BTFS Private Net](#running-a-btfs-node-on-btfs-private-net)
     - [Troubleshooting](#troubleshooting)
   - [Development Dependencies](#development-dependencies)
@@ -65,12 +66,16 @@ export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
 ```
 
 
-#### Download and Compile BTFS
+#### To access github private repo:
+```
+$ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
+```
 
+
+#### Download and Compile BTFS
 ```
 $ git clone https://github.com/TRON-US/go-btfs.git
 $ cd go-btfs
-$ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
 $ go clean -modcache
 $ make install
 go version go1.12.4 linux/amd64
@@ -93,6 +98,15 @@ peer identity: QmTkQjKAtfh2GNDPmtnFB8d..................
 to get started, enter:
 
         btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
+```
+
+#### Auto Update Setting
+Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
+```
+version: 0.0.4    # btfs version
+md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
+autoupdateFlg: true     # is auto update
+sleepTime: 20        # how often to auto updte (second）.
 ```
 
 
@@ -242,6 +256,5 @@ If you make changes to the protocol buffers, you will need to install the [proto
 
 
 ## TODO
-### Updating go-btfs
 ### Troubleshooting
 
