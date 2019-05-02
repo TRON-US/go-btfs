@@ -183,7 +183,7 @@ func update() {
 			continue
 		}
 
-		fmt.Println("Process will exit now and restart after the update completes.")
+		fmt.Println("Download update binary file success!")
 
 		// Add executable permissions to update binary file.
 		err = os.Chmod(updateBinaryPath, 0775)
@@ -209,7 +209,7 @@ func update() {
 				continue
 			}
 		}
-		fmt.Println("Btfs auto update success, program exit.")
+		fmt.Println("Process will exit now and restart after the update completes.")
 		os.Exit(0)
 	}
 }
