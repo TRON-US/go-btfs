@@ -13,7 +13,6 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
     - [Install Go](#install-go)
     - [Environment Setting](#environment-setting)
     - [Download and Compile BTFS](#download-and-compile-btfs)
-    - [Running a BTFS Node On Local](#running-a-btfs-node-on-local)
     - [Running a BTFS Node On BTFS Private Net](#running-a-btfs-node-on-btfs-private-net)
     - [Troubleshooting](#troubleshooting)
   - [Development Dependencies](#development-dependencies)
@@ -72,6 +71,7 @@ export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
 $ git clone https://github.com/TRON-US/go-btfs.git
 $ cd go-btfs
 $ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
+$ go clean -modcache
 $ make install
 go version go1.12.4 linux/amd64
 bin/check_go_version 1.12
@@ -96,34 +96,40 @@ to get started, enter:
 ```
 
 
-#### Running a BTFS Node On Local
-```
-$ btfs daemon
-Initializing daemon...
-go-btfs version: 0.4.20-
-Repo version: 7
-System version: amd64/linux
-Golang version: go1.12.4
-Swarm listening on /ip4/127.0.0.1/tcp/4001
-Swarm listening on /ip4/172.31.25.27/tcp/4001
-Swarm listening on /ip6/::1/tcp/4001
-Swarm listening on /p2p-circuit
-Swarm announcing /ip4/127.0.0.1/tcp/4001
-Swarm announcing /ip4/172.31.25.27/tcp/4001
-Swarm announcing /ip6/::1/tcp/4001
-API server listening on /ip4/127.0.0.1/tcp/5001
-WebUI: http://127.0.0.1:5001/webui
-Gateway (readonly) server listening on /ip4/127.0.0.1/tcp/8080
-Daemon is ready
-
-```
-
-
 #### Running a BTFS Node On BTFS Private Net
-Put the swarm.key in /.btfs, and then run the node. [How to generate swarm.key](https://github.com/Kubuxu/go-ipfs-swarm-key-gen)
+Put the swarm.key in /.btfs, and then run the node. [Get swarm.key](https://github.com/TRON-US/go-btfs/blob/master/swarm.key)
 ```
-mv swarm.key /.btfs
-btfs daemon
+$ mv swarm.key ~/.btfs/swarm.key
+```
+Remove ipfs bootstrap:
+```
+$ btfs bootstrap rm --all  (if there is error like this: Error: cannot connect to the api. Is the deamon running? To run as a standalone CLI command remove the api file in `$IPFS_PATH/api`, please run `nohup btfs daemon </dev/null > /dev/null 2>&1 &` and then run this command.)
+```
+Join the private net work:
+```
+$ btfs bootstrap add /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
+added /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
+```
+Enable Cross-Origin Resource Sharing:
+```
+$ btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"*\"]"
+$ btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST", "OPTIONS"]'
+$ btfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials "[\"true\"]"
+```
+Enable gateway, api port:
+```
+$ btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
+$ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+```
+Run btfs at the backend:
+```
+you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
+$ nohup btfs daemon </dev/null > /dev/null 2>&1 &
+```
+Check if your node is connect to BTFS private net:
+```
+$ btfs swarm peers
+/ip4/3.18.120.107/tcp/4001/btfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
 ```
 
 
