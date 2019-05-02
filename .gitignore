@@ -24,3 +24,5 @@ bin/cover
 vendor
 .tarball
 go-ipfs-source.tar.gz
+.idea/
+
