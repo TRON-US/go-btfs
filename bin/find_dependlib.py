@@ -40,7 +40,7 @@ def print_dep(d):
 def run():
     pkgpath = os.environ["GOPATH"] + "/pkg"
     # dependency dictionary
-    d = {start_lib: [] for start_lib in start_libs}
+    dependency_map = {start_lib: [] for start_lib in start_libs}
     libs = list(start_libs)
     visited_libs = libs
 
@@ -88,26 +88,26 @@ def run():
                         pkg = sub.split("/")[-1]
                         if pkg not in next_libs and pkg not in visited_libs:
                             next_libs.append(pkg)
-                            if lib not in d:
-                                d[lib] = []
-                            d[lib].append(pkg)
+                            if lib not in dependency_map:
+                                dependency_map[lib] = []
+                            dependency_map[lib].append(pkg)
 
         libs = next_libs
         visited_libs.extend(libs)
-        for key, value in d.iteritems():
+        for key, value in dependency_map.iteritems():
             print key, value
         print "****** round end ******\n"
 
     print "\ndependency dictionary:\n"
-    allchange = set()
-    for key, value in d.iteritems():
-        allchange.add(key)
+    all_change = set()
+    for key, value in dependency_map.iteritems():
+        all_change.add(key)
         for item in value:
-            allchange.add(item)
-    print "\nall", len(allchange), "libs to change\n"
-    print allchange
+            all_change.add(item)
+    print "\nall", len(all_change), "libs\n"
+    print all_change
 
-    print_dep(d)
+    print_dep(dependency_map)
 
 if __name__ == "__main__":
     # check GOPATH
