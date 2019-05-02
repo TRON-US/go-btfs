@@ -52,22 +52,16 @@ You'll need to add Go's bin directories to your `$PATH` environment variable e.g
 export GOPATH=${HOME}/go
 export PATH=$PATH:/usr/local/go/bin
 export PATH=$PATH:$GOPATH/bin
+export GO111MODULE=on
 ```
 
 (If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
 
 
-#### Environment Setting
-
-```
-export GO111MODULE=on
-export EDITOR=vim
-export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
-```
-
 
 #### To access github private repo:
 ```
+$ export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
 $ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
 ```
 
