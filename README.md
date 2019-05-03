@@ -10,13 +10,10 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
 - [Install](#install)
   - [System Requirements](#system-requirements)
   - [Build from Source](#build-from-source)
-    - [Install Go](#install-go)
-    - [Environment Setting](#environment-setting)
-    - [Download and Compile BTFS](#download-and-compile-btfs)
-    - [Auto Updating Setting](auto-updating-setting)
-    - [Running a BTFS Node On BTFS Private Net](#running-a-btfs-node-on-btfs-private-net)
-    - [Troubleshooting](#troubleshooting)
-  - [Development Dependencies](#development-dependencies)
+    - [Install Go](#step1-install-go)
+    - [Download Source Code](#step2-download-source-code)
+    - [Build And Join BTFS Private Net](#step3-build-and-join-btfs-private-net)
+    - [Run BTFS At The Backend](#step4-run-btfs-at-the-backend)
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
@@ -33,7 +30,7 @@ BTFS can run on most Linux, macOS, and Windows systems. We recommend running it 
 
 ### Build from Source
 
-#### Install Go
+#### Step1 Install Go
 
 The build process for btfs requires Go 1.11 or higher. If you don't have it: [Download Go 1.12+](https://golang.org/dl/). Or use the following command:
 ```
@@ -59,21 +56,30 @@ export GO111MODULE=on
 
 
 
-#### To access github private repo:
+#### Step2 Download Source Code
+```
+$ git clone https://github.com/TRON-US/go-btfs.git
+$ cd go-btfs
+```
+
+#### Step3 Build And Join BTFS Private Net
+
+Your can choose to using on-step script to compile and build or just follow step by step.
+
+##### Using One-step Script
+
+`bash install_btfs.sh`
+
+##### Step-by-step Instruction
+
+###### 1. To access github private repo:
 ```
 $ export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
 $ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
 ```
 
+###### 2. Compile and build:
 
-#### Download and Compile BTFS
-download go-btfs source code:
-```
-$ git clone https://github.com/TRON-US/go-btfs.git
-$ cd go-btfs
-$ go clean -modcache
-```
-join the BTFS private net:(using `bash install_btfs.sh` command and your node will be deployed or just follow the following guide)
 ```
 $ make install
 go version go1.12.4 linux/amd64
@@ -87,7 +93,7 @@ Show if btfs exec file has been created:
 $which btfs
 /home/ubuntu/go/bin/btfs
 ```
-Init a btfs node:
+###### 3. Init a btfs node:
 ```
 $ btfs init
 initializing BTFS node at /home/ubuntu/.btfs
@@ -98,7 +104,9 @@ to get started, enter:
         btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
 ```
 
-#### Auto Update Setting
+
+###### 4. Auto Update Setting
+
 Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
 ```
 version: 0.0.4    # btfs version
@@ -108,7 +116,7 @@ sleepTime: 20        # how often to auto updte (second）.
 ```
 
 
-#### Running a BTFS Node On BTFS Private Net
+###### 5. Join BTFS Private Net
 Put the swarm.key in /.btfs, and then run the node. [Get swarm.key](https://github.com/TRON-US/go-btfs/blob/master/swarm.key)
 ```
 $ mv swarm.key ~/.btfs/swarm.key
@@ -133,7 +141,8 @@ Enable gateway, api port:
 $ btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 $ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 ```
-Run btfs at the backend:
+
+#### Step4 Run BTFS At The Backend
 ```
 you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
 $ nohup btfs daemon </dev/null > /dev/null 2>&1 &
