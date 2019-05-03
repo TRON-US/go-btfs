@@ -1,4 +1,11 @@
 #!/bin/bash
+export GOPATH=${HOME}/go
+export PATH=$PATH:/usr/local/go/bin
+export PATH=$PATH:$GOPATH/bin
+export GO111MODULE=on
+export EDITOR=vim
+export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
+git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
 make install
 btfs init
 # swarm key
@@ -14,3 +21,4 @@ btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", 
 btfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials "[\"true\"]"
 btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+echo install successful, please run 'btfs daemon'
