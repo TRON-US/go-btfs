@@ -5,6 +5,7 @@ export GO111MODULE=on
 export EDITOR=vim
 export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
 git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
+go clean -modcache
 make install
 btfs init
 # swarm key
