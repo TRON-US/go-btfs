@@ -46,6 +46,19 @@ sudo rm $GO_PACKAGE
 go version
 ```
 
+#### Download and Compile BTFS
+download go-btfs source code:
+```
+$ git clone https://github.com/TRON-US/go-btfs.git
+$ cd go-btfs
+```
+
+#### Run one step script 
+bash install_btfs.sh
+
+#### Start btfs
+btfs daemon 
+
 You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
 
 ```
