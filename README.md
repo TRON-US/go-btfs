@@ -10,13 +10,8 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
 - [Install](#install)
   - [System Requirements](#system-requirements)
   - [Build from Source](#build-from-source)
-    - [Install Go](#install-go)
-    - [Environment Setting](#environment-setting)
-    - [Download and Compile BTFS](#download-and-compile-btfs)
-    - [Auto Updating Setting](auto-updating-setting)
-    - [Running a BTFS Node On BTFS Private Net](#running-a-btfs-node-on-btfs-private-net)
-    - [Troubleshooting](#troubleshooting)
   - [Development Dependencies](#development-dependencies)
+- [Auto Updating Setting](#auto-updating-setting)
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
@@ -33,7 +28,7 @@ BTFS can run on most Linux, macOS, and Windows systems. We recommend running it 
 
 ### Build from Source
 
-#### Install Go
+#### Step 1. Install Go
 
 The build process for btfs requires Go 1.11 or higher. If you don't have it: [Download Go 1.12+](https://golang.org/dl/). Or use the following command:
 ```
@@ -46,86 +41,23 @@ sudo rm $GO_PACKAGE
 go version
 ```
 
-#### Download and Compile BTFS
-download go-btfs source code:
+#### Step 2. Download go-btfs source code:
 ```
 $ git clone https://github.com/TRON-US/go-btfs.git
 $ cd go-btfs
 ```
 
-#### Run one step script 
-bash install_btfs.sh
-
-#### Start btfs
-btfs daemon 
-
-You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
-
+#### Step 3. Run one step script 
 ```
-export GOPATH=${HOME}/go
-export PATH=$PATH:/usr/local/go/bin
-export PATH=$PATH:$GOPATH/bin
-export GO111MODULE=on
+$bash install_btfs.sh
 ```
 
-(If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
-
-
-
-#### To access github private repo:
+#### Step 4. Start btfs
 ```
-$ export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
-$ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
+$btfs daemon 
 ```
 
-
-#### Download and Compile BTFS
-download go-btfs source code:
-```
-$ git clone https://github.com/TRON-US/go-btfs.git
-$ cd go-btfs
-$ go clean -modcache
-```
-join the BTFS private net:(using `bash install_btfs.sh` command and your node will be deployed or just follow the following guide)
-```
-$ make install
-go version go1.12.4 linux/amd64
-bin/check_go_version 1.12
-go install -ldflags="-X "github.com/ipfs/go-ipfs".CurrentCommit=63ae486fa-dirty" ./cmd/btfs
-```
-If you are building on FreeBSD instead of `make install` use `gmake install`.
-
-Show if btfs exec file has been created:
-```
-$which btfs
-/home/ubuntu/go/bin/btfs
-```
-Init a btfs node:
-```
-$ btfs init
-initializing BTFS node at /home/ubuntu/.btfs
-generating 2048-bit RSA keypair...done
-peer identity: QmTkQjKAtfh2GNDPmtnFB8d..................
-to get started, enter:
-
-        btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
-```
-
-#### Auto Update Setting
-Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
-```
-version: 0.0.4    # btfs version
-md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
-autoupdateFlg: true     # is auto update
-sleepTime: 20        # how often to auto updte (second）.
-```
-
-
-#### Running a BTFS Node On BTFS Private Net
-Put the swarm.key in /.btfs, and then run the node. [Get swarm.key](https://github.com/TRON-US/go-btfs/blob/master/swarm.key)
-```
-$ mv swarm.key ~/.btfs/swarm.key
-```
+#### Explaination of some steps (refer to install_btfs.sh)
 Remove ipfs bootstrap:
 ```
 $ btfs bootstrap rm --all  (if there is error like this: Error: cannot connect to the api. Is the deamon running? To run as a standalone CLI command remove the api file in `$IPFS_PATH/api`, please run `nohup btfs daemon </dev/null > /dev/null 2>&1 &` and then run this command.)
@@ -155,6 +87,16 @@ Check if your node is connect to BTFS private net:
 ```
 $ btfs swarm peers
 /ip4/3.18.120.107/tcp/4001/btfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
+```
+
+
+## Auto Update Setting
+Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
+```
+version: 0.0.4    # btfs version
+md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
+autoupdateFlg: true     # is auto update
+sleepTime: 20        # how often to auto updte (second）.
 ```
 
 
@@ -248,23 +190,3 @@ Some places to get you started on the codebase:
   - libp2p: https://github.com/libp2p/go-libp2p
   - DHT: https://github.com/libp2p/go-libp2p-kad-dht
   - PubSub: https://github.com/libp2p/go-libp2p-pubsub
-
-
-### Testing
-
-```
-make test
-```
-
-### Development Dependencies
-
-If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
-
-
-## License
-
-[MIT](./LICENSE)
-
-
-## TODO
-### Troubleshooting
