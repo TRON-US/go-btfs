@@ -67,10 +67,14 @@ $ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON
 
 
 #### Download and Compile BTFS
+download go-btfs source code:
 ```
 $ git clone https://github.com/TRON-US/go-btfs.git
 $ cd go-btfs
 $ go clean -modcache
+```
+join the BTFS private net:(using `bash install_btfs.sh` command and your node will be deployed or just follow the following guide)
+```
 $ make install
 go version go1.12.4 linux/amd64
 bin/check_go_version 1.12
