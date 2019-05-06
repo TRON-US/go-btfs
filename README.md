@@ -2,7 +2,13 @@
 
 ## What is BTFS?
 
-BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that utilizes the TRON network for integration with DApps and smart contracts. In current smart-contract based networks like Ethereum and NEO, there exists no mechanism for large file transfer. BTFS allows for tokenized large file transfers. This paper presents a proposal for a BTFS and TRON based decentralized social media DApp which is censorship resistant and implements a tokenized reward system to content creators.
+BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from 
+IPFS that utilizes the TRON network for integration with DApps and smart 
+contracts. In current smart-contract based networks like Ethereum and NEO, 
+there exists no mechanism for large file transfer. BTFS allows for 
+tokenized large file transfers. This paper presents a proposal for a BTFS 
+and TRON based decentralized social media DApp which is censorship 
+resistant and implements a tokenized reward system to content creators.
 
 
 ## Table of Contents
@@ -25,14 +31,19 @@ BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from IPFS that 
 
 ### System Requirements
 
-BTFS can run on most Linux, macOS, and Windows systems. We recommend running it on a machine with at least 2 GB of RAM (it’ll do fine with only one CPU core), but it should run fine with as little as 1 GB of RAM. On systems with less memory, it may not be completely stable.
+BTFS can run on most Linux, macOS, and Windows systems. We recommend 
+running it on a machine with at least 2 GB of RAM (it’ll do fine with 
+only one CPU core), but it should run fine with as little as 1 GB of 
+RAM. On systems with less memory, it may not be completely stable.
 
 
 ### Build from Source
 
 #### Step1 Install Go
 
-The build process for btfs requires Go 1.11 or higher. If you don't have it: [Download Go 1.12+](https://golang.org/dl/). Or use the following command:
+The build process for btfs requires Go 1.11 or higher. If you don't 
+have it: [Download Go 1.12+](https://golang.org/dl/). Or use the 
+following command:
 ```
 cd /tmp
 GO_PACKAGE=go1.12.4.linux-amd64.tar.gz
@@ -43,7 +54,9 @@ sudo rm $GO_PACKAGE
 go version
 ```
 
-You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
+You'll need to add Go's bin directories to your `$PATH` environment 
+variable e.g., by adding these lines to your `/etc/profile` (for a 
+system-wide installation) or `$HOME/.profile`:
 
 ```
 export GOPATH=${HOME}/go
@@ -112,7 +125,7 @@ Create a config.yaml file in the same path of your btfs binary path. The config.
 version: 0.0.4    # btfs version
 md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
 autoupdateFlg: true     # is auto update
-sleepTime: 20        # how often to auto updte (second）.
+sleepTimeSeconds: 20        # how often to auto update (second）.
 ```
 
 
@@ -123,7 +136,10 @@ $ mv swarm.key ~/.btfs/swarm.key
 ```
 Remove ipfs bootstrap:
 ```
-$ btfs bootstrap rm --all  (if there is error like this: Error: cannot connect to the api. Is the deamon running? To run as a standalone CLI command remove the api file in `$IPFS_PATH/api`, please run `nohup btfs daemon </dev/null > /dev/null 2>&1 &` and then run this command.)
+$ btfs bootstrap rm --all  (if there is error like this: Error: cannot 
+connect to the api. Is the daemon running? To run as a standalone CLI 
+command remove the api file in `$IPFS_PATH/api`, please run `nohup btfs 
+daemon </dev/null > /dev/null 2>&1 &` and then run this command.)
 ```
 Join the private net work:
 ```
@@ -241,9 +257,9 @@ Some places to get you started on the codebase:
 - Main file: [./cmd/btfs/main.go](https://github.com/TRON-US/go-btfs/blob/master/cmd/btfs/main.go)
 - CLI Commands: [./core/commands/](https://github.com/TRON-US/go-btfs/tree/master/core/commands)
 - libp2p
-  - libp2p: https://github.com/libp2p/go-libp2p
-  - DHT: https://github.com/libp2p/go-libp2p-kad-dht
-  - PubSub: https://github.com/libp2p/go-libp2p-pubsub
+  - libp2p: [libp2p](https://github.com/libp2p/go-libp2p)
+  - DHT: [DHT](https://github.com/libp2p/go-libp2p-kad-dht)
+  - PubSub: [PubSub](https://github.com/libp2p/go-libp2p-pubsub)
 
 
 ### Testing
