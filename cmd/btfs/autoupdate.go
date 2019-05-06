@@ -29,10 +29,10 @@ const (
 )
 
 type Config struct {
-	Version         string `yaml:"version"`
-	Md5Check        string `yaml:"md5"`
-	AutoupdateFlg   bool   `yaml:"autoupdateFlg"`
-	SleepTimeSecond int    `yaml:"sleepTimeSecond"`
+	Version          string `yaml:"version"`
+	Md5Check         string `yaml:"md5"`
+	AutoupdateFlg    bool   `yaml:"autoupdateFlg"`
+	SleepTimeSeconds int    `yaml:"sleepTimeSeconds"`
 }
 
 var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-auto-update/test/"
@@ -83,7 +83,7 @@ func update() {
 		return
 	}
 
-	sleepTimeSecond := 20
+	sleepTimeSeconds := 20
 	version := "0.0.0"
 	autoupdateFlg := true
 
@@ -92,7 +92,7 @@ func update() {
 	if err == nil {
 		autoupdateFlg = currentConfig.AutoupdateFlg
 		version = currentConfig.Version
-		sleepTimeSecond = currentConfig.SleepTimeSecond
+		sleepTimeSeconds = currentConfig.SleepTimeSeconds
 	}
 
 	if !autoupdateFlg {
@@ -101,7 +101,7 @@ func update() {
 	}
 
 	for {
-		time.Sleep(time.Second * time.Duration(sleepTimeSecond))
+		time.Sleep(time.Second * time.Duration(sleepTimeSeconds))
 
 		if pathExists(latestConfigPath) {
 			// Delete the latest btfs config file.
