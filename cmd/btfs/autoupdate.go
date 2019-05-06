@@ -29,13 +29,13 @@ const (
 )
 
 type Config struct {
-	Version       string `yaml:"version"`
-	Md5Check      string `yaml:"md5"`
-	AutoupdateFlg bool   `yaml:"autoupdateFlg"`
-	SleepTime     int    `yaml:"sleepTime"`
+	Version         string `yaml:"version"`
+	Md5Check        string `yaml:"md5"`
+	AutoupdateFlg   bool   `yaml:"autoupdateFlg"`
+	SleepTimeSecond int    `yaml:"sleepTimeSecond"`
 }
 
-var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-autoupdate-config/test/"
+var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-auto-update/test/"
 
 // Auto update function.
 func update() {
@@ -83,20 +83,25 @@ func update() {
 		return
 	}
 
+	sleepTimeSecond := 20
+	version := "0.0.0"
+	autoupdateFlg := true
+
 	// Get current config file.
 	currentConfig, err := getConfigure(currentConfigPath)
-	if err != nil {
-		log.Errorf("Get current config file error, reasons: [%v]", err)
-		return
+	if err == nil {
+		autoupdateFlg = currentConfig.AutoupdateFlg
+		version = currentConfig.Version
+		sleepTimeSecond = currentConfig.SleepTimeSecond
 	}
 
-	if !currentConfig.AutoupdateFlg {
+	if !autoupdateFlg {
 		fmt.Println("Automatic update is not turned on")
 		return
 	}
 
 	for {
-		time.Sleep(time.Second * time.Duration(currentConfig.SleepTime))
+		time.Sleep(time.Second * time.Duration(sleepTimeSecond))
 
 		if pathExists(latestConfigPath) {
 			// Delete the latest btfs config file.
@@ -122,7 +127,7 @@ func update() {
 		}
 
 		// Compare version.
-		flg, err := versionCompare(latestConfig.Version, currentConfig.Version)
+		flg, err := versionCompare(latestConfig.Version, version)
 		if err != nil {
 			log.Errorf("Version compare error, reasons: [%v]", err)
 			continue
