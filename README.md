@@ -112,7 +112,7 @@ Create a config.yaml file in the same path of your btfs binary path. The config.
 version: 0.0.4    # btfs version
 md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
 autoupdateFlg: true     # is auto update
-sleepTime: 20        # how often to auto updte (second）.
+sleepTimeSecond: 20        # how often to auto updte (second）.
 ```
 
 
