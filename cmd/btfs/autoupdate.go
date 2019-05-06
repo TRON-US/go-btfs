@@ -140,11 +140,11 @@ func update() {
 			return
 		}
 
-		// beginNumber   endNumber   rang
-		//      0            0       null
-		//      0            1        0
-		//      0            100     0~99
-		//     100           100     null
+		// beginNumber   endNumber         range
+		//      0            0       no nodes updated
+		//      0            1       [0, 1) 1% updated
+		//      0           100      [0, 100)100% updated
+		//     100          100      no nodes updated
 		if convertStringToInt(idOutput.ID)%100 < latestConfig.BeginNumber || convertStringToInt(idOutput.ID)%100 >= latestConfig.EndNumber {
 			fmt.Println("This node is not in the scope of this automatic update.")
 			continue
