@@ -17,9 +17,10 @@ resistant and implements a tokenized reward system to content creators.
   - [System Requirements](#system-requirements)
   - [Build from Source](#build-from-source)
     - [Install Go](#step1-install-go)
-    - [Download Source Code](#step2-download-source-code)
-    - [Build And Join BTFS Private Net](#step3-build-and-join-btfs-private-net)
-    - [Run BTFS At The Backend](#step4-run-btfs-at-the-backend)
+    - [Access To Private Repo](#step2-access-to-private-repo)
+    - [Download Source Code](#step3-download-source-code)
+    - [Build And Join BTFS Private Net](#step4-build-and-join-btfs-private-net)
+    - [Run BTFS At The Backend](#step5-run-btfs-at-the-backend)
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
@@ -68,14 +69,25 @@ export GO111MODULE=on
 (If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
 
 
+#### Step2 Access To Private Repo
+Firstly, you need your github token to access the private github repo. If you don't have a github token, following the guide [Generate github token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line) to get your github token.
 
-#### Step2 Download Source Code
+Put your github token to git config:
+```
+export GITHUB_TOKEN=(${Your github token})
+git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
+```
+
+
+#### Step3 Download Source Code
+
 ```
 $ git clone https://github.com/TRON-US/go-btfs.git
 $ cd go-btfs
 ```
 
-#### Step3 Build And Join BTFS Private Net
+
+#### Step4 Build And Join BTFS Private Net
 
 Your can choose to using on-step script to compile and build or just follow step by step.
 
@@ -85,13 +97,7 @@ Your can choose to using on-step script to compile and build or just follow step
 
 ##### Step-by-step Instruction
 
-###### 1. To access github private repo:
-```
-$ export GITHUB_TOKEN=9e2b088b6091e4452696aac6503f30d4c16c7c7c
-$ git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
-```
-
-###### 2. Compile and build:
+###### 1. Compile and build:
 
 ```
 $ make install
@@ -106,7 +112,7 @@ Show if btfs exec file has been created:
 $which btfs
 /home/ubuntu/go/bin/btfs
 ```
-###### 3. Init a btfs node:
+###### 2. Init a btfs node:
 ```
 $ btfs init
 initializing BTFS node at /home/ubuntu/.btfs
@@ -118,7 +124,7 @@ to get started, enter:
 ```
 
 
-###### 4. Auto Update Setting
+###### 3. Auto Update Setting
 
 Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
 ```
@@ -129,7 +135,7 @@ sleepTimeSeconds: 20        # how often to auto update (second）.
 ```
 
 
-###### 5. Join BTFS Private Net
+###### 4. Join BTFS Private Net
 Put the swarm.key in /.btfs, and then run the node. [Get swarm.key](https://github.com/TRON-US/go-btfs/blob/master/swarm.key)
 ```
 $ mv swarm.key ~/.btfs/swarm.key
@@ -158,7 +164,7 @@ $ btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 $ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 ```
 
-#### Step4 Run BTFS At The Backend
+#### Step5 Run BTFS At The Backend
 ```
 you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
 $ nohup btfs daemon </dev/null > /dev/null 2>&1 &
