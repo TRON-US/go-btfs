@@ -32,6 +32,7 @@ require (
 	github.com/ipfs/go-fs-lock v0.0.1
 	github.com/ipfs/go-ipfs v0.4.20
 	github.com/ipfs/go-ipfs-addr v0.0.1
+	github.com/ipfs/go-ipfs-api v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-blocksutil v0.0.1
 	github.com/ipfs/go-ipfs-chunker v0.0.1

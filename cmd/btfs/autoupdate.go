@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -26,6 +27,7 @@ const (
 	CurrentConfigFile = "config.yaml"
 	UpdateBinary      = "update-%s-%s%s"
 	LatestBtfsBinary  = "btfs-%s-%s%s"
+	url               = "localhost:5001"
 )
 
 type Config struct {
@@ -33,6 +35,8 @@ type Config struct {
 	Md5Check         string `yaml:"md5"`
 	AutoupdateFlg    bool   `yaml:"autoupdateFlg"`
 	SleepTimeSeconds int    `yaml:"sleepTimeSeconds"`
+	BeginNumber      int    `yaml:"beginNumber"`
+	EndNumber        int    `yaml:"endNumber"`
 }
 
 var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-auto-update/test/"
@@ -124,6 +128,21 @@ func update() {
 		if err != nil {
 			log.Errorf("Get latest config file error, reasons: [%v]", err)
 			continue
+		}
+
+		// Where your local node is running on localhost:5001
+		sh := shell.NewShell(url)
+
+		// Get btfs id.
+		idOutput, err := sh.ID()
+		if err != nil {
+			log.Errorf("Get btfs id error, reasons: [%v]", err)
+			return
+		}
+
+		if transferStringToInt(idOutput.ID)%100 < latestConfig.BeginNumber || transferStringToInt(idOutput.ID)%100 > latestConfig.EndNumber {
+			fmt.Println("This node is not in the scope of this automatic update.")
+			return
 		}
 
 		// Compare version.
@@ -352,4 +371,13 @@ func md5Encode(name string) (string, error) {
 	}
 
 	return hex.EncodeToString(md5Hash.Sum(nil)), nil
+}
+
+// Transfer string to int.
+func transferStringToInt(s string) int {
+	sum := 0
+	for _, v := range []byte(s) {
+		sum += int(v)
+	}
+	return sum
 }
