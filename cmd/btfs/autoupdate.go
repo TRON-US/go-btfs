@@ -140,9 +140,14 @@ func update() {
 			return
 		}
 
-		if transferStringToInt(idOutput.ID)%100 < latestConfig.BeginNumber || transferStringToInt(idOutput.ID)%100 > latestConfig.EndNumber {
+		// beginNumber   endNumber   rang
+		//      0            0       null
+		//      0            1        0
+		//      0            100     0~99
+		//     100           100     null
+		if convertStringToInt(idOutput.ID)%100 < latestConfig.BeginNumber || convertStringToInt(idOutput.ID)%100 >= latestConfig.EndNumber {
 			fmt.Println("This node is not in the scope of this automatic update.")
-			return
+			continue
 		}
 
 		// Compare version.
@@ -373,8 +378,8 @@ func md5Encode(name string) (string, error) {
 	return hex.EncodeToString(md5Hash.Sum(nil)), nil
 }
 
-// Transfer string to int.
-func transferStringToInt(s string) int {
+// Convert string to int.
+func convertStringToInt(s string) int {
 	sum := 0
 	for _, v := range []byte(s) {
 		sum += int(v)
