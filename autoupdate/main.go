@@ -12,7 +12,7 @@ import (
 	shell "github.com/ipfs/go-ipfs-api"
 )
 
-const url = "localhost:50051"
+const url = "localhost:5001"
 
 // Rollback function of auto update.
 func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string) {
@@ -125,7 +125,7 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 	fmt.Println("BTFS rollback SUCCESS!")
 }
 
-func main() {
+func update() int {
 	time.Sleep(time.Second * 5)
 	defaultProjectPath := flag.String("project", "", "default project path")
 	defaultDownloadPath := flag.String("download", "", "default download path")
@@ -134,7 +134,7 @@ func main() {
 
 	if *defaultProjectPath == "" || *defaultDownloadPath == "" {
 		fmt.Println("Request param is nil.")
-		return
+		return 1
 	}
 
 	var currentConfigPath string
@@ -159,7 +159,7 @@ func main() {
 		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext))
 	} else {
 		fmt.Printf("Operating system [%s], arch [%s] does not support automatic updates\n", runtime.GOOS, runtime.GOARCH)
-		return
+		return 1
 	}
 
 	var err error
@@ -169,7 +169,7 @@ func main() {
 		err = os.Remove(backupConfigPath)
 		if err != nil {
 			fmt.Printf("Delete backup config file error, reasons: [%v]\n", err)
-			return
+			return 1
 		}
 	}
 
@@ -178,7 +178,7 @@ func main() {
 		err = os.Rename(currentConfigPath, backupConfigPath)
 		if err != nil {
 			fmt.Printf("Move current config file error, reasons: [%v]\n", err)
-			return
+			return 1
 		}
 	}
 
@@ -186,7 +186,7 @@ func main() {
 	err = os.Rename(latestConfigPath, currentConfigPath)
 	if err != nil {
 		fmt.Printf("Move file error, reasons: [%v]\n", err)
-		return
+		return 1
 	}
 
 	// Delete btfs backup file.
@@ -194,7 +194,7 @@ func main() {
 		err = os.Remove(btfsBackupPath)
 		if err != nil {
 			fmt.Printf("Move file error, reasons: [%v]\n", err)
-			return
+			return 1
 		}
 	}
 
@@ -202,21 +202,21 @@ func main() {
 	err = os.Rename(btfsBinaryPath, btfsBackupPath)
 	if err != nil {
 		fmt.Printf("Move file error, reasons: [%v]\n", err)
-		return
+		return 1
 	}
 
 	// Move latest btfs binary file to current btfs binary file.
 	err = os.Rename(latestBtfsBinaryPath, btfsBinaryPath)
 	if err != nil {
 		fmt.Printf("Move file error, reasons: [%v]\n", err)
-		return
+		return 1
 	}
 
 	// Add executable permissions to btfs binary.
 	err = os.Chmod(btfsBinaryPath, 0775)
 	if err != nil {
 		fmt.Printf("Chmod file error, reasons: [%v]\n", err)
-		return
+		return 1
 	}
 
 	wg := sync.WaitGroup{}
@@ -236,6 +236,11 @@ func main() {
 
 	// Wait for the rollback program to complete.
 	wg.Wait()
+	return 0
+}
+
+func main() {
+	os.Exit(update())
 }
 
 // Determine if the path file exists.
