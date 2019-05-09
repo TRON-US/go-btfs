@@ -10,6 +10,8 @@ import (
 	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
+
+	"github.com/pkg/errors"
 )
 
 const url = "localhost:5001"
@@ -31,30 +33,14 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		}
 	}
 
-	fmt.Println("BTFS rollback begin!")
+	fmt.Println("BTFS failed to start, rollback begin!")
 
-	var currentConfigPath string
-	var btfsBackupPath string
-	var btfsBinaryPath string
-	var backupConfigPath string
-
-	// Select binary files based on operating system.
-	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
-		ext := ""
-		if runtime.GOOS == "windows" {
-			ext = ".exe"
-		}
-
-		currentConfigPath = fmt.Sprint(defaultProjectPath, "config.yaml")
-		backupConfigPath = fmt.Sprint(defaultDownloadPath, "config.yaml.bk")
-		btfsBackupPath = fmt.Sprint(defaultDownloadPath, fmt.Sprintf("btfs%s.bk", ext))
-		btfsBinaryPath = fmt.Sprint(defaultProjectPath, fmt.Sprintf("btfs%s", ext))
-	} else {
+	// Select binary files and configure file path based on operating system.
+	currentConfigPath, backupConfigPath, _, btfsBinaryPath, btfsBackupPath, _, err := getProjectPath(defaultProjectPath, defaultDownloadPath)
+	if err != nil {
 		fmt.Printf("Operating system [%s], arch [%s] does not support rollback\n", runtime.GOOS, runtime.GOARCH)
 		return
 	}
-
-	var err error
 
 	// Check if the backup binary file exists.
 	if !pathExists(btfsBackupPath) {
@@ -137,32 +123,12 @@ func update() int {
 		return 1
 	}
 
-	var currentConfigPath string
-	var latestConfigPath string
-	var btfsBackupPath string
-	var btfsBinaryPath string
-	var latestBtfsBinaryPath string
-	var backupConfigPath string
-
-	// Select binary files based on operating system.
-	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
-		ext := ""
-		if runtime.GOOS == "windows" {
-			ext = ".exe"
-		}
-
-		currentConfigPath = fmt.Sprint(*defaultProjectPath, "config.yaml")
-		backupConfigPath = fmt.Sprint(*defaultDownloadPath, "config.yaml.bk")
-		latestConfigPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
-		btfsBackupPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs%s.bk", ext))
-		btfsBinaryPath = fmt.Sprint(*defaultProjectPath, fmt.Sprintf("btfs%s", ext))
-		latestBtfsBinaryPath = fmt.Sprint(*defaultDownloadPath, fmt.Sprintf("btfs-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext))
-	} else {
-		fmt.Printf("Operating system [%s], arch [%s] does not support automatic updates\n", runtime.GOOS, runtime.GOARCH)
+	// Select binary files and configure file path based on operating system.
+	currentConfigPath, backupConfigPath, latestConfigPath, btfsBinaryPath, btfsBackupPath, latestBtfsBinaryPath, err := getProjectPath(*defaultProjectPath, *defaultDownloadPath)
+	if err != nil {
+		fmt.Printf("Operating system [%s], arch [%s] does not support rollback\n", runtime.GOOS, runtime.GOARCH)
 		return 1
 	}
-
-	var err error
 
 	// Delete backup configure file.
 	if pathExists(backupConfigPath) {
@@ -253,4 +219,26 @@ func pathExists(path string) bool {
 		return false
 	}
 	return false
+}
+
+// Select binary files and configure file path based on operating system.
+func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConfigPath string, backupConfigPath string,
+	latestConfigPath string, btfsBinaryPath string, btfsBackupPath string, latestBtfsBinaryPath string, err error) {
+	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
+		ext := ""
+		if runtime.GOOS == "windows" {
+			ext = ".exe"
+		}
+
+		currentConfigPath = fmt.Sprint(defaultProjectPath, "config.yaml")
+		backupConfigPath = fmt.Sprint(defaultDownloadPath, "config.yaml.bk")
+		latestConfigPath = fmt.Sprint(defaultDownloadPath, fmt.Sprintf("config_%s_%s.yaml", runtime.GOOS, runtime.GOARCH))
+		btfsBinaryPath = fmt.Sprint(defaultProjectPath, fmt.Sprintf("btfs%s", ext))
+		btfsBackupPath = fmt.Sprint(defaultDownloadPath, fmt.Sprintf("btfs%s.bk", ext))
+		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, fmt.Sprintf("btfs-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext))
+	} else {
+		fmt.Printf("Operating system [%s], arch [%s] does not support automatic updates\n", runtime.GOOS, runtime.GOARCH)
+		return currentConfigPath, backupConfigPath, latestConfigPath, btfsBinaryPath, btfsBackupPath, latestBtfsBinaryPath, errors.New("os does not support automatic updates")
+	}
+	return
 }
