@@ -3,7 +3,6 @@ package analytics
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -14,12 +13,12 @@ import (
 
 type programInfo struct {
 	node        *core.IpfsNode
-	startTime   time.Time
-	NodeID      string `json:"node_id"`
-	CPUInfo     string `json:"cpu_info"`
-	BTFSVersion string `json:"btfs_version"`
-	OSType      string `json:"os_type"`
-	ArchType    string `json:"arch_type"`
+	startTime   time.Time //Time at which the Daemon was ready and analytics started
+	NodeID      string    `json:"node_id"`
+	CPUInfo     string    `json:"cpu_info"`
+	BTFSVersion string    `json:"btfs_version"`
+	OSType      string    `json:"os_type"`
+	ArchType    string    `json:"arch_type"`
 }
 
 type dataCollection struct {
@@ -68,12 +67,8 @@ func (dc *dataCollection) update() {
 	dc.StorageUsed = storage / 1024
 }
 
-func (dc *dataCollection) printData() {
-	temp, _ := json.Marshal(dc)
-	fmt.Print(string(temp))
-}
-
 func (dc *dataCollection) sendData() {
+	dc.update()
 	temp, _ := json.Marshal(dc)
 
 	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(temp))
@@ -89,14 +84,15 @@ func (dc *dataCollection) sendData() {
 	}
 
 	defer res.Body.Close()
-
 }
 
 func (dc *dataCollection) collectionAgent() {
 	tick := time.NewTicker(heartBeat)
+
 	defer tick.Stop()
+	dc.sendData()
+
 	for range tick.C {
-		dc.update()
 		dc.sendData()
 	}
 }
