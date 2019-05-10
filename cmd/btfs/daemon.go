@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
+	"github.com/TRON-US/go-btfs/analytics"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
@@ -25,12 +26,12 @@ import (
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/ipfs/go-ipfs-cmdkit"
+	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	goprocess "github.com/jbenet/goprocess"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/multiformats/go-multiaddr-net"
+	manet "github.com/multiformats/go-multiaddr-net"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -415,6 +416,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// The daemon is *finally* ready.
 	fmt.Printf("Daemon is ready\n")
+
+	//Begin sending analytics to hosted server
+	analytics.Initialize(node, version.CurrentVersionNumber)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
