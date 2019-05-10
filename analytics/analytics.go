@@ -25,8 +25,8 @@ type programInfo struct {
 type dataCollection struct {
 	programInfo
 	UpTime      uint64  `json:"up_time"`      //Seconds
-	StorageUsed uint64  `json:"storage_used"` //
-	MemUsed     uint64  `json:"memory_used"`  //
+	StorageUsed uint64  `json:"storage_used"` //Stored in Kilobytes
+	MemUsed     uint64  `json:"memory_used"`  //Stored in Kilobytes
 	CPUUsed     float64 `json:"cpu_used"`
 }
 
@@ -83,11 +83,13 @@ func (dc *dataCollection) sendData() {
 	}
 
 	res, err := http.DefaultClient.Do(req)
-	defer res.Body.Close()
 
 	if err != nil {
 		return
 	}
+
+	defer res.Body.Close()
+
 }
 
 func (dc *dataCollection) collectionAgent() {
