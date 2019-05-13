@@ -42,7 +42,7 @@ RAM. On systems with less memory, it may not be completely stable.
 
 #### Step1 Install Go
 
-The build process for btfs requires Go 1.11 or higher. If you don't 
+The build process for btfs requires Go 1.12 or higher. If you don't 
 have it: [Download Go 1.12+](https://golang.org/dl/). Or use the 
 following command:
 ```
@@ -74,7 +74,7 @@ Firstly, you need your github token to access the private github repo. If you do
 
 Put your github token to git config:
 ```
-export GITHUB_TOKEN=(${Your github token})
+export GITHUB_TOKEN=(Your github token)
 git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
 ```
 
@@ -171,7 +171,7 @@ $ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 
 ```
 you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
-$ nohup btfs daemon </dev/null > /dev/null 2>&1 &
+$ sudo nohup btfs daemon </dev/null >/dev/null 2>&1 &
 ```
 Check if your node is connect to BTFS private net:
 ```
