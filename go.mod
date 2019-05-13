@@ -6,7 +6,7 @@ require (
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/TRON-US/go-mfs v0.0.6-20190501
 	github.com/TRON-US/go-path v0.0.3-20190426
-	github.com/TRON-US/interface-go-btfs-core v0.0.6-20190501
+	github.com/TRON-US/interface-go-btfs-core v0.0.6-20190513
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cenkalti/backoff v2.1.1+incompatible
@@ -103,6 +103,7 @@ require (
 	github.com/opentracing/opentracing-go v1.0.2
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.2
+	github.com/shirou/gopsutil v2.18.12+incompatible
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-smux-multiplex v3.0.16+incompatible

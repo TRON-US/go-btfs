@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+
 	"github.com/shirou/gopsutil/cpu"
 )
 
