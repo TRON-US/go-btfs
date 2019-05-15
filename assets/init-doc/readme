@@ -1,14 +1,15 @@
-Hello and Welcome to IPFS!
+Hello and Welcome to BTFS!
 
-██╗██████╗ ███████╗███████╗
-██║██╔══██╗██╔════╝██╔════╝
-██║██████╔╝█████╗  ███████╗
-██║██╔═══╝ ██╔══╝  ╚════██║
-██║██║     ██║     ███████║
-╚═╝╚═╝     ╚═╝     ╚══════╝
+########  ######## ########  ######
+##     ##    ##    ##       ##    ##
+##     ##    ##    ##       ##
+########     ##    ######    ######
+##     ##    ##    ##             ##
+##     ##    ##    ##       ##    ##
+########     ##    ##        ######
 
 If you're seeing this, you have successfully installed
-IPFS and are now interfacing with the ipfs merkledag!
+BTFS and are now interfacing with the btfs merkledag!
 
  -------------------------------------------------------
 | Warning:                                              |
