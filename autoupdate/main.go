@@ -98,7 +98,7 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		err = cmd.Start()
 	} else {
 		fmt.Println(btfsBinaryPath)
-		cmd := exec.Command("sudo", btfsBinaryPath, "daemon")
+		cmd := exec.Command(btfsBinaryPath, "daemon")
 		err = cmd.Start()
 	}
 
@@ -195,8 +195,7 @@ func update() int {
 		cmd := exec.Command(btfsBinaryPath, "daemon")
 		err = cmd.Start()
 	} else {
-		fmt.Println(btfsBinaryPath)
-		cmd := exec.Command("sudo", btfsBinaryPath, "daemon")
+		cmd := exec.Command(btfsBinaryPath, "daemon")
 		err = cmd.Start()
 	}
 
