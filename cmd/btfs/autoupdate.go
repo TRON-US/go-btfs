@@ -39,16 +39,10 @@ type Config struct {
 	EndNumber        int    `yaml:"endNumber"`
 }
 
-var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-auto-update/test/"
+var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-binary-releases/master/"
 
 // Auto update function.
 func update() {
-	// Get download path.
-	var defaultDownloadPath = os.TempDir()
-	if defaultDownloadPath[len(defaultDownloadPath)-1:] == "/" {
-		defaultDownloadPath = defaultDownloadPath[:len(defaultDownloadPath)-1]
-	}
-
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
 	if err != nil {
@@ -78,10 +72,10 @@ func update() {
 		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, ext)
 		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext)
 
-		latestConfigPath = fmt.Sprint(defaultDownloadPath, sep, latestConfigFile)
+		latestConfigPath = fmt.Sprint(defaultBtfsPath, sep, latestConfigFile)
 		currentConfigPath = fmt.Sprint(defaultBtfsPath, sep, CurrentConfigFile)
-		latestBtfsBinaryPath = fmt.Sprint(defaultDownloadPath, sep, latestBtfsBinary)
-		updateBinaryPath = fmt.Sprint(defaultDownloadPath, sep, updateBinary)
+		latestBtfsBinaryPath = fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinary)
+		updateBinaryPath = fmt.Sprint(defaultBtfsPath, sep, updateBinary)
 	} else {
 		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
 		return
@@ -223,7 +217,7 @@ func update() {
 
 		if runtime.GOOS == "windows" {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "\\"), "-download", fmt.Sprint(defaultDownloadPath, "\\"))
+			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "\\"), "-download", fmt.Sprint(defaultBtfsPath, "\\"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
@@ -231,7 +225,7 @@ func update() {
 			}
 		} else {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command("sudo", updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultDownloadPath, "/"))
+			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultBtfsPath, "/"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
