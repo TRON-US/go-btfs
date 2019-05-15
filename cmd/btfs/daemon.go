@@ -8,6 +8,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
+	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	goprocess "github.com/jbenet/goprocess"
 	ma "github.com/multiformats/go-multiaddr"
@@ -57,9 +59,6 @@ const (
 	enablePubSubKwd           = "enable-pubsub-experiment"
 	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
 	enableMultiplexKwd        = "enable-mplex-experiment"
-
-	//Currently only way to know if our swarm is PrivateNet or BTFS swarm
-	defaultFingerPrint = "22b8ba3dda50813d757dd7ef9a327c11"
 
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
@@ -347,12 +346,11 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	node.IsDaemon = true
 
-	//creating string from fingerprint to compare to hardcoded default fingerprint value
-	fingerPrintString := fmt.Sprintf("%x", node.PNetFingerprint)
-
-	if node.PNetFingerprint != nil && fingerPrintString != defaultFingerPrint {
+	//Check if there is a swarm.key at btfs loc. This would still print fingerprint if they created a swarm.key with the same values
+	spath := filepath.Join(cctx.ConfigRoot, "swarm.key")
+	if node.PNetFingerprint != nil && util.FileExists(spath) {
 		fmt.Println("Swarm is limited to private network of peers with the swarm key")
-		fmt.Printf("Swarm key fingerprint: %x\n", fingerPrintString)
+		fmt.Printf("Swarm key fingerprint: %x\n", node.PNetFingerprint)
 	}
 
 	printSwarmAddrs(node)
