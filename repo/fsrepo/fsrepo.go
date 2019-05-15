@@ -63,6 +63,9 @@ func (err NoRepoError) Error() string {
 	return fmt.Sprintf("no BTFS repo found in %s.\nplease run: 'btfs init'", err.Path)
 }
 
+//Hardcoding default swarm key
+const defaultSwarm = "/key/swarm/psk/1.0.0/\n/base16/\n64ef95289a6b998c776927ed6e33ca8c9202ee47df90141d09f5ffeeb64b8a66"
+
 const apiFile = "api"
 const swarmKeyFile = "swarm.key"
 
@@ -271,6 +274,20 @@ func initSpec(path string, conf map[string]interface{}) error {
 	return ioutil.WriteFile(fn, bytes, 0600)
 }
 
+// Creates swarm key file using default value hardcoded above
+func initSwarm(path string) error {
+	fn, err := config.Path(path, swarmKeyFile)
+	if err != nil {
+		return err
+	}
+
+	if util.FileExists(fn) {
+		return nil
+	}
+
+	return ioutil.WriteFile(fn, []byte(defaultSwarm), 0600)
+}
+
 // Init initializes a new FSRepo at the given path with the provided config.
 // TODO add support for custom datastores.
 func Init(repoPath string, conf *config.Config) error {
@@ -289,6 +306,10 @@ func Init(repoPath string, conf *config.Config) error {
 	}
 
 	if err := initSpec(repoPath, conf.Datastore.Spec); err != nil {
+		return err
+	}
+
+	if err := initSwarm(repoPath); err != nil {
 		return err
 	}
 
