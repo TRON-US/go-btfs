@@ -103,6 +103,7 @@ require (
 	github.com/opentracing/opentracing-go v1.0.2
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.2
+	github.com/shirou/gopsutil v2.18.12+incompatible
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-smux-multiplex v3.0.16+incompatible

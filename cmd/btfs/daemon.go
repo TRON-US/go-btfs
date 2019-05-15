@@ -57,6 +57,10 @@ const (
 	enablePubSubKwd           = "enable-pubsub-experiment"
 	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
 	enableMultiplexKwd        = "enable-mplex-experiment"
+
+	//Currently only way to know if our swarm is PrivateNet or BTFS swarm
+	defaultFingerPrint = "22b8ba3dda50813d757dd7ef9a327c11"
+
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -343,9 +347,12 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	node.IsDaemon = true
 
-	if node.PNetFingerprint != nil {
+	//creating string from fingerprint to compare to hardcoded default fingerprint value
+	fingerPrintString := fmt.Sprintf("%x", node.PNetFingerprint)
+
+	if node.PNetFingerprint != nil && fingerPrintString != defaultFingerPrint {
 		fmt.Println("Swarm is limited to private network of peers with the swarm key")
-		fmt.Printf("Swarm key fingerprint: %x\n", node.PNetFingerprint)
+		fmt.Printf("Swarm key fingerprint: %x\n", fingerPrintString)
 	}
 
 	printSwarmAddrs(node)

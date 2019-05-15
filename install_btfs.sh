@@ -6,8 +6,6 @@ export EDITOR=vim
 go clean -modcache
 make install
 btfs init
-# swarm key
-cp swarm.key ~/.btfs/swarm.key
 # bootstrap node
 btfs bootstrap rm --all
 btfs bootstrap add /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
