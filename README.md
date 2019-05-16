@@ -258,7 +258,7 @@ Please refer to the documentation for the btfs-binary-releases project.
 #### Pay attention
 
 * This section is limited to maintenance personnel of btfs-binary-release.
-* Make sure go-btfs and btfs-binary-release are in the project directory.
+* Make sure go-btfs and btfs-binary-release are in the same directory.
 
 #### Step
 
