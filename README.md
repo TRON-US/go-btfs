@@ -20,10 +20,16 @@ resistant and implements a tokenized reward system to content creators.
     - [Access To Private Repo](#step2-access-to-private-repo)
     - [Download Source Code](#step3-download-source-code)
     - [Build And Join BTFS Private Net](#step4-build-and-join-btfs-private-net)
+        - [Install script](#using-one-step-script)
+        - [Instruction](#step-by-step-instruction)
     - [Run BTFS At The Backend](#step5-run-btfs-at-the-backend)
 - [Usage](#usage)
+- [Started by binary file](#started-by-binary-file)
+  - [Automatically generate](#automatically-generate)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
+    - [Pay attentiontion](#pay-attentiontion)
+    - [Step](#step)
 - [Packages](#packages)
 - [License](#license)
 
@@ -131,7 +137,7 @@ to get started, enter:
 
 Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
 ```
-version: 0.0.4    # btfs version
+version: 0.0.4    # btfs version, order by version.go
 md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
 autoupdateFlg: true     # is auto update
 sleepTimeSeconds: 20        # how often to auto update (second）.
@@ -241,11 +247,43 @@ SUBCOMMANDS
     export BTFS_PATH=/path/to/btfsrepo
 ```
 
-## Started by binary file.
+## Started by binary file
 
 Please refer to the documentation for the btfs-binary-releases project.
 
 [btfs-binary-releases](https://github.com/TRON-US/btfs-binary-releases/blob/master/README.md)
+
+### Automatically generate
+
+#### Pay attentiontion
+
+* This section is limited to maintenance personnel of btfs-binary-release.
+* Make sure go-btfs and btfs-binary-release are in the project directory.
+
+#### Step
+
+1. Download go-btfs and btfs-binary-release repo.
+
+```shell
+git clone https://github.com/TRON-US/go-btfs.git
+git clone https://github.com/TRON-US/btfs-binary-releases.git
+```
+
+2. Create a branch to upload in btfs-binary-release.
+
+```shell
+cd btfs-binary-releases
+git checkout -b uploader
+```
+
+3. Execute automatic packaging script.
+
+```shell
+cd ../go-btfs
+bash package.sh
+```
+
+Now you will generate all supported versions of the binary package. Push it to the remote to generate the pull request, we will review your pr and merge it into the master.
 
 ## Getting Started
 
