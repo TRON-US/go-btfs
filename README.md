@@ -28,7 +28,7 @@ resistant and implements a tokenized reward system to content creators.
   - [Automatically generate](#automatically-generate)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
-    - [Pay attentiontion](#pay-attentiontion)
+    - [Pay attention](#pay-attention)
     - [Step](#step)
 - [Packages](#packages)
 - [License](#license)
@@ -255,7 +255,7 @@ Please refer to the documentation for the btfs-binary-releases project.
 
 ### Automatically generate
 
-#### Pay attentiontion
+#### Pay attention
 
 * This section is limited to maintenance personnel of btfs-binary-release.
 * Make sure go-btfs and btfs-binary-release are in the project directory.
