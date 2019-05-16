@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sort"
 
-	version "github.com/ipfs/go-ipfs"
+	version "github.com/TRON-US/go-btfs"
 	core "github.com/TRON-US/go-btfs/core"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 

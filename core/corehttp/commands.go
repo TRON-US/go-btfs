@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	version "github.com/ipfs/go-ipfs"
+	version "github.com/TRON-US/go-btfs"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	corecommands "github.com/TRON-US/go-btfs/core/commands"

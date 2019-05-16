@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	version "github.com/ipfs/go-ipfs"
+	version "github.com/TRON-US/go-btfs"
 	core "github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/coreapi"
 	namesys "github.com/TRON-US/go-btfs/namesys"
