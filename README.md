@@ -36,13 +36,14 @@ BTFS can run on most Linux, macOS, and Windows systems. We recommend
 running it on a machine with at least 2 GB of RAM (it’ll do fine with 
 only one CPU core), but it should run fine with as little as 1 GB of 
 RAM. On systems with less memory, it may not be completely stable.
+Only support compiling from source for mac and unix-based system.
 
 
 ### Build from Source
 
 #### Step1 Install Go
 
-The build process for btfs requires Go 1.11 or higher. If you don't 
+The build process for btfs requires Go 1.12 or higher. If you don't 
 have it: [Download Go 1.12+](https://golang.org/dl/). Or use the 
 following command:
 ```
@@ -74,7 +75,7 @@ Firstly, you need your github token to access the private github repo. If you do
 
 Put your github token to git config:
 ```
-export GITHUB_TOKEN=(${Your github token})
+export GITHUB_TOKEN=(Your github token)
 git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
 ```
 
@@ -95,6 +96,7 @@ Your can choose to using on-step script to compile and build or just follow step
 
 `bash install_btfs.sh`
 
+
 ##### Step-by-step Instruction
 
 ###### 1. Compile and build:
@@ -112,7 +114,9 @@ Show if btfs exec file has been created:
 $which btfs
 /home/ubuntu/go/bin/btfs
 ```
+
 ###### 2. Init a btfs node:
+
 ```
 $ btfs init
 initializing BTFS node at /home/ubuntu/.btfs
@@ -122,7 +126,6 @@ to get started, enter:
 
         btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
 ```
-
 
 ###### 3. Auto Update Setting
 
@@ -134,8 +137,8 @@ autoupdateFlg: true     # is auto update
 sleepTimeSeconds: 20        # how often to auto update (second）.
 ```
 
-
 ###### 4. Join BTFS Private Net
+
 Put the swarm.key in /.btfs, and then run the node. [Get swarm.key](https://github.com/TRON-US/go-btfs/blob/master/swarm.key)
 ```
 $ mv swarm.key ~/.btfs/swarm.key
@@ -164,10 +167,12 @@ $ btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 $ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 ```
 
+
 #### Step5 Run BTFS At The Backend
+
 ```
 you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
-$ nohup btfs daemon </dev/null > /dev/null 2>&1 &
+$ sudo nohup btfs daemon </dev/null >/dev/null 2>&1 &
 ```
 Check if your node is connect to BTFS private net:
 ```
@@ -236,6 +241,11 @@ SUBCOMMANDS
     export BTFS_PATH=/path/to/btfsrepo
 ```
 
+## Started by binary file.
+
+Please refer to the documentation for the btfs-binary-releases project.
+
+[btfs-binary-releases](https://github.com/TRON-US/btfs-binary-releases/blob/master/README.md)
 
 ## Getting Started
 
