@@ -5,7 +5,7 @@ import (
 	"path"
 	"runtime"
 
-	version "github.com/ipfs/go-ipfs"
+	version "github.com/TRON-US/go-btfs"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"

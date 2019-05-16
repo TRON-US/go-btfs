@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	version "github.com/ipfs/go-ipfs"
+	version "github.com/TRON-US/go-btfs"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
