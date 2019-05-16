@@ -36,6 +36,7 @@ BTFS can run on most Linux, macOS, and Windows systems. We recommend
 running it on a machine with at least 2 GB of RAM (it’ll do fine with 
 only one CPU core), but it should run fine with as little as 1 GB of 
 RAM. On systems with less memory, it may not be completely stable.
+Only support compiling from source for mac and unix-based system.
 
 
 ### Build from Source
@@ -240,6 +241,11 @@ SUBCOMMANDS
     export BTFS_PATH=/path/to/btfsrepo
 ```
 
+## Started by binary file.
+
+Please refer to the documentation for the btfs-binary-releases project.
+
+[btfs-binary-releases](https://github.com/TRON-US/btfs-binary-releases/blob/master/README.md)
 
 ## Getting Started
 

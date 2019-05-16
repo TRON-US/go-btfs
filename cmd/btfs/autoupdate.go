@@ -98,6 +98,8 @@ func update() {
 		return
 	}
 
+	routePath := fmt.Sprint(runtime.GOOS, "/", runtime.GOARCH, "/")
+
 	for {
 		time.Sleep(time.Second * time.Duration(sleepTimeSeconds))
 
@@ -111,7 +113,7 @@ func update() {
 		}
 
 		// Get latest btfs config file.
-		err := download(latestConfigPath, fmt.Sprint(configRepoUrl, latestConfigFile))
+		err := download(latestConfigPath, fmt.Sprint(configRepoUrl, routePath, latestConfigFile))
 		if err != nil {
 			log.Errorf("Download latest btfs config file error, reasons: [%v]", err)
 			continue
@@ -168,7 +170,7 @@ func update() {
 		fmt.Println("BTFS auto update begin.")
 
 		// Get the btfs latest binary file from btns.
-		err = download(latestBtfsBinaryPath, fmt.Sprint(configRepoUrl, latestBtfsBinary))
+		err = download(latestBtfsBinaryPath, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinary))
 		if err != nil {
 			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
 			continue
@@ -200,7 +202,7 @@ func update() {
 		}
 
 		// Get the update binary file from btns.
-		err = download(updateBinaryPath, fmt.Sprint(configRepoUrl, updateBinary))
+		err = download(updateBinaryPath, fmt.Sprint(configRepoUrl, routePath, updateBinary))
 		if err != nil {
 			log.Error("Download update binary file failed.")
 			continue
