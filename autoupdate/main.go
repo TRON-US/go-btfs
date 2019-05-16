@@ -97,7 +97,6 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		cmd := exec.Command(btfsBinaryPath, "daemon")
 		err = cmd.Start()
 	} else {
-		fmt.Println(btfsBinaryPath)
 		cmd := exec.Command(btfsBinaryPath, "daemon")
 		err = cmd.Start()
 	}
