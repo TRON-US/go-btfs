@@ -11,13 +11,41 @@ import (
 
 	shell "github.com/ipfs/go-ipfs-api"
 
+	"github.com/natefinch/lumberjack"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const url = "localhost:5001"
 
+// Log print initialization, get *zap.Logger Info.
+func initLogger(logPath string) *zap.Logger {
+	hook := lumberjack.Logger{
+		Filename:   logPath, // log file path
+		MaxSize:    128,     // megabytes
+		MaxBackups: 30,      // max backup
+		MaxAge:     7,       // days
+		Compress:   true,    // is Compress, disabled by default
+	}
+
+	w := zapcore.AddSync(&hook)
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	// time format
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	core := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderConfig),
+		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), w), // this line enables log outputs to multiple destinations: log file/stdout
+		zap.InfoLevel,
+	)
+
+	logger := zap.New(core, zap.AddStacktrace(zap.ErrorLevel))
+	return logger
+}
+
 // Rollback function of auto update.
-func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string) {
+func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath string) {
 	defer func() {
 		wg.Done()
 	}()
@@ -28,23 +56,23 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		// Where your local node is running on localhost:5001
 		sh := shell.NewShell(url)
 		if sh.IsUp() {
-			fmt.Println("BTFS auto update SUCCESS!")
+			log.Info("BTFS node started successfully!")
 			return
 		}
 	}
 
-	fmt.Println("BTFS failed to start, rollback begin!")
+	log.Info("BTFS node failed to start, rollback begin!")
 
 	// Select binary files and configure file path based on operating system.
 	currentConfigPath, backupConfigPath, _, btfsBinaryPath, btfsBackupPath, _, err := getProjectPath(defaultProjectPath, defaultDownloadPath)
 	if err != nil {
-		fmt.Printf("Operating system [%s], arch [%s] does not support rollback\n", runtime.GOOS, runtime.GOARCH)
+		log.Error(fmt.Sprintf("Operating system [%s], arch [%s] does not support rollback\n", runtime.GOOS, runtime.GOARCH))
 		return
 	}
 
 	// Check if the backup binary file exists.
 	if !pathExists(btfsBackupPath) {
-		fmt.Printf("BTFS backup binary is not exists.")
+		log.Error(fmt.Sprintf("BTFS backup binary is not exists."))
 		return
 	}
 
@@ -53,7 +81,7 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		// Delete current configure file.
 		err = os.Remove(currentConfigPath)
 		if err != nil {
-			fmt.Printf("Delete backup configure file error, reasons: [%v]\n", err)
+			log.Error(fmt.Sprintf("Delete backup configure file error, reasons: [%v]\n", err))
 			return
 		}
 	}
@@ -63,7 +91,7 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		// Move backup configure file to current configure file.
 		err = os.Rename(backupConfigPath, currentConfigPath)
 		if err != nil {
-			fmt.Printf("Move backup configure file error, reasons: [%v]\n", err)
+			log.Error(fmt.Sprintf("Move backup configure file error, reasons: [%v]\n", err))
 			return
 		}
 	}
@@ -73,7 +101,7 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 		// Delete the btfs binary file.
 		err = os.Remove(btfsBinaryPath)
 		if err != nil {
-			fmt.Printf("Delete btfs binary file error, reasons: [%v]\n", err)
+			log.Error(fmt.Sprintf("Delete btfs binary file error, reasons: [%v]\n", err))
 			return
 		}
 	}
@@ -81,14 +109,14 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 	// Move backup btfs binary file to current btfs binary file.
 	err = os.Rename(btfsBackupPath, btfsBinaryPath)
 	if err != nil {
-		fmt.Printf("Move backup btfs binary file error, reasons: [%v]\n", err)
+		log.Error(fmt.Sprintf("Move backup btfs binary file error, reasons: [%v]\n", err))
 		return
 	}
 
 	// Add executable permissions to btfs binary.
 	err = os.Chmod(btfsBinaryPath, 0775)
 	if err != nil {
-		fmt.Printf("Chmod file error, reasons: [%v]\n", err)
+		log.Error(fmt.Sprintf("Chmod file error, reasons: [%v]\n", err))
 		return
 	}
 
@@ -103,29 +131,31 @@ func rollback(wg sync.WaitGroup, defaultProjectPath, defaultDownloadPath string)
 
 	// Check if the btfs daemon start success.
 	if err != nil {
-		fmt.Printf("BTFS rollback failed, reasons: [%v]", err)
+		log.Error(fmt.Sprintf("BTFS rollback failed, reasons: [%v]", err))
 		return
 	}
 
-	fmt.Println("BTFS rollback SUCCESS!")
+	log.Info("BTFS rollback SUCCESS!")
 }
 
-func update() int {
+func update(log *zap.Logger) int {
 	time.Sleep(time.Second * 5)
 	defaultProjectPath := flag.String("project", "", "default project path")
 	defaultDownloadPath := flag.String("download", "", "default download path")
 
 	flag.Parse()
 
+	log.Info("BTFS auto update begin.")
+
 	if *defaultProjectPath == "" || *defaultDownloadPath == "" {
-		fmt.Println("Request param is nil.")
+		log.Error("Request param is nil.")
 		return 1
 	}
 
 	// Select binary files and configure file path based on operating system.
 	currentConfigPath, backupConfigPath, latestConfigPath, btfsBinaryPath, btfsBackupPath, latestBtfsBinaryPath, err := getProjectPath(*defaultProjectPath, *defaultDownloadPath)
 	if err != nil {
-		fmt.Printf("Operating system [%s], arch [%s] does not support rollback\n", runtime.GOOS, runtime.GOARCH)
+		log.Error(fmt.Sprintf("Operating system [%s], arch [%s] does not support rollback\n", runtime.GOOS, runtime.GOARCH))
 		return 1
 	}
 
@@ -133,7 +163,7 @@ func update() int {
 	if pathExists(backupConfigPath) {
 		err = os.Remove(backupConfigPath)
 		if err != nil {
-			fmt.Printf("Delete backup config file error, reasons: [%v]\n", err)
+			log.Error(fmt.Sprintf("Delete backup config file error, reasons: [%v]\n", err))
 			return 1
 		}
 	}
@@ -142,7 +172,7 @@ func update() int {
 	if pathExists(currentConfigPath) {
 		err = os.Rename(currentConfigPath, backupConfigPath)
 		if err != nil {
-			fmt.Printf("Move current config file error, reasons: [%v]\n", err)
+			log.Error(fmt.Sprintf("Move current config file error, reasons: [%v]\n", err))
 			return 1
 		}
 	}
@@ -150,7 +180,7 @@ func update() int {
 	// Move latest configure file to current configure file.
 	err = os.Rename(latestConfigPath, currentConfigPath)
 	if err != nil {
-		fmt.Printf("Move file error, reasons: [%v]\n", err)
+		log.Error(fmt.Sprintf("Move file error, reasons: [%v]\n", err))
 		return 1
 	}
 
@@ -158,7 +188,7 @@ func update() int {
 	if pathExists(btfsBackupPath) {
 		err = os.Remove(btfsBackupPath)
 		if err != nil {
-			fmt.Printf("Move file error, reasons: [%v]\n", err)
+			log.Error(fmt.Sprintf("Move file error, reasons: [%v]\n", err))
 			return 1
 		}
 	}
@@ -166,29 +196,29 @@ func update() int {
 	// Backup btfs binary file.
 	err = os.Rename(btfsBinaryPath, btfsBackupPath)
 	if err != nil {
-		fmt.Printf("Move file error, reasons: [%v]\n", err)
+		log.Error(fmt.Sprintf("Move file error, reasons: [%v]\n", err))
 		return 1
 	}
 
 	// Move latest btfs binary file to current btfs binary file.
 	err = os.Rename(latestBtfsBinaryPath, btfsBinaryPath)
 	if err != nil {
-		fmt.Printf("Move file error, reasons: [%v]\n", err)
+		log.Error(fmt.Sprintf("Move file error, reasons: [%v]\n", err))
 		return 1
 	}
 
 	// Add executable permissions to btfs binary.
 	err = os.Chmod(btfsBinaryPath, 0775)
 	if err != nil {
-		fmt.Printf("Chmod file error, reasons: [%v]\n", err)
+		log.Error(fmt.Sprintf("Chmod file error, reasons: [%v]\n", err))
 		return 1
 	}
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
 
-	go rollback(wg, *defaultProjectPath, *defaultDownloadPath)
+	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath)
 
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command(btfsBinaryPath, "daemon")
@@ -200,11 +230,15 @@ func update() int {
 
 	// Wait for the rollback program to complete.
 	wg.Wait()
+
+	log.Info("BTFS auto update SUCCESS!")
+
 	return 0
 }
 
 func main() {
-	os.Exit(update())
+	log := initLogger("update.log")
+	os.Exit(update(log))
 }
 
 // Determine if the path file exists.

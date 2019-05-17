@@ -25,7 +25,9 @@ do
         mv ./cmd/btfs/btfs ../btfs-binary-releases/${goos}/${goarch}/btfs-${goos}-${goarch}${ext}
         mv update-${goos}-${goarch}${ext} ../btfs-binary-releases/${goos}/${goarch}/update-${goos}-${goarch}${ext}
         echo -e "version: ${version: 1: ${#version}-2}\nmd5: ${md5}\nautoupdateFlg: true\nsleepTimeSeconds: 30\nbeginNumber: 0\nendNumber: 100" > ../btfs-binary-releases/${goos}/${goarch}/config_${goos}_${goarch}.yaml
-        tar -cvf ../btfs-binary-releases/${goos}/${goarch}/btfs-${goos}-${goarch}.tar ../btfs-binary-releases/${goos}/${goarch}/config_${goos}_${goarch}.yaml ../btfs-binary-releases/${goos}/${goarch}/btfs-${goos}-${goarch}${ext}
+        cd ../btfs-binary-releases/${goos}/${goarch}
+        tar -cvf btfs-${goos}-${goarch}.tar config_${goos}_${goarch}.yaml btfs-${goos}-${goarch}${ext}
+        cd -
         echo "=============>OS: [${goos}] ARCH: [${goarch}] automatic compiler success."
     done
 done
