@@ -11,7 +11,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
 
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	random "github.com/jbenet/go-random"
 )
 

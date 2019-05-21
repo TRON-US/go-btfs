@@ -6,10 +6,12 @@ require (
 	github.com/Kubuxu/go-os-helper v0.0.1
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
+	github.com/TRON-US/go-btfs-config v0.0.1-20190521
 	github.com/TRON-US/go-libp2p-kad-dht v0.0.7-20190521
 	github.com/TRON-US/go-mfs v0.0.6-20190501
 	github.com/TRON-US/go-path v0.0.3-20190426
 	github.com/TRON-US/interface-go-btfs-core v0.0.6-20190513
+	github.com/TRON-US/iptb-plugins v0.0.2-20190521
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cenkalti/backoff v2.1.1+incompatible
@@ -42,7 +44,6 @@ require (
 	github.com/ipfs/go-ipfs-chunker v0.0.1
 	github.com/ipfs/go-ipfs-cmdkit v0.0.1
 	github.com/ipfs/go-ipfs-cmds v0.0.5
-	github.com/ipfs/go-ipfs-config v0.0.1
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
@@ -64,7 +65,6 @@ require (
 	github.com/ipfs/hang-fds v0.0.1
 	github.com/ipfs/interface-go-ipfs-core v0.0.6
 	github.com/ipfs/iptb v1.4.0
-	github.com/ipfs/iptb-plugins v0.0.2
 	github.com/jbenet/go-is-domain v1.0.2
 	github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c
 	github.com/jbenet/go-random-files v0.0.0-20190219210431-31b3f20ebded
