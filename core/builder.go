@@ -22,7 +22,7 @@ import (
 	retry "github.com/ipfs/go-datastore/retrystore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	cfg "github.com/ipfs/go-ipfs-config"
+	cfg "github.com/TRON-US/go-btfs-config"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	offroute "github.com/ipfs/go-ipfs-routing/offline"
 	ipns "github.com/ipfs/go-ipns"

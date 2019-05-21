@@ -11,7 +11,7 @@ import (
 	loader "github.com/TRON-US/go-btfs/plugin/loader"
 
 	"github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	logging "github.com/ipfs/go-log"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
