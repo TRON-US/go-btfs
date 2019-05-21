@@ -47,6 +47,18 @@ Only support compiling from source for mac and unix-based system.
 
 ### Build from Source
 
+#### Step0 Install GCC
+GCC is required to build btfs from source code. Approaches to install GCC may vary from operating system to operating system.
+To install GCC on Debian and Ubuntu system, please run the following commands:
+```bash
+sudo apt-get update
+sudo apt-get install build-essential manpages-dev
+```
+To verify that GCC has been successfully installed on your machine, please run this command:
+```bash
+gcc --version
+```
+
 #### Step1 Install Go
 
 The build process for btfs requires Go 1.12 or higher. If you don't 
