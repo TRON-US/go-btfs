@@ -12,6 +12,8 @@ github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 h1:UUppSQnhf4Yc6
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/Stebalien/go-bitfield v0.0.0-20180330043415-076a62f9ce6e h1:2Z+EBRrOJsA3psnUPcEWMIH2EIga1xHflQcr/EZslx8=
 github.com/Stebalien/go-bitfield v0.0.0-20180330043415-076a62f9ce6e/go.mod h1:3oM7gXIttpYDAJXpVNnSCiUMYBLIZ6cb1t+Ip982MRo=
+github.com/TRON-US/go-libp2p-kad-dht v0.0.7-20190521 h1:vJXEj+ibSKRutBN0c4RHGh8kJn7877wdOHuBx5qvt2Q=
+github.com/TRON-US/go-libp2p-kad-dht v0.0.7-20190521/go.mod h1:AX3rxUB/nkekDf98F6GfNZRit57vLF8ugwi05+eLZyM=
 github.com/TRON-US/go-mfs v0.0.6-20190501 h1:guiWTqBLDmJMW88UAaLPiWJrMyd6yGVwSHfBdJyOrOI=
 github.com/TRON-US/go-mfs v0.0.6-20190501/go.mod h1:JObk6vEUe92xlVulXl9q+kEoVhkeNhu5TgeO89KD+QI=
 github.com/TRON-US/go-path v0.0.3-20190426 h1:sl6eIx35p0HyrJOnE0NbfunNENM3rAEoAiaBAFOPSco=
@@ -308,9 +310,8 @@ github.com/libp2p/go-libp2p-interface-connmgr v0.0.1 h1:Q9EkNSLAOF+u90L88qmE9z/f
 github.com/libp2p/go-libp2p-interface-connmgr v0.0.1/go.mod h1:GarlRLH0LdeWcLnYM/SaBykKFl9U5JFnbBGruAk/D5k=
 github.com/libp2p/go-libp2p-interface-pnet v0.0.1 h1:7GnzRrBTJHEsofi1ahFdPN9Si6skwXQE9UqR2S+Pkh8=
 github.com/libp2p/go-libp2p-interface-pnet v0.0.1/go.mod h1:el9jHpQAXK5dnTpKA4yfCNBZXvrzdOU75zz+C6ryp3k=
+github.com/libp2p/go-libp2p-kad-dht v0.0.4 h1:Z+6l5pCD8xXQmqmKKO+OTa4+7Or1uyPTmu49rXNf4oo=
 github.com/libp2p/go-libp2p-kad-dht v0.0.4/go.mod h1:oaBflOQcuC8H+SVV0YN26H6AS+wcUEJyjUGV66vXuSY=
-github.com/libp2p/go-libp2p-kad-dht v0.0.7 h1:06CbmDaYeQ5Hj+s48WCeev7wJPx3VcpJNOe9NytSXOc=
-github.com/libp2p/go-libp2p-kad-dht v0.0.7/go.mod h1:X90f4pG3MNZN9VeCX0rcH8AY9g3AspA2x5EJ9AvU/gM=
 github.com/libp2p/go-libp2p-kbucket v0.0.1 h1:7H5hM851hkEpLOFjrVNSrrxo6J4bWrUQxxv+z1JW9xk=
 github.com/libp2p/go-libp2p-kbucket v0.0.1/go.mod h1:Y0iQDHRTk/ZgM8PC4jExoF+E4j+yXWwRkdldkMa5Xm4=
 github.com/libp2p/go-libp2p-kbucket v0.1.1 h1:ZrvW3qCM+lAuv7nrNts/zfEiClq+GZe8OIzX4Vb3Dwo=

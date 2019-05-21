@@ -12,7 +12,7 @@ import (
 	logging "github.com/ipfs/go-log"
 	path "github.com/TRON-US/go-path"
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
+	dht "github.com/TRON-US/go-libp2p-kad-dht"
 	peer "github.com/libp2p/go-libp2p-peer"
 	routing "github.com/libp2p/go-libp2p-routing"
 	mh "github.com/multiformats/go-multihash"

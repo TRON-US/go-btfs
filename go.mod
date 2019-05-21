@@ -6,6 +6,7 @@ require (
 	github.com/Kubuxu/go-os-helper v0.0.1
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
+	github.com/TRON-US/go-libp2p-kad-dht v0.0.7-20190521
 	github.com/TRON-US/go-mfs v0.0.6-20190501
 	github.com/TRON-US/go-path v0.0.3-20190426
 	github.com/TRON-US/interface-go-btfs-core v0.0.6-20190513
@@ -76,7 +77,6 @@ require (
 	github.com/libp2p/go-libp2p-crypto v0.0.1
 	github.com/libp2p/go-libp2p-host v0.0.1
 	github.com/libp2p/go-libp2p-interface-connmgr v0.0.1
-	github.com/libp2p/go-libp2p-kad-dht v0.0.7
 	github.com/libp2p/go-libp2p-kbucket v0.1.1
 	github.com/libp2p/go-libp2p-loggables v0.0.1
 	github.com/libp2p/go-libp2p-metrics v0.0.1
