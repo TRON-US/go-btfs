@@ -3,11 +3,14 @@ package analytics
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/ipfs/go-bitswap"
+	peer "github.com/libp2p/go-libp2p-peer"
 
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -24,10 +27,18 @@ type programInfo struct {
 
 type dataCollection struct {
 	programInfo
-	UpTime      uint64  `json:"up_time"`      //Seconds
-	StorageUsed uint64  `json:"storage_used"` //Stored in Kilobytes
-	MemUsed     uint64  `json:"memory_used"`  //Stored in Kilobytes
-	CPUUsed     float64 `json:"cpu_used"`
+	UpTime      uint64  `json:"up_time"`       //Seconds
+	StorageUsed uint64  `json:"storage_used"`  //Stored in Kilobytes
+	MemUsed     uint64  `json:"memory_used"`   //Stored in Kilobytes
+	CPUUsed     float64 `json:"cpu_used"`      //Overall CPU used
+	Upload      uint64  `json:"upload"`        //Upload over last epoch, stored in bytes
+	Download    uint64  `json:"download"`      //Download over last epoch, stored in bytes
+	TotalUp     uint64  `json:"totalupload"`   //Total data up, Stored in bytes
+	TotalDown   uint64  `json:"totaldownload"` //Total data down, Stored in bytes
+	BlocksUp    uint64  `json:"blocksup"`      //Total num of blocks uploaded
+	BlocksDown  uint64  `json:"blocksdown"`    //Total num of blocks downloaded
+	Exchanges   uint64  `json:"exchanges"`     //Number of block exchanges
+	NumPeers    uint64  `json:"numpeers"`      //Number of peers
 }
 
 //HeartBeat is how often we send data to server, at the moment set to 15 Minutes
@@ -35,6 +46,17 @@ var heartBeat = 15 * time.Minute
 
 //Server URL for data collection
 var dataServeURL = "http://18.220.204.165:8080/metrics"
+
+var peerCountMap map[peer.ID]uint64
+
+//Go doesn't have a built in Max function? simple function to not have negatives values
+func valOrZero(x uint64) uint64 {
+	if x < 0 {
+		return 0
+	}
+
+	return x
+}
 
 func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
@@ -53,6 +75,8 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 	dc.OSType = runtime.GOOS
 	dc.ArchType = runtime.GOARCH
 
+	peerCountMap = make(map[peer.ID]uint64)
+
 	go dc.collectionAgent()
 }
 
@@ -66,6 +90,40 @@ func (dc *dataCollection) update() {
 	dc.CPUUsed = cpus[0]
 	dc.MemUsed = m.HeapAlloc / 1024
 	dc.StorageUsed = storage / 1024
+
+	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
+	if !ok {
+		return
+	}
+
+	st, err := bs.Stat()
+	if err != nil {
+		return
+	}
+
+	dc.Upload = valOrZero(st.DataSent - dc.TotalUp)
+	dc.Download = valOrZero(st.DataReceived - dc.TotalDown)
+	dc.TotalUp = st.DataSent
+	dc.TotalDown = st.DataReceived
+	dc.BlocksUp = st.BlocksSent
+	dc.BlocksDown = st.BlocksReceived
+
+	//This iterates over all peers connected on ledger, this might end up being prohibitively
+	//expensive in the future. Better would be maintain a counter like the other stats
+	var exchangeCount uint64
+	for _, peerString := range st.Peers {
+		peerID, err := peer.IDB58Decode(peerString)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		peerRec := bs.LedgerForPeer(peerID)
+		exchangeCount += peerRec.Exchanged - peerCountMap[peerID]
+		peerCountMap[peerID] = peerRec.Exchanged
+	}
+
+	dc.Exchanges = exchangeCount
+	dc.NumPeers = uint64(len(st.Peers))
 }
 
 func (dc *dataCollection) sendData() {

@@ -57,13 +57,13 @@ queried using this method are outlined in the specification:
 https://github.com/libp2p/specs/blob/master/7-properties.md#757-protocol-multicodecs
 
 Example protocol options:
-  - /ipfs/id/1.0.0
-  - /ipfs/bitswap
-  - /ipfs/dht
+  - /btfs/id/1.0.0
+  - /btfs/bitswap
+  - /btfs/dht
 
 Example:
 
-    > ipfs stats bw -t /ipfs/bitswap
+    > btfs stats bw -t /btfs/bitswap
     Bandwidth
     TotalIn: 5.0MB
     TotalOut: 0B
