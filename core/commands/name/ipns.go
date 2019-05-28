@@ -11,7 +11,7 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
 	path "github.com/TRON-US/go-path"
 	options "github.com/TRON-US/interface-go-btfs-core/options"

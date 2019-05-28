@@ -12,6 +12,8 @@ github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 h1:UUppSQnhf4Yc6
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/Stebalien/go-bitfield v0.0.0-20180330043415-076a62f9ce6e h1:2Z+EBRrOJsA3psnUPcEWMIH2EIga1xHflQcr/EZslx8=
 github.com/Stebalien/go-bitfield v0.0.0-20180330043415-076a62f9ce6e/go.mod h1:3oM7gXIttpYDAJXpVNnSCiUMYBLIZ6cb1t+Ip982MRo=
+github.com/TRON-US/go-btfs-cmds v0.0.5-20190528 h1:8/gdpZ35L/+F0qwYnjL5prU2a2j/tu3CLh3WjMBpWoU=
+github.com/TRON-US/go-btfs-cmds v0.0.5-20190528/go.mod h1:k4qPgyiQYbU1JSNNs5XuvfWtl+tLz9m/sOm1l0ioo88=
 github.com/TRON-US/go-btfs-config v0.0.1-20190521 h1:bFjEYh1o5LXPRuR9s7AvhT7a0Ts60p3Jpr/Donz8rgo=
 github.com/TRON-US/go-btfs-config v0.0.1-20190521/go.mod h1:xe4IWQoXdpZZv3t0wVy9s4NkyFZjcQBS4Y6EPNt17fs=
 github.com/TRON-US/go-libp2p-kad-dht v0.0.7-20190521 h1:vJXEj+ibSKRutBN0c4RHGh8kJn7877wdOHuBx5qvt2Q=

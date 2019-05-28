@@ -22,9 +22,9 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	osh "github.com/Kubuxu/go-os-helper"
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	"github.com/ipfs/go-ipfs-cmds/cli"
-	"github.com/ipfs/go-ipfs-cmds/http"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds/cli"
+	"github.com/TRON-US/go-btfs-cmds/http"
 	config "github.com/TRON-US/go-btfs-config"
 	u "github.com/ipfs/go-ipfs-util"
 	logging "github.com/ipfs/go-log"

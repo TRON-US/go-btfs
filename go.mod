@@ -6,6 +6,7 @@ require (
 	github.com/Kubuxu/go-os-helper v0.0.1
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
+	github.com/TRON-US/go-btfs-cmds v0.0.5-20190528
 	github.com/TRON-US/go-btfs-config v0.0.1-20190521
 	github.com/TRON-US/go-libp2p-kad-dht v0.0.7-20190521
 	github.com/TRON-US/go-mfs v0.0.6-20190501
@@ -43,7 +44,6 @@ require (
 	github.com/ipfs/go-ipfs-blocksutil v0.0.1
 	github.com/ipfs/go-ipfs-chunker v0.0.1
 	github.com/ipfs/go-ipfs-cmdkit v0.0.1
-	github.com/ipfs/go-ipfs-cmds v0.0.5
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
