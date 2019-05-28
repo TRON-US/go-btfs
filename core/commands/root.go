@@ -49,7 +49,7 @@ ADVANCED COMMANDS
   daemon        Start a long-running daemon process
   mount         Mount an BTFS read-only mountpoint
   resolve       Resolve any type of name
-  name          Publish and resolve IPNS names
+  name          Publish and resolve BTNS names
   key           Create and list IPNS name keypairs
   dns           Resolve DNS links
   pin           Pin objects to local storage
