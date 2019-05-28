@@ -10,7 +10,7 @@ import (
 	unixfs "github.com/TRON-US/go-btfs/core/commands/unixfs"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
 )
 

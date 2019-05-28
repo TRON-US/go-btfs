@@ -12,7 +12,7 @@ import (
 
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
