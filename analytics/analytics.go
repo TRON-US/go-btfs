@@ -27,18 +27,18 @@ type programInfo struct {
 
 type dataCollection struct {
 	programInfo
-	UpTime      uint64  `json:"up_time"`       //Seconds
-	StorageUsed uint64  `json:"storage_used"`  //Stored in Kilobytes
-	MemUsed     uint64  `json:"memory_used"`   //Stored in Kilobytes
-	CPUUsed     float64 `json:"cpu_used"`      //Overall CPU used
-	Upload      uint64  `json:"upload"`        //Upload over last epoch, stored in bytes
-	Download    uint64  `json:"download"`      //Download over last epoch, stored in bytes
-	TotalUp     uint64  `json:"totalupload"`   //Total data up, Stored in bytes
-	TotalDown   uint64  `json:"totaldownload"` //Total data down, Stored in bytes
-	BlocksUp    uint64  `json:"blocksup"`      //Total num of blocks uploaded
-	BlocksDown  uint64  `json:"blocksdown"`    //Total num of blocks downloaded
-	Exchanges   uint64  `json:"exchanges"`     //Number of block exchanges
-	NumPeers    uint64  `json:"numpeers"`      //Number of peers
+	UpTime      uint64  `json:"up_time"`         //Seconds
+	StorageUsed uint64  `json:"storage_used"`    //Stored in Kilobytes
+	MemUsed     uint64  `json:"memory_used"`     //Stored in Kilobytes
+	CPUUsed     float64 `json:"cpu_used"`        //Overall CPU used
+	Upload      uint64  `json:"upload"`          //Upload over last epoch, stored in bytes
+	Download    uint64  `json:"download"`        //Download over last epoch, stored in bytes
+	TotalUp     uint64  `json:"total_upload"`    //Total data up, Stored in bytes
+	TotalDown   uint64  `json:"total_download"`  //Total data down, Stored in bytes
+	BlocksUp    uint64  `json:"blocks_up"`       //Total num of blocks uploaded
+	BlocksDown  uint64  `json:"blocks_down"`     //Total num of blocks downloaded
+	Exchanges   uint64  `json:"exchanges"`       //Number of block exchanges
+	NumPeers    uint64  `json:"peers_connected"` //Number of peers
 }
 
 //HeartBeat is how often we send data to server, at the moment set to 15 Minutes
