@@ -2,7 +2,7 @@
 export PATH=$PATH:/usr/local/go/bin
 export PATH=$PATH:$GOPATH/bin
 export GO111MODULE=on
-export EDITOR=vim
+
 go clean -modcache
 make install
 btfs init
