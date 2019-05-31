@@ -5,7 +5,7 @@ import (
 
 	commands "github.com/TRON-US/go-btfs/core/commands"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 // This is the CLI root, used for executing commands accessible to CLI clients.

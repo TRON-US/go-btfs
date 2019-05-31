@@ -12,7 +12,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs-cmdkit"
-	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
@@ -47,9 +47,9 @@ const (
 
 var ObjectCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Interact with IPFS objects.",
+		Tagline: "Interact with BTFS objects.",
 		ShortDescription: `
-'ipfs object' is a plumbing command used to manipulate DAG objects
+'btfs object' is a plumbing command used to manipulate DAG objects
 directly.`,
 	},
 
@@ -68,13 +68,13 @@ directly.`,
 // ObjectDataCmd object data command
 var ObjectDataCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Output the raw bytes of an IPFS object.",
+		Tagline: "Output the raw bytes of an BTFS object.",
 		ShortDescription: `
-'ipfs object data' is a plumbing command for retrieving the raw bytes stored
+'btfs object data' is a plumbing command for retrieving the raw bytes stored
 in a DAG node. It outputs to stdout, and <key> is a base58 encoded multihash.
 `,
 		LongDescription: `
-'ipfs object data' is a plumbing command for retrieving the raw bytes stored
+'btfs object data' is a plumbing command for retrieving the raw bytes stored
 in a DAG node. It outputs to stdout, and <key> is a base58 encoded multihash.
 
 Note that the "--encoding" option does not affect the output, since the output
@@ -110,7 +110,7 @@ var ObjectLinksCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Output the links pointed to by the specified object.",
 		ShortDescription: `
-'ipfs object links' is a plumbing command for retrieving the links from
+'btfs object links' is a plumbing command for retrieving the links from
 a DAG node. It outputs to stdout, and <key> is a base58 encoded
 multihash.
 `,
@@ -187,12 +187,12 @@ var ObjectGetCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Get and serialize the DAG node named by <key>.",
 		ShortDescription: `
-'ipfs object get' is a plumbing command for retrieving DAG nodes.
+'btfs object get' is a plumbing command for retrieving DAG nodes.
 It serializes the DAG node to the format specified by the "--encoding"
 flag. It outputs to stdout, and <key> is a base58 encoded multihash.
 `,
 		LongDescription: `
-'ipfs object get' is a plumbing command for retrieving DAG nodes.
+'btfs object get' is a plumbing command for retrieving DAG nodes.
 It serializes the DAG node to the format specified by the "--encoding"
 flag. It outputs to stdout, and <key> is a base58 encoded multihash.
 
@@ -298,7 +298,7 @@ var ObjectStatCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Get stats for the DAG node named by <key>.",
 		ShortDescription: `
-'ipfs object stat' is a plumbing command to print DAG node statistics.
+'btfs object stat' is a plumbing command to print DAG node statistics.
 <key> is a base58 encoded multihash. It outputs to stdout:
 
 	NumLinks        int number of links in link table
@@ -368,11 +368,11 @@ var ObjectPutCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Store input as a DAG object, print its key.",
 		ShortDescription: `
-'ipfs object put' is a plumbing command for storing DAG nodes.
+'btfs object put' is a plumbing command for storing DAG nodes.
 It reads from stdin, and the output is a base58 encoded multihash.
 `,
 		LongDescription: `
-'ipfs object put' is a plumbing command for storing DAG nodes.
+'btfs object put' is a plumbing command for storing DAG nodes.
 It reads from stdin, and the output is a base58 encoded multihash.
 
 Data should be in the format specified by the --inputenc flag.
@@ -382,7 +382,7 @@ Data should be in the format specified by the --inputenc flag.
 
 Examples:
 
-	$ echo '{ "Data": "abc" }' | ipfs object put
+	$ echo '{ "Data": "abc" }' | btfs object put
 
 This creates a node with the data 'abc' and no links. For an object with
 links, create a file named 'node.json' with the contents:
@@ -398,7 +398,7 @@ links, create a file named 'node.json' with the contents:
 
 And then run:
 
-	$ ipfs object put node.json
+	$ btfs object put node.json
 `,
 	},
 
@@ -472,12 +472,12 @@ And then run:
 // ObjectNewCmd object new command
 var ObjectNewCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Create a new object from an ipfs template.",
+		Tagline: "Create a new object from an btfs template.",
 		ShortDescription: `
-'ipfs object new' is a plumbing command for creating new DAG nodes.
+'btfs object new' is a plumbing command for creating new DAG nodes.
 `,
 		LongDescription: `
-'ipfs object new' is a plumbing command for creating new DAG nodes.
+'btfs object new' is a plumbing command for creating new DAG nodes.
 By default it creates and returns a new empty merkledag node, but
 you may pass an optional template argument to create a preformatted
 node.

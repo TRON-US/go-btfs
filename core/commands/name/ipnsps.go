@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
-	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/libp2p/go-libp2p-record"
@@ -27,7 +27,7 @@ type stringList struct {
 // IpnsPubsubCmd is the subcommand that allows us to manage the IPNS pubsub system
 var IpnsPubsubCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "IPNS pubsub management",
+		Tagline: "BTNS pubsub management",
 		ShortDescription: `
 Manage and inspect the state of the IPNS pubsub resolver.
 

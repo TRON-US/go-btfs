@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	testutil "github.com/libp2p/go-testutil"
 )

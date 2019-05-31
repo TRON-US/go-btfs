@@ -15,7 +15,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/e"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
 	iface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/whyrusleeping/tar-utils"

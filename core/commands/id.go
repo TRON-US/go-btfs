@@ -12,7 +12,7 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	kb "github.com/libp2p/go-libp2p-kbucket"
 	"github.com/libp2p/go-libp2p-peer"

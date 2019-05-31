@@ -17,4 +17,9 @@ btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", 
 btfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials "[\"true\"]"
 btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
-echo install successful, please run 'btfs daemon'
+
+# echo a message if btfs is installed successfully
+var_btfs=$(which btfs)
+if [ -n "$var_btfs" ]; then
+    echo install successful, please run 'btfs daemon'
+fi

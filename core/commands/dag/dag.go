@@ -12,7 +12,7 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
 	path "github.com/TRON-US/go-path"
@@ -24,10 +24,10 @@ var DagCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Interact with ipld dag objects.",
 		ShortDescription: `
-'ipfs dag' is used for creating and manipulating dag objects.
+'btfs dag' is used for creating and manipulating dag objects.
 
 This subcommand is currently an experimental feature, but it is intended
-to deprecate and replace the existing 'ipfs object' command moving forward.
+to deprecate and replace the existing 'btfs object' command moving forward.
 		`,
 	},
 	Subcommands: map[string]*cmds.Command{
@@ -50,9 +50,9 @@ type ResolveOutput struct {
 
 var DagPutCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Add a dag node to ipfs.",
+		Tagline: "Add a dag node to btfs.",
 		ShortDescription: `
-'ipfs dag put' accepts input from a file or stdin and parses it
+'btfs dag put' accepts input from a file or stdin and parses it
 into an object of the specified format.
 `,
 	},
@@ -145,9 +145,9 @@ into an object of the specified format.
 
 var DagGetCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
-		Tagline: "Get a dag node from ipfs.",
+		Tagline: "Get a dag node from btfs.",
 		ShortDescription: `
-'ipfs dag get' fetches a dag node from ipfs and prints it out in the specified
+'btfs dag get' fetches a dag node from btfs and prints it out in the specified
 format.
 `,
 	},
@@ -193,7 +193,7 @@ var DagResolveCmd = &cmds.Command{
 	Helptext: cmdkit.HelpText{
 		Tagline: "Resolve ipld block",
 		ShortDescription: `
-'ipfs dag resolve' fetches a dag node from ipfs, prints it's address and remaining path.
+'btfs dag resolve' fetches a dag node from btfs, prints it's address and remaining path.
 `,
 	},
 	Arguments: []cmdkit.Argument{

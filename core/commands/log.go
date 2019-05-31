@@ -5,7 +5,7 @@ import (
 	"io"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
 )
