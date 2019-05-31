@@ -31,15 +31,17 @@ type dataCollection struct {
 	StorageUsed uint64  `json:"storage_used"`    //Stored in Kilobytes
 	MemUsed     uint64  `json:"memory_used"`     //Stored in Kilobytes
 	CPUUsed     float64 `json:"cpu_used"`        //Overall CPU used
-	Upload      uint64  `json:"upload"`          //Upload over last epoch, stored in bytes
-	Download    uint64  `json:"download"`        //Download over last epoch, stored in bytes
-	TotalUp     uint64  `json:"total_upload"`    //Total data up, Stored in bytes
-	TotalDown   uint64  `json:"total_download"`  //Total data down, Stored in bytes
+	Upload      uint64  `json:"upload"`          //Upload over last epoch, stored in Kilobytes
+	Download    uint64  `json:"download"`        //Download over last epoch, stored in Kilobytes
+	TotalUp     uint64  `json:"total_upload"`    //Total data up, Stored in Kilobytes
+	TotalDown   uint64  `json:"total_download"`  //Total data down, Stored in Kilobytes
 	BlocksUp    uint64  `json:"blocks_up"`       //Total num of blocks uploaded
 	BlocksDown  uint64  `json:"blocks_down"`     //Total num of blocks downloaded
 	Exchanges   uint64  `json:"exchanges"`       //Number of block exchanges
 	NumPeers    uint64  `json:"peers_connected"` //Number of peers
 }
+
+const kilobyte = 1024
 
 //HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 var heartBeat = 15 * time.Minute
@@ -88,8 +90,8 @@ func (dc *dataCollection) update() {
 
 	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
 	dc.CPUUsed = cpus[0]
-	dc.MemUsed = m.HeapAlloc / 1024
-	dc.StorageUsed = storage / 1024
+	dc.MemUsed = m.HeapAlloc / kilobyte
+	dc.StorageUsed = storage / kilobyte
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
 	if !ok {
@@ -101,10 +103,10 @@ func (dc *dataCollection) update() {
 		return
 	}
 
-	dc.Upload = valOrZero(st.DataSent - dc.TotalUp)
-	dc.Download = valOrZero(st.DataReceived - dc.TotalDown)
-	dc.TotalUp = st.DataSent
-	dc.TotalDown = st.DataReceived
+	dc.Upload = valOrZero(st.DataSent-dc.TotalUp) / kilobyte
+	dc.Download = valOrZero(st.DataReceived-dc.TotalDown) / kilobyte
+	dc.TotalUp = st.DataSent / kilobyte
+	dc.TotalDown = st.DataReceived / kilobyte
 	dc.BlocksUp = st.BlocksSent
 	dc.BlocksDown = st.BlocksReceived
 
