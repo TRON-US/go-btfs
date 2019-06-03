@@ -42,7 +42,7 @@ type dataCollection struct {
 const kilobyte = 1024
 
 //HeartBeat is how often we send data to server, at the moment set to 15 Minutes
-var heartBeat = 15 * time.Second
+var heartBeat = 15 * time.Minute
 
 //Server URL for data collection
 var dataServeURL = "http://18.220.204.165:8080/metrics"
