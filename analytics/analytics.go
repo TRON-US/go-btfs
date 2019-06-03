@@ -3,7 +3,6 @@ package analytics
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -37,14 +36,13 @@ type dataCollection struct {
 	TotalDown   uint64  `json:"total_download"`  //Total data down, Stored in Kilobytes
 	BlocksUp    uint64  `json:"blocks_up"`       //Total num of blocks uploaded
 	BlocksDown  uint64  `json:"blocks_down"`     //Total num of blocks downloaded
-	Exchanges   uint64  `json:"exchanges"`       //Number of block exchanges
 	NumPeers    uint64  `json:"peers_connected"` //Number of peers
 }
 
 const kilobyte = 1024
 
 //HeartBeat is how often we send data to server, at the moment set to 15 Minutes
-var heartBeat = 15 * time.Minute
+var heartBeat = 15 * time.Second
 
 //Server URL for data collection
 var dataServeURL = "http://18.220.204.165:8080/metrics"
@@ -110,28 +108,12 @@ func (dc *dataCollection) update() {
 	dc.BlocksUp = st.BlocksSent
 	dc.BlocksDown = st.BlocksReceived
 
-	//This iterates over all peers connected on ledger, this might end up being prohibitively
-	//expensive in the future. Better would be maintain a counter like the other stats
-	var exchangeCount uint64
-	for _, peerString := range st.Peers {
-		peerID, err := peer.IDB58Decode(peerString)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		peerRec := bs.LedgerForPeer(peerID)
-		exchangeCount += peerRec.Exchanged - peerCountMap[peerID]
-		peerCountMap[peerID] = peerRec.Exchanged
-	}
-
-	dc.Exchanges = exchangeCount
 	dc.NumPeers = uint64(len(st.Peers))
 }
 
 func (dc *dataCollection) sendData() {
 	dc.update()
 	temp, _ := json.Marshal(dc)
-
 	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(temp))
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
