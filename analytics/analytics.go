@@ -9,7 +9,6 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/ipfs/go-bitswap"
-	peer "github.com/libp2p/go-libp2p-peer"
 
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -47,8 +46,6 @@ var heartBeat = 15 * time.Minute
 //Server URL for data collection
 var dataServeURL = "http://18.220.204.165:8080/metrics"
 
-var peerCountMap map[peer.ID]uint64
-
 //Go doesn't have a built in Max function? simple function to not have negatives values
 func valOrZero(x uint64) uint64 {
 	if x < 0 {
@@ -74,8 +71,6 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 	dc.BTFSVersion = BTFSVersion
 	dc.OSType = runtime.GOOS
 	dc.ArchType = runtime.GOARCH
-
-	peerCountMap = make(map[peer.ID]uint64)
 
 	go dc.collectionAgent()
 }
