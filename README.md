@@ -173,6 +173,12 @@ Join the private net work:
 $ btfs bootstrap add /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
 added /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
 ```
+Announce your public ip address to btfs network:
+You can get your public ip address through online browsing or run "curl https://ipinfo.io/ip"
+```
+# for example, your public ip4 address is: 38.142.72.82
+$ btfs config --json Addresses.Announce  '["/ip4/38.142.72.82/tcp/4001"]'
+```
 Enable Cross-Origin Resource Sharing:
 ```
 $ btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"*\"]"
