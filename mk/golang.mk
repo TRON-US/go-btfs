@@ -73,6 +73,7 @@ test_go: $(TEST_GO)
 check_go_version:
 	@go version
 	bin/check_go_version $(GO_MIN_VERSION)
+	bash patching.sh
 .PHONY: check_go_version
 DEPS_GO += check_go_version
 

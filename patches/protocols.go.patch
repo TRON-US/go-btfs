@@ -1,0 +1,17 @@
+--- protocols.go	2019-06-05 13:39:45.000000000 -0700
++++ protocols.new.go	2019-06-06 15:06:16.000000000 -0700
+@@ -130,7 +130,7 @@
+ 		VCode: CodeToVarint(P_HTTPS),
+ 	}
+ 	protoP2P = Protocol{
+-		Name:       "ipfs",
++		Name:       "btfs",
+ 		Code:       P_P2P,
+ 		VCode:      CodeToVarint(P_P2P),
+ 		Size:       LengthPrefixedVarSize,
+@@ -180,4 +180,5 @@
+ 	// explicitly set both of these
+ 	protocolsByName["p2p"] = protoP2P
+ 	protocolsByName["ipfs"] = protoP2P
++	protocolsByName["btfs"] = protoP2P
+ }
