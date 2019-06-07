@@ -1,0 +1,65 @@
+--- ipfs/go-path@v0.0.3/path.go	2019-06-07 14:48:24.000000000 -0700
++++ /Users/tron/patch-from/go-path/v0.0.3/path.go	2019-06-07 14:59:49.000000000 -0700
+@@ -11,7 +11,7 @@
+ 
+ var (
+ 	// ErrBadPath is returned when a given path is incorrectly formatted
+-	ErrBadPath = errors.New("invalid 'ipfs ref' path")
++	ErrBadPath = errors.New("invalid 'btfs ref' path")
+ 
+ 	// ErrNoComponents is used when Paths after a protocol
+ 	// do not contain at least one component
+@@ -37,7 +37,7 @@
+ 
+ // FromCid safely converts a cid.Cid type to a Path type.
+ func FromCid(c cid.Cid) Path {
+-	return Path("/ipfs/" + c.String())
++	return Path("/btfs/" + c.String())
+ }
+ 
+ // Segments returns the different elements of a path
+@@ -63,7 +63,7 @@
+ // /ipld/<key>
+ func (p Path) IsJustAKey() bool {
+ 	parts := p.Segments()
+-	return len(parts) == 2 && (parts[0] == "ipfs" || parts[0] == "ipld")
++	return len(parts) == 2 && (parts[0] == "btfs" || parts[0] == "ipld")
+ }
+ 
+ // PopLastSegment returns a new Path without its final segment, and the final
+@@ -110,7 +110,7 @@
+ 			return "", ErrBadPath
+ 		}
+ 		// The case when the path starts with hash without a protocol prefix
+-		return Path("/ipfs/" + txt), nil
++		return Path("/btfs/" + txt), nil
+ 	}
+ 
+ 	if len(parts) < 3 {
+@@ -119,7 +119,7 @@
+ 
+ 	//TODO: make this smarter
+ 	switch parts[1] {
+-	case "ipfs", "ipld":
++	case "btfs", "ipld":
+ 		if parts[2] == "" {
+ 			return "", ErrNoComponents
+ 		}
+@@ -128,7 +128,7 @@
+ 		if err != nil {
+ 			return "", err
+ 		}
+-	case "ipns":
++	case "btns":
+ 		if parts[2] == "" {
+ 			return "", ErrNoComponents
+ 		}
+@@ -173,7 +173,7 @@
+ // must be a Multihash) and return it separately.
+ func SplitAbsPath(fpath Path) (cid.Cid, []string, error) {
+ 	parts := fpath.Segments()
+-	if parts[0] == "ipfs" || parts[0] == "ipld" {
++	if parts[0] == "btfs" || parts[0] == "ipld" {
+ 		parts = parts[1:]
+ 	}
+ 
