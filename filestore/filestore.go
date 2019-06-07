@@ -21,7 +21,7 @@ import (
 
 var log = logging.Logger("filestore")
 
-var ErrFilestoreNotEnabled = errors.New("filestore is not enabled, see https://developers.btfs.network/docs/cli#filestore")
+var ErrFilestoreNotEnabled = errors.New("filestore is not enabled, see https://developers.btfs.network/docs/cli#section-filestore")
 var ErrUrlstoreNotEnabled = errors.New("urlstore is not enabled")
 
 // Filestore implements a Blockstore by combining a standard Blockstore
