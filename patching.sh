@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# patching $GOPATH/pkg/mod/github.com/multiformats/go-multiaddr@v0.0.1/protocols.go
+# patching $GOPATH/pkg/mod/github.com/multiformats/go-multiaddr@v0.0.1
 patchdir=$GOPATH/pkg/mod/github.com/multiformats/go-multiaddr@v0.0.1
 chmod -R 777 $patchdir
-if ! patch -R -p0 -s -f --dry-run  $patchdir/protocols.go < ./patches/protocols.go.patch; then
-    patch -p0 $patchdir/protocols.go < ./patches/protocols.go.patch;
+if ! patch -R -p0 -s -f --dry-run  $patchdir/protocols.go < ./patches/go-multiaddr-v0.0.1-protocols.go.patch; then
+    patch -p0 $patchdir/protocols.go < ./patches/go-multiaddr-v0.0.1-protocols.go.patch;
 fi
 
 # patching $GOPATH/pkg/mod/github.com/ipfs/go-path@v0.0.3
