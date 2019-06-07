@@ -6,10 +6,10 @@ import (
 
 	ncmd "github.com/TRON-US/go-btfs/core/commands/name"
 	namesys "github.com/TRON-US/go-btfs/namesys"
-	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 )
 
 const (

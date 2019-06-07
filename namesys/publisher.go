@@ -13,7 +13,7 @@ import (
 	dsquery "github.com/ipfs/go-datastore/query"
 	ipns "github.com/ipfs/go-ipns"
 	pb "github.com/ipfs/go-ipns/pb"
-	path "github.com/TRON-US/go-path"
+	path "github.com/ipfs/go-path"
 	ft "github.com/ipfs/go-unixfs"
 	ci "github.com/libp2p/go-libp2p-crypto"
 	peer "github.com/libp2p/go-libp2p-peer"

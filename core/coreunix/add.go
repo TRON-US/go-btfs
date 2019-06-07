@@ -18,12 +18,12 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/TRON-US/go-mfs"
+	"github.com/ipfs/go-mfs"
 	"github.com/ipfs/go-unixfs"
 	"github.com/ipfs/go-unixfs/importer/balanced"
 	ihelper "github.com/ipfs/go-unixfs/importer/helpers"
 	"github.com/ipfs/go-unixfs/importer/trickle"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
 )
 
 var log = logging.Logger("coreunix")

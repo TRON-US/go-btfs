@@ -12,8 +12,8 @@ import (
 
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	caopts "github.com/TRON-US/interface-go-btfs-core/options"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	caopts "github.com/ipfs/interface-go-ipfs-core/options"
 )
 
 type BlockAPI CoreAPI

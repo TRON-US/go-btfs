@@ -7,11 +7,11 @@ import (
 	"github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
+	cmds "github.com/ipfs/go-ipfs-cmds"
+	config "github.com/ipfs/go-ipfs-config"
 	logging "github.com/ipfs/go-log"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	options "github.com/ipfs/interface-go-ipfs-core/options"
 )
 
 var log = logging.Logger("core/commands/cmdenv")

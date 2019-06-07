@@ -12,7 +12,7 @@ import (
 	cid "github.com/ipfs/go-cid"
 	chunk "github.com/ipfs/go-ipfs-chunker"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	balanced "github.com/ipfs/go-unixfs/importer/balanced"
 	ihelper "github.com/ipfs/go-unixfs/importer/helpers"
 	trickle "github.com/ipfs/go-unixfs/importer/trickle"

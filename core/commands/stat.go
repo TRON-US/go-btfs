@@ -10,7 +10,7 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	metrics "github.com/libp2p/go-libp2p-metrics"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"

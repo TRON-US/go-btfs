@@ -21,7 +21,7 @@ import (
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	config "github.com/TRON-US/go-btfs-config"
+	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 	pi "github.com/ipfs/go-ipfs-posinfo"
 	dag "github.com/ipfs/go-merkledag"

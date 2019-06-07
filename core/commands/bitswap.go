@@ -12,7 +12,7 @@ import (
 	decision "github.com/ipfs/go-bitswap/decision"
 	cidutil "github.com/ipfs/go-cidutil"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 

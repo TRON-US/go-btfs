@@ -10,7 +10,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/dagutils"
 	dag "github.com/ipfs/go-merkledag"
-	path "github.com/TRON-US/go-path"
+	path "github.com/ipfs/go-path"
 	importer "github.com/ipfs/go-unixfs/importer"
 	uio "github.com/ipfs/go-unixfs/io"
 

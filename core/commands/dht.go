@@ -11,10 +11,10 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	path "github.com/TRON-US/go-path"
+	path "github.com/ipfs/go-path"
 	peer "github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	routing "github.com/libp2p/go-libp2p-routing"

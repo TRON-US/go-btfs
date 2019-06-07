@@ -8,8 +8,8 @@ import (
 	"github.com/TRON-US/go-btfs/dagutils"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	cmds "github.com/ipfs/go-ipfs-cmds"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
 )
 
 const (

@@ -14,14 +14,14 @@ import (
 	core "github.com/TRON-US/go-btfs/core"
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	dag "github.com/ipfs/go-merkledag"
-	path "github.com/TRON-US/go-path"
+	path "github.com/ipfs/go-path"
 	ft "github.com/ipfs/go-unixfs"
 
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
-	mfs "github.com/TRON-US/go-mfs"
+	mfs "github.com/ipfs/go-mfs"
 	ci "github.com/libp2p/go-libp2p-crypto"
 	peer "github.com/libp2p/go-libp2p-peer"
 )

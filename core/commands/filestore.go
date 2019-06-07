@@ -12,7 +12,7 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 )
 
 var FileStoreCmd = &cmds.Command{

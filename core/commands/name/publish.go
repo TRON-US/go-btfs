@@ -9,9 +9,9 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	iface "github.com/TRON-US/interface-go-btfs-core"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
+	cmds "github.com/ipfs/go-ipfs-cmds"
+	iface "github.com/ipfs/interface-go-ipfs-core"
+	options "github.com/ipfs/interface-go-ipfs-core/options"
 )
 
 var (

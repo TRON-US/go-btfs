@@ -9,10 +9,10 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	merkledag "github.com/ipfs/go-merkledag"
 	unixfs "github.com/ipfs/go-unixfs"
-	iface "github.com/TRON-US/interface-go-btfs-core"
+	iface "github.com/ipfs/interface-go-ipfs-core"
 )
 
 type LsLink struct {

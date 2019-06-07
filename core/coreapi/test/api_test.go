@@ -18,7 +18,7 @@ import (
 
 	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	"github.com/TRON-US/go-btfs-config"
+	"github.com/ipfs/go-ipfs-config"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/tests"
 	ci "github.com/libp2p/go-libp2p-crypto"

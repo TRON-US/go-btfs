@@ -12,7 +12,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
 
-	config "github.com/TRON-US/go-btfs-config"
+	config "github.com/ipfs/go-ipfs-config"
 	random "github.com/jbenet/go-random"
 )
 

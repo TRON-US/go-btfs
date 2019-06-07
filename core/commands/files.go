@@ -18,14 +18,14 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	"github.com/ipfs/go-ipfs-cmdkit"
-	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/go-ipfs-exchange-offline"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/TRON-US/go-mfs"
+	"github.com/ipfs/go-mfs"
 	ft "github.com/ipfs/go-unixfs"
-	"github.com/TRON-US/interface-go-btfs-core"
+	"github.com/ipfs/interface-go-ipfs-core"
 	mh "github.com/multiformats/go-multihash"
 )
 

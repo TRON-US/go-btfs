@@ -12,11 +12,11 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
-	path "github.com/TRON-US/go-path"
-	iface "github.com/TRON-US/interface-go-btfs-core"
+	path "github.com/ipfs/go-path"
+	iface "github.com/ipfs/interface-go-ipfs-core"
 	mh "github.com/multiformats/go-multihash"
 )
 

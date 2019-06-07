@@ -9,8 +9,8 @@ import (
 
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
-	path "github.com/TRON-US/go-path"
-	resolver "github.com/TRON-US/go-path/resolver"
+	path "github.com/ipfs/go-path"
+	resolver "github.com/ipfs/go-path/resolver"
 )
 
 // ErrNoNamesys is an explicit error for when an BTFS node doesn't

@@ -13,9 +13,9 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	ipld "github.com/ipfs/go-ipld-format"
-	path "github.com/TRON-US/go-path"
+	path "github.com/ipfs/go-path"
 )
 
 var refsEncoderMap = cmds.EncoderMap{

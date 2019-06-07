@@ -12,7 +12,7 @@ import (
 	math2 "github.com/TRON-US/go-btfs/thirdparty/math2"
 	lgbl "github.com/libp2p/go-libp2p-loggables"
 
-	config "github.com/TRON-US/go-btfs-config"
+	config "github.com/ipfs/go-ipfs-config"
 	goprocess "github.com/jbenet/goprocess"
 	procctx "github.com/jbenet/goprocess/context"
 	periodicproc "github.com/jbenet/goprocess/periodic"
