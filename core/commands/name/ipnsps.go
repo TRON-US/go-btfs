@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
-	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/ipfs/go-ipfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/libp2p/go-libp2p-record"

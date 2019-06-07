@@ -15,9 +15,9 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/e"
 
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
-	iface "github.com/TRON-US/interface-go-btfs-core"
+	iface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/whyrusleeping/tar-utils"
 	"gopkg.in/cheggaaa/pb.v1"
 )

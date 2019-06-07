@@ -10,7 +10,7 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/ipfs/go-ipfs-cmds"
 	verifcid "github.com/ipfs/go-verifcid"
 	mbase "github.com/multiformats/go-multibase"
 	mhash "github.com/multiformats/go-multihash"

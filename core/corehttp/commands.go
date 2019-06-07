@@ -14,10 +14,10 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	corecommands "github.com/TRON-US/go-btfs/core/commands"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	cmdsHttp "github.com/TRON-US/go-btfs-cmds/http"
-	config "github.com/TRON-US/go-btfs-config"
-	path "github.com/TRON-US/go-path"
+	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmdsHttp "github.com/ipfs/go-ipfs-cmds/http"
+	config "github.com/ipfs/go-ipfs-config"
+	path "github.com/ipfs/go-path"
 )
 
 var (

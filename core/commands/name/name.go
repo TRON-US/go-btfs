@@ -2,7 +2,7 @@ package name
 
 import (
 	"github.com/ipfs/go-ipfs-cmdkit"
-	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/ipfs/go-ipfs-cmds"
 )
 
 type IpnsEntry struct {

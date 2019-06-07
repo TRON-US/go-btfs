@@ -9,9 +9,9 @@ import (
 	"github.com/TRON-US/go-btfs/keystore"
 	"github.com/TRON-US/go-btfs/namesys"
 
-	ipath "github.com/TRON-US/go-path"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	caopts "github.com/TRON-US/interface-go-btfs-core/options"
+	ipath "github.com/ipfs/go-path"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	caopts "github.com/ipfs/interface-go-ipfs-core/options"
 	"github.com/libp2p/go-libp2p-crypto"
 	ci "github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-peer"

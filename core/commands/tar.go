@@ -9,9 +9,9 @@ import (
 	tar "github.com/TRON-US/go-btfs/tar"
 
 	"github.com/ipfs/go-ipfs-cmdkit"
-	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/ipfs/go-ipfs-cmds"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/TRON-US/go-path"
+	"github.com/ipfs/go-path"
 )
 
 var TarCmd = &cmds.Command{

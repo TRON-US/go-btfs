@@ -12,7 +12,7 @@ import (
 
 	core "github.com/TRON-US/go-btfs/core"
 	mdag "github.com/ipfs/go-merkledag"
-	path "github.com/TRON-US/go-path"
+	path "github.com/ipfs/go-path"
 	ft "github.com/ipfs/go-unixfs"
 	uio "github.com/ipfs/go-unixfs/io"
 

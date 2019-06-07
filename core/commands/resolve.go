@@ -13,11 +13,11 @@ import (
 
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	path "github.com/TRON-US/go-path"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
-	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	cmds "github.com/ipfs/go-ipfs-cmds"
+	path "github.com/ipfs/go-path"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	options "github.com/ipfs/interface-go-ipfs-core/options"
+	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 )
 
 const (
