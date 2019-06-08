@@ -39,6 +39,7 @@ type Result struct {
 // The routine then iterates over every block in the blockstore and
 // deletes any block that is not found in the marked set.
 func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn pin.Pinner, bestEffortRoots []cid.Cid) <-chan Result {
+	ctx, cancel := context.WithCancel(ctx)
 
 	elock := log.EventBegin(ctx, "GC.lockWait")
 	unlocker := bs.GCLock()
@@ -52,6 +53,7 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 	output := make(chan Result, 128)
 
 	go func() {
+		defer cancel()
 		defer close(output)
 		defer unlocker.Unlock()
 		defer elock.Done()
@@ -161,7 +163,7 @@ func Descendants(ctx context.Context, getLinks dag.GetLinks, set *cid.Set, roots
 			strings.Contains(err.Error(), verifcid.ErrPossiblyInsecureHashFunction.Error()) {
 			err = fmt.Errorf("\"%s\"\nPlease run 'btfs pin verify'"+
 				" to list insecure hashes. If you want to read them,"+
-				" please downgrade your go-btfs to 0.4.13\n", err)
+				" please downgrade your go-btfs to 0.0.1\n", err)
 			log.Error(err)
 		}
 		return err

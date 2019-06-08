@@ -10,6 +10,7 @@ import (
 	"time"
 
 	core "github.com/TRON-US/go-btfs/core"
+	bootstrap2 "github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/coreapi"
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
@@ -118,7 +119,7 @@ func RunThreeLeggedCat(data []byte, conf testutil.LatencyConfig) error {
 	}
 
 	bis := bootstrap.Peerstore.PeerInfo(bootstrap.PeerHost.ID())
-	bcfg := core.BootstrapConfigWithPeers([]pstore.PeerInfo{bis})
+	bcfg := bootstrap2.BootstrapConfigWithPeers([]pstore.PeerInfo{bis})
 	if err := adder.Bootstrap(bcfg); err != nil {
 		return err
 	}

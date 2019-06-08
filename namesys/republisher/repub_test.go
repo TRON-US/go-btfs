@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/bootstrap"
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	. "github.com/TRON-US/go-btfs/namesys/republisher"
@@ -45,7 +46,7 @@ func TestRepublish(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bsinf := core.BootstrapConfigWithPeers(
+	bsinf := bootstrap.BootstrapConfigWithPeers(
 		[]pstore.PeerInfo{
 			nodes[0].Peerstore.PeerInfo(nodes[0].Identity),
 		},

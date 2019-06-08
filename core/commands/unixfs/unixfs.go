@@ -1,12 +1,11 @@
 package unixfs
 
 import (
-	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 )
 
 var UnixFSCmd = &cmds.Command{
-	Helptext: cmdkit.HelpText{
+	Helptext: cmds.HelpText{
 		Tagline: "Interact with BTFS objects representing Unix filesystems.",
 		ShortDescription: `
 'btfs file' provides a familiar interface to file systems represented

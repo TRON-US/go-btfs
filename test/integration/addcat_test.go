@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/coreapi"
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
@@ -140,10 +141,10 @@ func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
 	bs1 := []pstore.PeerInfo{adder.Peerstore.PeerInfo(adder.Identity)}
 	bs2 := []pstore.PeerInfo{catter.Peerstore.PeerInfo(catter.Identity)}
 
-	if err := catter.Bootstrap(core.BootstrapConfigWithPeers(bs1)); err != nil {
+	if err := catter.Bootstrap(bootstrap.BootstrapConfigWithPeers(bs1)); err != nil {
 		return err
 	}
-	if err := adder.Bootstrap(core.BootstrapConfigWithPeers(bs2)); err != nil {
+	if err := adder.Bootstrap(bootstrap.BootstrapConfigWithPeers(bs2)); err != nil {
 		return err
 	}
 

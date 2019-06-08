@@ -8,7 +8,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
@@ -22,14 +21,13 @@ import (
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
+	libp2p "github.com/TRON-US/go-btfs/core/node/libp2p"
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 
 	"github.com/hashicorp/go-multierror"
-	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	goprocess "github.com/jbenet/goprocess"
 	ma "github.com/multiformats/go-multiaddr"
@@ -59,13 +57,12 @@ const (
 	enablePubSubKwd           = "enable-pubsub-experiment"
 	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
 	enableMultiplexKwd        = "enable-mplex-experiment"
-
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
 
 var daemonCmd = &cmds.Command{
-	Helptext: cmdkit.HelpText{
+	Helptext: cmds.HelpText{
 		Tagline: "Run a network-connected BTFS node.",
 		ShortDescription: `
 'btfs daemon' runs a persistent btfs daemon that can serve commands
@@ -156,26 +153,26 @@ Headers.
 `,
 	},
 
-	Options: []cmdkit.Option{
-		cmdkit.BoolOption(initOptionKwd, "Initialize btfs with default settings if not already initialized"),
-		cmdkit.StringOption(initProfileOptionKwd, "Configuration profiles to apply for --init. See btfs init --help for more"),
-		cmdkit.StringOption(routingOptionKwd, "Overrides the routing option").WithDefault(routingOptionDefaultKwd),
-		cmdkit.BoolOption(mountKwd, "Mounts BTFS to the filesystem"),
-		cmdkit.BoolOption(writableKwd, "Enable writing objects (with POST, PUT and DELETE)"),
-		cmdkit.StringOption(ipfsMountKwd, "Path to the mountpoint for BTFS (if using --mount). Defaults to config setting."),
-		cmdkit.StringOption(ipnsMountKwd, "Path to the mountpoint for BTNS (if using --mount). Defaults to config setting."),
-		cmdkit.BoolOption(unrestrictedApiAccessKwd, "Allow API access to unlisted hashes"),
-		cmdkit.BoolOption(unencryptTransportKwd, "Disable transport encryption (for debugging protocols)"),
-		cmdkit.BoolOption(enableGCKwd, "Enable automatic periodic repo garbage collection"),
-		cmdkit.BoolOption(adjustFDLimitKwd, "Check and raise file descriptor limits if needed").WithDefault(true),
-		cmdkit.BoolOption(migrateKwd, "If true, assume yes at the migrate prompt. If false, assume no."),
-		cmdkit.BoolOption(enablePubSubKwd, "Instantiate the btfs daemon with the experimental pubsub feature enabled."),
-		cmdkit.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
-		cmdkit.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
+	Options: []cmds.Option{
+		cmds.BoolOption(initOptionKwd, "Initialize btfs with default settings if not already initialized"),
+		cmds.StringOption(initProfileOptionKwd, "Configuration profiles to apply for --init. See btfs init --help for more"),
+		cmds.StringOption(routingOptionKwd, "Overrides the routing option").WithDefault(routingOptionDefaultKwd),
+		cmds.BoolOption(mountKwd, "Mounts BTFS to the filesystem"),
+		cmds.BoolOption(writableKwd, "Enable writing objects (with POST, PUT and DELETE)"),
+		cmds.StringOption(ipfsMountKwd, "Path to the mountpoint for BTFS (if using --mount). Defaults to config setting."),
+		cmds.StringOption(ipnsMountKwd, "Path to the mountpoint for BTNS (if using --mount). Defaults to config setting."),
+		cmds.BoolOption(unrestrictedApiAccessKwd, "Allow API access to unlisted hashes"),
+		cmds.BoolOption(unencryptTransportKwd, "Disable transport encryption (for debugging protocols)"),
+		cmds.BoolOption(enableGCKwd, "Enable automatic periodic repo garbage collection"),
+		cmds.BoolOption(adjustFDLimitKwd, "Check and raise file descriptor limits if needed").WithDefault(true),
+		cmds.BoolOption(migrateKwd, "If true, assume yes at the migrate prompt. If false, assume no."),
+		cmds.BoolOption(enablePubSubKwd, "Instantiate the btfs daemon with the experimental pubsub feature enabled."),
+		cmds.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
+		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
-		// cmdkit.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
-		// cmdkit.StringOption(swarmAddrKwd, "Address for the swarm socket (overrides config)"),
+		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
+		// cmds.StringOption(swarmAddrKwd, "Address for the swarm socket (overrides config)"),
 	},
 	Subcommands: map[string]*cmds.Command{},
 	Run:         daemonFunc,
@@ -330,11 +327,11 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	case routingOptionSupernodeKwd:
 		return errors.New("supernode routing was never fully implemented and has been removed")
 	case routingOptionDHTClientKwd:
-		ncfg.Routing = core.DHTClientOption
+		ncfg.Routing = libp2p.DHTClientOption
 	case routingOptionDHTKwd:
-		ncfg.Routing = core.DHTOption
+		ncfg.Routing = libp2p.DHTOption
 	case routingOptionNoneKwd:
-		ncfg.Routing = core.NilRouterOption
+		ncfg.Routing = libp2p.NilRouterOption
 	default:
 		return fmt.Errorf("unrecognized routing option: %s", routingOption)
 	}
@@ -346,9 +343,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	node.IsDaemon = true
 
-	//Check if there is a swarm.key at btfs loc. This would still print fingerprint if they created a swarm.key with the same values
-	spath := filepath.Join(cctx.ConfigRoot, "swarm.key")
-	if node.PNetFingerprint != nil && util.FileExists(spath) {
+	if node.PNetFingerprint != nil {
 		fmt.Println("Swarm is limited to private network of peers with the swarm key")
 		fmt.Printf("Swarm key fingerprint: %x\n", node.PNetFingerprint)
 	}
@@ -381,7 +376,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if err != nil {
 		return err
 	}
-	node.Process().AddChild(goprocess.WithTeardown(cctx.Plugins.Close))
+	node.Process.AddChild(goprocess.WithTeardown(cctx.Plugins.Close))
 
 	// construct api endpoint - every time
 	apiErrc, err := serveHTTPApi(req, cctx)
@@ -392,7 +387,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// construct fuse mountpoints - if the user provided the --mount flag
 	mount, _ := req.Options[mountKwd].(bool)
 	if mount && offline {
-		return cmdkit.Errorf(cmdkit.ErrClient, "mount is not currently supported in offline mode")
+		return cmds.Errorf(cmds.ErrClient, "mount is not currently supported in offline mode")
 	}
 	if mount {
 		if err := mountFuse(req, cctx); err != nil {

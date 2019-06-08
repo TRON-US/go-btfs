@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/node"
 	"github.com/TRON-US/go-btfs/namesys"
 	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-btfs/provider"
@@ -207,7 +208,7 @@ func (api *CoreAPI) WithOptions(opts ...options.ApiOption) (coreiface.CoreAPI, e
 
 		cs := cfg.Ipns.ResolveCacheSize
 		if cs == 0 {
-			cs = core.DefaultIpnsCacheSize
+			cs = node.DefaultIpnsCacheSize
 		}
 		if cs < 0 {
 			return nil, fmt.Errorf("cannot specify negative resolve cache size")

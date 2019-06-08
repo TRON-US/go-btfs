@@ -9,7 +9,6 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 
-	cmdkit "github.com/ipfs/go-ipfs-cmdkit"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	config "github.com/ipfs/go-ipfs-config"
 )
@@ -20,7 +19,7 @@ const (
 )
 
 var MountCmd = &cmds.Command{
-	Helptext: cmdkit.HelpText{
+	Helptext: cmds.HelpText{
 		Tagline: "Mounts BTFS to the filesystem (read-only).",
 		ShortDescription: `
 Mount BTFS at a read-only mountpoint on the OS (default: /btfs and /btns).
@@ -76,9 +75,9 @@ baz
 baz
 `,
 	},
-	Options: []cmdkit.Option{
-		cmdkit.StringOption(mountIPFSPathOptionName, "f", "The path where BTFS should be mounted."),
-		cmdkit.StringOption(mountIPNSPathOptionName, "n", "The path where BTNS should be mounted."),
+	Options: []cmds.Option{
+		cmds.StringOption(mountIPFSPathOptionName, "f", "The path where BTFS should be mounted."),
+		cmds.StringOption(mountIPNSPathOptionName, "n", "The path where BTNS should be mounted."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
