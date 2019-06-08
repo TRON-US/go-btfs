@@ -17,8 +17,13 @@ fi
 # patching $GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.0.6
 patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.0.6
 chmod -R 777 $patchdir
+# 1) path.go
 if ! patch -R -p0 -s -f --dry-run  $patchdir/path.go < ./patches/interface-go-ipfs-core-v0.0.6-path.go.patch; then
     patch -p0 $patchdir/path.go < ./patches/interface-go-ipfs-core-v0.0.6-path.go.patch;
+fi
+# 2) errors.go
+if ! patch -R -p0 -s -f --dry-run  $patchdir/errors.go < ./patches/interface-go-ipfs-core-v0.0.6-errors.go.patch; then
+    patch -p0 $patchdir/errors.go < ./patches/interface-go-ipfs-core-v0.0.6-errors.go.patch;
 fi
 
 # patching $GOPATH/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.0.7
