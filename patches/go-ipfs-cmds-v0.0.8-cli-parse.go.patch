@@ -1,0 +1,16 @@
+--- go-ipfs-cmds@v0.0.8/cli/parse.go	2019-06-10 11:16:59.000000000 -0700
++++ /tmp/go-ipfs-cmds/v0.0.8/cli/parse.go	2019-06-10 11:26:56.000000000 -0700
+@@ -17,11 +17,11 @@
+ )
+ 
+ var log = logging.Logger("cmds/cli")
+-var msgStdinInfo = "ipfs: Reading from %s; send Ctrl-d to stop."
++var msgStdinInfo = "btfs: Reading from %s; send Ctrl-d to stop."
+ 
+ func init() {
+ 	if osh.IsWindows() {
+-		msgStdinInfo = "ipfs: Reading from %s; send Ctrl-z to stop."
++		msgStdinInfo = "btfs: Reading from %s; send Ctrl-z to stop."
+ 	}
+ }
+ 

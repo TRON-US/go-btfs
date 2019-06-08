@@ -1,0 +1,17 @@
+--- go-multiaddr@v0.0.4/protocols.go	2019-06-10 11:17:00.000000000 -0700
++++ /tmp/go-multiaddr/protocols.go	2019-06-10 12:05:23.000000000 -0700
+@@ -135,7 +135,7 @@
+ 		VCode: CodeToVarint(P_HTTPS),
+ 	}
+ 	protoP2P = Protocol{
+-		Name:       "ipfs",
++		Name:       "btfs",
+ 		Code:       P_P2P,
+ 		VCode:      CodeToVarint(P_P2P),
+ 		Size:       LengthPrefixedVarSize,
+@@ -186,4 +186,5 @@
+ 	// explicitly set both of these
+ 	protocolsByName["p2p"] = protoP2P
+ 	protocolsByName["ipfs"] = protoP2P
++	protocolsByName["btfs"] = protoP2P
+ }
