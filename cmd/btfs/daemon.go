@@ -8,6 +8,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	cmds "github.com/ipfs/go-ipfs-cmds"
+	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	goprocess "github.com/jbenet/goprocess"
 	ma "github.com/multiformats/go-multiaddr"
@@ -343,7 +345,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	node.IsDaemon = true
 
-	if node.PNetFingerprint != nil {
+	//Check if there is a swarm.key at btfs loc. This would still print fingerprint if they created a swarm.key with the same values
+	spath := filepath.Join(cctx.ConfigRoot, "swarm.key")
+	if node.PNetFingerprint != nil && util.FileExists(spath) {
 		fmt.Println("Swarm is limited to private network of peers with the swarm key")
 		fmt.Printf("Swarm key fingerprint: %x\n", node.PNetFingerprint)
 	}
