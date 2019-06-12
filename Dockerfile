@@ -1,7 +1,7 @@
 FROM golang:1.12-stretch
 MAINTAINER Lars Gierth <lgierth@ipfs.io>
 
-ENV SRC_DIR /go-ipfs
+ENV SRC_DIR /go-btfs
 
 # Download packages first so they can be cached.
 COPY go.mod go.sum $SRC_DIR/
@@ -40,10 +40,10 @@ RUN apt-get update && apt-get install -y fuse
 FROM busybox:1-glibc
 MAINTAINER Lars Gierth <lgierth@ipfs.io>
 
-# Get the ipfs binary, entrypoint script, and TLS CAs from the build container.
-ENV SRC_DIR /go-ipfs
-COPY --from=0 $SRC_DIR/cmd/btfs/ipfs /usr/local/bin/ipfs
-COPY --from=0 $SRC_DIR/bin/container_daemon /usr/local/bin/start_ipfs
+# Get the btfs binary, entrypoint script, and TLS CAs from the build container.
+ENV SRC_DIR /go-btfs
+COPY --from=0 $SRC_DIR/cmd/btfs/btfs /usr/local/bin/btfs
+COPY --from=0 $SRC_DIR/bin/container_daemon /usr/local/bin/start_btfs
 COPY --from=0 /tmp/su-exec/su-exec /sbin/su-exec
 COPY --from=0 /tmp/tini /sbin/tini
 COPY --from=0 /bin/fusermount /usr/local/bin/fusermount
@@ -65,17 +65,17 @@ EXPOSE 8080
 EXPOSE 8081
 
 # Create the fs-repo directory and switch to a non-privileged user.
-ENV IPFS_PATH /data/ipfs
+ENV IPFS_PATH /data/btfs
 RUN mkdir -p $IPFS_PATH \
-  && adduser -D -h $IPFS_PATH -u 1000 -G users ipfs \
-  && chown ipfs:users $IPFS_PATH
+  && adduser -D -h $IPFS_PATH -u 1000 -G users btfs \
+  && chown btfs:users $IPFS_PATH
 
-# Create mount points for `ipfs mount` command
+# Create mount points for `btfs mount` command
 RUN mkdir /btfs /btns \
   && chown btfs:users /btfs /btns
 
 # Expose the fs-repo as a volume.
-# start_ipfs initializes an fs-repo if none is mounted.
+# start_btfs initializes an fs-repo if none is mounted.
 # Important this happens after the USER directive so permission are correct.
 VOLUME $IPFS_PATH
 
@@ -85,7 +85,7 @@ ENV IPFS_LOGGING ""
 # This just makes sure that:
 # 1. There's an fs-repo, and initializes one if there isn't.
 # 2. The API and Gateway are accessible from outside the container.
-ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start_ipfs"]
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start_btfs"]
 
 # Execute the daemon subcommand by default
 CMD ["daemon", "--migrate=true"]
