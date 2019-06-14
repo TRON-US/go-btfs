@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"net/http"
+	"io/ioutil"
+	"fmt"
 
 	"go.uber.org/fx"
 
@@ -114,12 +117,49 @@ func (cfg *BuildCfg) options(ctx context.Context) (fx.Option, *cfg.Config) {
 		return fx.Error(err), nil
 	}
 
+	address, err := externalIP()
+	if err == nil {
+		if ! contains(conf.Addresses.Announce, address) {
+			conf.Addresses.Announce = append(conf.Addresses.Announce, address)
+			cfg.Repo.SetConfig(conf)
+		}
+	}
+
 	return fx.Options(
 		repoOption,
 		hostOption,
 		routingOption,
 		metricsCtx,
 	), conf
+}
+
+func contains(s []string, e string) bool {
+    for _, a := range s {
+        if a == e {
+            return true
+        }
+    }
+    return false
+}
+
+func externalIP() (string, error) {
+	resp, err := http.Get("http://checkip.amazonaws.com")
+	if err != nil {
+		fmt.Println("get external IP failed")
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("parse external IP failed")
+		return "", err
+	}
+	ip := string(body)
+	// remove last return
+	ip = ip[:len(ip)-1]
+	address := "/ip4/" + ip
+	address += "/tcp/4001"
+	return address, nil
 }
 
 func defaultRepo(dstore repo.Datastore) (repo.Repo, error) {
