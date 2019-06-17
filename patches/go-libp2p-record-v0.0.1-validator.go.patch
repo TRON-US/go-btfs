@@ -1,0 +1,12 @@
+--- libp2p/go-libp2p-record@v0.0.1/validator.go	2019-06-17 10:29:17.000000000 +0800
++++ /Users/tron/patch-from/go-libp2p-record/v0.0.1/validator.go	2019-06-17 10:34:37.000000000 +0800
+@@ -36,6 +36,9 @@
+ 	if err != nil {
+ 		return nil
+ 	}
++	if ns == "btns" {
++		ns = "ipns"
++	}
+ 	return v[ns]
+ }
+ 
