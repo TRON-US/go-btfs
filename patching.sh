@@ -55,3 +55,10 @@ fi
 if ! patch -R -s -f --dry-run $patchdir/bootstrap_peers.go < ./patches/go-ipfs-config-v0.0.3-bootstrap_peers.go.patch 1>/dev/null; then
     patch $patchdir/bootstrap_peers.go < ./patches/go-ipfs-config-v0.0.3-bootstrap_peers.go.patch;
 fi
+
+# patching $GOPATH/pkg/mod/github.com/libp2p/go-libp2p-record@v0.0.1
+patchdir=$GOPATH/pkg/mod/github.com/libp2p/go-libp2p-record@v0.0.1
+chmod -R 777 $patchdir
+if ! patch -R -s -f --dry-run $patchdir/validator.go < ./patches/go-libp2p-record-v0.0.1-validator.go.patch 1>/dev/null; then
+    patch $patchdir/validator.go < ./patches/go-libp2p-record-v0.0.1-validator.go.patch;
+fi
