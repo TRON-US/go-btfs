@@ -9,6 +9,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/ipfs/go-bitswap"
+	ic "github.com/libp2p/go-libp2p-crypto"
 
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -36,6 +37,12 @@ type dataCollection struct {
 	BlocksUp    uint64  `json:"blocks_up"`       //Total num of blocks uploaded
 	BlocksDown  uint64  `json:"blocks_down"`     //Total num of blocks downloaded
 	NumPeers    uint64  `json:"peers_connected"` //Number of peers
+}
+
+type dataBag struct {
+	PublicKey []byte `json:"public_key"`
+	Signature []byte `json:"signature"`
+	Payload []byte `json:"payload"`
 }
 
 const kilobyte = 1024
@@ -108,8 +115,18 @@ func (dc *dataCollection) update() {
 
 func (dc *dataCollection) sendData() {
 	dc.update()
-	temp, _ := json.Marshal(dc)
-	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(temp))
+	dcMarshal, _ := json.Marshal(dc)
+	signature, _ := dc.node.PrivateKey.Sign(dcMarshal)
+
+	publicKey, _ := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
+
+	dataBagInstance := new(dataBag)
+	dataBagInstance.PublicKey = publicKey
+	dataBagInstance.Signature = signature
+	dataBagInstance.Payload = dcMarshal
+	dataBagMarshaled, _ := json.Marshal(dataBagInstance)
+
+	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(dataBagMarshaled))
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		return
