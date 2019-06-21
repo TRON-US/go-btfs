@@ -68,7 +68,6 @@ NETWORK COMMANDS
 TOOL COMMANDS
   config        Manage configuration
   version       Show btfs version information
-  update        Download and apply go-ipfs updates
   commands      List all available commands
   cid           Convert and discover properties of CIDs
   log           Manage and show logs of running daemon
