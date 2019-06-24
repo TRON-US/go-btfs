@@ -1,0 +1,11 @@
+--- github.com/ipfs/go-ipns@v0.0.1/record.go	2019-06-24 16:16:28.000000000 +0800
++++ /Users/tron/patch-from/go-ipns/v0.0.1/record.go	2019-06-24 16:12:55.000000000 +0800
+@@ -34,7 +34,7 @@
+ // Validate validates an IPNS record.
+ func (v Validator) Validate(key string, value []byte) error {
+ 	ns, pidString, err := record.SplitKey(key)
+-	if err != nil || ns != "ipns" {
++	if err != nil || (ns != "ipns" && ns != "btns") {
+ 		return ErrInvalidPath
+ 	}
+ 

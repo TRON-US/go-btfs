@@ -62,3 +62,10 @@ chmod -R 777 $patchdir
 if ! patch -R -s -f --dry-run $patchdir/validator.go < ./patches/go-libp2p-record-v0.0.1-validator.go.patch 1>/dev/null; then
     patch $patchdir/validator.go < ./patches/go-libp2p-record-v0.0.1-validator.go.patch;
 fi
+
+# patching $GOPATH/pkg/mod/github.com/ipfs/go-ipns@v0.0.1
+patchdir=$GOPATH/pkg/mod/github.com/ipfs/go-ipns@v0.0.1
+chmod -R 777 $patchdir
+if ! patch -R -s -f --dry-run $patchdir/record.go < ./patches/go-ipns-v.0.0.1-record.go.patch 1>/dev/null; then
+    patch $patchdir/record.go < ./patches/go-ipns-v.0.0.1-record.go.patch;
+fi
