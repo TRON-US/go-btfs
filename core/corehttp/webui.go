@@ -1,7 +1,7 @@
 package corehttp
 
 // TODO: move to BTNS
-const WebUIPath = "/btfs/QmZJUPocZuMa4sawVzSDEouUoU1ZrtEgBSGdy3S6QUUHax"
+const WebUIPath = "/btfs/QmZ9KReQmJ5Bp8iWdYJ7dqjuMUB7ou6bwmiE3pXTX3BuHx"
 
 // this is a list of all past webUI paths.
 var WebUIPaths = []string{
