@@ -44,7 +44,7 @@ const kilobyte = 1024
 var heartBeat = 15 * time.Minute
 
 //Server URL for data collection
-var dataServeURL = "http://18.220.204.165:8080/metrics"
+var dataServeURL = "https://db.btfs.io/metrics"
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
 func valOrZero(x uint64) uint64 {
