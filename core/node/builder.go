@@ -5,9 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"net/http"
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	"go.uber.org/fx"
 
@@ -119,7 +119,7 @@ func (cfg *BuildCfg) options(ctx context.Context) (fx.Option, *cfg.Config) {
 
 	address, err := externalIP()
 	if err == nil {
-		if ! contains(conf.Addresses.Announce, address) {
+		if !contains(conf.Addresses.Announce, address) {
 			conf.Addresses.Announce = append(conf.Addresses.Announce, address)
 			cfg.Repo.SetConfig(conf)
 		}
@@ -134,12 +134,12 @@ func (cfg *BuildCfg) options(ctx context.Context) (fx.Option, *cfg.Config) {
 }
 
 func contains(s []string, e string) bool {
-    for _, a := range s {
-        if a == e {
-            return true
-        }
-    }
-    return false
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 func externalIP() (string, error) {
@@ -164,7 +164,7 @@ func externalIP() (string, error) {
 
 func defaultRepo(dstore repo.Datastore) (repo.Repo, error) {
 	c := cfg.Config{}
-	priv, pub, err := ci.GenerateKeyPairWithReader(ci.RSA, 1024, rand.Reader)
+	priv, pub, err := ci.GenerateKeyPairWithReader(ci.ECDSA, 1024, rand.Reader)
 	if err != nil {
 		return nil, err
 	}

@@ -1,13 +1,39 @@
---- go-ipfs-config@v0.0.3/init.go	2019-06-10 11:17:01.000000000 -0700
-+++ /tmp/go-ipfs-config/init.go	2019-06-10 15:52:58.000000000 -0700
-@@ -49,8 +49,8 @@
+--- /Users/tron/work/go/pkg/mod/github.com/ipfs/go-ipfs-config@v0.0.3/init.go	2019-06-27 12:07:43.000000000 +0800
++++ init.go	2019-06-27 12:17:17.000000000 +0800
+@@ -6,6 +6,7 @@
+ 	"fmt"
+ 	"io"
+ 	"time"
++	"os"
  
- 		// setup the node mount points.
- 		Mounts: Mounts{
--			IPFS: "/ipfs",
--			IPNS: "/ipns",
-+			IPFS: "/btfs",
-+			IPNS: "/btns",
- 		},
+ 	ci "github.com/libp2p/go-libp2p-crypto"
+ 	peer "github.com/libp2p/go-libp2p-peer"
+@@ -156,10 +157,24 @@
+ 		return ident, errors.New("bitsize less than 1024 is considered unsafe")
+ 	}
  
- 		Ipns: Ipns{
+-	fmt.Fprintf(out, "generating %v-bit RSA keypair...", nbits)
+-	sk, pk, err := ci.GenerateKeyPair(ci.RSA, nbits)
+-	if err != nil {
+-		return ident, err
++	var (
++		sk ci.PrivKey
++		pk ci.PubKey
++		err error
++	)
++	
++	if os.Getenv("RSA_FLG") == "TRUE" {
++		fmt.Fprintf(out, "generating %v-bit RSA keypair...", nbits)
++		sk, pk, err = ci.GenerateKeyPair(ci.ECDSA, nbits)
++		if err != nil {
++			return ident, err
++		}
++	} else {
++		fmt.Fprintf(out, "generating %v-bit ECDSA keypair...", nbits)
++		sk, pk, err = ci.GenerateKeyPair(ci.ECDSA, nbits)
++		if err != nil {
++			return ident, err
++		}
+ 	}
+ 	fmt.Fprintf(out, "done\n")
+ 
