@@ -1,5 +1,5 @@
---- /Users/tron/work/go/pkg/mod/github.com/ipfs/go-ipfs-config@v0.0.3/init.go	2019-06-27 12:07:43.000000000 +0800
-+++ init.go	2019-06-27 12:17:17.000000000 +0800
+--- /Users/tron/work/go/pkg/mod/github.com/ipfs/go-ipfs-config@v0.0.3/init.go	2019-06-27 14:24:03.000000000 +0800
++++ init.go	2019-06-27 14:29:09.000000000 +0800
 @@ -6,6 +6,7 @@
  	"fmt"
  	"io"
@@ -8,7 +8,18 @@
  
  	ci "github.com/libp2p/go-libp2p-crypto"
  	peer "github.com/libp2p/go-libp2p-peer"
-@@ -156,10 +157,24 @@
+@@ -49,8 +50,8 @@
+ 
+ 		// setup the node mount points.
+ 		Mounts: Mounts{
+-			IPFS: "/ipfs",
+-			IPNS: "/ipns",
++			IPFS: "/btfs",
++			IPNS: "/btns",
+ 		},
+ 
+ 		Ipns: Ipns{
+@@ -156,11 +157,25 @@
  		return ident, errors.New("bitsize less than 1024 is considered unsafe")
  	}
  
@@ -16,12 +27,13 @@
 -	sk, pk, err := ci.GenerateKeyPair(ci.RSA, nbits)
 -	if err != nil {
 -		return ident, err
+-	}
 +	var (
 +		sk ci.PrivKey
 +		pk ci.PubKey
 +		err error
 +	)
-+	
++
 +	if os.Getenv("RSA_FLG") == "TRUE" {
 +		fmt.Fprintf(out, "generating %v-bit RSA keypair...", nbits)
 +		sk, pk, err = ci.GenerateKeyPair(ci.ECDSA, nbits)
@@ -34,6 +46,7 @@
 +		if err != nil {
 +			return ident, err
 +		}
- 	}
++ 	}
  	fmt.Fprintf(out, "done\n")
  
+ 	// currently storing key unencrypted. in the future we need to encrypt it.
