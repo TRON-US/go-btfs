@@ -145,21 +145,6 @@ to get started, enter:
         btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
 ```
 
-For the default is ECDSA. If you want to use RSA as a key generation rule, please set the environment variable RSA_FLG to TRUE.
-
-```
-$ export RSA_FLG=TRUE
-$ btfs init
-initializing BTFS node at /home/ubuntu/.btfs
-generating 2048-bit RSA keypair...done
-peer identity: QmTkQjKAtfh2GNDPmtnFB8d..................
-to get started, enter:
-
-        btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
-```
-
-
-
 ###### 3. Auto Update Setting
 
 Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
