@@ -78,6 +78,14 @@ func (api *KeyAPI) Generate(ctx context.Context, name string, opts ...caopts.Key
 
 		sk = priv
 		pk = pub
+	case "ecdsa":
+		priv, pub, err := crypto.GenerateECDSAKeyPair(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+
+		sk = priv
+		pk = pub
 	default:
 		return nil, fmt.Errorf("unrecognized key type: %s", options.Algorithm)
 	}
