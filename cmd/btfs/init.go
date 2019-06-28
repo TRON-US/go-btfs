@@ -26,6 +26,8 @@ const (
 	bitsOptionName         = "bits"
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
+	keyType                = "key"
+	ecdsa                  = "ECDSA"
 )
 
 var initCmd = &cmds.Command{
@@ -53,6 +55,7 @@ environment variable:
 		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(nBitsForKeypairDefault),
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
+		cmds.StringOption(keyType, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
 
 		// TODO need to decide whether to expose the override as a file or a
 		// directory. That is: should we allow the user to also specify the
@@ -109,7 +112,12 @@ environment variable:
 			profiles = strings.Split(profile, ",")
 		}
 
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf)
+		keyType, _ := req.Options[keyType].(string)
+		if keyType == "" {
+			keyType = ecdsa
+		}
+
+		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType)
 	},
 }
 
@@ -123,10 +131,10 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 		profiles = strings.Split(profile, ",")
 	}
 
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil)
+	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, ecdsa)
 }
 
-func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config) error {
+func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config, keyType string) error {
 	if _, err := fmt.Fprintf(out, "initializing BTFS node at %s\n", repoRoot); err != nil {
 		return err
 	}
@@ -141,7 +149,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair)
+		conf, err = config.Init(out, nBitsForKeypair, keyType)
 		if err != nil {
 			return err
 		}

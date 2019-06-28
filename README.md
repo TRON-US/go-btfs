@@ -136,7 +136,7 @@ $which btfs
 ###### 2. Init a btfs node:
 
 ```
-$ btfs init
+$ btfs init -k ECDSA(type of key generation, e.g. RSA, ECDSA ...)
 initializing BTFS node at /home/ubuntu/.btfs
 generating 2048-bit ECDSA keypair...done
 peer identity: QmTkQjKAtfh2GNDPmtnFB8d..................
