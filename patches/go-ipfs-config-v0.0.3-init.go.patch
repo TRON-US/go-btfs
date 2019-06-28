@@ -40,15 +40,15 @@
 +
 +	switch keyType {
 +	case "RSA":
-+		key = 0
++		key = ci.RSA
 +	case "Ed25519":
-+		key = 1
++		key = ci.Ed25519
 +	case "Secp256k1":
-+		key = 2
++		key = ci.Secp256k1
 +	case "ECDSA":
-+		key = 3
++		key = ci.ECDSA
 +	default:
-+		key = 3
++		key = ci.ECDSA
 +	}
 +
 +	fmt.Fprintf(out, "generating %v-bit %s keypair...", nbits, keyType)
