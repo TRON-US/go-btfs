@@ -115,10 +115,18 @@ func (dc *dataCollection) update() {
 
 func (dc *dataCollection) sendData() {
 	dc.update()
-	dcMarshal, _ := json.Marshal(dc)
-	signature, _ := dc.node.PrivateKey.Sign(dcMarshal)
-	publicKey, _ := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
-
+	dcMarshal, err := json.Marshal(dc)
+	if err != nil {
+		return
+	}
+	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
+	if err != nil {
+		return
+	}
+	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
+	if err != nil {
+		return
+	}
 	dataBagInstance := new(dataBag)
 	dataBagInstance.PublicKey = publicKey
 	dataBagInstance.Signature = signature
@@ -128,6 +136,7 @@ func (dc *dataCollection) sendData() {
 		return
 	}
 
+	// btfs node reports to status server by making HTTP request
 	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(dataBagMarshaled))
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
