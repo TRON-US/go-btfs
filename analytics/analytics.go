@@ -117,14 +117,16 @@ func (dc *dataCollection) sendData() {
 	dc.update()
 	dcMarshal, _ := json.Marshal(dc)
 	signature, _ := dc.node.PrivateKey.Sign(dcMarshal)
-
 	publicKey, _ := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 
 	dataBagInstance := new(dataBag)
 	dataBagInstance.PublicKey = publicKey
 	dataBagInstance.Signature = signature
 	dataBagInstance.Payload = dcMarshal
-	dataBagMarshaled, _ := json.Marshal(dataBagInstance)
+	dataBagMarshaled, err := json.Marshal(dataBagInstance)
+	if err != nil {
+		return
+	}
 
 	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(dataBagMarshaled))
 	req.Header.Add("Content-Type", "application/json")
