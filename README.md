@@ -155,30 +155,8 @@ autoupdateFlg: true     # is auto update
 sleepTimeSeconds: 20        # how often to auto update (second）.
 ```
 
-###### 4. Join BTFS Private Net
+###### 4. Configuration
 
-Put the swarm.key in /.btfs, and then run the node. [Get swarm.key](https://github.com/TRON-US/go-btfs/blob/master/swarm.key)
-```
-$ mv swarm.key ~/.btfs/swarm.key
-```
-Remove ipfs bootstrap:
-```
-$ btfs bootstrap rm --all  (if there is error like this: Error: cannot 
-connect to the api. Is the daemon running? To run as a standalone CLI 
-command remove the api file in `$IPFS_PATH/api`, please run `nohup btfs 
-daemon </dev/null > /dev/null 2>&1 &` and then run this command.)
-```
-Join the private net work:
-```
-$ btfs bootstrap add /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
-added /ip4/3.18.120.107/tcp/4001/ipfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
-```
-Announce your public ip address to btfs network:
-You can get your public ip address through online browsing or run "curl https://ipinfo.io/ip"
-```
-# for example, your public ip4 address is: 38.142.72.82
-$ btfs config --json Addresses.Announce  '["/ip4/38.142.72.82/tcp/4001"]'
-```
 Enable Cross-Origin Resource Sharing:
 ```
 $ btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"*\"]"
