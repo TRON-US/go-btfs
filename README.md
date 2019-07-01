@@ -4,7 +4,7 @@
 
 BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from 
 IPFS that utilizes the TRON network and the BitTorrent Ecosystem for integration with DApps and smart 
-contracts. The <a href="https://docs.btfs.io/">API documentation</a> helps to walk developers through BTFS setup and usage.  
+contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation</a> walks developers through BTFS setup, usage, and contains all the API references.  
 
 ## Table of Contents
 
