@@ -3,13 +3,8 @@
 ## What is BTFS?
 
 BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from 
-IPFS that utilizes the TRON network for integration with DApps and smart 
-contracts. In current smart-contract based networks like Ethereum and NEO, 
-there exists no mechanism for large file transfer. BTFS allows for 
-tokenized large file transfers. This paper presents a proposal for a BTFS 
-and TRON based decentralized social media DApp which is censorship 
-resistant and implements a tokenized reward system to content creators.
-
+IPFS that utilizes the TRON network and the BitTorrent Ecosystem for integration with DApps and smart 
+contracts. The <a href="https://docs.btfs.io/">API documentation</a> helps to walk developers through BTFS setup and usage.  
 
 ## Table of Contents
 
