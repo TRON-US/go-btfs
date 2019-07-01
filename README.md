@@ -83,17 +83,7 @@ export GO111MODULE=on
 (If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
 
 
-#### Step2 Access To Private Repo
-Firstly, you need your github token to access the private github repo. If you don't have a github token, following the guide [Generate github token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line) to get your github token.
-
-Put your github token to git config:
-```
-export GITHUB_TOKEN=(Your github token)
-git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/TRON-US".insteadOf "https://github.com/TRON-US"
-```
-
-
-#### Step3 Download Source Code
+#### Step2 Download Source Code
 
 ```
 $ git clone https://github.com/TRON-US/go-btfs.git
@@ -101,7 +91,7 @@ $ cd go-btfs
 ```
 
 
-#### Step4 Build And Join BTFS Private Net
+#### Step3 Build And Join BTFS Private Net
 
 Your can choose to using on-step script to compile and build or just follow step by step.
 
@@ -118,7 +108,7 @@ Your can choose to using on-step script to compile and build or just follow step
 $ make install
 go version go1.12.4 linux/amd64
 bin/check_go_version 1.12
-go install -ldflags="-X "github.com/ipfs/go-ipfs".CurrentCommit=63ae486fa-dirty" ./cmd/btfs
+go install -ldflags="-X "github.com/btfs/go-btfs".CurrentCommit=63ae486fa-dirty" ./cmd/btfs
 ```
 If you are building on FreeBSD instead of `make install` use `gmake install`.
 
@@ -165,7 +155,7 @@ $ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 ```
 
 
-#### Step5 Run BTFS At The Backend
+#### Step4 Run BTFS At The Backend
 
 ```
 you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
