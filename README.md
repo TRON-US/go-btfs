@@ -105,6 +105,7 @@ Your can choose to using on-step script to compile and build or just follow step
 ###### 1. Compile and build:
 
 ```
+$ go clean -modcache
 $ make install
 go version go1.12.4 linux/amd64
 bin/check_go_version 1.12
