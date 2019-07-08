@@ -27,6 +27,7 @@ const (
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
 	keyType                = "key"
+	importKey			   = "import"
 	ecdsa                  = "ECDSA"
 )
 
@@ -56,6 +57,7 @@ environment variable:
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
 		cmds.StringOption(keyType, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
+		cmds.StringOption(importKey, "i", "Import TRON private key to generate btfs PeerID."),
 
 		// TODO need to decide whether to expose the override as a file or a
 		// directory. That is: should we allow the user to also specify the
@@ -112,12 +114,16 @@ environment variable:
 			profiles = strings.Split(profile, ",")
 		}
 
+		importKey, _ := req.Options[importKey].(string)
+
 		keyType, _ := req.Options[keyType].(string)
 		if keyType == "" {
 			keyType = ecdsa
+		} else if importKey != "" {
+			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 		}
 
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType)
+		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey)
 	},
 }
 
@@ -131,10 +137,11 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 		profiles = strings.Split(profile, ",")
 	}
 
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, ecdsa)
+	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, ecdsa, "")
 }
 
-func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config, keyType string) error {
+func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,
+	keyType string, importKey string) error {
 	if _, err := fmt.Fprintf(out, "initializing BTFS node at %s\n", repoRoot); err != nil {
 		return err
 	}
@@ -149,7 +156,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair, keyType)
+		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey)
 		if err != nil {
 			return err
 		}
