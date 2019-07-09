@@ -125,6 +125,7 @@ func update() {
 			log.Errorf("Get latest config file error, reasons: [%v]", err)
 			continue
 		}
+		time.Sleep(time.Second * 5)
 
 		// Where your local node is running on localhost:5001
 		sh := shell.NewShell(url)
