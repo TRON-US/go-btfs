@@ -80,7 +80,7 @@ RUN mkdir /btfs /btns \
 VOLUME $BTFS_PATH
 
 # The default logging level
-ENV IPFS_LOGGING ""
+ENV BTFS_LOGGING ""
 
 # This just makes sure that:
 # 1. There's an fs-repo, and initializes one if there isn't.
