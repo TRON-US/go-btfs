@@ -1,5 +1,5 @@
 FROM golang:1.12-stretch
-MAINTAINER Lars Gierth <lgierth@ipfs.io>
+MAINTAINER Wei Yu <weiyu@tron.network>
 
 ENV SRC_DIR /go-btfs
 
@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y fuse
 
 # Now comes the actual target image, which aims to be as small as possible.
 FROM busybox:1-glibc
-MAINTAINER Lars Gierth <lgierth@ipfs.io>
+MAINTAINER Wei Yu <weiyu@tron.network>
 
 # Get the btfs binary, entrypoint script, and TLS CAs from the build container.
 ENV SRC_DIR /go-btfs
@@ -65,10 +65,10 @@ EXPOSE 8080
 EXPOSE 8081
 
 # Create the fs-repo directory and switch to a non-privileged user.
-ENV IPFS_PATH /data/btfs
-RUN mkdir -p $IPFS_PATH \
-  && adduser -D -h $IPFS_PATH -u 1000 -G users btfs \
-  && chown btfs:users $IPFS_PATH
+ENV BTFS_PATH /data/btfs
+RUN mkdir -p $BTFS_PATH \
+  && adduser -D -h $BTFS_PATH -u 1000 -G users btfs \
+  && chown btfs:users $BTFS_PATH
 
 # Create mount points for `btfs mount` command
 RUN mkdir /btfs /btns \
@@ -77,7 +77,7 @@ RUN mkdir /btfs /btns \
 # Expose the fs-repo as a volume.
 # start_btfs initializes an fs-repo if none is mounted.
 # Important this happens after the USER directive so permission are correct.
-VOLUME $IPFS_PATH
+VOLUME $BTFS_PATH
 
 # The default logging level
 ENV IPFS_LOGGING ""
