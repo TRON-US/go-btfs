@@ -10,6 +10,9 @@ RUN cd $SRC_DIR \
 
 COPY . $SRC_DIR
 
+# Install path
+RUN apt-get update && apt-get install -y patch
+
 # Build the thing.
 # Also: fix getting HEAD commit hash via git rev-parse.
 RUN cd $SRC_DIR \
