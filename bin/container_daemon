@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
-user=ipfs
-repo="$IPFS_PATH"
+user=btfs
+repo="$BTFS_PATH"
 
 if [ `id -u` -eq 0 ]; then
   echo "Changing user to $user"
@@ -12,18 +12,18 @@ if [ `id -u` -eq 0 ]; then
 fi
 
 # 2nd invocation with regular user
-ipfs version
+btfs version
 
 if [ -e "$repo/config" ]; then
-  echo "Found IPFS fs-repo at $repo"
+  echo "Found BTFS fs-repo at $repo"
 else
   case "$IPFS_PROFILE" in
     "") INIT_ARGS="" ;;
     *) INIT_ARGS="--profile=$IPFS_PROFILE" ;;
   esac
-  ipfs init $INIT_ARGS
-  ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001
-  ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+  btfs init $INIT_ARGS
+  btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
+  btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 fi
 
-exec ipfs "$@"
+exec btfs "$@"
