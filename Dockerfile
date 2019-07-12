@@ -1,5 +1,5 @@
 FROM golang:1.12-stretch
-MAINTAINER Wei Yu <weiyu@tron.network>
+MAINTAINER TRON-US <support@tron.network>
 
 ENV SRC_DIR /go-btfs
 
@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y fuse
 
 # Now comes the actual target image, which aims to be as small as possible.
 FROM busybox:1-glibc
-MAINTAINER Wei Yu <weiyu@tron.network>
+MAINTAINER TRON-US <support@tron.network>
 
 # Get the btfs binary, entrypoint script, and TLS CAs from the build container.
 ENV SRC_DIR /go-btfs
@@ -80,7 +80,7 @@ RUN mkdir /btfs /btns \
 VOLUME $BTFS_PATH
 
 # The default logging level
-ENV IPFS_LOGGING ""
+ENV BTFS_LOGGING ""
 
 # This just makes sure that:
 # 1. There's an fs-repo, and initializes one if there isn't.
