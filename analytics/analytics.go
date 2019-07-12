@@ -3,6 +3,7 @@ package analytics
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/ipfs/go-bitswap"
 	ic "github.com/libp2p/go-libp2p-crypto"
+	logging "github.com/ipfs/go-log"
 
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -45,13 +47,26 @@ type dataBag struct {
 	Payload []byte `json:"payload"`
 }
 
-const kilobyte = 1024
-
-//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
-var heartBeat = 15 * time.Minute
+type healthData struct {
+	NodeId 			string `json:"node_id"`
+	BTFSVersion 	string `json:"btfs_version"`
+	FailurePoint 	string `json:"failure_point"`
+}
 
 //Server URL for data collection
-var dataServeURL = "https://db.btfs.io/metrics"
+const (
+	statusServerDomain = "https://db.btfs.io"
+	routeMetrics	   = "/metrics"
+	routeHealth		   = "/health"
+)
+
+// other constants
+const (
+	kilobyte = 1024
+
+	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
+	heartBeat = 15 * time.Minute
+)
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
 func valOrZero(x uint64) uint64 {
@@ -95,11 +110,13 @@ func (dc *dataCollection) update() {
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
 	if !ok {
+		dc.reportHealthDueToError("failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion")
 		return
 	}
 
 	st, err := bs.Stat()
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to perform bs.Stat() call: %s", err.Error()))
 		return
 	}
 
@@ -117,14 +134,17 @@ func (dc *dataCollection) sendData() {
 	dc.update()
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
 		return
 	}
 	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
 		return
 	}
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
 		return
 	}
 	dataBagInstance := new(dataBag)
@@ -133,19 +153,21 @@ func (dc *dataCollection) sendData() {
 	dataBagInstance.Payload = dcMarshal
 	dataBagMarshaled, err := json.Marshal(dataBagInstance)
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to marshal databag: %s", err.Error()))
 		return
 	}
 
 	// btfs node reports to status server by making HTTP request
-	req, err := http.NewRequest("POST", dataServeURL, bytes.NewReader(dataBagMarshaled))
-	req.Header.Add("Content-Type", "application/json")
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeMetrics), bytes.NewReader(dataBagMarshaled))
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to make new http request: %s", err.Error()))
 		return
 	}
+	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
-
 	if err != nil {
+		dc.reportHealthDueToError(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
 
@@ -160,5 +182,30 @@ func (dc *dataCollection) collectionAgent() {
 
 	for range tick.C {
 		dc.sendData()
+	}
+}
+
+func (dc *dataCollection) reportHealthDueToError(failurePoint string) {
+	// log is the command logger
+	var log = logging.Logger("cmd/btfs")
+
+	hd := new(healthData)
+	hd.NodeId = dc.NodeID
+	hd.BTFSVersion = dc.BTFSVersion
+	hd.FailurePoint = failurePoint
+	hdMarshaled, err := json.Marshal(hd)
+	if err != nil {
+		log.Warning(err.Error())
+		return
+	}
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeHealth), bytes.NewReader(hdMarshaled))
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := http.DefaultClient.Do(req)
+	defer res.Body.Close()
+
+	if err != nil {
+		log.Warning(err.Error())
+		return
 	}
 }
