@@ -10,6 +10,13 @@ RUN cd $SRC_DIR \
 
 COPY . $SRC_DIR
 
+# Newer git submodule uses "absorbgitdirs" option by default which does not
+# include .git folder inside a submodule.
+# Use a build time variable $gitdir to specify the location of the actual .git folder.
+ARG gitdir=.git
+RUN test -d $SRC_DIR/.git \
+  || mv $SRC_DIR/$gitdir $SRC_DIR/.git
+
 # Install path
 RUN apt-get update && apt-get install -y patch
 
