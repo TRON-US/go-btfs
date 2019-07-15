@@ -23,7 +23,6 @@ const (
 	LocalOption   = "local" // DEPRECATED: use OfflineOption
 	OfflineOption = "offline"
 	ApiOption     = "api"
-	RemoveOnUnpin = "remove-on-unpin"
 )
 
 var Root = &cmds.Command{
@@ -97,7 +96,6 @@ The CLI will exit with one of the following values:
 		cmds.BoolOption(LocalOption, "L", "Run the command locally, instead of using the daemon. DEPRECATED: use --offline."),
 		cmds.BoolOption(OfflineOption, "Run the command offline."),
 		cmds.StringOption(ApiOption, "Use a specific API instance (defaults to /ip4/127.0.0.1/tcp/5001)"),
-		cmds.BoolOption(RemoveOnUnpin, "R", "Remove file on unpin."),
 
 		// global options, added to every command
 		cmdenv.OptionCidBase,

@@ -59,26 +59,19 @@ var RmCmd = &cmds.Command{
 			}
 		}
 
-		rm, _ := req.Options[RemoveOnUnpin].(bool)
+		// Surgincal approach
+		p, err := path2.ParsePath(req.Arguments[0])
+		if err != nil {
+			return err
+		}
 
-		if rm {
-			// Run garbage collection
-			RepoCmd.Subcommands["gc"].Run(req, res, env)
-		} else {
-			// Surgincal approach
-			p, err := path2.ParsePath(req.Arguments[0])
-			if err != nil {
-				return err
-			}
+		object, err := resolve.Resolve(req.Context, n.Namesys, n.Resolver, p)
+		if err != nil {
+			return err
+		}
 
-			object, err := resolve.Resolve(req.Context, n.Namesys, n.Resolver, p)
-			if err != nil {
-				return err
-			}
-
-			for _, cid := range object.Links() {
-				n.Blockstore.DeleteBlock(cid.Cid)
-			}
+		for _, cid := range object.Links() {
+			n.Blockstore.DeleteBlock(cid.Cid)
 		}
 
 		return nil
