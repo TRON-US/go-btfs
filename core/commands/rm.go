@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/namesys/resolve"
@@ -70,24 +69,18 @@ var RmCmd = &cmds.Command{
 			return err
 		}
 
+		// rm all child links
 		for _, cid := range object.Links() {
-			n.Blockstore.DeleteBlock(cid.Cid)
+			if err := n.Blockstore.DeleteBlock(cid.Cid); err == nil {
+				fmt.Printf("Removed %s\n", cid.Cid.Hash().B58String())
+			}
+		}
+
+		// rm parent node
+		if err := n.Blockstore.DeleteBlock(object.Cid()); err == nil {
+			fmt.Printf("Removed %s\n", object.Cid().Hash().B58String())
 		}
 
 		return nil
-	},
-	Type: GcResult{},
-	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, gcr *GcResult) error {
-			if gcr.Error != "" {
-				_, err := fmt.Fprintf(w, "Error: %s\n", gcr.Error)
-				return err
-			}
-
-			prefix := "removed "
-
-			_, err := fmt.Fprintf(w, "%s%s\n", prefix, gcr.Key)
-			return err
-		}),
 	},
 }
