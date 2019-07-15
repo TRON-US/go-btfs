@@ -87,7 +87,6 @@ environment variable:
 		cctx := env.(*oldcmds.Context)
 		empty, _ := req.Options[emptyRepoOptionName].(bool)
 		nBitsForKeypair, _ := req.Options[bitsOptionName].(int)
-
 		rmOnUnpin, _ := req.Options[rmOnUnpinOptionName].(bool)
 
 		var conf *config.Config
