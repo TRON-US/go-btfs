@@ -5,7 +5,9 @@ import (
 	"io"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/namesys/resolve"
 	cmds "github.com/ipfs/go-ipfs-cmds"
+	path2 "github.com/ipfs/go-path"
 	"github.com/ipfs/interface-go-ipfs-core/options"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 )
@@ -20,7 +22,11 @@ var RmCmd = &cmds.Command{
 		cmds.StringArg("hash", true, true, "The hash of the file to be removed from local btfs node.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		// TODO: modify request to get 'pin rm' api
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
@@ -53,9 +59,28 @@ var RmCmd = &cmds.Command{
 			}
 		}
 
-		// All of the pins have been removed
-		req.Path = []string{"repo", "gc"}
-		RepoCmd.Subcommands["gc"].Run(req, res, env)
+		rm, _ := req.Options[RemoveOnUnpin].(bool)
+
+		if rm {
+			// Run garbage collection
+			RepoCmd.Subcommands["gc"].Run(req, res, env)
+		} else {
+			// Surgincal approach
+			p, err := path2.ParsePath(req.Arguments[0])
+			if err != nil {
+				return err
+			}
+
+			object, err := resolve.Resolve(req.Context, n.Namesys, n.Resolver, p)
+			if err != nil {
+				return err
+			}
+
+			for _, cid := range object.Links() {
+				n.Blockstore.DeleteBlock(cid.Cid)
+			}
+		}
+
 		return nil
 	},
 	Type: GcResult{},
