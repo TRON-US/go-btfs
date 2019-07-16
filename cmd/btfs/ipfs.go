@@ -93,4 +93,5 @@ var cmdDetailsMap = map[string]cmdDetails{
 	"repo/fsck":   {cannotRunOnDaemon: true},
 	"config/edit": {cannotRunOnDaemon: true, doesNotUseRepo: true},
 	"cid":         {doesNotUseRepo: true},
+	"rm":          {cannotRunOnDaemon: true},
 }
