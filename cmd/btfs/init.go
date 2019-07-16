@@ -160,7 +160,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey)
+		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey, rmOnUnpin)
 		if err != nil {
 			return err
 		}
