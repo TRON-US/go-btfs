@@ -1,5 +1,5 @@
 FROM golang:1.12-stretch
-MAINTAINER Wei Yu <weiyu@tron.network>
+MAINTAINER TRON-US <support@tron.network>
 
 ENV SRC_DIR /go-btfs
 
@@ -9,6 +9,16 @@ RUN cd $SRC_DIR \
   && go mod download
 
 COPY . $SRC_DIR
+
+# Newer git submodule uses "absorbgitdirs" option by default which does not
+# include .git folder inside a submodule.
+# Use a build time variable $gitdir to specify the location of the actual .git folder.
+ARG gitdir=.git
+RUN test -d $SRC_DIR/.git \
+  || mv $SRC_DIR/$gitdir $SRC_DIR/.git
+
+# Install path
+RUN apt-get update && apt-get install -y patch
 
 # Build the thing.
 # Also: fix getting HEAD commit hash via git rev-parse.
@@ -38,7 +48,7 @@ RUN apt-get update && apt-get install -y fuse
 
 # Now comes the actual target image, which aims to be as small as possible.
 FROM busybox:1-glibc
-MAINTAINER Wei Yu <weiyu@tron.network>
+MAINTAINER TRON-US <support@tron.network>
 
 # Get the btfs binary, entrypoint script, and TLS CAs from the build container.
 ENV SRC_DIR /go-btfs
