@@ -14,7 +14,7 @@
  
 -func Init(out io.Writer, nBitsForKeypair int) (*Config, error) {
 -	identity, err := identityConfig(out, nBitsForKeypair)
-+func Init(out io.Writer, nBitsForKeypair int, keyType string, importKey string, rmOnUnpin bool) (*Config, error) {
++func Init(out io.Writer, nBitsForKeypair int, keyType string, importKey string) (*Config, error) {
 +	identity, err := identityConfig(out, nBitsForKeypair, keyType, importKey)
  	if err != nil {
  		return nil, err
