@@ -1,9 +1,0 @@
-2019-07-16T11:48:08.712-0700	info	BTFS auto update begin.
-2019-07-16T11:48:08.713-0700	error	Move file error, reasons: [rename /Users/lukasz/Progs/go-btfs/cmd/btfs/btfs /Users/lukasz/Progs/go-btfs/cmd/btfs/btfs.bk: no such file or directory]
-
-main.update
-	/Users/tron/Tut/go-workspace/src/github.com/TRON-US/go-btfs/autoupdate/main.go:199
-main.main
-	/Users/tron/Tut/go-workspace/src/github.com/TRON-US/go-btfs/autoupdate/main.go:241
-runtime.main
-	/usr/local/go/src/runtime/proc.go:200
