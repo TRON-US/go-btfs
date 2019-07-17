@@ -10,11 +10,13 @@ require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
+	github.com/ethereum/go-ethereum v1.9.0
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-critic/go-critic v0.0.0-20181204210945-ee9bf5809ead // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogo/protobuf v1.2.1
+	github.com/golang/protobuf v1.3.1
 	github.com/golangci/golangci-lint v1.16.1-0.20190425135923-692dacb773b7
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/golang-lru v0.5.1
@@ -127,8 +129,10 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
+	golang.org/x/net v0.0.0-20190522135303-fa69b94a3b58
 	golang.org/x/sys v0.0.0-20190522044717-8097e1b27ff5
 	google.golang.org/appengine v1.4.0 // indirect
+	google.golang.org/grpc v1.19.0
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
