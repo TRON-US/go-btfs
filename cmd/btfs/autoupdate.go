@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	btfs_version "github.com/TRON-US/go-btfs"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -81,7 +82,6 @@ func update() {
 		return
 	}
 
-	// TODO: change sleepTimeSeconds back to 20
 	sleepTimeSeconds := 20
 	version := "0.0.0"
 	autoupdateFlg := true
@@ -97,7 +97,7 @@ func update() {
 			version = currentConfig.Version
 			sleepTimeSeconds = currentConfig.SleepTimeSeconds
 		} else {
-			// version = btfs_version.CurrentVersionNumber
+			version = btfs_version.CurrentVersionNumber
 		}
 
 		if !autoupdateFlg {
