@@ -97,6 +97,7 @@ func update() {
 			version = currentConfig.Version
 			sleepTimeSeconds = currentConfig.SleepTimeSeconds
 		} else {
+			fmt.Println("Local configuration not found. Checking binary version.")
 			version = btfs_version.CurrentVersionNumber
 		}
 
@@ -157,6 +158,7 @@ func update() {
 		}
 
 		if flg <= 0 {
+			fmt.Println("BTFS is up-to-date.")
 			sleepTimeSeconds = latestConfig.SleepTimeSeconds
 			continue
 		}
