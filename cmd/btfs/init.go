@@ -28,8 +28,8 @@ const (
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
 	keyTypeOptionName      = "key"
+	keyTypeDefault         = "Secp256k1"
 	importKeyOptionName    = "import"
-	ecdsa                  = "ECDSA"
 	rmOnUnpinOptionName    = "rm-on-unpin"
 )
 
@@ -58,7 +58,7 @@ environment variable:
 		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(nBitsForKeypairDefault),
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
-		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
+		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is Secp256k1"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
 		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
 
@@ -122,7 +122,7 @@ environment variable:
 
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		if keyType == "" {
-			keyType = ecdsa
+			keyType = keyTypeDefault
 		} else if importKey != "" {
 			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 		}
