@@ -18,8 +18,8 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
+	config "github.com/TRON-US/go-btfs-config"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 
 	"github.com/tyler-smith/go-bip32"

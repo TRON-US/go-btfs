@@ -12,9 +12,9 @@ import (
 	"github.com/TRON-US/go-btfs/core/node/libp2p"
 	"github.com/TRON-US/go-btfs/repo"
 
+	cfg "github.com/TRON-US/go-btfs-config"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
-	cfg "github.com/ipfs/go-ipfs-config"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )

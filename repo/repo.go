@@ -8,7 +8,7 @@ import (
 	filestore "github.com/ipfs/go-filestore"
 
 	ds "github.com/ipfs/go-datastore"
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	ma "github.com/multiformats/go-multiaddr"
 )
 

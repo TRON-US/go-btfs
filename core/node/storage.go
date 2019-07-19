@@ -8,7 +8,7 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/retrystore"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	"go.uber.org/fx"
 
 	"github.com/TRON-US/go-btfs/core/node/helpers"
