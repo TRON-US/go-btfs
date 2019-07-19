@@ -48,16 +48,19 @@ ReYNnyicsbkqWletNw+vHX/bvZ8=
 )
 
 func LedgerConnection() (*grpc.ClientConn, error) {
-	b, err := ioutil.ReadAll(strings.NewReader(certFile))
-	if err != nil {
-		return nil, err
+	var grpcOption grpc.DialOption
+	if certFile == "" {
+		grpcOption = grpc.WithInsecure()
+	} else {
+		b := []byte(certFile)
+		cp := x509.NewCertPool()
+		if !cp.AppendCertsFromPEM(b) {
+			return nil, fmt.Errorf("credentials: failed to append certificates: %v", err)
+		}
+		credential := credentials.NewTLS(&tls.Config{RootCAs: cp})
+		grpcOption = grpc.WithTransportCredentials(credential)
 	}
-	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(b) {
-		return nil, fmt.Errorf("credentials: failed to append certificates: %v", err)
-	}
-	credential := credentials.NewTLS(&tls.Config{RootCAs: cp})
-	conn, err := grpc.Dial(ledgerAddr, grpc.WithTransportCredentials(credential))
+	conn, err := grpc.Dial(ledgerAddr, grpcOption)
 	if err != nil {
 		return nil, err
 	}
@@ -109,8 +112,13 @@ func NewSignedChannelState(channelState *ledgerPb.ChannelState, fromSig []byte, 
 	}
 }
 
-func ImportAccount(ctx context.Context, pubKey []byte, ledgerClient ledgerPb.ChannelsClient) (*ledgerPb.Account, error) {
-	res, err := ledgerClient.CreateAccount(ctx, &ledgerPb.PublicKey{Key: pubKey})
+func ImportAccount(ctx context.Context, pubKey libcrypto.PubKey, ledgerClient ledgerPb.ChannelsClient) (*ledgerPb.Account, error) {
+	keyBytes, err := pubKey.Raw()
+	if err != nil {
+		log.Error("fail to marshal public key: ", err)
+		return nil, err
+	}
+	res, err := ledgerClient.CreateAccount(ctx, &ledgerPb.PublicKey{Key: keyBytes})
 	if err != nil {
 		log.Error("fail to create account using imported pub key: ", err)
 		return nil, err
@@ -121,17 +129,17 @@ func ImportAccount(ctx context.Context, pubKey []byte, ledgerClient ledgerPb.Cha
 func CreateAccount(ctx context.Context, ledgerClient ledgerPb.ChannelsClient) (*libcrypto.PrivKey, *ledgerPb.Account, error) {
 	privKey, pubKey, err := libcrypto.GenerateKeyPair(libcrypto.Secp256k1, 256)
 	if err != nil {
-		log.Errorf("fail to generate key pair: ", err)
+		log.Error("fail to generate key pair: ", err)
 		return nil, nil, err
 	}
 	pubKeyBytes, err := pubKey.Raw()
 	if err != nil {
-		log.Errorf("fail to marshal public key: ", err)
+		log.Error("fail to marshal public key: ", err)
 		return nil, nil, err
 	}
 	res, err := ledgerClient.CreateAccount(ctx, &ledgerPb.PublicKey{Key: pubKeyBytes})
 	if err != nil {
-		log.Errorf("fail to create account: ", err)
+		log.Error("fail to create account: ", err)
 		return nil, nil, err
 	}
 	return &privKey, res.GetAccount(), nil
@@ -147,7 +155,7 @@ func CreateChannel(ctx context.Context, ledgerClient ledgerPb.ChannelsClient, ch
 func CloseChannel(ctx context.Context, ledgerClient ledgerPb.ChannelsClient, signedChannelState *ledgerPb.SignedChannelState) error {
 	closed, err := ledgerClient.CloseChannel(ctx, signedChannelState)
 	if err != nil {
-		log.Errorf("channel fail to close: ", closed.GetState().Channel, err)
+		log.Error("channel fail to close: ", closed.GetState().Channel, err)
 		return err
 	}
 	return nil
@@ -156,7 +164,7 @@ func CloseChannel(ctx context.Context, ledgerClient ledgerPb.ChannelsClient, sig
 func Sign(key libcrypto.PrivKey, channelMessage proto.Message) ([]byte, error) {
 	raw, err := proto.Marshal(channelMessage)
 	if err != nil {
-		log.Errorf("fail to marshal pb message: ", err)
+		log.Error("fail to marshal pb message: ", err)
 		return nil, err
 	}
 	return key.Sign(raw)

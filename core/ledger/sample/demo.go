@@ -12,7 +12,7 @@ func main()  {
 	// build connection with ledger
 	clientConn, err := ledger.LedgerConnection()
 	if err != nil {
-		log.Panic("fail to connect")
+		log.Panic("fail to connect", err)
 	}
 	defer ledger.CloseConnection(clientConn)
 	// new ledger client
@@ -21,7 +21,7 @@ func main()  {
 	fromPrivKey, fromAcc, err := ledger.CreateAccount(ctx, ledgerClient)
 	toPrivKey, toAcc, err := ledger.CreateAccount(ctx, ledgerClient)
 	if err != nil {
-		log.Panic("fail to create account")
+		log.Panic("fail to create account", err)
 	}
 	// prepare channel commit
 	amount := fromAcc.GetBalance() / 10
@@ -29,12 +29,12 @@ func main()  {
 	// sign for the channel commit
 	fromSig, err := ledger.Sign(*fromPrivKey, channelCommit)
 	if err != nil {
-		log.Panic("fail to sign channel commit")
+		log.Panic("fail to sign channel commit", err)
 	}
 	// create channel: payer start the channel
 	channelID, err := ledger.CreateChannel(ctx, ledgerClient, channelCommit, fromSig)
 	if err != nil {
-		log.Panic("fail to create channel")
+		log.Panic("fail to create channel", err)
 	}
 	// channel state: transfer money from -> to
 	fromAcc = ledger.NewAccount(fromAcc.Address.Key, 0)
@@ -44,12 +44,12 @@ func main()  {
 	fromSigState, err := ledger.Sign(*fromPrivKey, channelState)
 	toSigState, err := ledger.Sign(*toPrivKey, channelState)
 	if err != nil {
-		log.Panic("error when signing the channel state")
+		log.Panic("error when signing the channel state", err)
 	}
 	signedChannelState := ledger.NewSignedChannelState(channelState, fromSigState, toSigState)
 	// close channel
 	err = ledger.CloseChannel(ctx, ledgerClient, signedChannelState)
 	if err != nil {
-		log.Panic("fail to close channel")
+		log.Panic("fail to close channel", err)
 	}
 }
