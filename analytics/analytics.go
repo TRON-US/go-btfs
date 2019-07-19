@@ -110,13 +110,13 @@ func (dc *dataCollection) update() {
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
 	if !ok {
-		dc.reportHealthDueToError("failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion")
+		dc.reportHealthAlert("failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion")
 		return
 	}
 
 	st, err := bs.Stat()
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to perform bs.Stat() call: %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to perform bs.Stat() call: %s", err.Error()))
 		return
 	}
 
@@ -134,17 +134,17 @@ func (dc *dataCollection) sendData() {
 	dc.update()
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
 		return
 	}
 	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
 		return
 	}
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
 		return
 	}
 	dataBagInstance := new(dataBag)
@@ -153,21 +153,21 @@ func (dc *dataCollection) sendData() {
 	dataBagInstance.Payload = dcMarshal
 	dataBagMarshaled, err := json.Marshal(dataBagInstance)
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to marshal databag: %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to marshal databag: %s", err.Error()))
 		return
 	}
 
 	// btfs node reports to status server by making HTTP request
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeMetrics), bytes.NewReader(dataBagMarshaled))
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to make new http request: %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to make new http request: %s", err.Error()))
 		return
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		dc.reportHealthDueToError(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
+		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
 
@@ -185,7 +185,7 @@ func (dc *dataCollection) collectionAgent() {
 	}
 }
 
-func (dc *dataCollection) reportHealthDueToError(failurePoint string) {
+func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	// log is the command logger
 	var log = logging.Logger("cmd/btfs")
 
