@@ -4,8 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
-	"strings"
 	"time"
 
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
@@ -55,7 +53,7 @@ func LedgerConnection() (*grpc.ClientConn, error) {
 		b := []byte(certFile)
 		cp := x509.NewCertPool()
 		if !cp.AppendCertsFromPEM(b) {
-			return nil, fmt.Errorf("credentials: failed to append certificates: %v", err)
+			return nil, fmt.Errorf("credentials: failed to append certificates")
 		}
 		credential := credentials.NewTLS(&tls.Config{RootCAs: cp})
 		grpcOption = grpc.WithTransportCredentials(credential)
