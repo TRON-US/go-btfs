@@ -17,8 +17,8 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
+	"github.com/TRON-US/go-btfs-config"
 	"github.com/ipfs/go-ipfs-cmds"
-	"github.com/ipfs/go-ipfs-config"
 	"github.com/ipfs/go-ipfs-files"
 )
 
