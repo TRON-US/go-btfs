@@ -103,7 +103,7 @@ func update() {
 
 		if !autoupdateFlg {
 			fmt.Println("Automatic update is not turned on")
-			return
+			continue
 		}
 
 		if pathExists(latestConfigPath) {
