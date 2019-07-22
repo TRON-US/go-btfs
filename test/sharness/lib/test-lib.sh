@@ -14,10 +14,10 @@ if test "$MAKE_SKIP_PATH" != "1"; then
   BIN2=$(cd ../.. && echo `pwd`/cmd/btfs)
   PATH=${BIN2}:${BIN}:${PATH}
 
-  # assert the `ipfs` we're using is the right one.
-  if test `which ipfs` != ${BIN2}/ipfs; then
-    echo >&2 "Cannot find the tests' local ipfs tool."
-    echo >&2 "Please check test and ipfs tool installation."
+  # assert the `btfs` we're using is the right one.
+  if test `which btfs` != ${BIN2}/btfs; then
+    echo >&2 "Cannot find the tests' local btfs tool."
+    echo >&2 "Please check test and btfs tool installation."
     exit 1
   fi
 fi
@@ -43,7 +43,7 @@ SHARNESS_LIB="lib/sharness/sharness.sh"
 
 # Make sure the ipfs path is set, also set in test_init_ipfs but that
 # is not always used.
-export IPFS_PATH="$(pwd)/.ipfs"
+export IPFS_PATH="$(pwd)/.btfs"
 # Ask programs to please not print ANSI codes
 export TERM=dumb
 
