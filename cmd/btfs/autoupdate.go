@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	btfs_version "github.com/TRON-US/go-btfs"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -84,24 +85,24 @@ func update() {
 	sleepTimeSeconds := 20
 	version := "0.0.0"
 	autoupdateFlg := true
-
-	// Get current config file.
-	currentConfig, err := getConfigure(currentConfigPath)
-	if err == nil {
-		autoupdateFlg = currentConfig.AutoupdateFlg
-		version = currentConfig.Version
-		sleepTimeSeconds = currentConfig.SleepTimeSeconds
-	}
-
-	if !autoupdateFlg {
-		fmt.Println("Automatic update is not turned on")
-		return
-	}
-
 	routePath := fmt.Sprint(runtime.GOOS, "/", runtime.GOARCH, "/")
 
 	for {
 		time.Sleep(time.Second * time.Duration(sleepTimeSeconds))
+
+		// Get current config file.
+		currentConfig, err := getConfigure(currentConfigPath)
+		if err == nil {
+			autoupdateFlg = currentConfig.AutoupdateFlg
+			version = currentConfig.Version
+			sleepTimeSeconds = currentConfig.SleepTimeSeconds
+		} else {
+			version = btfs_version.CurrentVersionNumber
+		}
+
+		if !autoupdateFlg {
+			continue
+		}
 
 		if pathExists(latestConfigPath) {
 			// Delete the latest btfs config file.
@@ -113,7 +114,7 @@ func update() {
 		}
 
 		// Get latest btfs config file.
-		err := download(latestConfigPath, fmt.Sprint(configRepoUrl, routePath, latestConfigFile))
+		err = download(latestConfigPath, fmt.Sprint(configRepoUrl, routePath, latestConfigFile))
 		if err != nil {
 			log.Errorf("Download latest btfs config file error, reasons: [%v]", err)
 			continue
@@ -155,6 +156,8 @@ func update() {
 		}
 
 		if flg <= 0 {
+			fmt.Println("BTFS is up-to-date.")
+			sleepTimeSeconds = latestConfig.SleepTimeSeconds
 			continue
 		}
 
