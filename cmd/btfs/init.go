@@ -31,7 +31,6 @@ const (
 	importKeyOptionName    = "import"
 	ecdsa                  = "ECDSA"
 	rmOnUnpinOptionName    = "rm-on-unpin"
-	maxStorageOptionName   = "max-storage"
 )
 
 var initCmd = &cmds.Command{
@@ -62,7 +61,6 @@ environment variable:
 		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
 		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
-		cmds.IntOption(maxStorageOptionName, "m", "Maximum storage capacity allowed on the BTFS node."),
 
 		// TODO need to decide whether to expose the override as a file or a
 		// directory. That is: should we allow the user to also specify the
