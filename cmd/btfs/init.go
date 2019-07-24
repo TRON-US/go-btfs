@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	assets "github.com/TRON-US/go-btfs/assets"
@@ -27,8 +28,9 @@ const (
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
 	keyTypeOptionName      = "key"
-	importKeyOptionName	   = "import"
+	importKeyOptionName    = "import"
 	ecdsa                  = "ECDSA"
+	rmOnUnpinOptionName    = "rm-on-unpin"
 )
 
 var initCmd = &cmds.Command{
@@ -58,6 +60,7 @@ environment variable:
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
 		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
+		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
 
 		// TODO need to decide whether to expose the override as a file or a
 		// directory. That is: should we allow the user to also specify the
@@ -84,6 +87,7 @@ environment variable:
 		cctx := env.(*oldcmds.Context)
 		empty, _ := req.Options[emptyRepoOptionName].(bool)
 		nBitsForKeypair, _ := req.Options[bitsOptionName].(int)
+		rmOnUnpin, _ := req.Options[rmOnUnpinOptionName].(bool)
 
 		var conf *config.Config
 
@@ -123,7 +127,7 @@ environment variable:
 			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 		}
 
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey)
+		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, rmOnUnpin)
 	},
 }
 
@@ -137,11 +141,11 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 		profiles = strings.Split(profile, ",")
 	}
 
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, ecdsa, "")
+	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, ecdsa, "", false)
 }
 
 func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,
-	keyType string, importKey string) error {
+	keyType string, importKey string, rmOnUnpin bool) error {
 	if _, err := fmt.Fprintf(out, "initializing BTFS node at %s\n", repoRoot); err != nil {
 		return err
 	}
@@ -159,6 +163,11 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey)
 		if err != nil {
 			return err
+		}
+
+		if rmOnUnpin {
+			raw := json.RawMessage(`{"rmOnUnpin":"` + strconv.FormatBool(rmOnUnpin) + `"}`)
+			conf.Datastore.Params = &raw
 		}
 	}
 

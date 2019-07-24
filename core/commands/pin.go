@@ -2,16 +2,17 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
 	pin "github.com/TRON-US/go-btfs/pin"
-
 	bserv "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
@@ -214,6 +215,24 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 	},
 	Type: PinOutput{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		r := n.Repo
+		cfg, err := r.Config()
+		if err != nil {
+			return err
+		}
+
+		var rmOnUnpin bool = false
+
+		var m map[string]string
+		if cfg.Datastore.Params != nil {
+			if err := json.Unmarshal(*cfg.Datastore.Params, &m); err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		rmOnUnpin, _ = strconv.ParseBool(m["rmOnUnpin"])
+
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
@@ -232,6 +251,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 		}
 
 		pins := make([]string, 0, len(req.Arguments))
+
 		for _, b := range req.Arguments {
 			rp, err := api.ResolvePath(req.Context, path.New(b))
 			if err != nil {
@@ -245,7 +265,15 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 			}
 		}
 
-		return cmds.EmitOnce(res, &PinOutput{pins})
+		if err := cmds.EmitOnce(res, &PinOutput{pins}); err != nil {
+			return err
+		}
+
+		if rmOnUnpin {
+			RepoCmd.Subcommands["gc"].Run(req, res, env)
+		}
+
+		return nil
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *PinOutput) error {
