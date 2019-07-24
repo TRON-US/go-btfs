@@ -97,12 +97,10 @@ func update() {
 			version = currentConfig.Version
 			sleepTimeSeconds = currentConfig.SleepTimeSeconds
 		} else {
-			fmt.Println("Local configuration not found. Checking binary version.")
 			version = btfs_version.CurrentVersionNumber
 		}
 
 		if !autoupdateFlg {
-			fmt.Println("Automatic update is not turned on")
 			continue
 		}
 
