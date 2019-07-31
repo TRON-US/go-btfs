@@ -9,14 +9,12 @@ import (
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	"github.com/ipfs/go-ipfs-config"
 	util "github.com/ipfs/go-ipfs-util"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/pstoremem"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
 	"github.com/TRON-US/go-btfs/core/node/libp2p"
 	"github.com/TRON-US/go-btfs/p2p"
-	"github.com/TRON-US/go-btfs/provider"
-	"github.com/TRON-US/go-btfs/reprovide"
 
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	offroute "github.com/ipfs/go-ipfs-routing/offline"
@@ -81,10 +79,10 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		switch cfg.Pubsub.Router {
 		case "":
 			fallthrough
-		case "floodsub":
-			ps = fx.Provide(libp2p.FloodSub(pubsubOptions...))
 		case "gossipsub":
 			ps = fx.Provide(libp2p.GossipSub(pubsubOptions...))
+		case "floodsub":
+			ps = fx.Provide(libp2p.FloodSub(pubsubOptions...))
 		default:
 			return fx.Error(fmt.Errorf("unknown pubsub router %s", cfg.Pubsub.Router))
 		}
@@ -96,11 +94,11 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		BaseLibP2P,
 
 		fx.Provide(libp2p.AddrFilters(cfg.Swarm.AddrFilters)),
-		fx.Invoke(libp2p.SetupDiscovery(cfg.Discovery.MDNS.Enabled, cfg.Discovery.MDNS.Interval)),
 		fx.Provide(libp2p.AddrsFactory(cfg.Addresses.Announce, cfg.Addresses.NoAnnounce)),
 		fx.Provide(libp2p.SmuxTransport(bcfg.getOpt("mplex"))),
 		fx.Provide(libp2p.Relay(cfg.Swarm.DisableRelay, cfg.Swarm.EnableRelayHop)),
 		fx.Invoke(libp2p.StartListening(cfg.Addresses.Swarm)),
+		fx.Invoke(libp2p.SetupDiscovery(cfg.Discovery.MDNS.Enabled, cfg.Discovery.MDNS.Interval)),
 
 		fx.Provide(libp2p.Security(!bcfg.DisableEncryptedConnections, cfg.Experimental.PreferTLS)),
 
@@ -186,42 +184,6 @@ var IPNS = fx.Options(
 	fx.Provide(RecordValidator),
 )
 
-// Providers groups units managing provider routing records
-func Providers(cfg *config.Config) fx.Option {
-	reproviderInterval := kReprovideFrequency
-	if cfg.Reprovider.Interval != "" {
-		dur, err := time.ParseDuration(cfg.Reprovider.Interval)
-		if err != nil {
-			return fx.Error(err)
-		}
-
-		reproviderInterval = dur
-	}
-
-	var keyProvider fx.Option
-	switch cfg.Reprovider.Strategy {
-	case "all":
-		fallthrough
-	case "":
-		keyProvider = fx.Provide(reprovide.NewBlockstoreProvider)
-	case "roots":
-		keyProvider = fx.Provide(reprovide.NewPinnedProvider(true))
-	case "pinned":
-		keyProvider = fx.Provide(reprovide.NewPinnedProvider(false))
-	default:
-		return fx.Error(fmt.Errorf("unknown reprovider strategy '%s'", cfg.Reprovider.Strategy))
-	}
-
-	return fx.Options(
-		fx.Provide(ProviderQueue),
-		fx.Provide(ProviderCtor),
-		fx.Provide(ReproviderCtor(reproviderInterval)),
-		keyProvider,
-
-		fx.Invoke(Reprovider),
-	)
-}
-
 // Online groups online-only units
 func Online(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 
@@ -261,8 +223,11 @@ func Online(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		recordLifetime = d
 	}
 
+	/* don't provide from bitswap when the strategic provider service is active */
+	shouldBitswapProvide := !cfg.Experimental.StrategicProviding
+
 	return fx.Options(
-		fx.Provide(OnlineExchange),
+		fx.Provide(OnlineExchange(shouldBitswapProvide)),
 		fx.Provide(Namesys(ipnsCacheSize)),
 
 		fx.Invoke(IpnsRepublisher(repubPeriod, recordLifetime)),
@@ -270,17 +235,19 @@ func Online(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		fx.Provide(p2p.New),
 
 		LibP2P(bcfg, cfg),
-		Providers(cfg),
+		OnlineProviders(cfg.Experimental.StrategicProviding, cfg.Reprovider.Strategy, cfg.Reprovider.Interval),
 	)
 }
 
 // Offline groups offline alternatives to Online units
-var Offline = fx.Options(
-	fx.Provide(offline.Exchange),
-	fx.Provide(Namesys(0)),
-	fx.Provide(offroute.NewOfflineRouter),
-	fx.Provide(provider.NewOfflineProvider),
-)
+func Offline(cfg *config.Config) fx.Option {
+	return fx.Options(
+		fx.Provide(offline.Exchange),
+		fx.Provide(Namesys(0)),
+		fx.Provide(offroute.NewOfflineRouter),
+		OfflineProviders(cfg.Experimental.StrategicProviding, cfg.Reprovider.Strategy, cfg.Reprovider.Interval),
+	)
+}
 
 // Core groups basic BTFS services
 var Core = fx.Options(
@@ -295,7 +262,7 @@ func Networked(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 	if bcfg.Online {
 		return Online(bcfg, cfg)
 	}
-	return Offline
+	return Offline(cfg)
 }
 
 // BTFS builds a group of fx Options based on the passed BuildCfg

@@ -6,21 +6,19 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"text/tabwriter"
 
+	humanize "github.com/dustin/go-humanize"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
-	humanize "github.com/dustin/go-humanize"
 
 	cid "github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
 )
 
 type RepoVersion struct {
@@ -216,44 +214,11 @@ var repoFsckCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Remove repo lockfiles.",
 		ShortDescription: `
-'btfs repo fsck' is a plumbing command that will remove repo and level db
-lockfiles, as well as the api file. This command can only run when no btfs
-daemons are running.
+'ipfs repo fsck' is now a no-op.
 `,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		configRoot, err := cmdenv.GetConfigRoot(env)
-		if err != nil {
-			return err
-		}
-
-		dsPath, err := config.DataStorePath(configRoot)
-		if err != nil {
-			return err
-		}
-
-		dsLockFile := filepath.Join(dsPath, "LOCK") // TODO: get this lockfile programmatically
-		repoLockFile := filepath.Join(configRoot, fsrepo.LockFile)
-		apiFile := filepath.Join(configRoot, "api") // TODO: get this programmatically
-
-		log.Infof("Removing repo lockfile: %s", repoLockFile)
-		log.Infof("Removing datastore lockfile: %s", dsLockFile)
-		log.Infof("Removing api file: %s", apiFile)
-
-		err = os.Remove(repoLockFile)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-		err = os.Remove(dsLockFile)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-		err = os.Remove(apiFile)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &MessageOutput{"Lockfiles have been removed.\n"})
+		return cmds.EmitOnce(res, &MessageOutput{"`ipfs repo fsck` is deprecated and does nothing.\n"})
 	},
 	Type: MessageOutput{},
 	Encoders: cmds.EncoderMap{

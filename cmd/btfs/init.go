@@ -17,9 +17,9 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
-	files "github.com/ipfs/go-ipfs-files"
+	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/ipfs/go-ipfs-config"
+	"github.com/ipfs/go-ipfs-files"
 )
 
 const (

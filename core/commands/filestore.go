@@ -5,10 +5,10 @@ import (
 	"io"
 	"os"
 
+	filestore "github.com/ipfs/go-filestore"
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
-	filestore "github.com/TRON-US/go-btfs/filestore"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-ipfs-cmds"

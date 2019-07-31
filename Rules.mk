@@ -5,6 +5,7 @@ DISTCLEAN :=
 TEST :=
 TEST_SHORT :=
 GOCC ?= go
+PROTOC ?= protoc
 
 all: help    # all has to be first defined target
 .PHONY: all
@@ -50,16 +51,12 @@ endif
 dir := pin/internal/pb
 include $(dir)/Rules.mk
 
-dir := filestore/pb
-include $(dir)/Rules.mk
-
-
 # -------------------- #
 #   universal rules    #
 # -------------------- #
 
-%.pb.go: %.proto
-	$(PROTOC)
+%.pb.go: %.proto bin/protoc-gen-gogofaster
+	$(PROTOC) --gogofaster_out=. --proto_path=.:$(GOPATH)/src:$(dir $@) $<
 
 # -------------------- #
 #     core targets     #

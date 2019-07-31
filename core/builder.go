@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ipfs/go-metrics-interface"
-	"go.uber.org/fx"
-
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/node"
+
+	"github.com/ipfs/go-metrics-interface"
+	"go.uber.org/fx"
 )
 
 type BuildCfg = node.BuildCfg // Alias for compatibility until we properly refactor the constructor interface

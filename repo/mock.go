@@ -3,7 +3,7 @@ package repo
 import (
 	"errors"
 
-	filestore "github.com/TRON-US/go-btfs/filestore"
+	filestore "github.com/ipfs/go-filestore"
 	keystore "github.com/TRON-US/go-btfs/keystore"
 
 	config "github.com/ipfs/go-ipfs-config"
