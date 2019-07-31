@@ -60,7 +60,6 @@ func writeFile(size int, path string) ([]byte, error) {
 }
 
 func verifyFile(t *testing.T, path string, wantData []byte) {
-        t.Skip("Skipping testing because it hangs")
 	isData, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
