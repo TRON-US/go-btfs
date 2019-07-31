@@ -162,6 +162,16 @@ it uses a _lot_ of file descriptors.
 Luckily, most modern kernels can handle thousands of file descriptors without
 any difficulty.
 
+#### Decreased Connection Handshake Latency
+
+Libp2p now shaves off a couple of round trips when initiating connections by
+beginning the protocol negotiation before the remote peer responds to the
+initial handshake message.
+
+In the optimal case (when the target peer speaks our preferred protocol), this
+reduces the number of handshake round-trips from 6 to 4 (including the TCP
+handshake).
+
 ### Commands
 
 This release brings no new commands but does introduce a few changes, bugfixes,
@@ -272,6 +282,7 @@ go versions during builds.
 ### Changelog
 
 - github.com/ipfs/go-ipfs:
+  - fix: use http.Error for sending errors ([ipfs/go-ipfs#6379](https://github.com/ipfs/go-ipfs/pull/6379))
   - core: call app.Stop once ([ipfs/go-ipfs#6380](https://github.com/ipfs/go-ipfs/pull/6380))
   - explain what dhtclient does ([ipfs/go-ipfs#6375](https://github.com/ipfs/go-ipfs/pull/6375))
   - ci: actually enable golangci-lint ([ipfs/go-ipfs#6362](https://github.com/ipfs/go-ipfs/pull/6362))
@@ -348,7 +359,11 @@ go versions during builds.
   - sync: apply entire query while locked ([ipfs/go-datastore#129](https://github.com/ipfs/go-datastore/pull/129))
   - filter: values are now always bytes ([ipfs/go-datastore#126](https://github.com/ipfs/go-datastore/pull/126))
   - autobatch: batch deletes ([ipfs/go-datastore#128](https://github.com/ipfs/go-datastore/pull/128))
-- github.com/ipfs/go-ipfs-cmds (v0.0.5 -> v0.0.7):
+- github.com/ipfs/go-ipfs-cmds (v0.0.5 -> v0.0.8):
+  - fix: use golang's http.Error to send errors ([ipfs/go-ipfs-cmds#167](https://github.com/ipfs/go-ipfs-cmds/pull/167))
+  - improve help text on narrow terminals ([ipfs/go-ipfs-cmds#140](https://github.com/ipfs/go-ipfs-cmds/pull/140))
+  - chore: remove an old hack ([ipfs/go-ipfs-cmds#165](https://github.com/ipfs/go-ipfs-cmds/pull/165))
+  - http: use the request context ([ipfs/go-ipfs-cmds#163](https://github.com/ipfs/go-ipfs-cmds/pull/163))
   - merge in go-ipfs-cmdkit ([ipfs/go-ipfs-cmds#164](https://github.com/ipfs/go-ipfs-cmds/pull/164))
   - fix: return the correct error ([ipfs/go-ipfs-cmds#162](https://github.com/ipfs/go-ipfs-cmds/pull/162))
 - github.com/ipfs/go-ipfs-config (v0.0.1 -> v0.0.3):
@@ -439,10 +454,16 @@ go versions during builds.
   - add an example (mainly for development) ([libp2p/go-libp2p-tls#14](https://github.com/libp2p/go-libp2p-tls/pull/14))
 - github.com/libp2p/go-libp2p-transport-upgrader (v0.0.1 -> v0.0.4):
   - improve correctness of closing connections on failure ([libp2p/go-libp2p-transport-upgrader#19](https://github.com/libp2p/go-libp2p-transport-upgrader/pull/19))
+- github.com/libp2p/go-maddr-filter (v0.0.1 -> v0.0.4):
+  - fix filter listing ([libp2p/go-maddr-filter#13](https://github.com/libp2p/go-maddr-filter/pull/13))
+  - Reinstate deprecated Remove() method to reverse breakage ([libp2p/go-maddr-filter#12](https://github.com/libp2p/go-maddr-filter/pull/12))
+  - Implement support for whitelists, default-deny/allow ([libp2p/go-maddr-filter#8](https://github.com/libp2p/go-maddr-filter/pull/8))
 - github.com/libp2p/go-mplex (v0.0.1 -> v0.0.4):
+  - disable write coalescing ([libp2p/go-mplex#61](https://github.com/libp2p/go-mplex/pull/61))
   - fix SetDeadline error conditions ([libp2p/go-mplex#59](https://github.com/libp2p/go-mplex/pull/59))
   - don't use contexts for deadlines ([libp2p/go-mplex#58](https://github.com/libp2p/go-mplex/pull/58))
   - don't reset on pathologies, just ignore the data ([libp2p/go-mplex#57](https://github.com/libp2p/go-mplex/pull/57))
+  - coalesce writes ([libp2p/go-mplex#54](https://github.com/libp2p/go-mplex/pull/54))
   - read as much as we can in one go ([libp2p/go-mplex#53](https://github.com/libp2p/go-mplex/pull/53))
   - use timeouts when sending messages for stream open, close, and reset. ([libp2p/go-mplex#52](https://github.com/libp2p/go-mplex/pull/52))
   - fix: reset a stream even if closed remotely ([libp2p/go-mplex#50](https://github.com/libp2p/go-mplex/pull/50))
@@ -450,6 +471,9 @@ go versions during builds.
   - Fix race condition by adding a mutex for deadline access ([libp2p/go-mplex#41](https://github.com/libp2p/go-mplex/pull/41))
 - github.com/libp2p/go-msgio (v0.0.1 -> v0.0.2):
   - fix: never claim to read more than read ([libp2p/go-msgio#12](https://github.com/libp2p/go-msgio/pull/12))
+- github.com/libp2p/go-ws-transport (v0.0.2 -> v0.0.4):
+  - dep: import go-smux-* into the libp2p org ([libp2p/go-ws-transport#43](https://github.com/libp2p/go-ws-transport/pull/43))
+  - replace gx instructions with note about gomod ([libp2p/go-ws-transport#42](https://github.com/libp2p/go-ws-transport/pull/42))
 
 
 ## 0.4.20 2019-04-16

@@ -1,6 +1,5 @@
 Dockerfile
 Dockerfile.fast
-.git
 .git/
 !.git/HEAD
 !.git/refs/

@@ -10,8 +10,8 @@ import (
 
 	core "github.com/TRON-US/go-btfs/core"
 
-	p2phttp "github.com/hsanjuan/go-libp2p-http"
-	protocol "github.com/libp2p/go-libp2p-protocol"
+	protocol "github.com/libp2p/go-libp2p-core/protocol"
+	p2phttp "github.com/libp2p/go-libp2p-http"
 )
 
 // ProxyOption is an endpoint for proxying a HTTP request to another btfs peer

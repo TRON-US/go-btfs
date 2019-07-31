@@ -17,16 +17,16 @@
 -		"/ip6/2400:6180:0:d0::151:6001/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu",  // saturn.i.ipfs.io
 -		"/ip6/2604:a880:800:10::4a:5001/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64", // venus.i.ipfs.io
 -		"/ip6/2a03:b0c0:0:1010::23:1001/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd", // earth.i.ipfs.io
-+		"/ip4/18.237.54.123/tcp/4001/ipfs/QmWJWGxKKaqZUW4xga2BCzT5FBtYDL8Cc5Q5jywd6xPt1g",
-+		"/ip4/54.213.128.120/tcp/4001/ipfs/QmWm3vBCRuZcJMUT9jDZysoYBb66aokmSReX26UaMk8qq5",
-+		"/ip4/34.213.5.20/tcp/4001/ipfs/QmQVQBsM7uoJy8hATjTm51uSAkx2y3iGLhSwA6LWLa7iQJ",
-+		"/ip4/18.237.202.91/tcp/4001/ipfs/QmbVFdiNkvxtc7Nni7yBWAgtHg8MuyhaZ5mDaYR2ZrhhvN",
-+		"/ip4/13.229.45.41/tcp/4001/ipfs/QmX7RZXh27AX8iv2BKLGMgPBiuUpEy8p4LFXgtXAfaZDn9",
-+		"/ip4/54.254.227.188/tcp/4001/ipfs/QmYqCq3PasrzLr3PxtLo5D6spEAJ836W9Re9Eo4zUou45U",
-+		"/ip4/52.77.240.134/tcp/4001/ipfs/QmURPwdLYesWUDB66EGXvDvwcyV44rVRqV2iGNqKN24eVu",
-+		"/ip4/3.120.224.94/tcp/4001/ipfs/QmWTTmvchTodUaVvuKZMo67xk7ZgkxJf4nBo7SZry3vGU5",
-+		"/ip4/18.194.71.27/tcp/4001/ipfs/QmYHkY5CrWcvgaDo4PfvzTQgaZtfaqRGDjwW1MrHUj8cLK",
-+		"/ip4/54.93.47.134/tcp/4001/ipfs/QmeHaHe7WvjeY37z5MYC3qYQcQcuvDwUhwTXtP3KhKLXXK",
++		"/ip4/18.237.54.123/tcp/4001/btfs/QmWJWGxKKaqZUW4xga2BCzT5FBtYDL8Cc5Q5jywd6xPt1g",
++		"/ip4/54.213.128.120/tcp/4001/btfs/QmWm3vBCRuZcJMUT9jDZysoYBb66aokmSReX26UaMk8qq5",
++		"/ip4/34.213.5.20/tcp/4001/btfs/QmQVQBsM7uoJy8hATjTm51uSAkx2y3iGLhSwA6LWLa7iQJ",
++		"/ip4/18.237.202.91/tcp/4001/btfs/QmbVFdiNkvxtc7Nni7yBWAgtHg8MuyhaZ5mDaYR2ZrhhvN",
++		"/ip4/13.229.45.41/tcp/4001/btfs/QmX7RZXh27AX8iv2BKLGMgPBiuUpEy8p4LFXgtXAfaZDn9",
++		"/ip4/54.254.227.188/tcp/4001/btfs/QmYqCq3PasrzLr3PxtLo5D6spEAJ836W9Re9Eo4zUou45U",
++		"/ip4/52.77.240.134/tcp/4001/btfs/QmURPwdLYesWUDB66EGXvDvwcyV44rVRqV2iGNqKN24eVu",
++		"/ip4/3.120.224.94/tcp/4001/btfs/QmWTTmvchTodUaVvuKZMo67xk7ZgkxJf4nBo7SZry3vGU5",
++		"/ip4/18.194.71.27/tcp/4001/btfs/QmYHkY5CrWcvgaDo4PfvzTQgaZtfaqRGDjwW1MrHUj8cLK",
++		"/ip4/54.93.47.134/tcp/4001/btfs/QmeHaHe7WvjeY37z5MYC3qYQcQcuvDwUhwTXtP3KhKLXXK",
  	} {
  		ma, err := multiaddr.NewMultiaddr(s)
  		if err != nil {

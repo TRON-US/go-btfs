@@ -9,7 +9,7 @@
  	"fmt"
  	"io"
 @@ -11,8 +12,8 @@
- 	peer "github.com/libp2p/go-libp2p-peer"
+ 	peer "github.com/libp2p/go-libp2p-core/peer"
  )
  
 -func Init(out io.Writer, nBitsForKeypair int) (*Config, error) {

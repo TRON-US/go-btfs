@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	bserv "github.com/ipfs/go-blockservice"
 	pin "github.com/TRON-US/go-btfs/pin"
+	bserv "github.com/ipfs/go-blockservice"
 	dag "github.com/ipfs/go-merkledag"
 
 	cid "github.com/ipfs/go-cid"
@@ -170,10 +170,8 @@ func Descendants(ctx context.Context, getLinks dag.GetLinks, set *cid.Set, roots
 	}
 
 	for _, c := range roots {
-		set.Add(c)
-
-		// EnumerateChildren recursively walks the dag and adds the keys to the given set
-		err := dag.EnumerateChildren(ctx, verifyGetLinks, c, set.Visit)
+		// Walk recursively walks the dag and adds the keys to the given set
+		err := dag.Walk(ctx, verifyGetLinks, c, set.Visit, dag.Concurrent())
 
 		if err != nil {
 			err = verboseCidError(err)

@@ -6,7 +6,7 @@ import (
 	"net/url"
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	filestore "github.com/TRON-US/go-btfs/filestore"
+	filestore "github.com/ipfs/go-filestore"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"

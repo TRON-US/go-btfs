@@ -1,8 +1,8 @@
 diff --git a/tests/block.go b/tests/block.go
-index 34e47e9..8bdabb1 100644
+index 6b648f3..d71f3f5 100644
 --- a/tests/block.go
 +++ b/tests/block.go
-@@ -111,7 +111,7 @@ func (tp *provider) TestBlockGet(t *testing.T) {
+@@ -111,7 +111,7 @@ func (tp *TestSuite) TestBlockGet(t *testing.T) {
  		t.Error("didn't get correct data back")
  	}
  
@@ -12,10 +12,10 @@ index 34e47e9..8bdabb1 100644
  	rp, err := api.ResolvePath(ctx, p)
  	if err != nil {
 diff --git a/tests/key.go b/tests/key.go
-index 7ff5f33..e207fef 100644
+index e3461f9..1eb3806 100644
 --- a/tests/key.go
 +++ b/tests/key.go
-@@ -64,8 +64,8 @@ func (tp *provider) TestListSelf(t *testing.T) {
+@@ -64,8 +64,8 @@ func (tp *TestSuite) TestListSelf(t *testing.T) {
  		t.Errorf("expected the key to be called 'self', got '%s'", keys[0].Name())
  	}
  
@@ -26,7 +26,7 @@ index 7ff5f33..e207fef 100644
  	}
  }
  
-@@ -134,8 +134,8 @@ func (tp *provider) TestGenerate(t *testing.T) {
+@@ -134,8 +134,8 @@ func (tp *TestSuite) TestGenerate(t *testing.T) {
  		t.Errorf("expected the key to be called 'foo', got '%s'", k.Name())
  	}
  
@@ -37,7 +37,7 @@ index 7ff5f33..e207fef 100644
  	}
  }
  
-@@ -157,8 +157,8 @@ func (tp *provider) TestGenerateSize(t *testing.T) {
+@@ -157,8 +157,8 @@ func (tp *TestSuite) TestGenerateSize(t *testing.T) {
  		t.Errorf("expected the key to be called 'foo', got '%s'", k.Name())
  	}
  
@@ -48,7 +48,18 @@ index 7ff5f33..e207fef 100644
  	}
  }
  
-@@ -256,13 +256,13 @@ func (tp *provider) TestList(t *testing.T) {
+@@ -183,8 +183,8 @@ func (tp *TestSuite) TestGenerateType(t *testing.T) {
+ 	}
+ 
+ 	// Expected to be an inlined identity hash.
+-	if !strings.HasPrefix(k.Path().String(), "/ipns/12") {
+-		t.Errorf("expected the key to be prefixed with '/ipns/12', got '%s'", k.Path().String())
++	if !strings.HasPrefix(k.Path().String(), "/btns/12") {
++		t.Errorf("expected the key to be prefixed with '/btns/12', got '%s'", k.Path().String())
+ 	}
+ }
+ 
+@@ -256,13 +256,13 @@ func (tp *TestSuite) TestList(t *testing.T) {
  		return
  	}
  
@@ -67,10 +78,10 @@ index 7ff5f33..e207fef 100644
  	}
  }
 diff --git a/tests/name.go b/tests/name.go
-index efaf1d3..db495c3 100644
+index 31a5c14..2e284e0 100644
 --- a/tests/name.go
 +++ b/tests/name.go
-@@ -212,7 +212,7 @@ func (tp *provider) TestBasicPublishResolveKey(t *testing.T) {
+@@ -212,7 +212,7 @@ func (tp *TestSuite) TestBasicPublishResolveKey(t *testing.T) {
  		t.Fatal(err)
  	}
  
@@ -80,10 +91,10 @@ index efaf1d3..db495c3 100644
  	}
  
 diff --git a/tests/object.go b/tests/object.go
-index 8682a2e..4f4fc25 100644
+index 2e066ca..a988289 100644
 --- a/tests/object.go
 +++ b/tests/object.go
-@@ -89,15 +89,15 @@ func (tp *provider) TestObjectPut(t *testing.T) {
+@@ -89,15 +89,15 @@ func (tp *TestSuite) TestObjectPut(t *testing.T) {
  		t.Fatal(err)
  	}
  
@@ -103,13 +114,13 @@ index 8682a2e..4f4fc25 100644
  	}
  }
 diff --git a/tests/path.go b/tests/path.go
-index 4fd18bd..a876053 100644
+index 2d94972..b0d59e3 100644
 --- a/tests/path.go
 +++ b/tests/path.go
-@@ -188,9 +188,9 @@ func (tp *provider) TestPathRoot(t *testing.T) {
+@@ -188,9 +188,9 @@ func (tp *TestSuite) TestPathRoot(t *testing.T) {
  }
  
- func (tp *provider) TestPathJoin(t *testing.T) {
+ func (tp *TestSuite) TestPathJoin(t *testing.T) {
 -	p1 := path.New("/ipfs/QmYNmQKp6SuaVrpgWRsPTgCQCnpxUYGq76YEKBXuj2N4H6/bar/baz")
 +	p1 := path.New("/btfs/QmYNmQKp6SuaVrpgWRsPTgCQCnpxUYGq76YEKBXuj2N4H6/bar/baz")
  
@@ -119,10 +130,10 @@ index 4fd18bd..a876053 100644
  	}
  }
 diff --git a/tests/unixfs.go b/tests/unixfs.go
-index c810167..a791ec7 100644
+index 47ce505..6839324 100644
 --- a/tests/unixfs.go
 +++ b/tests/unixfs.go
-@@ -50,12 +50,12 @@ func (tp *provider) TestUnixfs(t *testing.T) {
+@@ -50,12 +50,12 @@ func (tp *TestSuite) TestUnixfs(t *testing.T) {
  	t.Run("TestGetSeek", tp.TestGetSeek)
  }
  
@@ -139,7 +150,7 @@ index c810167..a791ec7 100644
  
  func strFile(data string) func() files.Node {
  	return func() files.Node {
-@@ -170,20 +170,20 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -170,20 +170,20 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  		{
  			name: "addCidV1",
  			data: strFile(helloStr),
@@ -163,7 +174,7 @@ index c810167..a791ec7 100644
  			opts: []options.UnixfsAddOption{options.Unixfs.Hash(mh.SHA3_256)},
  		},
  		{
-@@ -196,38 +196,38 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -196,38 +196,38 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  		{
  			name: "addInline",
  			data: strFile(helloStr),
@@ -209,7 +220,7 @@ index c810167..a791ec7 100644
  			opts: []options.UnixfsAddOption{options.Unixfs.Chunker("size-4"), options.Unixfs.Layout(options.TrickleLayout)},
  		},
  		// Local
-@@ -247,26 +247,26 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -247,26 +247,26 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  		{
  			name: "simpleDirNoWrap",
  			data: flatDir,
@@ -240,7 +251,7 @@ index c810167..a791ec7 100644
  			data: func() files.Node {
  				return files.NewBytesFile([]byte(helloStr))
  			},
-@@ -285,26 +285,26 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -285,26 +285,26 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  			},
  			wrap:   "t",
  			expect: wrapped("t"),
@@ -271,7 +282,7 @@ index c810167..a791ec7 100644
  			opts: []options.UnixfsAddOption{options.Unixfs.Nocopy(true)},
  			err:  helpers.ErrMissingFsRef.Error(),
  		},
-@@ -312,7 +312,7 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -312,7 +312,7 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  		{
  			name: "simpleAddEvent",
  			data: strFile(helloStr),
@@ -280,7 +291,7 @@ index c810167..a791ec7 100644
  			events: []coreiface.AddEvent{
  				{Name: "bafkreidi4zlleupgp2bvrpxyja5lbvi4mym7hz5bvhyoowby2qp7g2hxfa", Path: p("bafkreidi4zlleupgp2bvrpxyja5lbvi4mym7hz5bvhyoowby2qp7g2hxfa"), Size: strconv.Itoa(len(helloStr))},
  			},
-@@ -321,7 +321,7 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -321,7 +321,7 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  		{
  			name: "silentAddEvent",
  			data: twoLevelDir(),
@@ -289,7 +300,7 @@ index c810167..a791ec7 100644
  			events: []coreiface.AddEvent{
  				{Name: "abc", Path: p("QmU7nuGs2djqK99UNsNgEPGh6GV4662p6WtsgccBNGTDxt"), Size: "62"},
  				{Name: "", Path: p("QmVG2ZYCkV1S4TK8URA3a4RupBF17A8yAr4FqsRDXVJASr"), Size: "229"},
-@@ -331,7 +331,7 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -331,7 +331,7 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  		{
  			name: "dirAddEvents",
  			data: twoLevelDir(),
@@ -298,7 +309,7 @@ index c810167..a791ec7 100644
  			events: []coreiface.AddEvent{
  				{Name: "abc/def", Path: p("QmNyJpQkU1cEkBwMDhDNFstr42q55mqG5GE5Mgwug4xyGk"), Size: "13"},
  				{Name: "bar", Path: p("QmS21GuXiRMvJKHos4ZkEmQDmRBqRaF5tQS2CQCu2ne9sY"), Size: "14"},
-@@ -345,7 +345,7 @@ func (tp *provider) TestAdd(t *testing.T) {
+@@ -345,7 +345,7 @@ func (tp *TestSuite) TestAdd(t *testing.T) {
  			data: func() files.Node {
  				return files.NewReaderFile(bytes.NewReader(bytes.Repeat([]byte{0}, 1000000)))
  			},
