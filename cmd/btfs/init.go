@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,10 +21,14 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
+
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
 )
 
 const (
 	nBitsForKeypairDefault = 2048
+	mnemonicLength         = 12
 	bitsOptionName         = "bits"
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
@@ -31,6 +36,7 @@ const (
 	importKeyOptionName    = "import"
 	ecdsa                  = "ECDSA"
 	rmOnUnpinOptionName    = "rm-on-unpin"
+	seedOptionName         = "seed"
 )
 
 var initCmd = &cmds.Command{
@@ -61,6 +67,7 @@ environment variable:
 		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
 		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
+		cmds.StringOption(seedOptionName, "s", "Import seed phrase"),
 
 		// TODO need to decide whether to expose the override as a file or a
 		// directory. That is: should we allow the user to also specify the
@@ -125,6 +132,37 @@ environment variable:
 			keyType = ecdsa
 		} else if importKey != "" {
 			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+		}
+
+		seedPhrase, _ := req.Options[seedOptionName].(string)
+		mnemonicLen := len(strings.Split(seedPhrase, ","))
+		mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
+
+		if seedPhrase != "" {
+			if mnemonicLen != mnemonicLength {
+				return fmt.Errorf("mnemonic needs to contain 12 words")
+			}
+
+			/*
+				BIP32 uses path derivation to generate a private key.
+				The path derivation process is split into simple and hardened derivation.
+				go-bip32 does not explicitly support hardened derication, and therefore
+				I add bip32.FirstHardenedChild to the path.
+
+				Path is copied from TronLink implementation: "m/44'/195'/0'/0/0",
+				with  (') indicating the hardened path.
+			*/
+			seed := bip39.NewSeed(mnemonic, "")
+			masterKey, _ := bip32.NewMasterKey(seed)
+
+			childKey, _ := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
+			childKey2, _ := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
+			childKey3, _ := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
+			childKey4, _ := childKey3.NewChildKey(0)
+			childKey5, _ := childKey4.NewChildKey(0)
+
+			encoding := childKey5.Key
+			importKey = hex.EncodeToString(encoding)
 		}
 
 		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, rmOnUnpin)
