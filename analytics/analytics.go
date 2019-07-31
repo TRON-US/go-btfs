@@ -103,12 +103,12 @@ func (dc *dataCollection) update() {
 
 	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
 	cpus, e := cpu.Percent(0, false)
-	if e != nil {
+	if e == nil {
 		dc.CPUUsed = cpus[0]
 	}
 	dc.MemUsed = m.HeapAlloc / kilobyte
 	storage, e := dc.node.Repo.GetStorageUsage()
-	if e != nil {
+	if e == nil {
 		dc.StorageUsed = storage / kilobyte
 	}
 
