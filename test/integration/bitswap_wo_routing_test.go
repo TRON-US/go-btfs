@@ -5,11 +5,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ipfs/go-block-format"
-	"github.com/ipfs/go-cid"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/mock"
 	"github.com/TRON-US/go-btfs/core/node/libp2p"
+	"github.com/ipfs/go-block-format"
+	"github.com/ipfs/go-cid"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 )
 

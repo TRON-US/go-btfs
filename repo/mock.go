@@ -3,8 +3,8 @@ package repo
 import (
 	"errors"
 
-	filestore "github.com/TRON-US/go-btfs/filestore"
 	keystore "github.com/TRON-US/go-btfs/keystore"
+	filestore "github.com/ipfs/go-filestore"
 
 	config "github.com/ipfs/go-ipfs-config"
 	ma "github.com/multiformats/go-multiaddr"

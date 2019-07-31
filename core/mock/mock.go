@@ -2,21 +2,24 @@ package coremock
 
 import (
 	"context"
+
 	libp2p2 "github.com/TRON-US/go-btfs/core/node/libp2p"
 
-	commands "github.com/TRON-US/go-btfs/commands"
-	core "github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/commands"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/repo"
 
 	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	config "github.com/ipfs/go-ipfs-config"
+
 	"github.com/libp2p/go-libp2p"
-	host "github.com/libp2p/go-libp2p-host"
-	peer "github.com/libp2p/go-libp2p-peer"
-	pstore "github.com/libp2p/go-libp2p-peerstore"
+	host "github.com/libp2p/go-libp2p-core/host"
+	peer "github.com/libp2p/go-libp2p-core/peer"
+	pstore "github.com/libp2p/go-libp2p-core/peerstore"
+	testutil "github.com/libp2p/go-libp2p-testing/net"
+
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
-	"github.com/libp2p/go-testutil"
 )
 
 // NewMockNode constructs an IpfsNode for use in tests.

@@ -1,7 +1,6 @@
 package node
 
 import (
-	"context"
 	"os"
 	"syscall"
 	"time"
@@ -13,10 +12,10 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/TRON-US/go-btfs/core/node/helpers"
-	"github.com/TRON-US/go-btfs/filestore"
 	"github.com/TRON-US/go-btfs/repo"
 	"github.com/TRON-US/go-btfs/thirdparty/cidv0v1"
 	"github.com/TRON-US/go-btfs/thirdparty/verifbs"
+	"github.com/ipfs/go-filestore"
 )
 
 func isTooManyFDError(err error) bool {
@@ -55,15 +54,7 @@ func BaseBlockstoreCtor(cacheOpts blockstore.CacheOpts, nilRepo bool, hashOnRead
 		bs = &verifbs.VerifBS{Blockstore: bs}
 
 		if !nilRepo {
-			ctx, cancel := context.WithCancel(mctx)
-
-			lc.Append(fx.Hook{
-				OnStop: func(context context.Context) error {
-					cancel()
-					return nil
-				},
-			})
-			bs, err = blockstore.CachedBlockstore(ctx, bs, cacheOpts)
+			bs, err = blockstore.CachedBlockstore(helpers.LifecycleCtx(mctx, lc), bs, cacheOpts)
 			if err != nil {
 				return nil, err
 			}
