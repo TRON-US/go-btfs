@@ -270,11 +270,20 @@ func addDefaultAssets(out io.Writer, repoRoot string) error {
 		return err
 	}
 
-	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
+	buildCfg := &core.BuildCfg{Repo: r}
+	nd, err := core.NewNode(ctx, buildCfg)
 	if err != nil {
 		return err
 	}
 	defer nd.Close()
+
+	// announce public ip by default for btfs nodes running on cloud vm
+	// or local network with NAT
+	err = buildCfg.AnnouncePublicIp()
+	if err != nil {
+		// don't quit here, user can manually add to config later
+		fmt.Fprintf(out, "announce public ip failed.\n")
+	}
 
 	dkey, err := assets.SeedInitDocs(nd)
 	if err != nil {

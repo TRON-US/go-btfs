@@ -55,6 +55,10 @@ fi
 if ! patch -R -s -f --dry-run $patchdir/bootstrap_peers.go < ./patches/go-ipfs-config-v0.0.3-bootstrap_peers.go.patch 1>/dev/null; then
     patch $patchdir/bootstrap_peers.go < ./patches/go-ipfs-config-v0.0.3-bootstrap_peers.go.patch;
 fi
+# 4) patching profile.go
+if ! patch -R -s -f --dry-run $patchdir/profile.go < ./patches/go-ipfs-config-v0.0.3-profile.go.patch 1>/dev/null; then
+    patch $patchdir/profile.go < ./patches/go-ipfs-config-v0.0.3-profile.go.patch
+fi
 
 # patching $GOPATH/pkg/mod/github.com/libp2p/go-libp2p-record@v0.0.1
 patchdir=$GOPATH/pkg/mod/github.com/libp2p/go-libp2p-record@v0.0.1
