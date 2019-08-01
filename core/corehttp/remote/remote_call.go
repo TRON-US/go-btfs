@@ -1,4 +1,4 @@
-package node
+package remote
 
 import (
 	"encoding/json"
@@ -9,23 +9,22 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
-type Call interface {
-	CallGet()
-	CallPost()
-}
-
 type RemoteCall struct {
 	URL string
 	ID peer.ID
 	Call
 }
 
-func (r *RemoteCall) CallGet(prefix string, args []string) (map[string]interface{}, error) {
+// APIPath is the path at which the API is mounted.
+const APIPath = "/api/v0"
+const prefix  = "/x/test/http"+APIPath
+
+func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{}, error) {
 	var arg string
 	for _, str := range args {
 		arg += fmt.Sprintf("arg=%s&", str)
 	}
-	resp, err := http.Get(r.URL+r.ID.Pretty()+prefix+arg)
+	resp, err := http.Get(r.URL+r.ID.Pretty()+prefix+api+arg)
 	if err != nil {
 		return nil, err
 	}

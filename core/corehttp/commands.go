@@ -3,6 +3,7 @@ package corehttp
 import (
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"net"
 	"net/http"
 	"os"
@@ -33,9 +34,6 @@ cli arguments:
 	btfs config API.HTTPHeaders --json '{"Access-Control-Allow-Origin": ["*"]}'
 	btfs daemon
 `
-
-// APIPath is the path at which the API is mounted.
-const APIPath = "/api/v0"
 
 var defaultLocalhostOrigins = []string{
 	"http://127.0.0.1:<port>",
@@ -122,7 +120,7 @@ func commandsOption(cctx oldcmds.Context, command *cmds.Command) ServeOption {
 
 		cfg := cmdsHttp.NewServerConfig()
 		cfg.SetAllowedMethods("GET", "POST", "PUT")
-		cfg.APIPath = APIPath
+		cfg.APIPath = remote.APIPath
 		rcfg, err := n.Repo.Config()
 		if err != nil {
 			return nil, err
@@ -134,7 +132,7 @@ func commandsOption(cctx oldcmds.Context, command *cmds.Command) ServeOption {
 		patchCORSVars(cfg, l.Addr())
 
 		cmdHandler := cmdsHttp.NewHandler(&cctx, command, cfg)
-		mux.Handle(APIPath+"/", cmdHandler)
+		mux.Handle(remote.APIPath+"/", cmdHandler)
 		return mux, nil
 	}
 }
@@ -158,8 +156,8 @@ func CheckVersionOption() ServeOption {
 	return ServeOption(func(n *core.IpfsNode, l net.Listener, parent *http.ServeMux) (*http.ServeMux, error) {
 		mux := http.NewServeMux()
 		parent.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, APIPath) {
-				cmdqry := r.URL.Path[len(APIPath):]
+			if strings.HasPrefix(r.URL.Path, remote.APIPath) {
+				cmdqry := r.URL.Path[len(remote.APIPath):]
 				pth := path.SplitList(cmdqry)
 
 				// backwards compatibility to previous version check
