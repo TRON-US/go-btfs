@@ -83,13 +83,19 @@ func durationToSeconds(duration time.Duration) uint64 {
 
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion string) {
+	var log = logging.Logger("cmd/btfs")
+
 	dc := new(dataCollection)
-	infoStats, _ := cpu.Info()
+	infoStats, err := cpu.Info()
+	if err == nil {
+		dc.CPUInfo = infoStats[0].ModelName
+	} else {
+		log.Warning(err.Error())
+	}
 
 	dc.node = n
 	dc.startTime = time.Now()
 	dc.NodeID = n.Identity.Pretty()
-	dc.CPUInfo = infoStats[0].ModelName
 	dc.BTFSVersion = BTFSVersion
 	dc.OSType = runtime.GOOS
 	dc.ArchType = runtime.GOARCH
@@ -171,11 +177,10 @@ func (dc *dataCollection) sendData() {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
+		res.Body.Close()
 		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
-
-	defer res.Body.Close()
 }
 
 func (dc *dataCollection) collectionAgent() {
@@ -206,9 +211,8 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
-	defer res.Body.Close()
-
 	if err != nil {
+		res.Body.Close()
 		log.Warning(err.Error())
 		return
 	}
