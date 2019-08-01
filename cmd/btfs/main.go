@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -12,14 +13,13 @@ import (
 	"strings"
 	"time"
 
-	util "github.com/TRON-US/go-btfs/cmd/btfs/util"
+	"github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
-	core "github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core"
 	corecmds "github.com/TRON-US/go-btfs/core/commands"
-	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
-	loader "github.com/TRON-US/go-btfs/plugin/loader"
-	repo "github.com/TRON-US/go-btfs/repo"
-	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
+	"github.com/TRON-US/go-btfs/plugin/loader"
+	"github.com/TRON-US/go-btfs/repo"
+	"github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	osh "github.com/Kubuxu/go-os-helper"
 	cmds "github.com/ipfs/go-ipfs-cmds"
@@ -424,7 +424,7 @@ func apiClientForAddr(ctx context.Context, addr ma.Multiaddr) (http.Client, erro
 		return nil, err
 	}
 
-	return http.NewClient(host, http.ClientWithAPIPrefix(corehttp.APIPath)), nil
+	return http.NewClient(host, http.ClientWithAPIPrefix(remote.APIPath)), nil
 }
 
 func resolveAddr(ctx context.Context, addr ma.Multiaddr) (ma.Multiaddr, error) {

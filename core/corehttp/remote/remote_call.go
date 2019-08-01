@@ -12,9 +12,12 @@ import (
 type RemoteCall struct {
 	URL string
 	ID peer.ID
+	Call
 }
 
-const prefix  = "/x/test/http/api/v0"
+// APIPath is the path at which the API is mounted.
+const APIPath = "/api/v0"
+const prefix  = "/x/test/http"+APIPath
 
 func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{}, error) {
 	var arg string
