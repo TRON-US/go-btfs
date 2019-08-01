@@ -10,7 +10,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
-	libcrypto "github.com/libp2p/go-libp2p-core/crypto"
+	//libcrypto "github.com/libp2p/go-libp2p-core/crypto"
+	ic "github.com/libp2p/go-libp2p-crypto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -84,7 +85,15 @@ func NewAccount(addr []byte, amount int64) *ledgerPb.Account {
 	}
 }
 
-func NewChannelCommit(fromAddr []byte, toAddr []byte, amount int64) *ledgerPb.ChannelCommit {
+func NewChannelCommit(fromKey ic.PubKey, toKey ic.PubKey, amount int64) *ledgerPb.ChannelCommit {
+	fromAddr, err := fromKey.Raw()
+	if err != nil {
+		log.Panic("fail to marshal payer public key", err)
+	}
+	toAddr, err := toKey.Raw()
+	if err != nil {
+		log.Panic("fail to marshal receiver public key", err)
+	}
 	return &ledgerPb.ChannelCommit{
 		Payer:    &ledgerPb.PublicKey{Key: fromAddr},
 		Receiver: &ledgerPb.PublicKey{Key: toAddr},
@@ -110,7 +119,7 @@ func NewSignedChannelState(channelState *ledgerPb.ChannelState, fromSig []byte, 
 	}
 }
 
-func ImportAccount(ctx context.Context, pubKey libcrypto.PubKey, ledgerClient ledgerPb.ChannelsClient) (*ledgerPb.Account, error) {
+func ImportAccount(ctx context.Context, pubKey ic.PubKey, ledgerClient ledgerPb.ChannelsClient) (*ledgerPb.Account, error) {
 	keyBytes, err := pubKey.Raw()
 	if err != nil {
 		log.Error("fail to marshal public key: ", err)
@@ -124,8 +133,8 @@ func ImportAccount(ctx context.Context, pubKey libcrypto.PubKey, ledgerClient le
 	return res.GetAccount(), nil
 }
 
-func CreateAccount(ctx context.Context, ledgerClient ledgerPb.ChannelsClient) (*libcrypto.PrivKey, *ledgerPb.Account, error) {
-	privKey, pubKey, err := libcrypto.GenerateKeyPair(libcrypto.Secp256k1, 256)
+func CreateAccount(ctx context.Context, ledgerClient ledgerPb.ChannelsClient) (*ic.PrivKey, *ledgerPb.Account, error) {
+	privKey, pubKey, err := ic.GenerateKeyPair(ic.Secp256k1, 256)
 	if err != nil {
 		log.Error("fail to generate key pair: ", err)
 		return nil, nil, err
@@ -159,7 +168,7 @@ func CloseChannel(ctx context.Context, ledgerClient ledgerPb.ChannelsClient, sig
 	return nil
 }
 
-func Sign(key libcrypto.PrivKey, channelMessage proto.Message) ([]byte, error) {
+func Sign(key ic.PrivKey, channelMessage proto.Message) ([]byte, error) {
 	raw, err := proto.Marshal(channelMessage)
 	if err != nil {
 		log.Error("fail to marshal pb message: ", err)
