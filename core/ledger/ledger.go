@@ -10,7 +10,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
-	//libcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -78,7 +77,12 @@ func NewClient(conn *grpc.ClientConn) ledgerPb.ChannelsClient {
 	return ledgerPb.NewChannelsClient(conn)
 }
 
-func NewAccount(addr []byte, amount int64) *ledgerPb.Account {
+func NewAccount(pubKey ic.PubKey, amount int64) *ledgerPb.Account {
+	addr, err := pubKey.Raw()
+	if err != nil {
+		log.Errorf("fail to extract raw bytes from public key", err)
+		return nil
+	}
 	return &ledgerPb.Account{
 		Address: &ledgerPb.PublicKey{Key: addr},
 		Balance: amount,
@@ -175,4 +179,12 @@ func Sign(key ic.PrivKey, channelMessage proto.Message) ([]byte, error) {
 		return nil, err
 	}
 	return key.Sign(raw)
+}
+
+func Verify(key ic.PubKey, channelMessage proto.Message, sig []byte) (bool, error) {
+	raw, err := proto.Marshal(channelMessage)
+	if err != nil {
+		return false, err
+	}
+	return key.Verify(raw, sig)
 }
