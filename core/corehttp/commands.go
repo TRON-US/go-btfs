@@ -14,9 +14,9 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	corecommands "github.com/TRON-US/go-btfs/core/commands"
 
+	config "github.com/TRON-US/go-btfs-config"
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	cmdsHttp "github.com/ipfs/go-ipfs-cmds/http"
-	config "github.com/TRON-US/go-btfs-config"
 	path "github.com/ipfs/go-path"
 )
 
@@ -149,6 +149,12 @@ func CommandsOption(cctx oldcmds.Context) ServeOption {
 // into the HTTP server.
 func CommandsROOption(cctx oldcmds.Context) ServeOption {
 	return commandsOption(cctx, corecommands.RootRO)
+}
+
+// CommandsRemoteOption constructs a ServerOption for hooking the public-facing,
+// remote commands into the HTTP server.
+func CommandsRemoteOption(cctx oldcmds.Context) ServeOption {
+	return commandsOption(cctx, corecommands.RootRemote)
 }
 
 // CheckVersionOption returns a ServeOption that checks whether the client btfs version matches. Does nothing when the user agent string does not contain `/go-ipfs/`

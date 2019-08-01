@@ -415,6 +415,16 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}
 
+	// construct http remote api - if it is set in the config
+	var rapiErrc <-chan error
+	if len(cfg.Addresses.RemoteAPI) > 0 {
+		var err error
+		rapiErrc, err = serveHTTPRemoteApi(req, cctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	// initialize metrics collector
 	prometheus.MustRegister(&corehttp.IpfsNodeCollector{Node: node})
 
@@ -434,7 +444,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// collect long-running errors and block for shutdown
 	// TODO(cryptix): our fuse currently doesnt follow this pattern for graceful shutdown
 	var errs error
-	for err := range merge(apiErrc, gwErrc, gcErrc) {
+	for err := range merge(apiErrc, gwErrc, rapiErrc, gcErrc) {
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
@@ -599,16 +609,13 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 		listeners = append(listeners, gwLis)
 	}
 
-	cmdctx := *cctx
-	cmdctx.Gateway = true
-
 	var opts = []corehttp.ServeOption{
 		corehttp.MetricsCollectionOption("gateway"),
 		corehttp.IPNSHostnameOption(),
 		corehttp.GatewayOption(writable, "/btfs", "/btns"),
 		corehttp.VersionOption(),
 		corehttp.CheckVersionOption(),
-		corehttp.CommandsROOption(cmdctx),
+		corehttp.CommandsROOption(*cctx),
 	}
 
 	if cfg.Experimental.P2pHttpProxy {
@@ -622,6 +629,62 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 	node, err := cctx.ConstructNode()
 	if err != nil {
 		return nil, fmt.Errorf("serveHTTPGateway: ConstructNode() failed: %s", err)
+	}
+
+	errc := make(chan error)
+	var wg sync.WaitGroup
+	for _, lis := range listeners {
+		wg.Add(1)
+		go func(lis manet.Listener) {
+			defer wg.Done()
+			errc <- corehttp.Serve(node, manet.NetListener(lis), opts...)
+		}(lis)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errc)
+	}()
+
+	return errc, nil
+}
+
+// serveHTTPRemoteApi collects options, creates listener, prints status message and starts serving requests
+func serveHTTPRemoteApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error) {
+	cfg, err := cctx.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: GetConfig() failed: %s", err)
+	}
+
+	rapiAddrs := cfg.Addresses.RemoteAPI
+	listeners := make([]manet.Listener, 0, len(rapiAddrs))
+	for _, addr := range rapiAddrs {
+		rapiMaddr, err := ma.NewMultiaddr(addr)
+		if err != nil {
+			return nil, fmt.Errorf("serveHTTPRemoteApi: invalid remote api address: %q (err: %s)", addr, err)
+		}
+
+		rapiLis, err := manet.Listen(rapiMaddr)
+		if err != nil {
+			return nil, fmt.Errorf("serveHTTPRemoteApi: manet.Listen(%s) failed: %s", rapiMaddr, err)
+		}
+		// we might have listened to /tcp/0 - lets see what we are listing on
+		rapiMaddr = rapiLis.Multiaddr()
+		fmt.Printf("Remote API server listening on %s\n", rapiMaddr)
+
+		listeners = append(listeners, rapiLis)
+	}
+
+	var opts = []corehttp.ServeOption{
+		corehttp.MetricsCollectionOption("remote_api"),
+		corehttp.VersionOption(),
+		corehttp.CheckVersionOption(),
+		corehttp.CommandsRemoteOption(*cctx),
+	}
+
+	node, err := cctx.ConstructNode()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: ConstructNode() failed: %s", err)
 	}
 
 	errc := make(chan error)

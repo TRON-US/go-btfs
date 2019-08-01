@@ -22,6 +22,8 @@ github.com/Stebalien/go-bitfield v0.0.1 h1:X3kbSSPUaJK60wV2hjOPZwmpljr6VGCqdq4cB
 github.com/Stebalien/go-bitfield v0.0.1/go.mod h1:GNjFpasyUVkHMsfEOk8EFLJ9syQ6SI+XWrX9Wf2XH0s=
 github.com/TRON-US/go-btfs-config v0.1.0 h1:vkfJv+ydZE/WT+30yDKoGqOrm4TIyuQQFXb2DIjRrWk=
 github.com/TRON-US/go-btfs-config v0.1.0/go.mod h1:GdZW7SmAY3rVqYwcbYkMmKo27IihzezwEQQMDTftlU0=
+github.com/TRON-US/go-btfs-config v0.1.1 h1:708pzBFKyxajfY4/yAExjxst/T0qZrJWTkBrtGSLOBw=
+github.com/TRON-US/go-btfs-config v0.1.1/go.mod h1:GdZW7SmAY3rVqYwcbYkMmKo27IihzezwEQQMDTftlU0=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
