@@ -21,6 +21,7 @@ import (
 	commands "github.com/TRON-US/go-btfs/core/commands"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
+	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
 	libp2p "github.com/TRON-US/go-btfs/core/node/libp2p"
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
@@ -692,7 +693,8 @@ func serveHTTPRemoteApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error,
 	}
 
 	// set default listener to remote api endpoint
-	if _, err := node.P2P.ForwardRemote(node.Context(), "/rapi", listeners[0].Multiaddr(), false); err != nil {
+	if _, err := node.P2P.ForwardRemote(node.Context(),
+		httpremote.P2PRemoteCallProto, listeners[0].Multiaddr(), false); err != nil {
 		return nil, fmt.Errorf("serveHTTPRemoteApi: ForwardRemote() failed: %s", err)
 	}
 

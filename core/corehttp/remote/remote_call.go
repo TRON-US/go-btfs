@@ -14,7 +14,7 @@ type RemoteCall struct {
 	ID  peer.ID
 }
 
-const prefix = "/x/test/http/api/v0"
+const prefix = "/x/test/http" + apiPrefix
 
 func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{}, error) {
 	var arg string
@@ -35,4 +35,7 @@ func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{},
 		return nil, fmt.Errorf("fail to unmarshal json body: %s", err)
 	}
 	return jsonResp, nil
+}
+
+func (r *RemoteCall) CallPost() {
 }
