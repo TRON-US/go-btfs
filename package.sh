@@ -21,7 +21,7 @@ do
         rm ../btfs-binary-releases/${goos}/${goarch}/*
         GOOS=${goos} GOARCH=${goarch} make build
         GOOS=${goos} GOARCH=${goarch} go build -o update-${goos}-${goarch}${ext} autoupdate/main.go
-        md5=`md5 ./cmd/btfs/btfs | awk '{print $4}'`
+        md5=`openssl md5 ./cmd/btfs/btfs | awk '{print $2}'`
         mv ./cmd/btfs/btfs ../btfs-binary-releases/${goos}/${goarch}/btfs-${goos}-${goarch}${ext}
         mv update-${goos}-${goarch}${ext} ../btfs-binary-releases/${goos}/${goarch}/update-${goos}-${goarch}${ext}
         echo -e "version: ${version: 1: ${#version}-2}\nmd5: ${md5}\nautoupdateFlg: true\nsleepTimeSeconds: 86400\nbeginNumber: 0\nendNumber: 100" > ../btfs-binary-releases/${goos}/${goarch}/config_${goos}_${goarch}.yaml
