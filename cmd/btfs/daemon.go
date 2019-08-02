@@ -656,6 +656,10 @@ func serveHTTPRemoteApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error,
 		return nil, fmt.Errorf("serveHTTPRemoteApi: GetConfig() failed: %s", err)
 	}
 
+	if !cfg.Experimental.Libp2pStreamMounting {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: libp2p stream mounting must be enabled")
+	}
+
 	rapiAddrs := cfg.Addresses.RemoteAPI
 	listeners := make([]manet.Listener, 0, len(rapiAddrs))
 	for _, addr := range rapiAddrs {
@@ -685,6 +689,11 @@ func serveHTTPRemoteApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error,
 	node, err := cctx.ConstructNode()
 	if err != nil {
 		return nil, fmt.Errorf("serveHTTPRemoteApi: ConstructNode() failed: %s", err)
+	}
+
+	// set default listener to remote api endpoint
+	if _, err := node.P2P.ForwardRemote(node.Context(), "/rapi", listeners[0].Multiaddr(), false); err != nil {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: ForwardRemote() failed: %s", err)
 	}
 
 	errc := make(chan error)
