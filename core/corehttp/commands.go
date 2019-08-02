@@ -33,7 +33,6 @@ cli arguments:
 	btfs config API.HTTPHeaders --json '{"Access-Control-Allow-Origin": ["*"]}'
 	btfs daemon
 `
-
 // APIPath is the path at which the API is mounted.
 const APIPath = "/api/v0"
 
