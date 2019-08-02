@@ -12,7 +12,6 @@ import (
 type RemoteCall struct {
 	URL string
 	ID peer.ID
-	Call
 }
 
 const prefix  = "/x/test/http/api/v0"

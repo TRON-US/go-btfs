@@ -17,7 +17,7 @@ import (
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	cmdsHttp "github.com/ipfs/go-ipfs-cmds/http"
 	config "github.com/ipfs/go-ipfs-config"
-	"github.com/ipfs/go-path"
+	path "github.com/ipfs/go-path"
 )
 
 var (
@@ -33,6 +33,7 @@ cli arguments:
 	btfs config API.HTTPHeaders --json '{"Access-Control-Allow-Origin": ["*"]}'
 	btfs daemon
 `
+
 // APIPath is the path at which the API is mounted.
 const APIPath = "/api/v0"
 
