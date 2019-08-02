@@ -38,21 +38,12 @@ var RmCmd = &cmds.Command{
 			return err
 		}
 
-		// Remove pins recursively
-		enc, err := cmdenv.GetCidEncoder(req)
-		if err != nil {
-			return err
-		}
-
-		pins := make([]string, 0, len(req.Arguments))
 		for _, b := range req.Arguments {
 			rp, err := api.ResolvePath(req.Context, path.New(b))
 			if err != nil {
 				return err
 			}
 
-			id := enc.Encode(rp.Cid())
-			pins = append(pins, id)
 			if err := api.Pin().Rm(req.Context, rp, options.Pin.RmRecursive(recursive)); err != nil {
 				return err
 			}
