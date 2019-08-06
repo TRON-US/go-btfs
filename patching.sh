@@ -73,3 +73,11 @@ chmod -R 777 $patchdir
 if ! patch -R -s -f --dry-run $patchdir/record.go < ./patches/go-ipns-v.0.0.1-record.go.patch 1>/dev/null; then
     patch $patchdir/record.go < ./patches/go-ipns-v.0.0.1-record.go.patch;
 fi
+
+# patching test
+patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.0.8
+cp ./patches/test/interface-go-ipfs-core.patch $patchdir
+cd $patchdir
+if ! patch -p1 -R -s -f --dry-run < interface-go-ipfs-core.patch 1>/dev/null; then
+    patch -p1 < interface-go-ipfs-core.patch
+fi
