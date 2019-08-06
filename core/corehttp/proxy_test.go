@@ -7,7 +7,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/thirdparty/assert"
 
-	protocol "github.com/libp2p/go-libp2p-protocol"
+	protocol "github.com/libp2p/go-libp2p-core/protocol"
 )
 
 type TestCase struct {

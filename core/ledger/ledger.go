@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -8,10 +9,10 @@ import (
 
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
-	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"golang.org/x/net/context"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

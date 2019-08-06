@@ -10,7 +10,7 @@ import (
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 )
 
 const (
