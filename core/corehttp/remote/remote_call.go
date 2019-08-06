@@ -15,7 +15,7 @@ type RemoteCall struct {
 }
 
 // APIPath is the path at which the API is mounted.
-const APIPath = "/api/v0"
+const APIprefix = "/api/v0"
 
 func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	var arg string
@@ -23,7 +23,7 @@ func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 		arg += fmt.Sprintf("arg=%s&", str)
 	}
 	curURL := r.URL+api+arg
-	log.Debug("Current calling URL: ", curURL)
+	log.Info("Current calling URL: ", curURL)
 	resp, err := http.Get(curURL)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP GET fail: %v", err)

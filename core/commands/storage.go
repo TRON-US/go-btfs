@@ -91,7 +91,7 @@ var storageUploadCmd = &cmds.Command{
 		}
 		selfPrivKey := n.PrivateKey
 		selfPubKey := selfPrivKey.GetPublic()
-		log.Debugf("Private Key: %v \n Public Key: %v\n", selfPrivKey, selfPubKey)
+		log.Infof("Private Key: %v \n Public Key: %v\n", selfPrivKey, selfPubKey)
 
 		// get other node's public key as address
 		// create channel between them
@@ -124,7 +124,7 @@ var storageUploadCmd = &cmds.Command{
 		}
 		var argInit []string
 		argInit = append(argInit, n.Identity.Pretty(), strconv.FormatInt(channelID.Id, 10), fileHash)
-		respBody, err := remoteCall.CallGet(remote.APIPath+"/storage/upload/init?", argInit)
+		respBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/init?", argInit)
 		if err != nil {
 			log.Error("fail to get response from: ", err)
 			return err
@@ -153,7 +153,7 @@ var storageUploadInitCmd = &cmds.Command{
 		cid := req.Arguments[1]
 		chunk := req.Arguments[2]
 
-		log.Debug("Verifying Channel Info to establish payment")
+		log.Info("Verifying Channel Info to establish payment")
 		ctx := context.Background()
 		// build connection with ledger
 		clientConn, err := ledger.LedgerConnection()
@@ -181,7 +181,7 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 		var argsGet []string
 		argsGet = append(argsGet, chunk)
-		fileBytes, err := remoteCall.CallGet(remote.APIPath+"/get?", argsGet)
+		fileBytes, err := remoteCall.CallGet(remote.APIprefix+"/get?", argsGet)
 		if err != nil {
 			log.Error("fail to get chunk file: \n", err)
 			return err
@@ -191,7 +191,7 @@ var storageUploadInitCmd = &cmds.Command{
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
 		var argReqc []string
 		argReqc = append(argReqc, n.Identity.Pretty(), chunk)
-		respChanllengeBody, err := remoteCall.CallGet(remote.APIPath+"/storage/upload/reqc?", argReqc)
+		respChanllengeBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/reqc?", argReqc)
 		if err != nil {
 			log.Error("fail to remote call reqc", err)
 			return err
@@ -201,19 +201,19 @@ var storageUploadInitCmd = &cmds.Command{
 			log.Error("")
 			return err
 		}
-		log.Debug("Successful unmarshal json from reqc:", bodyJSON)
+		log.Info("Successful unmarshal json from reqc:", bodyJSON)
 
 		// TODO: Verify ch to get CHR
 
 		// RemoteCall(user, CHID, CHR) to get signedPayment
 		var argRespc []string
 		argRespc = append(argRespc, n.Identity.Pretty(), chunk, "ChallengeID", "ChallengeData")
-		signedPaymentBody, err := remoteCall.CallGet(remote.APIPath+"/storage/upload/respc?", argRespc)
+		signedPaymentBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/respc?", argRespc)
 		if err != nil {
 			log.Error("fail to get resp with signedPayment: ", err)
 			return err
 		}
-		log.Debug("Received signed payment:", signedPaymentBody)
+		log.Info("Received signed payment:", signedPaymentBody)
 		var halfSignedChannelState ledgerPb.SignedChannelState
 		err = proto.Unmarshal(signedPaymentBody, &halfSignedChannelState)
 		if err != nil {
@@ -221,7 +221,7 @@ var storageUploadInitCmd = &cmds.Command{
 			return err
 		}
 		channelState := halfSignedChannelState.GetChannel()
-		log.Debug("Get current channel state: ", channelState)
+		log.Info("Get current channel state: ", channelState)
 
 		// Verify payment
 		pk, err := stringPeerIdToPublicKey(req.Arguments[0])
@@ -268,7 +268,7 @@ var storageUploadRequestCmd = &cmds.Command{
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, emit cmds.ResponseEmitter, env cmds.Environment) error {
-		log.Debug("Reqc Received Call.")
+		log.Info("Reqc Received Call.")
 		cid := "challengeID"
 		ch := "challengeData"
 		res := make(map[string]interface{})
@@ -286,7 +286,7 @@ var storageUploadResponseCmd = &cmds.Command{
 		cmds.StringArg("challenge", true, false, "challenge response back to uploader.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, emit cmds.ResponseEmitter, env cmds.Environment) error {
-		log.Debug("Repsc Received Call.")
+		log.Info("Repsc Received Call.")
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -319,7 +319,7 @@ var storageUploadResponseCmd = &cmds.Command{
 			return nil
 		}
 		r := bytes.NewReader(signedBytes)
-		log.Debug("Sending signed payment", signedBytes)
+		log.Info("Sending signed payment", signedBytes)
 		return cmds.EmitOnce(emit, r)
 	},
 }
