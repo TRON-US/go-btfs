@@ -122,13 +122,13 @@ $which btfs
 ###### 2. Init a btfs node:
 
 ```
-$ btfs init -k ECDSA(type of key generation, e.g. RSA, ECDSA ...)
+$ btfs init
 initializing BTFS node at /home/ubuntu/.btfs
-generating 2048-bit ECDSA keypair...done
-peer identity: QmTkQjKAtfh2GNDPmtnFB8d..................
+generating 2048-bit Secp256k1 keypair...done
+peer identity: 16Uiu2HAmHmW9mHcE9c5UfUomy8caBuEgJVP99MDb4wFtzF8URgzE
 to get started, enter:
 
-        btfs cat /btfs/QmS4ustL54uo8FzR9455qaxZwuMi........H4uVv/readme
+        btfs cat /btfs/QmPbWqakofrBdDSm4mLUS5RE5QiPQi8JbnK73LgWwQNdbi/readme
 ```
 
 ###### 3. Auto Update Setting

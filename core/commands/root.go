@@ -196,9 +196,18 @@ var rootROSubcommands = map[string]*cmds.Command{
 	"resolve": ResolveCmd,
 }
 
+// RootRemote is the remote-facing version of Root
+var RootRemote = &cmds.Command{}
+
+// FIXME: testing-only, switch to storage commands soon
+var rootRemoteSubcommands = map[string]*cmds.Command{
+	"id": IDCmd,
+}
+
 func init() {
 	Root.ProcessHelp()
 	*RootRO = *Root
+	*RootRemote = *Root
 
 	// this was in the big map definition above before,
 	// but if we leave it there lgc.NewCommand will be executed
@@ -213,9 +222,12 @@ func init() {
 	*VersionROCmd = *VersionCmd
 	VersionROCmd.Subcommands = map[string]*cmds.Command{}
 	rootROSubcommands["version"] = VersionROCmd
+	// also sanitize remote version command
+	rootRemoteSubcommands["version"] = VersionROCmd
 
 	Root.Subcommands = rootSubcommands
 	RootRO.Subcommands = rootROSubcommands
+	RootRemote.Subcommands = rootRemoteSubcommands
 }
 
 type MessageOutput struct {

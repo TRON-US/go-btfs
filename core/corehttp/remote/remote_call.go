@@ -6,22 +6,22 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 type RemoteCall struct {
 	URL string
-	ID peer.ID
+	ID  peer.ID
 }
 
-const prefix  = "/x/test/http/api/v0"
+const prefix = "/x/test/http" + apiPrefix
 
 func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{}, error) {
 	var arg string
 	for _, str := range args {
 		arg += fmt.Sprintf("arg=%s&", str)
 	}
-	resp, err := http.Get(r.URL+r.ID.Pretty()+prefix+api+arg)
+	resp, err := http.Get(r.URL + r.ID.Pretty() + prefix + api + arg)
 	if err != nil {
 		return nil, err
 	}
@@ -35,4 +35,7 @@ func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{},
 		return nil, fmt.Errorf("fail to unmarshal json body: %s", err)
 	}
 	return jsonResp, nil
+}
+
+func (r *RemoteCall) CallPost() {
 }

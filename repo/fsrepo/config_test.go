@@ -10,7 +10,7 @@ import (
 	"github.com/TRON-US/go-btfs/plugin/loader"
 	"github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	"github.com/ipfs/go-ipfs-config"
+	"github.com/TRON-US/go-btfs-config"
 )
 
 // note: to test sorting of the mountpoints in the disk spec they are
@@ -75,7 +75,7 @@ var measureConfig = []byte(`{
 }`)
 
 func TestDefaultDatastoreConfig(t *testing.T) {
-	loader, err := loader.NewPluginLoader("")
+	loader, err := loader.NewPluginLoader()
 	if err != nil {
 		t.Fatal(err)
 	}

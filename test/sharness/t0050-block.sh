@@ -26,6 +26,18 @@ test_expect_success "'ipfs block put' output looks good" '
   test_cmp expected_out actual_out
 '
 
+test_expect_success "'ipfs block put' with 2 files succeeds" '
+  echo "Hello Mars!" > a &&
+  echo "Hello Venus!" > b &&
+  ipfs block put a b >actual_out
+'
+
+test_expect_success "'ipfs block put' output looks good" '
+  echo "$HASH" >expected_out &&
+  echo "$HASHB" >>expected_out &&
+  test_cmp expected_out actual_out
+'
+
 #
 # "block get" tests
 #

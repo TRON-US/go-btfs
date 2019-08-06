@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -8,18 +9,18 @@ import (
 
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
-	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	libcrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"golang.org/x/net/context"
+
+	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 var log = logging.Logger("ledger")
 var (
-	ledgerAddr     = "ledger.bt.co:443"
-	certFile = `-----BEGIN CERTIFICATE-----
+	ledgerAddr = "ledger.bt.co:443"
+	certFile   = `-----BEGIN CERTIFICATE-----
 MIIEADCCAuigAwIBAgIBADANBgkqhkiG9w0BAQUFADBjMQswCQYDVQQGEwJVUzEh
 MB8GA1UEChMYVGhlIEdvIERhZGR5IEdyb3VwLCBJbmMuMTEwLwYDVQQLEyhHbyBE
 YWRkeSBDbGFzcyAyIENlcnRpZmljYXRpb24gQXV0aG9yaXR5MB4XDTA0MDYyOTE3
