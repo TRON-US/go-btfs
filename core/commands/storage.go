@@ -19,17 +19,17 @@ import (
 )
 
 const (
-	uploadPriceOptionName = "price"
+	uploadPriceOptionName       = "price"
 	replicationFactorOptionName = "replication-factor"
-	hostSelectModeOptionName = "host-select-mode"
-	hostSelectionOptionName = "host-selection"
+	hostSelectModeOptionName    = "host-select-mode"
+	hostSelectionOptionName     = "host-selection"
 )
 
 var (
-	channelID *ledgerPb.ChannelID
+	channelID    *ledgerPb.ChannelID
 	ledgerClient ledgerPb.ChannelsClient
-	price int64
-	)
+	price        int64
+)
 
 const (
 	userURL = "http://127.0.0.1:5001"
@@ -44,8 +44,8 @@ var StorageCmd = &cmds.Command{
 
 var storageUploadCmd = &cmds.Command{
 	Subcommands: map[string]*cmds.Command{
-		"init": storageUploadInitCmd,
-		"reqc": storageUploadRequestCmd,
+		"init":  storageUploadInitCmd,
+		"reqc":  storageUploadRequestCmd,
 		"respc": storageUploadResponseCmd,
 	},
 	Arguments: []cmds.Argument{
@@ -120,7 +120,7 @@ var storageUploadCmd = &cmds.Command{
 		// Remote call other Node with fileHash
 		remoteCall := &remote.RemoteCall{
 			URL: nodeURL,
-			ID: pid.Pretty(),
+			ID:  pid.Pretty(),
 		}
 		var argInit []string
 		argInit = append(argInit, n.Identity.Pretty(), strconv.FormatInt(channelID.Id, 10), fileHash)
@@ -177,7 +177,7 @@ var storageUploadInitCmd = &cmds.Command{
 		// RemoteCall to api/v0/get/file-hash=hash
 		remoteCall := &remote.RemoteCall{
 			URL: userURL,
-			ID: pid,
+			ID:  pid,
 		}
 		var argsGet []string
 		argsGet = append(argsGet, chunk)
@@ -186,7 +186,7 @@ var storageUploadInitCmd = &cmds.Command{
 			log.Error("fail to get chunk file: \n", err)
 			return err
 		}
-		log.Info("Successfully get file! \n", string(fileBytes))
+		log.Info("Successfully get file! \n")
 
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
 		var argReqc []string
@@ -291,11 +291,7 @@ var storageUploadResponseCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		//clientConn, err := ledger.LedgerConnection()
-		//if err != nil {
-		//	return err
-		//}
-		//ledgerClient = ledger.NewClient(clientConn)
+
 		fromAccount := ledger.NewAccount(n.PrivateKey.GetPublic(), 0)
 		// prepare money receiver account
 		toPubKey, err := stringPeerIdToPublicKey(req.Arguments[0])

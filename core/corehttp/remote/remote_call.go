@@ -10,7 +10,7 @@ import (
 
 type RemoteCall struct {
 	URL string
-	ID string
+	ID  string
 	Call
 }
 
@@ -22,7 +22,7 @@ func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	for _, str := range args {
 		arg += fmt.Sprintf("arg=%s&", str)
 	}
-	curURL := r.URL+api+arg
+	curURL := r.URL + api + arg
 	log.Info("Current calling URL: ", curURL)
 	resp, err := http.Get(curURL)
 	if err != nil {
