@@ -1,3 +1,10 @@
 ipfs
 ipfs-test-cover
 ipfs.exe
+go.mod
+go.sum
+btfs-darwin-amd64
+config_darwin_amd64.yaml
+config.yaml
+update-darwin-amd64
+update.log
