@@ -37,7 +37,7 @@ func TestResolverValidation(t *testing.T) {
 	// Create entry with expiry in one hour
 	priv, id, _, ipnsDHTPath := genKeys(t)
 	ts := time.Now()
-	p := []byte("/ipfs/QmfM2r8seH2GiRaC4esTjeraXEachRt8ZsSeGaWTPLyMoG")
+	p := []byte("/btfs/QmfM2r8seH2GiRaC4esTjeraXEachRt8ZsSeGaWTPLyMoG")
 	entry, err := ipns.Create(priv, p, 1, ts.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
