@@ -44,9 +44,7 @@ var RmCmd = &cmds.Command{
 				return err
 			}
 
-			if err := api.Pin().Rm(req.Context, rp, options.Pin.RmRecursive(recursive)); err != nil {
-				return err
-			}
+			api.Pin().Rm(req.Context, rp, options.Pin.RmRecursive(recursive))
 		}
 
 		// Surgincal approach
@@ -62,14 +60,16 @@ var RmCmd = &cmds.Command{
 
 		// rm all child links
 		for _, cid := range object.Links() {
-			if err := n.Blockstore.DeleteBlock(cid.Cid); err == nil {
-				fmt.Printf("Removed %s\n", cid.Cid.Hash().B58String())
+			if err := api.Dag().Remove(req.Context, cid.Cid); err != nil {
+				res.Emit("Error removing object " + cid.Cid.String())
+			} else {
+				res.Emit("Removed " + cid.Cid.String())
 			}
 		}
 
 		// rm parent node
-		if err := n.Blockstore.DeleteBlock(object.Cid()); err == nil {
-			fmt.Printf("Removed %s\n", object.Cid().Hash().B58String())
+		if err := api.Dag().Remove(req.Context, object.Cid()); err == nil {
+			res.Emit(fmt.Sprintf("Removed %s", object.Cid().String()))
 		}
 
 		return nil
