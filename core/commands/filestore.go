@@ -11,7 +11,7 @@ import (
 	filestore "github.com/ipfs/go-filestore"
 
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds"
 )
 
 var FileStoreCmd = &cmds.Command{

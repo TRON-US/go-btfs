@@ -9,7 +9,7 @@ import (
 	ocmd "github.com/TRON-US/go-btfs/core/commands/object"
 	unixfs "github.com/TRON-US/go-btfs/core/commands/unixfs"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
 )
 

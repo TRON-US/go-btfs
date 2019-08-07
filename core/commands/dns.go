@@ -8,7 +8,7 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 const (

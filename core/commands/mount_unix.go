@@ -9,7 +9,7 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 )
 

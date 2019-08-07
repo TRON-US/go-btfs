@@ -11,7 +11,7 @@ import (
 	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
 	path "github.com/ipfs/interface-go-ipfs-core/path"
 	mh "github.com/multiformats/go-multihash"

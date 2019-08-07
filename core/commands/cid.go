@@ -9,7 +9,7 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	verifcid "github.com/ipfs/go-verifcid"
 	mbase "github.com/multiformats/go-multibase"
 	mhash "github.com/multiformats/go-multihash"

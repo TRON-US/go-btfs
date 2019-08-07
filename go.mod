@@ -4,12 +4,13 @@ require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
 	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
-	github.com/Kubuxu/go-os-helper v0.0.1
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
+	github.com/TRON-US/go-btfs-cmds v0.1.2
 	github.com/TRON-US/go-btfs-config v0.1.2
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
+	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
 	github.com/fatih/color v1.7.0 // indirect
@@ -27,7 +28,6 @@ require (
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-cidutil v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
-	github.com/ipfs/go-detect-race v0.0.1
 	github.com/ipfs/go-ds-badger v0.0.5
 	github.com/ipfs/go-ds-flatfs v0.0.2
 	github.com/ipfs/go-ds-leveldb v0.0.2
@@ -37,7 +37,6 @@ require (
 	github.com/ipfs/go-ipfs-api v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-chunker v0.0.1
-	github.com/ipfs/go-ipfs-cmds v0.1.0
 	github.com/ipfs/go-ipfs-config v0.0.6 // indirect
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
