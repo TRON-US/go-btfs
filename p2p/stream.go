@@ -84,7 +84,7 @@ func (r *StreamRegistry) Register(streamInfo *Stream) {
 	r.Streams[r.nextID] = streamInfo
 	r.nextID++
 
-	r.streams[streamInfo.Local.RemoteAddr().String()] = streamInfo
+	r.streams[streamInfo.Local.LocalAddr().String()] = streamInfo
 
 	streamInfo.startStreaming()
 }
@@ -107,7 +107,7 @@ func (r *StreamRegistry) Deregister(streamID uint64) {
 
 	delete(r.Streams, streamID)
 
-	delete(r.streams, s.Local.RemoteAddr().String())
+	delete(r.streams, s.Local.LocalAddr().String())
 }
 
 // GetStreamRemotePeerID looks up the remote's peer ID based on local open address
