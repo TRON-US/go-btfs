@@ -1,0 +1,11 @@
+--- client.go	2019-08-07 14:37:39.000000000 -0700
++++ /tmp/go-ipfs-cmds/client.go	2019-08-07 14:40:45.000000000 -0700
+@@ -79,7 +79,7 @@
+ 	res, err := c.Send(req)
+ 	if err != nil {
+ 		if isConnRefused(err) {
+-			err = fmt.Errorf("cannot connect to the api. Is the deamon running? To run as a standalone CLI command remove the api file in `$IPFS_PATH/api`")
++			err = fmt.Errorf("cannot connect to the api. Is the deamon running? To run as a standalone CLI command remove the api file in `$BTFS_PATH/api`")
+ 		}
+ 		return err
+ 	}
