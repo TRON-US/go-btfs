@@ -29,7 +29,7 @@ import (
 )
 
 // `ipfs object new unixfs-dir`
-var emptyDir = "/ipfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
+var emptyDir = "/btfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 
 type mockNamesys map[string]path.Path
 
@@ -43,7 +43,7 @@ func (m mockNamesys) Resolve(ctx context.Context, name string, opts ...nsopts.Re
 		// max uint
 		depth = ^uint(0)
 	}
-	for strings.HasPrefix(name, "/ipns/") {
+	for strings.HasPrefix(name, "/btns/") {
 		if depth == 0 {
 			return value, namesys.ErrResolveRecursion
 		}
@@ -139,7 +139,7 @@ func newTestServerAndNode(t *testing.T, ns mockNamesys) (*httptest.Server, iface
 	dh.Handler, err = makeHandler(n,
 		ts.Listener,
 		IPNSHostnameOption(),
-		GatewayOption(false, "/ipfs", "/ipns"),
+		GatewayOption(false, "/btfs", "/btns"),
 		VersionOption(),
 	)
 	if err != nil {
@@ -163,11 +163,11 @@ func TestGatewayGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ns["/ipns/example.com"] = path.FromString(k.String())
-	ns["/ipns/working.example.com"] = path.FromString(k.String())
-	ns["/ipns/double.example.com"] = path.FromString("/ipns/working.example.com")
-	ns["/ipns/triple.example.com"] = path.FromString("/ipns/double.example.com")
-	ns["/ipns/broken.example.com"] = path.FromString("/ipns/" + k.Cid().String())
+	ns["/btns/example.com"] = path.FromString(k.String())
+	ns["/btns/working.example.com"] = path.FromString(k.String())
+	ns["/btns/double.example.com"] = path.FromString("/btns/working.example.com")
+	ns["/btns/triple.example.com"] = path.FromString("/btns/double.example.com")
+	ns["/btns/broken.example.com"] = path.FromString("/btns/" + k.Cid().String())
 	// We picked .man because:
 	// 1. It's a valid TLD.
 	// 2. Go treats it as the file extension for "man" files (even though
@@ -175,7 +175,7 @@ func TestGatewayGet(t *testing.T) {
 	//
 	// Unfortunately, this may not work on all platforms as file type
 	// detection is platform dependent.
-	ns["/ipns/example.man"] = path.FromString(k.String())
+	ns["/btns/example.man"] = path.FromString(k.String())
 
 	t.Log(ts.URL)
 	for i, test := range []struct {
@@ -187,17 +187,17 @@ func TestGatewayGet(t *testing.T) {
 		{"localhost:5001", "/", http.StatusNotFound, "404 page not found\n"},
 		{"localhost:5001", "/" + k.Cid().String(), http.StatusNotFound, "404 page not found\n"},
 		{"localhost:5001", k.String(), http.StatusOK, "fnord"},
-		{"localhost:5001", "/ipns/nxdomain.example.com", http.StatusNotFound, "ipfs resolve -r /ipns/nxdomain.example.com: " + namesys.ErrResolveFailed.Error() + "\n"},
-		{"localhost:5001", "/ipns/%0D%0A%0D%0Ahello", http.StatusNotFound, "ipfs resolve -r /ipns/%0D%0A%0D%0Ahello: " + namesys.ErrResolveFailed.Error() + "\n"},
-		{"localhost:5001", "/ipns/example.com", http.StatusOK, "fnord"},
+		{"localhost:5001", "/btns/nxdomain.example.com", http.StatusNotFound, "btfs resolve -r /btns/nxdomain.example.com: " + namesys.ErrResolveFailed.Error() + "\n"},
+		{"localhost:5001", "/btns/%0D%0A%0D%0Ahello", http.StatusNotFound, "btfs resolve -r /btns/%0D%0A%0D%0Ahello: " + namesys.ErrResolveFailed.Error() + "\n"},
+		{"localhost:5001", "/btns/example.com", http.StatusOK, "fnord"},
 		{"example.com", "/", http.StatusOK, "fnord"},
 
 		{"working.example.com", "/", http.StatusOK, "fnord"},
 		{"double.example.com", "/", http.StatusOK, "fnord"},
 		{"triple.example.com", "/", http.StatusOK, "fnord"},
-		{"working.example.com", k.String(), http.StatusNotFound, "ipfs resolve -r /ipns/working.example.com" + k.String() + ": no link named \"ipfs\" under " + k.Cid().String() + "\n"},
-		{"broken.example.com", "/", http.StatusNotFound, "ipfs resolve -r /ipns/broken.example.com/: " + namesys.ErrResolveFailed.Error() + "\n"},
-		{"broken.example.com", k.String(), http.StatusNotFound, "ipfs resolve -r /ipns/broken.example.com" + k.String() + ": " + namesys.ErrResolveFailed.Error() + "\n"},
+		{"working.example.com", k.String(), http.StatusNotFound, "btfs resolve -r /btns/working.example.com" + k.String() + ": no link named \"btfs\" under " + k.Cid().String() + "\n"},
+		{"broken.example.com", "/", http.StatusNotFound, "btfs resolve -r /btns/broken.example.com/: " + namesys.ErrResolveFailed.Error() + "\n"},
+		{"broken.example.com", k.String(), http.StatusNotFound, "btfs resolve -r /btns/broken.example.com" + k.String() + ": " + namesys.ErrResolveFailed.Error() + "\n"},
 		// This test case ensures we don't treat the TLD as a file extension.
 		{"example.man", "/", http.StatusOK, "fnord"},
 	} {
@@ -241,7 +241,7 @@ func TestIPNSHostnameRedirect(t *testing.T) {
 	t.Logf("test server url: %s", ts.URL)
 	defer ts.Close()
 
-	// create /ipns/example.net/foo/index.html
+	// create /btns/example.net/foo/index.html
 
 	f1 := files.NewMapDirectory(map[string]files.Node{
 		"_": files.NewBytesFile([]byte("_")),
@@ -256,7 +256,7 @@ func TestIPNSHostnameRedirect(t *testing.T) {
 	}
 
 	t.Logf("k: %s\n", k)
-	ns["/ipns/example.net"] = path.FromString(k.String())
+	ns["/btns/example.net"] = path.FromString(k.String())
 
 	// make request to directory containing index.html
 	req, err := http.NewRequest("GET", ts.URL+"/foo", nil)
@@ -339,7 +339,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 		}),
 	})
 
-	// create /ipns/example.net/foo/
+	// create /btns/example.net/foo/
 	k, err := api.Unixfs().Add(ctx, f1)
 	if err != nil {
 		t.Fatal(err)
@@ -356,7 +356,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 	}
 
 	t.Logf("k: %s\n", k)
-	ns["/ipns/example.net"] = path.FromString(k.String())
+	ns["/btns/example.net"] = path.FromString(k.String())
 
 	// make request to directory listing
 	req, err := http.NewRequest("GET", ts.URL+"/foo%3F%20%23%3C%27/", nil)
