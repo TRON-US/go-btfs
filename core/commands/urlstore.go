@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/url"
 
+	filestore "github.com/ipfs/go-filestore"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	filestore "github.com/TRON-US/go-btfs/filestore"
 
 	cmds "github.com/ipfs/go-ipfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"

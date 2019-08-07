@@ -122,7 +122,7 @@ You may be able to get this error to go away by setting it again:
 
 	btfs config --bool %s true
 
-Either way, please tell us at: http://github.com/ipfs/go-ipfs/issues
+Either way, please tell us at: http://github.com/TRON-US/go-btfs/issues
 `
 
 func darwinFuseCheckVersion(node *core.IpfsNode) error {

@@ -1,4 +1,4 @@
-// +build !nofuse
+// +build !openbsd,!nofuse,!netbsd
 
 package node
 
@@ -17,7 +17,7 @@ import (
 	ipns "github.com/TRON-US/go-btfs/fuse/ipns"
 	mount "github.com/TRON-US/go-btfs/fuse/mount"
 
-	ci "github.com/libp2p/go-testutil/ci"
+	ci "github.com/libp2p/go-libp2p-testing/ci"
 )
 
 func maybeSkipFuseTests(t *testing.T) {

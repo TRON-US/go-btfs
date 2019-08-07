@@ -4,11 +4,11 @@ import (
 	"errors"
 	"io"
 
-	filestore "github.com/TRON-US/go-btfs/filestore"
+	filestore "github.com/ipfs/go-filestore"
 	keystore "github.com/TRON-US/go-btfs/keystore"
 
 	ds "github.com/ipfs/go-datastore"
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -18,7 +18,7 @@ var (
 
 // Repo represents all persistent data of a given ipfs node.
 type Repo interface {
-	// Config returns the ipfs configuration file from the repo. Changes made
+	// Config returns the btfs configuration file from the repo. Changes made
 	// to the returned config are not automatically persisted.
 	Config() (*config.Config, error)
 

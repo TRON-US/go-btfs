@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	logging "github.com/ipfs/go-log"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 var log = logging.Logger("corehttp/remote")
@@ -44,4 +45,7 @@ func UnmarshalResp(body []byte) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("fail to unmarshal json body: %s", err)
 	}
 	return jsonResp, nil
+}
+
+func (r *RemoteCall) CallPost() {
 }
