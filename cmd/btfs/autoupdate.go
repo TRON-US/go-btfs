@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	btfs_version "github.com/TRON-US/go-btfs"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -82,7 +81,7 @@ func update() {
 		return
 	}
 
-	sleepTimeSeconds := 20
+	sleepTimeSeconds := 1
 	version := "0.0.0"
 	autoupdateFlg := true
 	routePath := fmt.Sprint(runtime.GOOS, "/", runtime.GOARCH, "/")
@@ -97,7 +96,7 @@ func update() {
 			version = currentConfig.Version
 			sleepTimeSeconds = currentConfig.SleepTimeSeconds
 		} else {
-			version = btfs_version.CurrentVersionNumber
+			// version = btfs_version.CurrentVersionNumber
 		}
 
 		if !autoupdateFlg {
@@ -126,7 +125,7 @@ func update() {
 			log.Errorf("Get latest config file error, reasons: [%v]", err)
 			continue
 		}
-		time.Sleep(time.Second * 5)
+		// time.Sleep(time.Second * 5)
 
 		// Where your local node is running on localhost:5001
 		sh := shell.NewShell(url)
