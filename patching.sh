@@ -39,6 +39,9 @@ chmod -R 777 $patchdir
 if ! patch -R -s -f --dry-run $patchdir/cli/parse.go < ./patches/go-ipfs-cmds-v0.0.8-cli-parse.go.patch 1>/dev/null; then
     patch $patchdir/cli/parse.go < ./patches/go-ipfs-cmds-v0.0.8-cli-parse.go.patch;
 fi
+if ! patch -R -s -f --dry-run $patchdir/http/client.go < ./patches/go-ipfs-cmds-http-client.go.patch 1>/dev/null; then
+    patch $patchdir/http/client.go < ./patches/go-ipfs-cmds-http-client.go.patch;
+fi
 
 # patching $GOPATH/pkg/mod/github.com/ipfs/go-ipfs-config@v0.0.3
 patchdir=$GOPATH/pkg/mod/github.com/ipfs/go-ipfs-config@v0.0.3
