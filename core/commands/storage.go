@@ -91,7 +91,6 @@ var storageUploadCmd = &cmds.Command{
 		}
 		selfPrivKey := n.PrivateKey
 		selfPubKey := selfPrivKey.GetPublic()
-		log.Infof("Private Key: %v \n Public Key: %v\n", selfPrivKey, selfPubKey)
 
 		// get other node's public key as address
 		// create channel between them
@@ -106,6 +105,7 @@ var storageUploadCmd = &cmds.Command{
 				log.Error("fail to extract public key from peer ID: %s")
 				return fmt.Errorf("fail to extract public key from peer ID: %s", err)
 			}
+			emitter.Emit("Init channel...")
 			channelID, err = initChannel(selfPubKey, selfPrivKey, peerPubKey, price)
 			if err != nil {
 				log.Error("fail to init channel with peer id:", pid, err)
@@ -115,7 +115,7 @@ var storageUploadCmd = &cmds.Command{
 				break
 			}
 		}
-		log.Info("Create Channel Success: ", channelID)
+		emitter.Emit(fmt.Sprintf("Create Channel Success: %v", channelID))
 
 		// Remote call other Node with fileHash
 		remoteCall := &remote.RemoteCall{
@@ -123,6 +123,7 @@ var storageUploadCmd = &cmds.Command{
 			ID:  pid.Pretty(),
 		}
 		var argInit []string
+		emitter.Emit("Calling node who will provide space...")
 		argInit = append(argInit, n.Identity.Pretty(), strconv.FormatInt(channelID.Id, 10), fileHash)
 		respBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/init?", argInit)
 		if err != nil {
@@ -134,7 +135,7 @@ var storageUploadCmd = &cmds.Command{
 			log.Error("resp body marshal err: ", err)
 			return err
 		}
-		return emitter.Emit(fmt.Sprintf("Upload Success!\n response from upload init: %v", resp))
+		return emitter.Emit(fmt.Sprintf("Upload Success!\n Get response from upload init: %v", resp))
 	},
 }
 
@@ -187,6 +188,7 @@ var storageUploadInitCmd = &cmds.Command{
 			return err
 		}
 		log.Info("Successfully get file! \n")
+		log.Debug("Raw file bytes: ", fileBytes)
 
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
 		var argReqc []string
@@ -201,7 +203,7 @@ var storageUploadInitCmd = &cmds.Command{
 			log.Error("")
 			return err
 		}
-		log.Info("Successful unmarshal json from reqc:", bodyJSON)
+		log.Debug("Successful unmarshal json from reqc:", bodyJSON)
 
 		// TODO: Verify ch to get CHR
 
@@ -213,7 +215,7 @@ var storageUploadInitCmd = &cmds.Command{
 			log.Error("fail to get resp with signedPayment: ", err)
 			return err
 		}
-		log.Info("Received signed payment:", signedPaymentBody)
+		log.Debug("Received signed payment:", signedPaymentBody)
 		var halfSignedChannelState ledgerPb.SignedChannelState
 		err = proto.Unmarshal(signedPaymentBody, &halfSignedChannelState)
 		if err != nil {
@@ -221,7 +223,7 @@ var storageUploadInitCmd = &cmds.Command{
 			return err
 		}
 		channelState := halfSignedChannelState.GetChannel()
-		log.Info("Get current channel state: ", channelState)
+		log.Debug("Get current channel state: ", channelState)
 
 		// Verify payment
 		pk, err := stringPeerIdToPublicKey(req.Arguments[0])
@@ -315,7 +317,7 @@ var storageUploadResponseCmd = &cmds.Command{
 			return nil
 		}
 		r := bytes.NewReader(signedBytes)
-		log.Info("Sending signed payment", signedBytes)
+		log.Debug("Sending signed payment", signedBytes)
 		return cmds.EmitOnce(emit, r)
 	},
 }

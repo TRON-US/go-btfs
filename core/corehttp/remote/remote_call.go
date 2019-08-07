@@ -3,11 +3,13 @@ package remote
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/prometheus/common/log"
 	"io/ioutil"
 	"net/http"
+
+	logging "github.com/ipfs/go-log"
 )
 
+var log = logging.Logger("corehttp/remote")
 type RemoteCall struct {
 	URL string
 	ID  string
