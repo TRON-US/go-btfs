@@ -64,9 +64,10 @@ func (s *Stream) startStreaming() {
 type StreamRegistry struct {
 	sync.Mutex
 
-	Streams map[uint64]*Stream
+	Streams map[uint64]*Stream // map of stream id to *Stream
 	conns   map[peer.ID]int
 	nextID  uint64
+	streams map[string]*Stream // map of remote addr to *Stream
 
 	ifconnmgr.ConnManager
 }
@@ -82,6 +83,8 @@ func (r *StreamRegistry) Register(streamInfo *Stream) {
 	streamInfo.id = r.nextID
 	r.Streams[r.nextID] = streamInfo
 	r.nextID++
+
+	r.streams[streamInfo.Local.RemoteAddr().String()] = streamInfo
 
 	streamInfo.startStreaming()
 }
@@ -103,6 +106,20 @@ func (r *StreamRegistry) Deregister(streamID uint64) {
 	}
 
 	delete(r.Streams, streamID)
+
+	delete(r.streams, s.Local.RemoteAddr().String())
+}
+
+// GetStreamRemotePeerID looks up the remote's peer ID based on local open address
+// Note `addr` is `RemoteAddr` from handler's context
+func (r *StreamRegistry) GetStreamRemotePeerID(addr string) (peer.ID, bool) {
+	r.Lock()
+	defer r.Unlock()
+
+	if s, ok := r.streams[addr]; ok {
+		return s.peer, true
+	}
+	return "", false
 }
 
 // Close stream endpoints and deregister it
