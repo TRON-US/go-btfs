@@ -23,21 +23,21 @@ func TestDnsEntryParsing(t *testing.T) {
 
 	goodEntries := []string{
 		"QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
-		"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
-		"dnslink=/ipns/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
-		"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo",
-		"dnslink=/ipns/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/bar",
-		"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo/bar/baz",
-		"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo/bar/baz/",
-		"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+		"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+		"dnslink=/btns/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+		"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo",
+		"dnslink=/btns/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/bar",
+		"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo/bar/baz",
+		"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo/bar/baz/",
+		"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 	}
 
 	badEntries := []string{
 		"QmYhE8xgFCjGcz6PHgnvJz5NOTCORRECT",
-		"quux=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+		"quux=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 		"dnslink=",
 		"dnslink=/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/foo",
-		"dnslink=ipns/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/bar",
+		"dnslink=btns/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/bar",
 	}
 
 	for _, e := range goodEntries {
@@ -65,66 +65,66 @@ func newMockDNS() *mockDNS {
 				"dnslink=QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 			},
 			"ipfs.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 			},
 			"_dnslink.dipfs.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 			},
 			"dns1.example.com.": []string{
-				"dnslink=/ipns/ipfs.example.com",
+				"dnslink=/btns/ipfs.example.com",
 			},
 			"dns2.example.com.": []string{
-				"dnslink=/ipns/dns1.example.com",
+				"dnslink=/btns/dns1.example.com",
 			},
 			"multi.example.com.": []string{
 				"some stuff",
-				"dnslink=/ipns/dns1.example.com",
-				"masked dnslink=/ipns/example.invalid",
+				"dnslink=/btns/dns1.example.com",
+				"masked dnslink=/btns/example.invalid",
 			},
 			"equals.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/=equals",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/=equals",
 			},
 			"loop1.example.com.": []string{
-				"dnslink=/ipns/loop2.example.com",
+				"dnslink=/btns/loop2.example.com",
 			},
 			"loop2.example.com.": []string{
-				"dnslink=/ipns/loop1.example.com",
+				"dnslink=/btns/loop1.example.com",
 			},
 			"_dnslink.dloop1.example.com.": []string{
-				"dnslink=/ipns/loop2.example.com",
+				"dnslink=/btns/loop2.example.com",
 			},
 			"_dnslink.dloop2.example.com.": []string{
-				"dnslink=/ipns/loop1.example.com",
+				"dnslink=/btns/loop1.example.com",
 			},
 			"bad.example.com.": []string{
 				"dnslink=",
 			},
 			"withsegment.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment",
 			},
 			"withrecsegment.example.com.": []string{
-				"dnslink=/ipns/withsegment.example.com/subsub",
+				"dnslink=/btns/withsegment.example.com/subsub",
 			},
 			"withtrailing.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/",
 			},
 			"withtrailingrec.example.com.": []string{
-				"dnslink=/ipns/withtrailing.example.com/segment/",
+				"dnslink=/btns/withtrailing.example.com/segment/",
 			},
 			"double.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 			},
 			"_dnslink.double.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 			},
 			"double.conflict.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD",
 			},
 			"_dnslink.conflict.example.com.": []string{
-				"dnslink=/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjE",
+				"dnslink=/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjE",
 			},
 			"fqdn.example.com.": []string{
-				"dnslink=/ipfs/QmYvMB9yrsSf7RKBghkfwmHJkzJhW2ZgVwq3LxBXXPasFr",
+				"dnslink=/btfs/QmYvMB9yrsSf7RKBghkfwmHJkzJhW2ZgVwq3LxBXXPasFr",
 			},
 		},
 	}
@@ -133,34 +133,34 @@ func newMockDNS() *mockDNS {
 func TestDNSResolution(t *testing.T) {
 	mock := newMockDNS()
 	r := &DNSResolver{lookupTXT: mock.lookupTXT}
-	testResolution(t, r, "multihash.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "ipfs.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "dipfs.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "dns1.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "dns1.example.com", 1, "/ipns/ipfs.example.com", ErrResolveRecursion)
-	testResolution(t, r, "dns2.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "dns2.example.com", 1, "/ipns/dns1.example.com", ErrResolveRecursion)
-	testResolution(t, r, "dns2.example.com", 2, "/ipns/ipfs.example.com", ErrResolveRecursion)
-	testResolution(t, r, "multi.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "multi.example.com", 1, "/ipns/dns1.example.com", ErrResolveRecursion)
-	testResolution(t, r, "multi.example.com", 2, "/ipns/ipfs.example.com", ErrResolveRecursion)
-	testResolution(t, r, "equals.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/=equals", nil)
-	testResolution(t, r, "loop1.example.com", 1, "/ipns/loop2.example.com", ErrResolveRecursion)
-	testResolution(t, r, "loop1.example.com", 2, "/ipns/loop1.example.com", ErrResolveRecursion)
-	testResolution(t, r, "loop1.example.com", 3, "/ipns/loop2.example.com", ErrResolveRecursion)
-	testResolution(t, r, "loop1.example.com", opts.DefaultDepthLimit, "/ipns/loop1.example.com", ErrResolveRecursion)
-	testResolution(t, r, "dloop1.example.com", 1, "/ipns/loop2.example.com", ErrResolveRecursion)
-	testResolution(t, r, "dloop1.example.com", 2, "/ipns/loop1.example.com", ErrResolveRecursion)
-	testResolution(t, r, "dloop1.example.com", 3, "/ipns/loop2.example.com", ErrResolveRecursion)
-	testResolution(t, r, "dloop1.example.com", opts.DefaultDepthLimit, "/ipns/loop1.example.com", ErrResolveRecursion)
+	testResolution(t, r, "multihash.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "ipfs.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "dipfs.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "dns1.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "dns1.example.com", 1, "/btns/ipfs.example.com", ErrResolveRecursion)
+	testResolution(t, r, "dns2.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "dns2.example.com", 1, "/btns/dns1.example.com", ErrResolveRecursion)
+	testResolution(t, r, "dns2.example.com", 2, "/btns/ipfs.example.com", ErrResolveRecursion)
+	testResolution(t, r, "multi.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "multi.example.com", 1, "/btns/dns1.example.com", ErrResolveRecursion)
+	testResolution(t, r, "multi.example.com", 2, "/btns/ipfs.example.com", ErrResolveRecursion)
+	testResolution(t, r, "equals.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/=equals", nil)
+	testResolution(t, r, "loop1.example.com", 1, "/btns/loop2.example.com", ErrResolveRecursion)
+	testResolution(t, r, "loop1.example.com", 2, "/btns/loop1.example.com", ErrResolveRecursion)
+	testResolution(t, r, "loop1.example.com", 3, "/btns/loop2.example.com", ErrResolveRecursion)
+	testResolution(t, r, "loop1.example.com", opts.DefaultDepthLimit, "/btns/loop1.example.com", ErrResolveRecursion)
+	testResolution(t, r, "dloop1.example.com", 1, "/btns/loop2.example.com", ErrResolveRecursion)
+	testResolution(t, r, "dloop1.example.com", 2, "/btns/loop1.example.com", ErrResolveRecursion)
+	testResolution(t, r, "dloop1.example.com", 3, "/btns/loop2.example.com", ErrResolveRecursion)
+	testResolution(t, r, "dloop1.example.com", opts.DefaultDepthLimit, "/btns/loop1.example.com", ErrResolveRecursion)
 	testResolution(t, r, "bad.example.com", opts.DefaultDepthLimit, "", ErrResolveFailed)
-	testResolution(t, r, "withsegment.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment", nil)
-	testResolution(t, r, "withrecsegment.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/subsub", nil)
-	testResolution(t, r, "withsegment.example.com/test1", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/test1", nil)
-	testResolution(t, r, "withrecsegment.example.com/test2", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/subsub/test2", nil)
-	testResolution(t, r, "withrecsegment.example.com/test3/", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/subsub/test3/", nil)
-	testResolution(t, r, "withtrailingrec.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/", nil)
-	testResolution(t, r, "double.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
-	testResolution(t, r, "conflict.example.com", opts.DefaultDepthLimit, "/ipfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjE", nil)
-	testResolution(t, r, "fqdn.example.com.", opts.DefaultDepthLimit, "/ipfs/QmYvMB9yrsSf7RKBghkfwmHJkzJhW2ZgVwq3LxBXXPasFr", nil)
+	testResolution(t, r, "withsegment.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment", nil)
+	testResolution(t, r, "withrecsegment.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/subsub", nil)
+	testResolution(t, r, "withsegment.example.com/test1", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/test1", nil)
+	testResolution(t, r, "withrecsegment.example.com/test2", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/subsub/test2", nil)
+	testResolution(t, r, "withrecsegment.example.com/test3/", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/subsub/test3/", nil)
+	testResolution(t, r, "withtrailingrec.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD/sub/segment/", nil)
+	testResolution(t, r, "double.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjD", nil)
+	testResolution(t, r, "conflict.example.com", opts.DefaultDepthLimit, "/btfs/QmY3hE8xgFCjGcz6PHgnvJz5HZi1BaKRfPkn1ghZUcYMjE", nil)
+	testResolution(t, r, "fqdn.example.com.", opts.DefaultDepthLimit, "/btfs/QmYvMB9yrsSf7RKBghkfwmHJkzJhW2ZgVwq3LxBXXPasFr", nil)
 }
