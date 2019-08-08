@@ -10,7 +10,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/ipfs/go-ipfs-files"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"

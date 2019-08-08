@@ -18,7 +18,7 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 type RepoVersion struct {

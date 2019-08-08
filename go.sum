@@ -22,6 +22,8 @@ github.com/Stebalien/go-bitfield v0.0.1 h1:X3kbSSPUaJK60wV2hjOPZwmpljr6VGCqdq4cB
 github.com/Stebalien/go-bitfield v0.0.1/go.mod h1:GNjFpasyUVkHMsfEOk8EFLJ9syQ6SI+XWrX9Wf2XH0s=
 github.com/TRON-US/go-btfs-config v0.1.1 h1:708pzBFKyxajfY4/yAExjxst/T0qZrJWTkBrtGSLOBw=
 github.com/TRON-US/go-btfs-config v0.1.1/go.mod h1:GdZW7SmAY3rVqYwcbYkMmKo27IihzezwEQQMDTftlU0=
+github.com/TRON-US/go-btfs-cmds v0.1.1 h1:q5yFG5kk3dV/LTq5aNaMkvNZiZL3cn7zJYeDKQoWox4=
+github.com/TRON-US/go-btfs-cmds v0.1.1/go.mod h1:WxYDXVGY8q907Cz/45KsAwcBsAvkijclkIPbGyVpU9U=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
@@ -254,8 +256,6 @@ github.com/ipfs/go-ipfs-blocksutil v0.0.1 h1:Eh/H4pc1hsvhzsQoMEP3Bke/aW5P5rVM1IW
 github.com/ipfs/go-ipfs-blocksutil v0.0.1/go.mod h1:Yq4M86uIOmxmGPUHv/uI7uKqZNtLb449gwKqXjIsnRk=
 github.com/ipfs/go-ipfs-chunker v0.0.1 h1:cHUUxKFQ99pozdahi+uSC/3Y6HeRpi9oTeUHbE27SEw=
 github.com/ipfs/go-ipfs-chunker v0.0.1/go.mod h1:tWewYK0we3+rMbOh7pPFGDyypCtvGcBFymgY4rSDLAw=
-github.com/ipfs/go-ipfs-cmds v0.1.0 h1:0CEde9EcxByej8+L6d1PST57J4ambRPyCTjLG5Ymou8=
-github.com/ipfs/go-ipfs-cmds v0.1.0/go.mod h1:TiK4e7/V31tuEb8YWDF8lN3qrnDH+BS7ZqWIeYJlAs8=
 github.com/ipfs/go-ipfs-config v0.0.5/go.mod h1:IGkVTacurWv9WFKc7IBPjHGM/7hi6+PEClqUb/l2BIM=
 github.com/ipfs/go-ipfs-config v0.0.6 h1:jzK9Tl8S0oWBir3F5ObtGgnHRPdqQ0MYiCmwXtV3Ps4=
 github.com/ipfs/go-ipfs-config v0.0.6/go.mod h1:IGkVTacurWv9WFKc7IBPjHGM/7hi6+PEClqUb/l2BIM=

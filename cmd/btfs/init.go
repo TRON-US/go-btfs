@@ -18,7 +18,7 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	"github.com/TRON-US/go-btfs-config"
-	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/ipfs/go-ipfs-files"
 )
 

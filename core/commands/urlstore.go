@@ -8,7 +8,7 @@ import (
 	filestore "github.com/ipfs/go-filestore"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/interface-go-ipfs-core/options"
 )

@@ -29,7 +29,7 @@ import (
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 
 	"github.com/hashicorp/go-multierror"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	goprocess "github.com/jbenet/goprocess"

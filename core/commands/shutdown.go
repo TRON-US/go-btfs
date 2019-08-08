@@ -3,7 +3,7 @@ package commands
 import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds"
 )
 
 var daemonShutdownCmd = &cmds.Command{

@@ -10,7 +10,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"
 	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
