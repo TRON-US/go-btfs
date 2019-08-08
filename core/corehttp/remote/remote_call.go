@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	logging "github.com/ipfs/go-log"
-	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 var log = logging.Logger("corehttp/remote")
@@ -41,7 +40,7 @@ func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 
 func UnmarshalResp(body []byte) (map[string]interface{}, error) {
 	jsonResp := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(body), &jsonResp); err != nil {
+	if err := json.Unmarshal(body, &jsonResp); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal json body: %s", err)
 	}
 	return jsonResp, nil

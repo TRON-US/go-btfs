@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -9,7 +8,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	p2phttp "github.com/libp2p/go-libp2p-http"
 )
 
@@ -20,7 +19,7 @@ type P2PRemoteCall struct {
 
 const P2PRemoteCallProto = "/rapi"
 
-func (r *P2PRemoteCall) CallGet(api string, args []string) (map[string]interface{}, error) {
+func (r *P2PRemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	var sb strings.Builder
 	for i, str := range args {
 		if i > 0 {
@@ -43,11 +42,7 @@ func (r *P2PRemoteCall) CallGet(api string, args []string) (map[string]interface
 	if err != nil {
 		return nil, fmt.Errorf("fail to read response body: %s", err)
 	}
-	jsonResp := map[string]interface{}{}
-	if err := json.Unmarshal([]byte(body), &jsonResp); err != nil {
-		return nil, fmt.Errorf("fail to unmarshal json body: %s", err)
-	}
-	return jsonResp, nil
+	return body, nil
 }
 
 func (r *P2PRemoteCall) CallPost() {

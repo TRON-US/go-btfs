@@ -2,10 +2,12 @@ package commands
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/ipfs/interface-go-ipfs-core/path"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	"strconv"
 	"strings"
 
@@ -29,11 +31,6 @@ var (
 	channelID    *ledgerPb.ChannelID
 	ledgerClient ledgerPb.ChannelsClient
 	price        int64
-)
-
-const (
-	userURL = "http://127.0.0.1:5001"
-	nodeURL = "http://127.0.0.1:5101"
 )
 
 var StorageCmd = &cmds.Command{
@@ -117,25 +114,25 @@ var storageUploadCmd = &cmds.Command{
 		}
 		emitter.Emit(fmt.Sprintf("Create Channel Success: %v", channelID))
 
-		// Remote call other Node with fileHash
-		remoteCall := &remote.RemoteCall{
-			URL: nodeURL,
-			ID:  pid.Pretty(),
+		remoteCall := &remote.P2PRemoteCall{
+			Node: n,
+			ID: pid,
 		}
 		var argInit []string
 		emitter.Emit("Calling node who will provide space...")
 		argInit = append(argInit, n.Identity.Pretty(), strconv.FormatInt(channelID.Id, 10), fileHash)
-		respBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/init?", argInit)
+		respBody, err := remoteCall.CallGet("/storage/upload/init?", argInit)
 		if err != nil {
 			log.Error("fail to get response from: ", err)
 			return err
 		}
-		resp, err := remote.UnmarshalResp(respBody)
-		if err != nil {
-			log.Error("resp body marshal err: ", err)
-			return err
-		}
-		return emitter.Emit(fmt.Sprintf("Upload Success!\n Get response from upload init: %v", resp))
+		//log.Debug(respBody)
+		//respJSON, err := remote.UnmarshalResp(respBody)
+		//if err != nil {
+		//	log.Error("resp body marshal err: ", err)
+		//	return err
+		//}
+		return emitter.Emit(fmt.Sprintf("Upload Success!\n Get response from upload init: %v", string(respBody)))
 	},
 }
 
@@ -151,8 +148,9 @@ var storageUploadInitCmd = &cmds.Command{
 			return err
 		}
 		pid := req.Arguments[0]
+		log.Info("received peer id:", pid)
 		cid := req.Arguments[1]
-		chunk := req.Arguments[2]
+		hash := req.Arguments[2]
 
 		log.Info("Verifying Channel Info to establish payment")
 		ctx := context.Background()
@@ -175,32 +173,42 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 		log.Info("Verified channel info: ", channelInfo)
 
-		// RemoteCall to api/v0/get/file-hash=hash
-		remoteCall := &remote.RemoteCall{
-			URL: userURL,
-			ID:  pid,
+		// Get
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
 		}
-		var argsGet []string
-		argsGet = append(argsGet, chunk)
-		fileBytes, err := remoteCall.CallGet(remote.APIprefix+"/get?", argsGet)
+		p := path.New(hash)
+		file, err := api.Unixfs().Get(req.Context, p)
+		if err != nil {
+			return err
+		}
+		fileBytes, err := fileArchive(file, p.String(), false, gzip.NoCompression)
 		if err != nil {
 			log.Error("fail to get chunk file: \n", err)
 			return err
 		}
-		log.Info("Successfully get file! \n")
-		log.Debug("Raw file bytes: ", fileBytes)
+		log.Info("Successfully get file! \n", fileBytes)
 
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
+		id, err := peer.IDB58Decode(pid)
+		if err != nil {
+			log.Error("id convert err", err)
+			return err
+		}
+		remoteCall := &remote.P2PRemoteCall{
+			Node: n,
+			ID: id,
+		}
 		var argReqc []string
-		argReqc = append(argReqc, n.Identity.Pretty(), chunk)
-		respChanllengeBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/reqc?", argReqc)
+		argReqc = append(argReqc, n.Identity.Pretty(), hash)
+		respChanllengeBody, err := remoteCall.CallGet("/storage/upload/reqc?", argReqc)
 		if err != nil {
 			log.Error("fail to remote call reqc", err)
 			return err
 		}
 		bodyJSON, err := remote.UnmarshalResp(respChanllengeBody)
 		if err != nil {
-			log.Error("")
 			return err
 		}
 		log.Debug("Successful unmarshal json from reqc:", bodyJSON)
@@ -209,8 +217,8 @@ var storageUploadInitCmd = &cmds.Command{
 
 		// RemoteCall(user, CHID, CHR) to get signedPayment
 		var argRespc []string
-		argRespc = append(argRespc, n.Identity.Pretty(), chunk, "ChallengeID", "ChallengeData")
-		signedPaymentBody, err := remoteCall.CallGet(remote.APIprefix+"/storage/upload/respc?", argRespc)
+		argRespc = append(argRespc, n.Identity.Pretty(), hash, "ChallengeID", "ChallengeData")
+		signedPaymentBody, err := remoteCall.CallGet("/storage/upload/respc?", argRespc)
 		if err != nil {
 			log.Error("fail to get resp with signedPayment: ", err)
 			return err
@@ -260,7 +268,7 @@ var storageUploadInitCmd = &cmds.Command{
 		// TODO: CollateralProof
 		res := make(map[string]interface{})
 		res["CollateralProof"] = "proof"
-		return cmds.EmitOnce(emit, res)
+		return emit.Emit(res)
 	},
 }
 

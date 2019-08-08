@@ -202,7 +202,7 @@ var RootRemote = &cmds.Command{}
 
 // FIXME: testing-only, switch to storage commands soon
 var rootRemoteSubcommands = map[string]*cmds.Command{
-	"id": IDCmd,
+	"storage": StorageCmd,
 }
 
 func init() {
