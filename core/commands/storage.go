@@ -16,8 +16,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	ic "github.com/libp2p/go-libp2p-crypto"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
 
 const (
@@ -120,37 +120,35 @@ var storageUploadCmd = &cmds.Command{
 		}
 		var argInit []string
 		emitter.Emit("Calling node who will provide space...")
-		argInit = append(argInit, n.Identity.Pretty(), strconv.FormatInt(channelID.Id, 10), fileHash)
+		argInit = append(argInit, strconv.FormatInt(channelID.Id, 10), fileHash)
 		respBody, err := remoteCall.CallGet("/storage/upload/init?", argInit)
 		if err != nil {
 			log.Error("fail to get response from: ", err)
 			return err
 		}
-		//log.Debug(respBody)
-		//respJSON, err := remote.UnmarshalResp(respBody)
-		//if err != nil {
-		//	log.Error("resp body marshal err: ", err)
-		//	return err
-		//}
 		return emitter.Emit(fmt.Sprintf("Upload Success!\n Get response from upload init: %v", string(respBody)))
 	},
 }
 
 var storageUploadInitCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
+		//cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
 		cmds.StringArg("channel-id", true, false, "open channel id for payment").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, emit cmds.ResponseEmitter, env cmds.Environment) error {
+		cid := req.Arguments[0]
+		hash := req.Arguments[1]
+
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		pid := req.Arguments[0]
-		log.Info("received peer id:", pid)
-		cid := req.Arguments[1]
-		hash := req.Arguments[2]
+		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
+		if !ok {
+			return fmt.Errorf("fail to get peer ID from request")
+		}
+		log.Debug("Received peer id:", pid)
 
 		log.Info("Verifying Channel Info to establish payment")
 		ctx := context.Background()
@@ -171,9 +169,9 @@ var storageUploadInitCmd = &cmds.Command{
 			log.Error("fail to get channel info", err)
 			return err
 		}
-		log.Info("Verified channel info: ", channelInfo)
+		log.Debug("Verified channel info: ", channelInfo)
 
-		// Get
+		// Get file
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
@@ -191,33 +189,24 @@ var storageUploadInitCmd = &cmds.Command{
 		log.Info("Successfully get file! \n", fileBytes)
 
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
-		id, err := peer.IDB58Decode(pid)
-		if err != nil {
-			log.Error("id convert err", err)
-			return err
-		}
 		remoteCall := &remote.P2PRemoteCall{
 			Node: n,
-			ID: id,
+			ID: pid,
 		}
 		var argReqc []string
-		argReqc = append(argReqc, n.Identity.Pretty(), hash)
+		argReqc = append(argReqc, hash)
 		respChanllengeBody, err := remoteCall.CallGet("/storage/upload/reqc?", argReqc)
 		if err != nil {
 			log.Error("fail to remote call reqc", err)
 			return err
 		}
-		bodyJSON, err := remote.UnmarshalResp(respChanllengeBody)
-		if err != nil {
-			return err
-		}
-		log.Debug("Successful unmarshal json from reqc:", bodyJSON)
+		log.Debug("Successful unmarshal json from reqc:", string(respChanllengeBody))
 
 		// TODO: Verify ch to get CHR
 
 		// RemoteCall(user, CHID, CHR) to get signedPayment
 		var argRespc []string
-		argRespc = append(argRespc, n.Identity.Pretty(), hash, "ChallengeID", "ChallengeData")
+		argRespc = append(argRespc, hash, "ChallengeID", "ChallengeData")
 		signedPaymentBody, err := remoteCall.CallGet("/storage/upload/respc?", argRespc)
 		if err != nil {
 			log.Error("fail to get resp with signedPayment: ", err)
@@ -234,11 +223,11 @@ var storageUploadInitCmd = &cmds.Command{
 		log.Debug("Get current channel state: ", channelState)
 
 		// Verify payment
-		pk, err := stringPeerIdToPublicKey(req.Arguments[0])
+		pk, err := pid.ExtractPublicKey()
 		if err != nil {
 			return err
 		}
-		ok, err := ledger.Verify(pk, channelState, halfSignedChannelState.GetFromSignature())
+		ok, err = ledger.Verify(pk, channelState, halfSignedChannelState.GetFromSignature())
 		if err != nil || !ok {
 			log.Error("fail to verify channel state: ", err)
 			return err
@@ -274,7 +263,7 @@ var storageUploadInitCmd = &cmds.Command{
 
 var storageUploadRequestCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
+		//cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, emit cmds.ResponseEmitter, env cmds.Environment) error {
@@ -290,7 +279,7 @@ var storageUploadRequestCmd = &cmds.Command{
 
 var storageUploadResponseCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
+		//cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 		cmds.StringArg("challenge-id", true, false, "challenge id from uploader").EnableStdin(),
 		cmds.StringArg("challenge", true, false, "challenge response back to uploader.").EnableStdin(),
@@ -301,12 +290,17 @@ var storageUploadResponseCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
+		if !ok {
+			return fmt.Errorf("fail to get peer ID from request")
+		}
+		log.Info("Received peer id:", pid)
 
 		fromAccount := ledger.NewAccount(n.PrivateKey.GetPublic(), 0)
 		// prepare money receiver account
-		toPubKey, err := stringPeerIdToPublicKey(req.Arguments[0])
+		toPubKey, err := pid.ExtractPublicKey()
 		if err != nil {
-			log.Error("fail to extract public key from input string: ", err)
+			log.Error("fail to extract public key from id: ", err)
 			return err
 		}
 		toAccount := ledger.NewAccount(toPubKey, price)
