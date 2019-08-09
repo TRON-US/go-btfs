@@ -5,19 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	logging "github.com/ipfs/go-log"
 )
-
-var log = logging.Logger("corehttp/remote")
 
 type RemoteCall struct {
 	URL string
 	ID  string
 }
-
-// APIPath is the path at which the API is mounted.
-const APIprefix = "/api/v0"
 
 func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	var arg string

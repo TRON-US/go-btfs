@@ -105,7 +105,7 @@ var storageUploadCmd = &cmds.Command{
 			}
 		}
 		if channelID == nil || channelID.GetId() == 0 {
-			return res.Emit("fail to create channel ID")
+			return fmt.Errorf("fail to create channel ID")
 		}
 
 		// call server
@@ -118,7 +118,8 @@ var storageUploadCmd = &cmds.Command{
 		if err != nil {
 			return fmt.Errorf("fail to get response from: %s", err)
 		}
-		return res.Emit(fmt.Sprintf("Upload Success!\n Get response from upload init: %v", string(respBody)))
+		log.Info("Upload success, get proof: ", respBody)
+		return nil
 	},
 }
 
@@ -246,6 +247,7 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 		return res.Emit(proof)
 	},
+	Type: ProofRes{},
 }
 
 type ProofRes struct {
@@ -269,6 +271,7 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 		}
 		return cmds.EmitOnce(res, out)
 	},
+	Type: ChallengeRes{},
 }
 
 var storageUploadResponseChallengeCmd = &cmds.Command{
