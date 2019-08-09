@@ -22,7 +22,9 @@ const P2PRemoteCallProto = "/rapi"
 func (r *P2PRemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	var sb strings.Builder
 	for i, str := range args {
-		if i > 0 {
+		if i == 0 {
+			sb.WriteString("?")
+		} else {
 			sb.WriteString("&")
 		}
 		sb.WriteString("arg=")

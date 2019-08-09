@@ -10,10 +10,10 @@ import (
 )
 
 var log = logging.Logger("corehttp/remote")
+
 type RemoteCall struct {
 	URL string
 	ID  string
-	Call
 }
 
 // APIPath is the path at which the API is mounted.
@@ -21,11 +21,14 @@ const APIprefix = "/api/v0"
 
 func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	var arg string
-	for _, str := range args {
-		arg += fmt.Sprintf("arg=%s&", str)
+	for i, str := range args {
+		if i == 0 {
+			arg += fmt.Sprintf("?arg=%s", str)
+		} else {
+			arg += fmt.Sprintf("&arg=%s", str)
+		}
 	}
 	curURL := r.URL + api + arg
-	log.Info("Current calling URL: ", curURL)
 	resp, err := http.Get(curURL)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP GET fail: %v", err)

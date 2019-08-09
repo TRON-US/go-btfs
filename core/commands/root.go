@@ -3,11 +3,11 @@ package commands
 import (
 	"errors"
 
-	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
-	name "github.com/TRON-US/go-btfs/core/commands/name"
+	"github.com/TRON-US/go-btfs/core/commands/name"
 	ocmd "github.com/TRON-US/go-btfs/core/commands/object"
-	unixfs "github.com/TRON-US/go-btfs/core/commands/unixfs"
+	"github.com/TRON-US/go-btfs/core/commands/unixfs"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
@@ -200,7 +200,6 @@ var rootROSubcommands = map[string]*cmds.Command{
 // RootRemote is the remote-facing version of Root
 var RootRemote = &cmds.Command{}
 
-// FIXME: testing-only, switch to storage commands soon
 var rootRemoteSubcommands = map[string]*cmds.Command{
 	"storage": StorageCmd,
 }
