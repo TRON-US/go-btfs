@@ -5,33 +5,38 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 type RemoteCall struct {
 	URL string
-	ID  peer.ID
+	ID  string
 }
 
-const prefix = "/x/test/http" + apiPrefix
-
-func (r *RemoteCall) CallGet(api string, args []string) (map[string]interface{}, error) {
+func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	var arg string
-	for _, str := range args {
-		arg += fmt.Sprintf("arg=%s&", str)
+	for i, str := range args {
+		if i == 0 {
+			arg += fmt.Sprintf("?arg=%s", str)
+		} else {
+			arg += fmt.Sprintf("&arg=%s", str)
+		}
 	}
-	resp, err := http.Get(r.URL + r.ID.Pretty() + prefix + api + arg)
+	curURL := r.URL + api + arg
+	resp, err := http.Get(curURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("HTTP GET fail: %v", err)
 	}
-	defer resp.Body.Close()
+	//defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("fail to read response body: %s", err)
 	}
-	jsonResp := map[string]interface{}{}
-	if err := json.Unmarshal([]byte(body), &jsonResp); err != nil {
+	return body, nil
+}
+
+func UnmarshalResp(body []byte) (map[string]interface{}, error) {
+	jsonResp := make(map[string]interface{})
+	if err := json.Unmarshal(body, &jsonResp); err != nil {
 		return nil, fmt.Errorf("fail to unmarshal json body: %s", err)
 	}
 	return jsonResp, nil
