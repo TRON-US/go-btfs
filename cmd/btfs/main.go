@@ -22,10 +22,10 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	osh "github.com/Kubuxu/go-os-helper"
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	"github.com/ipfs/go-ipfs-cmds"
 	"github.com/ipfs/go-ipfs-cmds/cli"
 	"github.com/ipfs/go-ipfs-cmds/http"
-	config "github.com/ipfs/go-ipfs-config"
+	"github.com/ipfs/go-ipfs-config"
 	u "github.com/ipfs/go-ipfs-util"
 	logging "github.com/ipfs/go-log"
 	loggables "github.com/libp2p/go-libp2p-loggables"
@@ -60,15 +60,15 @@ func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
 	}
 	plugins, err = loader.NewPluginLoader(pluginpath)
 	if err != nil {
-		log.Error("error loading plugins: ", err)
+		return nil, fmt.Errorf("error loading plugins: %s", err)
 	}
 
 	if err := plugins.Initialize(); err != nil {
-		log.Error("error initializing plugins: ", err)
+		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 
 	if err := plugins.Inject(); err != nil {
-		log.Error("error running plugins: ", err)
+		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 	return plugins, nil
 }

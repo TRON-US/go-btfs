@@ -4,8 +4,8 @@ import (
 	"context"
 	libp2p2 "github.com/TRON-US/go-btfs/core/node/libp2p"
 
-	commands "github.com/TRON-US/go-btfs/commands"
-	core "github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/commands"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/repo"
 
 	"github.com/ipfs/go-datastore"

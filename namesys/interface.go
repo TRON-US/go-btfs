@@ -18,7 +18,7 @@ or:
   /ipfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
 
 The mutable name system also allows users to resolve those references
-to find the immutable IPFS object currently referenced by a given
+to find the immutable BTFS object currently referenced by a given
 mutable name.
 
 For command-line bindings to this functionality, see:

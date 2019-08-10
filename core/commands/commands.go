@@ -1,6 +1,6 @@
-// Package commands implements the ipfs command interface
+// Package commands implements the btfs command interface
 //
-// Using github.com/ipfs/go-ipfs/commands to define the command line and HTTP
+// Using github.com/TRON-US/go-btfs/commands to define the command line and HTTP
 // APIs.  This is the interface available to folks using BTFS from outside of
 // the Go language.
 package commands

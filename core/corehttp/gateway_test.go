@@ -28,7 +28,7 @@ import (
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 
-// `ipfs object new unixfs-dir`
+// `btfs object new unixfs-dir`
 var emptyDir = "/btfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 
 type mockNamesys map[string]path.Path

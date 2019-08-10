@@ -18,7 +18,7 @@ BTFS is a filesystem:
 
 BTFS is a web:
 - can be used to view documents like the web
-- files accessible via HTTP at `gateway.btfs.trongrid.io/<path>`
+- files accessible via HTTP at `gateway.btfssoter.io/<path>`
 - hash-addressed content guarantees authenticity
 
 BTFS is modular:

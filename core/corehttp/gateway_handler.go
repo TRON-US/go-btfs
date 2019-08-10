@@ -400,7 +400,7 @@ func (i *gatewayHandler) putHandler(w http.ResponseWriter, r *http.Request) {
 
 	rsegs := rootPath.Segments()
 	if rsegs[0] == ipnsPathPrefix {
-		webError(w, "putHandler: updating named entries not supported", errors.New("WritableGateway: ipns put not supported"), http.StatusBadRequest)
+		webError(w, "putHandler: updating named entries not supported", errors.New("WritableGateway: btns put not supported"), http.StatusBadRequest)
 		return
 	}
 

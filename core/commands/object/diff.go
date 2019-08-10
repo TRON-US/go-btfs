@@ -21,28 +21,28 @@ type Changes struct {
 
 var ObjectDiffCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Display the diff between two ipfs objects.",
+		Tagline: "Display the diff between two btfs objects.",
 		ShortDescription: `
-'ipfs object diff' is a command used to show the differences between
-two IPFS objects.`,
+'btfs object diff' is a command used to show the differences between
+two BTFS objects.`,
 		LongDescription: `
-'ipfs object diff' is a command used to show the differences between
-two IPFS objects.
+'btfs object diff' is a command used to show the differences between
+two BTFS objects.
 
 Example:
 
    > ls foo
    bar baz/ giraffe
-   > ipfs add -r foo
+   > btfs add -r foo
    ...
    Added QmegHcnrPgMwC7tBiMxChD54fgQMBUecNw9nE9UUU4x1bz foo
    > OBJ_A=QmegHcnrPgMwC7tBiMxChD54fgQMBUecNw9nE9UUU4x1bz
    > echo "different content" > foo/bar
-   > ipfs add -r foo
+   > btfs add -r foo
    ...
    Added QmcmRptkSPWhptCttgHg27QNDmnV33wAJyUkCnAvqD3eCD foo
    > OBJ_B=QmcmRptkSPWhptCttgHg27QNDmnV33wAJyUkCnAvqD3eCD
-   > ipfs object diff -v $OBJ_A $OBJ_B
+   > btfs object diff -v $OBJ_A $OBJ_B
    Changed "bar" from QmNgd5cz2jNftnAHBhcRUGdtiaMzb5Rhjqd4etondHHST8 to QmRfFVsjSXkhFxrfWnLpMae2M4GBVsry6VAuYYcji5MiZb.
 `,
 	},

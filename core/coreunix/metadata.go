@@ -1,8 +1,8 @@
 package coreunix
 
 import (
-	cid "github.com/ipfs/go-cid"
 	core "github.com/TRON-US/go-btfs/core"
+	cid "github.com/ipfs/go-cid"
 	dag "github.com/ipfs/go-merkledag"
 	ft "github.com/ipfs/go-unixfs"
 )

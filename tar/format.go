@@ -1,4 +1,4 @@
- package tarfmt
+package tarfmt
 
 import (
 	"archive/tar"

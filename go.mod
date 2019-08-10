@@ -22,14 +22,14 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hsanjuan/go-libp2p-http v0.0.2
 	github.com/ipfs/dir-index-html v1.0.3
-	github.com/ipfs/go-bitswap v0.0.7
+	github.com/ipfs/go-bitswap v0.0.8-0.20190704155249-cbb485998356
 	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.0.3
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-cidutil v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
 	github.com/ipfs/go-detect-race v0.0.1
-	github.com/ipfs/go-ds-badger v0.0.4
+	github.com/ipfs/go-ds-badger v0.0.5
 	github.com/ipfs/go-ds-flatfs v0.0.2
 	github.com/ipfs/go-ds-leveldb v0.0.2
 	github.com/ipfs/go-ds-measure v0.0.1
@@ -64,11 +64,13 @@ require (
 	github.com/ipfs/interface-go-ipfs-core v0.0.8
 	github.com/ipfs/iptb v1.4.0
 	github.com/ipfs/iptb-plugins v0.0.2
+	github.com/jbenet/go-fuse-version v0.0.0-20160322195114-6d4c97bcf253 // indirect
 	github.com/jbenet/go-is-domain v1.0.2
 	github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c
 	github.com/jbenet/go-random-files v0.0.0-20190219210431-31b3f20ebded
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2
 	github.com/jbenet/goprocess v0.1.3
+	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/libp2p/go-libp2p v0.0.28
 	github.com/libp2p/go-libp2p-autonat-svc v0.0.5
 	github.com/libp2p/go-libp2p-circuit v0.0.8
@@ -107,7 +109,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mr-tron/base58 v1.1.2
 	github.com/multiformats/go-multiaddr v0.0.4
-	github.com/multiformats/go-multiaddr-dns v0.0.2
+	github.com/multiformats/go-multiaddr-dns v0.0.3
 	github.com/multiformats/go-multiaddr-net v0.0.1
 	github.com/multiformats/go-multibase v0.0.1
 	github.com/multiformats/go-multihash v0.0.5
@@ -131,7 +133,7 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
-	golang.org/x/sys v0.0.0-20190522044717-8097e1b27ff5
+	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
 	google.golang.org/appengine v1.4.0 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
