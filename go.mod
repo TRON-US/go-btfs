@@ -17,6 +17,7 @@ require (
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/golangci/golangci-lint v1.16.1-0.20190425135923-692dacb773b7
+	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/ipfs/dir-index-html v1.0.3
