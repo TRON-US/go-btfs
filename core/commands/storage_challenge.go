@@ -28,14 +28,15 @@ type StorageChallenge struct {
 	sync.Mutex
 
 	// Selections and generations for challenge
-	ID    string
-	CID   cid.Cid
-	Nonce string
-	Hash  string
+	ID    string  // Challenge ID (randomly generated on creation)
+	CID   cid.Cid // Chunk hash in multihash format (selected chunk on each challenge request)
+	Nonce string  // Random nonce for each challenge request (uuidv4)
+	Hash  string  // Generated SHA-256 hash (chunk bytes + nonce bytes) for proof-of-file-existence
 }
 
 // NewStorageChallenge creates a challenge object with new ID, resolves the cid path
 // and initializes underlying CIDs to be ready for challenge generation.
+// Used by storage client.
 func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
 	fileHash cid.Cid) (*StorageChallenge, error) {
 	chid, err := uuid.NewRandom()
@@ -55,9 +56,10 @@ func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface
 	return sc, nil
 }
 
-// NewStoreChallengeResponse creates (rebuilds) a plain challenge object with only initializing
+// NewStorageChallengeResponse creates (rebuilds) a plain challenge object with only initializing
 // the basic components.
-func NewStoreChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+// Used by storage host.
+func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
 	challengeID string) *StorageChallenge {
 	return &StorageChallenge{
 		Ctx:  ctx,
