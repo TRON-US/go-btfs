@@ -55,6 +55,18 @@ func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface
 	return sc, nil
 }
 
+// NewStoreChallengeResponse creates (rebuilds) a plain challenge object with only initializing
+// the basic components.
+func NewStoreChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	challengeID string) *StorageChallenge {
+	return &StorageChallenge{
+		Ctx:  ctx,
+		Node: node,
+		API:  api,
+		ID:   challengeID,
+	}
+}
+
 // getAllCIDsRecursive traverses the full DAG to find all cids and
 // stores them in allCIDs for quick challenge regeneration/retry.
 func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
@@ -117,6 +129,38 @@ func (sc *StorageChallenge) GenChallenge() error {
 		return err
 	}
 	// But use bytes for hashing
+	nb := [16]byte(nonce)
+	h.Write(nb[:])
+	sc.Hash = fmt.Sprintf("%x", h.Sum(nil))
+
+	return nil
+}
+
+// SolveChallenge solves the given challenge block hash + nonce's request
+// and records the solved/responding value in Hash field.
+func (sc *StorageChallenge) SolveChallenge(chHash cid.Cid, chNonce string) error {
+	sc.Lock()
+	defer sc.Unlock()
+
+	// Fetch the raw data
+	r, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(chHash))
+	if err != nil {
+		return err
+	}
+	sc.CID = chHash
+
+	// Decode nonce
+	nonce, err := uuid.Parse(chNonce)
+	if err != nil {
+		return err
+	}
+	sc.Nonce = chNonce
+
+	// Re-hash to solve challenge
+	h := sha256.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return err
+	}
 	nb := [16]byte(nonce)
 	h.Write(nb[:])
 	sc.Hash = fmt.Sprintf("%x", h.Sum(nil))
