@@ -28,6 +28,7 @@ import (
 
 const (
 	nBitsForKeypairDefault = 2048
+	defaultEntropy         = 128
 	mnemonicLength         = 12
 	bitsOptionName         = "bits"
 	emptyRepoOptionName    = "empty-repo"
@@ -64,7 +65,7 @@ environment variable:
 		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(nBitsForKeypairDefault),
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
-		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is ECDSA"),
+		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is ECDSA"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
 		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
 		cmds.StringOption(seedOptionName, "s", "Import seed phrase"),
@@ -126,43 +127,26 @@ environment variable:
 		}
 
 		importKey, _ := req.Options[importKeyOptionName].(string)
-
 		keyType, _ := req.Options[keyTypeOptionName].(string)
-		if keyType == "" {
-			keyType = ecdsa
-		} else if importKey != "" {
-			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
-		}
-
 		seedPhrase, _ := req.Options[seedOptionName].(string)
 		mnemonicLen := len(strings.Split(seedPhrase, ","))
 		mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-		if seedPhrase != "" {
+		if importKey != "" && keyType != "" {
+			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+		} else if seedPhrase != "" {
 			if mnemonicLen != mnemonicLength {
 				return fmt.Errorf("mnemonic needs to contain 12 words")
 			}
+			fmt.Println("Generating TRON key with BIP39 seed phrase...")
+			importKey = generatePrivKeyUsingBIP39(mnemonic)
+		}
 
-			/*
-				BIP32 uses path derivation to generate a private key.
-				The path derivation process is split into simple and hardened derivation.
-				go-bip32 does not explicitly support hardened derication, and therefore
-				I add bip32.FirstHardenedChild to the path.
-
-				Path is copied from TronLink implementation: "m/44'/195'/0'/0/0",
-				with  (') indicating the hardened path.
-			*/
-			seed := bip39.NewSeed(mnemonic, "")
-			masterKey, _ := bip32.NewMasterKey(seed)
-
-			childKey, _ := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
-			childKey2, _ := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
-			childKey3, _ := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
-			childKey4, _ := childKey3.NewChildKey(0)
-			childKey5, _ := childKey4.NewChildKey(0)
-
-			encoding := childKey5.Key
-			importKey = hex.EncodeToString(encoding)
+		if keyType == "" {
+			keyType = ecdsa
+		} else if keyType == "BIP39" {
+			fmt.Println("Generating TRON key with BIP39 seed phrase...")
+			importKey = generatePrivKeyUsingBIP39("")
 		}
 
 		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, rmOnUnpin)
@@ -172,6 +156,35 @@ environment variable:
 var errRepoExists = errors.New(`btfs configuration file already exists!
 Reinitializing would overwrite your keys.
 `)
+
+func generatePrivKeyUsingBIP39(mnemonic string) string {
+	if mnemonic == "" {
+		entropy, _ := bip39.NewEntropy(defaultEntropy)
+		mnemonic, _ = bip39.NewMnemonic(entropy)
+	}
+
+	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
+	seed := bip39.NewSeed(mnemonic, "")
+
+	masterKey, _ := bip32.NewMasterKey(seed)
+	publicKey := masterKey.PublicKey()
+
+	childKey, _ := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
+	childKey2, _ := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
+	childKey3, _ := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
+	childKey4, _ := childKey3.NewChildKey(0)
+	childKey5, _ := childKey4.NewChildKey(0)
+
+	encoding := childKey5.Key
+	importKey := hex.EncodeToString(encoding)
+
+	// Display mnemonic and keys
+	fmt.Println("Mnemonic: ", mnemonic)
+	fmt.Println("Tron private key: ", importKey)
+	fmt.Println("Master public key: ", publicKey)
+
+	return importKey
+}
 
 func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 	var profiles []string
