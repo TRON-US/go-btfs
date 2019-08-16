@@ -38,6 +38,9 @@ BASIC COMMANDS
   ls <ref>      List links from an object
   refs <ref>    List hashes of links from an object
 
+BTFS COMMANDS
+  storage       Store a file in nodes
+
 DATA STRUCTURE COMMANDS
   block         Interact with raw blocks in the datastore
   object        Interact with raw dag nodes
