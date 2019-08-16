@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	mountIPFSPathOptionName = "ipfs-path"
-	mountIPNSPathOptionName = "ipns-path"
+	mountIPFSPathOptionName = "btfs-path"
+	mountIPNSPathOptionName = "btns-path"
 )
 
 var MountCmd = &cmds.Command{

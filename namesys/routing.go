@@ -118,7 +118,7 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 				// check for old style record:
 				if valh, err := mh.Cast(entry.GetValue()); err == nil {
 					// Its an old style multihash record
-					log.Debugf("encountered CIDv0 ipns entry: %s", valh)
+					log.Debugf("encountered CIDv0 btns entry: %s", valh)
 					p = path.FromCid(cid.NewCidV0(valh))
 				} else {
 					// Not a multihash, probably a new style record

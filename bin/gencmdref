@@ -13,7 +13,7 @@ def run(cmd):
 def main():
   lines = [l.strip() for l in sys.stdin]
 
-  print '# ipfs command reference'
+  print '# btfs command reference'
   print ''
   print 'generated on', datetime.datetime.now()
   print ''
@@ -31,7 +31,7 @@ def main():
 
 if __name__ == '__main__':
   if '-h' in sys.argv or '--help' in sys.argv:
-    print 'usage: ipfs commands | %s >cmdref.md' % sys.argv[0]
+    print 'usage: btfs commands | %s >cmdref.md' % sys.argv[0]
     print 'outputs all commands with --help to a markdown file'
     exit(0)
 

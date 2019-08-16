@@ -30,13 +30,13 @@ var ResolveCmd = &cmds.Command{
 		Tagline: "Resolve the value of names to BTFS.",
 		ShortDescription: `
 There are a number of mutable name protocols that can link among
-themselves and into IPNS. This command accepts any of these
+themselves and into BTNS. This command accepts any of these
 identifiers and resolves them to the referenced item.
 `,
 		LongDescription: `
 There are a number of mutable name protocols that can link among
-themselves and into IPNS. For example IPNS references can (currently)
-point at an BTFS object, and DNS links can point at other DNS links, IPNS
+themselves and into BTNS. For example BTNS references can (currently)
+point at an BTFS object, and DNS links can point at other DNS links, BTNS
 entries, or BTFS objects. This command accepts any of these
 identifiers and resolves them to the referenced item.
 
@@ -44,17 +44,17 @@ EXAMPLES
 
 Resolve the value of your identity:
 
-  $ btfs resolve /ipns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  $ btfs resolve /btns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
   /btfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
 
 Resolve the value of another name:
 
-  $ btfs resolve /ipns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
-  /ipns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  $ btfs resolve /btns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
+  /btns/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
 
 Resolve the value of another name recursively:
 
-  $ btfs resolve -r /ipns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
+  $ btfs resolve -r /btns/QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n
   /btfs/Qmcqtw8FfrVSBaRmbWwHxt3AuySBhJLcvmFYi3Lbc4xnwj
 
 Resolve the value of an BTFS DAG path:

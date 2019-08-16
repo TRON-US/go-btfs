@@ -171,7 +171,7 @@ var ledgerCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Show the current ledger for a peer.",
 		ShortDescription: `
-The Bitswap decision engine tracks the number of bytes exchanged between IPFS
+The Bitswap decision engine tracks the number of bytes exchanged between BTFS
 nodes, and stores this information as a collection of ledgers. This command
 prints the ledger associated with a given peer.
 `,

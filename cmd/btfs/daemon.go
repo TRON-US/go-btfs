@@ -42,8 +42,8 @@ const (
 	enableGCKwd               = "enable-gc"
 	initOptionKwd             = "init"
 	initProfileOptionKwd      = "init-profile"
-	ipfsMountKwd              = "mount-ipfs"
-	ipnsMountKwd              = "mount-ipns"
+	ipfsMountKwd              = "mount-btfs"
+	ipnsMountKwd              = "mount-btns"
 	migrateKwd                = "migrate"
 	mountKwd                  = "mount"
 	offlineKwd                = "offline" // global option

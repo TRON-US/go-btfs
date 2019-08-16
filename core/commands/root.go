@@ -49,7 +49,7 @@ ADVANCED COMMANDS
   mount         Mount an BTFS read-only mountpoint
   resolve       Resolve any type of name
   name          Publish and resolve BTNS names
-  key           Create and list IPNS name keypairs
+  key           Create and list BTNS name keypairs
   dns           Resolve DNS links
   pin           Pin objects to local storage
   repo          Manipulate the BTFS repository

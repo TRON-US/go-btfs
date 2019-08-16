@@ -28,7 +28,7 @@ var IpnsPubsubCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "BTNS pubsub management",
 		ShortDescription: `
-Manage and inspect the state of the IPNS pubsub resolver.
+Manage and inspect the state of the BTNS pubsub resolver.
 
 Note: this command is experimental and subject to change as the system is refined
 `,
@@ -42,7 +42,7 @@ Note: this command is experimental and subject to change as the system is refine
 
 var ipnspsStateCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Query the state of IPNS pubsub",
+		Tagline: "Query the state of BTNS pubsub",
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -79,18 +79,18 @@ var ipnspsSubsCmd = &cmds.Command{
 		}
 
 		if n.PSRouter == nil {
-			return cmds.Errorf(cmds.ErrClient, "IPNS pubsub subsystem is not enabled")
+			return cmds.Errorf(cmds.ErrClient, "BTNS pubsub subsystem is not enabled")
 		}
 		var paths []string
 		for _, key := range n.PSRouter.GetSubscriptions() {
 			ns, k, err := record.SplitKey(key)
-			if err != nil || ns != "ipns" {
+			if err != nil || ns != "btns" {
 				// Not necessarily an error.
 				continue
 			}
 			pid, err := peer.IDFromString(k)
 			if err != nil {
-				log.Errorf("ipns key not a valid peer ID: %s", err)
+				log.Errorf("btns key not a valid peer ID: %s", err)
 				continue
 			}
 			paths = append(paths, "/btns/"+peer.IDB58Encode(pid))
@@ -115,7 +115,7 @@ var ipnspsCancelCmd = &cmds.Command{
 		}
 
 		if n.PSRouter == nil {
-			return cmds.Errorf(cmds.ErrClient, "IPNS pubsub subsystem is not enabled")
+			return cmds.Errorf(cmds.ErrClient, "BTNS pubsub subsystem is not enabled")
 		}
 
 		name := req.Arguments[0]
