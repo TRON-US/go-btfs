@@ -27,7 +27,7 @@ var CatCmd = &cmds.Command{
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "The path to the BTFS object(s) to be outputted.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "The path to the BTFS object(s) to be outputted.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(offsetOptionName, "o", "Byte offset to begin reading from."),

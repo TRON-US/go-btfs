@@ -300,7 +300,7 @@ var swarmAddrsLocalCmd = &cmds.Command{
 		for _, addr := range maddrs {
 			saddr := addr.String()
 			if showid {
-				saddr = path.Join(saddr, "ipfs", self.ID().Pretty())
+				saddr = path.Join(saddr, "btfs", self.ID().Pretty())
 			}
 			addrs = append(addrs, saddr)
 		}
@@ -353,7 +353,7 @@ var swarmConnectCmd = &cmds.Command{
 
 The address format is an BTFS multiaddr:
 
-btfs swarm connect /ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+btfs swarm connect /ip4/104.131.131.82/tcp/4001/btfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 `,
 	},
 	Arguments: []cmds.Argument{
@@ -398,7 +398,7 @@ var swarmDisconnectCmd = &cmds.Command{
 'btfs swarm disconnect' closes a connection to a peer address. The address
 format is an BTFS multiaddr:
 
-btfs swarm disconnect /ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+btfs swarm disconnect /ip4/104.131.131.82/tcp/4001/btfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 
 The disconnect is not permanent; if btfs needs to talk to that address later,
 it will reconnect.
@@ -480,7 +480,7 @@ func resolveAddresses(ctx context.Context, addrs []string) ([]ma.Multiaddr, erro
 			return nil, err
 		}
 
-		// check whether address ends in `ipfs/Qm...`
+		// check whether address ends in `btfs/Qm...`
 		if _, last := ma.SplitLast(maddr); last.Protocol().Code == ma.P_IPFS {
 			maddrs = append(maddrs, maddr)
 			continue
@@ -493,7 +493,7 @@ func resolveAddresses(ctx context.Context, addrs []string) ([]ma.Multiaddr, erro
 				resolveErrC <- err
 				return
 			}
-			// filter out addresses that still doesn't end in `ipfs/Qm...`
+			// filter out addresses that still doesn't end in `btfs/Qm...`
 			found := 0
 			for _, raddr := range raddrs {
 				if _, last := ma.SplitLast(raddr); last != nil && last.Protocol().Code == ma.P_IPFS {

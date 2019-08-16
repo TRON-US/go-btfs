@@ -17,7 +17,7 @@ import (
 	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 )
 
-var log = logging.Logger("core/commands/ipns")
+var log = logging.Logger("core/commands/btns")
 
 type ResolvedPath struct {
 	Path path.Path
@@ -33,47 +33,47 @@ const (
 
 var IpnsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Resolve IPNS names.",
+		Tagline: "Resolve BTNS names.",
 		ShortDescription: `
-IPNS is a PKI namespace, where names are the hashes of public keys, and
+BTNS is a PKI namespace, where names are the hashes of public keys, and
 the private key enables publishing new (signed) values. In both publish
 and resolve, the default name used is the node's own PeerID,
 which is the hash of its public key.
 `,
 		LongDescription: `
-IPNS is a PKI namespace, where names are the hashes of public keys, and
+BTNS is a PKI namespace, where names are the hashes of public keys, and
 the private key enables publishing new (signed) values. In both publish
 and resolve, the default name used is the node's own PeerID,
 which is the hash of its public key.
 
-You can use the 'ipfs key' commands to list and generate more names and their
+You can use the 'btfs key' commands to list and generate more names and their
 respective keys.
 
 Examples:
 
 Resolve the value of your name:
 
-  > ipfs name resolve
-  /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  > btfs name resolve
+  /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
 
 Resolve the value of another name:
 
-  > ipfs name resolve QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
-  /ipfs/QmSiTko9JZyabH56y2fussEt1A5oDqsFXB3CkvAqraFryz
+  > btfs name resolve QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+  /btfs/QmSiTko9JZyabH56y2fussEt1A5oDqsFXB3CkvAqraFryz
 
 Resolve the value of a dnslink:
 
-  > ipfs name resolve ipfs.io
-  /ipfs/QmaBvfZooxWkrv7D3r8LS9moNjzD2o525XMZze69hhoxf5
+  > btfs name resolve btfs.io
+  /btfs/QmaBvfZooxWkrv7D3r8LS9moNjzD2o525XMZze69hhoxf5
 
 `,
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("name", false, false, "The IPNS name to resolve. Defaults to your node's peerID."),
+		cmds.StringArg("name", false, false, "The BTNS name to resolve. Defaults to your node's peerID."),
 	},
 	Options: []cmds.Option{
-		cmds.BoolOption(recursiveOptionName, "r", "Resolve until the result is not an IPNS name.").WithDefault(true),
+		cmds.BoolOption(recursiveOptionName, "r", "Resolve until the result is not an BTNS name.").WithDefault(true),
 		cmds.BoolOption(nocacheOptionName, "n", "Do not use cached entries."),
 		cmds.UintOption(dhtRecordCountOptionName, "dhtrc", "Number of records to request for DHT resolution."),
 		cmds.StringOption(dhtTimeoutOptionName, "dhtt", "Max time to collect values during DHT resolution eg \"30s\". Pass 0 for no timeout."),

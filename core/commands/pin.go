@@ -60,7 +60,7 @@ var addPinCmd = &cmds.Command{
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "Path to object(s) to be pinned.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "Path to object(s) to be pinned.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively pin the object linked to by the specified object(s).").WithDefault(true),
@@ -208,7 +208,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "Path to object(s) to be unpinned.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "Path to object(s) to be unpinned.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively unpin the object linked to by the specified object(s).").WithDefault(true),
@@ -337,7 +337,7 @@ Example:
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", false, true, "Path to object(s) to be listed."),
+		cmds.StringArg("btfs-path", false, true, "Path to object(s) to be listed."),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(pinTypeOptionName, "t", "The type of pinned keys to list. Can be \"direct\", \"indirect\", \"recursive\", or \"all\".").WithDefault("all"),

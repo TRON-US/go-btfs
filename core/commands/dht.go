@@ -431,7 +431,7 @@ Outputs the best value for the given key.
 
 There may be several different values for a given key stored in the routing
 system; in this context 'best' means the record that is most desirable. There is
-no one metric for 'best': it depends entirely on the key type. For IPNS, 'best'
+no one metric for 'best': it depends entirely on the key type. For BTNS, 'best'
 is the record that is both valid and has the highest sequence number (freshest).
 Different key types can specify other 'best' rules.
 `,
@@ -518,13 +518,13 @@ var putValueDhtCmd = &cmds.Command{
 Given a key of the form /foo/bar and a value of any form, this will write that
 value to the routing system with that key.
 
-Keys have two parts: a keytype (foo) and the key name (bar). IPNS uses the
-/ipns keytype, and expects the key name to be a Peer ID. IPNS entries are
+Keys have two parts: a keytype (foo) and the key name (bar). BTNS uses the
+/btns keytype, and expects the key name to be a Peer ID. BTNS entries are
 specifically formatted (protocol buffer).
 
 You may only use keytypes that are supported in your btfs binary: currently
-this is only /ipns. Unless you have a relatively deep understanding of the
-go-ipfs routing internals, you likely want to be using 'btfs name publish' instead
+this is only /btns. Unless you have a relatively deep understanding of the
+go-btfs routing internals, you likely want to be using 'btfs name publish' instead
 of this.
 
 Value is arbitrary text. Standard input can be used to provide value.
