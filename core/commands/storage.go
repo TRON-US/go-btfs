@@ -6,11 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core"
 	"strconv"
 	"strings"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/ledger"
@@ -37,7 +37,7 @@ var (
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "pay to store a file on btfs node.",
-		ShortDescription:  `
+		ShortDescription: `
 To UPLOAD a file using select hosts: 
     using -m with "custom" mode, and put host identifier in -l, multiple hosts separate by ','
 For example:
@@ -382,4 +382,3 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 	}
 	return cid, nil
 }
-
