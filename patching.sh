@@ -14,16 +14,16 @@ if ! patch -R -s -f --dry-run $patchdir/path.go < ./patches/go-path-v0.0.4-path.
     patch $patchdir/path.go < ./patches/go-path-v0.0.4-path.go.patch;
 fi
 
-# patching $GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.0.8
+# patching $GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0
 patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0
 chmod -R 777 $patchdir
 # 1) path.go
-if ! patch -R -s -f --dry-run $patchdir/path/path.go < ./patches/interface-go-ipfs-core-v0.0.8-path.go.patch 1>/dev/null; then
-    patch $patchdir/path/path.go < ./patches/interface-go-ipfs-core-v0.0.8-path.go.patch;
+if ! patch -R -s -f --dry-run $patchdir/path/path.go < ./patches/interface-go-ipfs-core-v0.1.0-path.go.patch 1>/dev/null; then
+    patch $patchdir/path/path.go < ./patches/interface-go-ipfs-core-v0.1.0-path.go.patch;
 fi
 # 2) errors.go
-if ! patch -R -s -f --dry-run $patchdir/errors.go < ./patches/interface-go-ipfs-core-v0.0.8-errors.go.patch 1>/dev/null; then
-    patch $patchdir/errors.go < ./patches/interface-go-ipfs-core-v0.0.8-errors.go.patch;
+if ! patch -R -s -f --dry-run $patchdir/errors.go < ./patches/interface-go-ipfs-core-v0.1.0-errors.go.patch 1>/dev/null; then
+    patch $patchdir/errors.go < ./patches/interface-go-ipfs-core-v0.1.0-errors.go.patch;
 fi
 
 # patching $GOPATH/pkg/mod/github.com/libp2p/go-libp2p-kad-dht@v0.0.13
@@ -48,7 +48,7 @@ if ! patch -R -s -f --dry-run $patchdir/record.go < ./patches/go-ipns-v.0.0.1-re
 fi
 
 # patching test
-patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.0.8
+patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0
 cp ./patches/test/interface-go-ipfs-core.patch $patchdir
 cd $patchdir
 if ! patch -p1 -R -s -f --dry-run < interface-go-ipfs-core.patch 1>/dev/null; then
