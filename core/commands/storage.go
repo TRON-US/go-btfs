@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/ledger"
@@ -34,6 +35,19 @@ var (
 )
 
 var StorageCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "pay to store a file on btfs node.",
+		ShortDescription: `
+To UPLOAD a file using select hosts: 
+    using -m with "custom" mode, and put host identifier in -l, multiple hosts separate by ','
+For example:
+
+    btfs storage upload -m=custom -l=host_address1,address2
+
+Or it will select a node based on reputation for you.
+And receiving a Collateral Proof as evidence when selected node stores your file.
+	`,
+	},
 	Subcommands: map[string]*cmds.Command{
 		"upload": storageUploadCmd,
 	},
@@ -109,12 +123,7 @@ var storageUploadCmd = &cmds.Command{
 		}
 
 		// call server
-		remoteCall := &remote.P2PRemoteCall{
-			Node: n,
-			ID:   pid,
-		}
-		argInit := []string{strconv.FormatInt(channelID.Id, 10), fileHash}
-		respBody, err := remoteCall.CallGet("/storage/upload/init", argInit)
+		respBody, err := p2pCall(n, pid, "/storage/upload/init", strconv.FormatInt(channelID.Id, 10), fileHash)
 		if err != nil {
 			return fmt.Errorf("fail to get response from: %s", err)
 		}
@@ -143,21 +152,8 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 
 		// build connection with ledger
-		clientConn, err := ledger.LedgerConnection()
-		defer ledger.CloseConnection(clientConn)
+		channelInfo, err := getChannelInfo(req.Context, cid)
 		if err != nil {
-			log.Error("fail to connect", err)
-			return err
-		}
-		ledgerClient := ledger.NewClient(clientConn)
-		cidInt64, err := strconv.ParseInt(cid, 10, 64)
-		if err != nil {
-			return fmt.Errorf("fail to convert channel ID to int64: %s", err)
-		}
-		channelID := ledgerPb.ChannelID{Id: cidInt64}
-		channelInfo, err := ledgerClient.GetChannelInfo(req.Context, &channelID)
-		if err != nil {
-			log.Error("fail to get channel info", err)
 			return err
 		}
 		log.Debug("Verified channel info: ", channelInfo)
@@ -174,19 +170,12 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 		_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
 		if err != nil {
-			log.Error("fail to get chunk file: \n", err)
 			return err
 		}
 
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
-		remoteCall := &remote.P2PRemoteCall{
-			Node: n,
-			ID:   pid,
-		}
-		argReqc := []string{hash}
-		reqcBody, err := remoteCall.CallGet("/storage/upload/reqc", argReqc)
+		reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", hash)
 		if err != nil {
-			log.Error("fail to remote call reqc", err)
 			return err
 		}
 		r := ChallengeRes{}
@@ -197,45 +186,21 @@ var storageUploadInitCmd = &cmds.Command{
 		// TODO: Verify ch to get CHR
 
 		// RemoteCall(user, CHID, CHR) to get signedPayment
-		argRespc := []string{hash, r.ID, r.Challenge}
-		signedPaymentBody, err := remoteCall.CallGet("/storage/upload/respc", argRespc)
+		signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", hash, r.ID, r.Challenge)
 		if err != nil {
-			log.Error("fail to get resp with signedPayment: ", err)
 			return err
 		}
 		var halfSignedChannelState ledgerPb.SignedChannelState
 		err = proto.Unmarshal(signedPaymentBody, &halfSignedChannelState)
 		if err != nil {
-			log.Error("fail to unmarshal signed payment: ", err)
-			return err
-		}
-		channelState := halfSignedChannelState.GetChannel()
-
-		// Verify payment
-		pk, err := pid.ExtractPublicKey()
-		if err != nil {
-			return err
-		}
-		ok, err = ledger.Verify(pk, channelState, halfSignedChannelState.GetFromSignature())
-		if err != nil || !ok {
-			log.Error("fail to verify channel state: ", err)
 			return err
 		}
 
-		// sign with private key
-		selfPrivKey := n.PrivateKey
-		sig, err := ledger.Sign(selfPrivKey, channelState)
-		if err != nil {
-			log.Error("fail to sign: ", err)
-			return err
-		}
-		halfSignedChannelState.ToSignature = sig
-		SignedchannelState := halfSignedChannelState
+		signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 
 		// Close channel
-		err = ledger.CloseChannel(req.Context, ledgerClient, &SignedchannelState)
+		err = ledger.CloseChannel(req.Context, signedchannelState)
 		if err != nil {
-			log.Error("fail to close channel: ", err)
 			return err
 		}
 		log.Info("Successfully close channel")
@@ -291,31 +256,16 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
-		fromAccount, err := ledger.NewAccount(n.PrivateKey.GetPublic(), 0)
+		channelState, err := prepareChannelState(n, pid)
 		if err != nil {
-			log.Error("fail to create payer account,", err)
 			return err
 		}
-		// prepare money receiver account
-		toPubKey, err := pid.ExtractPublicKey()
+
+		signedPayment, err := signChannelState(n.PrivateKey, channelState)
 		if err != nil {
-			log.Error("fail to extract public key from id: ", err)
 			return err
 		}
-		toAccount, err := ledger.NewAccount(toPubKey, price)
-		if err != nil {
-			log.Error("fail to create receiver account,", err)
-			return err
-		}
-		// create channel state wait for both side to agree on
-		channelState := ledger.NewChannelState(channelID, 0, fromAccount, toAccount)
-		// sign channel state
-		sig, err := ledger.Sign(n.PrivateKey, channelState)
-		if err != nil {
-			log.Error("fail to sign on channel state: ", err)
-			return err
-		}
-		signedPayment := ledger.NewSignedChannelState(channelState, sig, nil)
+
 		signedBytes, err := proto.Marshal(signedPayment)
 		if err != nil {
 			log.Error("fail to marshal signed payment: ", err)
@@ -324,6 +274,74 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 		r := bytes.NewReader(signedBytes)
 		return cmds.EmitOnce(res, r)
 	},
+}
+
+func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...string) ([]byte, error) {
+	remoteCall := &remote.P2PRemoteCall{
+		Node: n,
+		ID:   pid,
+	}
+	return remoteCall.CallGet(api, arg)
+}
+
+func getChannelInfo(ctx context.Context, cid string) (*ledgerPb.ChannelInfo, error) {
+	clientConn, err := ledger.LedgerConnection()
+	defer ledger.CloseConnection(clientConn)
+	if err != nil {
+		return nil, err
+	}
+	ledgerClient := ledger.NewClient(clientConn)
+	cidInt64, err := strconv.ParseInt(cid, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	channelID := ledgerPb.ChannelID{Id: cidInt64}
+	return ledgerClient.GetChannelInfo(ctx, &channelID)
+}
+
+func verifyAndSign(pid peer.ID, n *core.IpfsNode, signedChannelState *ledgerPb.SignedChannelState) (*ledgerPb.SignedChannelState, error) {
+	pk, err := pid.ExtractPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	channelState := signedChannelState.GetChannel()
+	ok, err := ledger.Verify(pk, channelState, signedChannelState.GetFromSignature())
+	if err != nil || !ok {
+		return nil, fmt.Errorf("fail to verify channel state, %v", err)
+	}
+
+	selfPrivKey := n.PrivateKey
+	sig, err := ledger.Sign(selfPrivKey, channelState)
+	if err != nil {
+		return nil, err
+	}
+	signedChannelState.ToSignature = sig
+	return signedChannelState, nil
+}
+
+func prepareChannelState(n *core.IpfsNode, pid peer.ID) (*ledgerPb.ChannelState, error) {
+	fromAccount, err := ledger.NewAccount(n.PrivateKey.GetPublic(), 0)
+	if err != nil {
+		return nil, err
+	}
+	toPubKey, err := pid.ExtractPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	toAccount, err := ledger.NewAccount(toPubKey, price)
+	if err != nil {
+		return nil, err
+	}
+	// create channel state wait for both side to agree on
+	return ledger.NewChannelState(channelID, 0, fromAccount, toAccount), nil
+}
+
+func signChannelState(privKey ic.PrivKey, channelState *ledgerPb.ChannelState) (*ledgerPb.SignedChannelState, error) {
+	sig, err := ledger.Sign(privKey, channelState)
+	if err != nil {
+		return nil, err
+	}
+	return ledger.NewSignedChannelState(channelState, sig, nil), nil
 }
 
 func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.PrivKey, recvPubKey ic.PubKey, amount int64) (*ledgerPb.ChannelID, error) {
@@ -359,16 +377,4 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 		return nil, err
 	}
 	return cid, nil
-}
-
-func stringPeerIdToPublicKey(str string) (ic.PubKey, error) {
-	_, pid, err := ParsePeerParam(str)
-	if err != nil {
-		return nil, err
-	}
-	pubKey, err := pid.ExtractPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	return pubKey, nil
 }
