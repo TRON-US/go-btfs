@@ -1,0 +1,84 @@
+FROM golang:1.12-stretch
+MAINTAINER TRON-US <support@tron.network>
+# Dockerfile.testing will build an image that contains the go-btfs source and binary.
+# It is quite large.  Its primary use case is to run the unit tests and test/sharness tests.
+# Use Dockerfile to run a btfs daemon instead
+ENV SRC_DIR /go-btfs
+
+# Download packages first so they can be cached.
+COPY go.mod go.sum $SRC_DIR/
+RUN cd $SRC_DIR \
+  && go mod download
+
+COPY . $SRC_DIR
+
+# Newer git submodule uses "absorbgitdirs" option by default which does not
+# include .git folder inside a submodule.
+# Use a build time variable $gitdir to specify the location of the actual .git folder.
+ARG gitdir=.git
+RUN test -d $SRC_DIR/.git \
+  || mv $SRC_DIR/$gitdir $SRC_DIR/.git
+
+# Install path
+RUN apt-get update && apt-get install -y patch
+
+# Build the thing.
+# Also: fix getting HEAD commit hash via git rev-parse.
+RUN cd $SRC_DIR \
+  && mkdir .git/objects \
+  && make build
+
+ENV SUEXEC_VERSION v0.2
+ENV TINI_VERSION v0.16.1
+RUN set -x \
+  && cd /tmp \
+  && git clone https://github.com/ncopa/su-exec.git \
+  && cd su-exec \
+  && git checkout -q $SUEXEC_VERSION \
+  && make \
+  && cd /tmp \
+  && wget -q -O tini https://github.com/krallin/tini/releases/download/$TINI_VERSION/tini \
+  && chmod +x tini
+
+# Get the TLS CA certificates, they're not provided by busybox.
+RUN apt-get update && apt-get install -y ca-certificates
+
+# Install FUSE
+RUN apt-get update && apt-get install -y fuse
+
+# Do this in the current container
+RUN mv /tmp/su-exec/su-exec /sbin/su-exec
+RUN mv /bin/fusermount /usr/local/bin/fusermount
+
+# Add suid bit on fusermount so it will run properly
+RUN chmod 4755 /usr/local/bin/fusermount
+
+# Create the fs-repo directory and switch to a non-privileged user.
+ENV BTFS_PATH /data/btfs
+RUN mkdir -p $BTFS_PATH \
+  && adduser --disabled-password --home $BTFS_PATH --uid 1000 --ingroup users btfs \
+  && chown btfs:users $BTFS_PATH
+
+# Create mount points for `btfs mount` command
+RUN mkdir /btfs /btns \
+  && chown btfs:users /btfs /btns
+
+# Change owner of go-btfs source and go folder
+RUN chown -R btfs:users /go \ 
+  && chown -R btfs:users /go-btfs
+
+# Expose the fs-repo as a volume.
+# start_btfs initializes an fs-repo if none is mounted.
+# Important this happens after the USER directive so permission are correct.
+VOLUME $BTFS_PATH
+
+# The default logging level
+ENV BTFS_LOGGING ""
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Commands are run as user btfs not root
+# Comment line below out if you want to run as root
+ENTRYPOINT ["/sbin/su-exec", "btfs:1000"]
+
+# by default lets run the make test
+CMD cd /go-btfs && make test 

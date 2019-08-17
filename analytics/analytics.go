@@ -10,8 +10,8 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/ipfs/go-bitswap"
-	ic "github.com/libp2p/go-libp2p-crypto"
 	logging "github.com/ipfs/go-log"
+	ic "github.com/libp2p/go-libp2p-crypto"
 
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -44,20 +44,20 @@ type dataCollection struct {
 type dataBag struct {
 	PublicKey []byte `json:"public_key"`
 	Signature []byte `json:"signature"`
-	Payload []byte `json:"payload"`
+	Payload   []byte `json:"payload"`
 }
 
 type healthData struct {
-	NodeId 			string `json:"node_id"`
-	BTFSVersion 	string `json:"btfs_version"`
-	FailurePoint 	string `json:"failure_point"`
+	NodeId       string `json:"node_id"`
+	BTFSVersion  string `json:"btfs_version"`
+	FailurePoint string `json:"failure_point"`
 }
 
 //Server URL for data collection
 const (
 	statusServerDomain = "https://db.btfs.io"
-	routeMetrics	   = "/metrics"
-	routeHealth		   = "/health"
+	routeMetrics       = "/metrics"
+	routeHealth        = "/health"
 )
 
 // other constants
@@ -83,13 +83,19 @@ func durationToSeconds(duration time.Duration) uint64 {
 
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion string) {
+	var log = logging.Logger("cmd/btfs")
+
 	dc := new(dataCollection)
-	infoStats, _ := cpu.Info()
+	infoStats, err := cpu.Info()
+	if err == nil {
+		dc.CPUInfo = infoStats[0].ModelName
+	} else {
+		log.Warning(err.Error())
+	}
 
 	dc.node = n
 	dc.startTime = time.Now()
 	dc.NodeID = n.Identity.Pretty()
-	dc.CPUInfo = infoStats[0].ModelName
 	dc.BTFSVersion = BTFSVersion
 	dc.OSType = runtime.GOOS
 	dc.ArchType = runtime.GOARCH
@@ -100,13 +106,17 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 func (dc *dataCollection) update() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	cpus, _ := cpu.Percent(0, false)
-	storage, _ := dc.node.Repo.GetStorageUsage()
 
 	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
-	dc.CPUUsed = cpus[0]
+	cpus, e := cpu.Percent(0, false)
+	if e == nil {
+		dc.CPUUsed = cpus[0]
+	}
 	dc.MemUsed = m.HeapAlloc / kilobyte
-	dc.StorageUsed = storage / kilobyte
+	storage, e := dc.node.Repo.GetStorageUsage()
+	if e == nil {
+		dc.StorageUsed = storage / kilobyte
+	}
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
 	if !ok {
@@ -167,11 +177,10 @@ func (dc *dataCollection) sendData() {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
+		res.Body.Close()
 		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
-
-	defer res.Body.Close()
 }
 
 func (dc *dataCollection) collectionAgent() {
@@ -202,9 +211,8 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
-	defer res.Body.Close()
-
 	if err != nil {
+		res.Body.Close()
 		log.Warning(err.Error())
 		return
 	}

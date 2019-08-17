@@ -34,6 +34,10 @@ Available profiles:
 
   Restores default network settings. Inverse profile of the `test` profile.
 
+- `announce-public`
+
+  Announce public IP when running on cloud VM or local network.
+
 - `badgerds`
 
   Replaces default datastore configuration with experimental badger datastore.

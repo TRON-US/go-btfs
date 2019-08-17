@@ -31,7 +31,7 @@ func TestRoutingResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := path.FromString("/ipfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
+	h := path.FromString("/btfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
 	err = publisher.Publish(context.Background(), privk, h)
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +70,7 @@ func TestPrexistingExpiredRecord(t *testing.T) {
 	}
 
 	// Make an expired record and put it in the datastore
-	h := path.FromString("/ipfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
+	h := path.FromString("/btfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
 	eol := time.Now().Add(time.Hour * -1)
 
 	entry, err := ipns.Create(privk, []byte(h), 0, eol)
@@ -112,7 +112,7 @@ func TestPrexistingRecord(t *testing.T) {
 	}
 
 	// Make a good record and put it in the datastore
-	h := path.FromString("/ipfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
+	h := path.FromString("/btfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
 	eol := time.Now().Add(time.Hour)
 	entry, err := ipns.Create(privk, []byte(h), 0, eol)
 	if err != nil {

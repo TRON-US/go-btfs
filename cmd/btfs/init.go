@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,13 +18,18 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	"github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs-config"
 	"github.com/ipfs/go-ipfs-files"
+
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
 )
 
 const (
 	nBitsForKeypairDefault = 2048
+	defaultEntropy         = 128
+	mnemonicLength         = 12
 	bitsOptionName         = "bits"
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
@@ -31,6 +37,7 @@ const (
 	keyTypeDefault         = "Secp256k1"
 	importKeyOptionName    = "import"
 	rmOnUnpinOptionName    = "rm-on-unpin"
+	seedOptionName         = "seed"
 )
 
 var initCmd = &cmds.Command{
@@ -58,9 +65,10 @@ environment variable:
 		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(nBitsForKeypairDefault),
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
-		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA. By default is Secp256k1"),
+		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is Secp256k1"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
 		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
+		cmds.StringOption(seedOptionName, "s", "Import seed phrase"),
 
 		// TODO need to decide whether to expose the override as a file or a
 		// directory. That is: should we allow the user to also specify the
@@ -119,12 +127,26 @@ environment variable:
 		}
 
 		importKey, _ := req.Options[importKeyOptionName].(string)
-
 		keyType, _ := req.Options[keyTypeOptionName].(string)
+		seedPhrase, _ := req.Options[seedOptionName].(string)
+		mnemonicLen := len(strings.Split(seedPhrase, ","))
+		mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
+
+		if importKey != "" && keyType != "" {
+			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+		} else if seedPhrase != "" {
+			if mnemonicLen != mnemonicLength {
+				return fmt.Errorf("mnemonic needs to contain 12 words")
+			}
+			fmt.Println("Generating TRON key with BIP39 seed phrase...")
+			importKey = generatePrivKeyUsingBIP39(mnemonic)
+		}
+
 		if keyType == "" {
 			keyType = keyTypeDefault
-		} else if importKey != "" {
-			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+		} else if keyType == "BIP39" {
+			fmt.Println("Generating TRON key with BIP39 seed phrase...")
+			importKey = generatePrivKeyUsingBIP39("")
 		}
 
 		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, rmOnUnpin)
@@ -134,6 +156,35 @@ environment variable:
 var errRepoExists = errors.New(`btfs configuration file already exists!
 Reinitializing would overwrite your keys.
 `)
+
+func generatePrivKeyUsingBIP39(mnemonic string) string {
+	if mnemonic == "" {
+		entropy, _ := bip39.NewEntropy(defaultEntropy)
+		mnemonic, _ = bip39.NewMnemonic(entropy)
+	}
+
+	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
+	seed := bip39.NewSeed(mnemonic, "")
+
+	masterKey, _ := bip32.NewMasterKey(seed)
+	publicKey := masterKey.PublicKey()
+
+	childKey, _ := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
+	childKey2, _ := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
+	childKey3, _ := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
+	childKey4, _ := childKey3.NewChildKey(0)
+	childKey5, _ := childKey4.NewChildKey(0)
+
+	encoding := childKey5.Key
+	importKey := hex.EncodeToString(encoding)
+
+	// Display mnemonic and keys
+	fmt.Println("Mnemonic: ", mnemonic)
+	fmt.Println("Tron private key: ", importKey)
+	fmt.Println("Master public key: ", publicKey)
+
+	return importKey
+}
 
 func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 	var profiles []string
@@ -232,11 +283,20 @@ func addDefaultAssets(out io.Writer, repoRoot string) error {
 		return err
 	}
 
-	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
+	buildCfg := &core.BuildCfg{Repo: r}
+	nd, err := core.NewNode(ctx, buildCfg)
 	if err != nil {
 		return err
 	}
 	defer nd.Close()
+
+	// announce public ip by default for btfs nodes running on cloud vm
+	// or local network with NAT
+	err = buildCfg.AnnouncePublicIp()
+	if err != nil {
+		// don't quit here, user can manually add to config later
+		fmt.Fprintf(out, "announce public ip failed.\n")
+	}
 
 	dkey, err := assets.SeedInitDocs(nd)
 	if err != nil {
