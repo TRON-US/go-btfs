@@ -152,13 +152,7 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 
 		// build connection with ledger
-		clientConn, err := ledger.LedgerConnection()
-		defer ledger.CloseConnection(clientConn)
-		if err != nil {
-			return err
-		}
-		ledgerClient := ledger.NewClient(clientConn)
-		channelInfo, err := getChannelInfo(req.Context, ledgerClient, cid)
+		channelInfo, err := getChannelInfo(req.Context, cid)
 		if err != nil {
 			return err
 		}
@@ -202,10 +196,10 @@ var storageUploadInitCmd = &cmds.Command{
 			return err
 		}
 
-		SignedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
+		signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 
 		// Close channel
-		err = ledger.CloseChannel(req.Context, ledgerClient, SignedchannelState)
+		err = ledger.CloseChannel(req.Context, signedchannelState)
 		if err != nil {
 			return err
 		}
@@ -287,14 +281,16 @@ func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...string) ([]byte, 
 		Node: n,
 		ID:   pid,
 	}
-	var args []string
-	for _, str := range arg {
-		args = append(args, str)
-	}
-	return remoteCall.CallGet(api, args)
+	return remoteCall.CallGet(api, arg)
 }
 
-func getChannelInfo(ctx context.Context, ledgerClient ledgerPb.ChannelsClient, cid string) (*ledgerPb.ChannelInfo, error) {
+func getChannelInfo(ctx context.Context, cid string) (*ledgerPb.ChannelInfo, error) {
+	clientConn, err := ledger.LedgerConnection()
+	defer ledger.CloseConnection(clientConn)
+	if err != nil {
+		return nil, err
+	}
+	ledgerClient := ledger.NewClient(clientConn)
 	cidInt64, err := strconv.ParseInt(cid, 10, 64)
 	if err != nil {
 		return nil, err

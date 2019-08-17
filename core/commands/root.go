@@ -39,7 +39,7 @@ BASIC COMMANDS
   refs <ref>    List hashes of links from an object
 
 BTFS COMMANDS
-  storage       Store a file in nodes
+  storage       Subcommand upload store a file in nodes (feature will be expanded)
 
 DATA STRUCTURE COMMANDS
   block         Interact with raw blocks in the datastore
