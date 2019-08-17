@@ -15,13 +15,13 @@ func TestResolveNoComponents(t *testing.T) {
 		t.Fatal("Should have constructed a mock node", err)
 	}
 
-	_, err = resolve.Resolve(n.Context(), n.Namesys, n.Resolver, path.Path("/ipns/"))
-	if err.Error() != "invalid path \"/ipns/\": ipns path missing IPNS ID" {
+	_, err = resolve.Resolve(n.Context(), n.Namesys, n.Resolver, path.Path("/btns/"))
+	if err.Error() != "invalid path \"/btns/\": btns path missing BTNS ID" {
 		t.Error("Should error with no components (/ipns/).", err)
 	}
 
-	_, err = resolve.Resolve(n.Context(), n.Namesys, n.Resolver, path.Path("/ipfs/"))
-	if err.Error() != "invalid path \"/ipfs/\": not enough path components" {
+	_, err = resolve.Resolve(n.Context(), n.Namesys, n.Resolver, path.Path("/btfs/"))
+	if err.Error() != "invalid path \"/btfs/\": not enough path components" {
 		t.Error("Should error with no components (/ipfs/).", err)
 	}
 

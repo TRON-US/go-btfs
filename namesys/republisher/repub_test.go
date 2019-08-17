@@ -60,9 +60,9 @@ func TestRepublish(t *testing.T) {
 
 	// have one node publish a record that is valid for 1 second
 	publisher := nodes[3]
-	p := path.FromString("/ipfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn") // does not need to be valid
+	p := path.FromString("/btfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn") // does not need to be valid
 	rp := namesys.NewIpnsPublisher(publisher.Routing, publisher.Repo.Datastore())
-	name := "/ipns/" + publisher.Identity.Pretty()
+	name := "/btns/" + publisher.Identity.Pretty()
 
 	// Retry in case the record expires before we can fetch it. This can
 	// happen when running the test on a slow machine.
