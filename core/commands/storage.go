@@ -148,7 +148,7 @@ var storageUploadInitCmd = &cmds.Command{
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
-			return nil
+			return err
 		}
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("host remoteAPI is not ENABLED")
@@ -249,7 +249,7 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
-			return nil
+			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("client remote API is not enabled")
@@ -276,7 +276,7 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
-			return nil
+			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("client remote API is not enabled")
