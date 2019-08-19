@@ -71,7 +71,7 @@ var storageUploadCmd = &cmds.Command{
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
-			return nil
+			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("client remoteAPI is not ENABLED")
