@@ -10,7 +10,7 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	namesys "github.com/TRON-US/go-btfs/namesys"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
 	path "github.com/ipfs/go-path"
 	options "github.com/ipfs/interface-go-ipfs-core/options"

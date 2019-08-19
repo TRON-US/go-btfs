@@ -8,7 +8,7 @@ import (
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	merkledag "github.com/ipfs/go-merkledag"
 	unixfs "github.com/ipfs/go-unixfs"
 	path "github.com/ipfs/interface-go-ipfs-core/path"

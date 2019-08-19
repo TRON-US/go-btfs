@@ -10,7 +10,7 @@ import (
 	version "github.com/TRON-US/go-btfs"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 type VersionOutput struct {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TRON-US/go-btfs-config"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	"github.com/ipfs/go-ipfs-config"
 	util "github.com/ipfs/go-ipfs-util"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/pstoremem"

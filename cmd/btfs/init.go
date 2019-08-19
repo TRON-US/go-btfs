@@ -18,8 +18,8 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 
 	"github.com/tyler-smith/go-bip32"
@@ -34,8 +34,8 @@ const (
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
 	keyTypeOptionName      = "key"
+	keyTypeDefault         = "Secp256k1"
 	importKeyOptionName    = "import"
-	ecdsa                  = "ECDSA"
 	rmOnUnpinOptionName    = "rm-on-unpin"
 	seedOptionName         = "seed"
 )
@@ -65,7 +65,7 @@ environment variable:
 		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(nBitsForKeypairDefault),
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
-		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is ECDSA"),
+		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is Secp256k1"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
 		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
 		cmds.StringOption(seedOptionName, "s", "Import seed phrase"),
@@ -143,7 +143,7 @@ environment variable:
 		}
 
 		if keyType == "" {
-			keyType = ecdsa
+			keyType = keyTypeDefault
 		} else if keyType == "BIP39" {
 			fmt.Println("Generating TRON key with BIP39 seed phrase...")
 			importKey = generatePrivKeyUsingBIP39("")
@@ -192,7 +192,7 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 		profiles = strings.Split(profile, ",")
 	}
 
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, ecdsa, "", false)
+	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", false)
 }
 
 func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,

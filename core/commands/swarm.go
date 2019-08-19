@@ -15,8 +15,8 @@ import (
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	cmds "github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	inet "github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	swarm "github.com/libp2p/go-libp2p-swarm"

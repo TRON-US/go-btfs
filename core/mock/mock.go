@@ -9,9 +9,9 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/repo"
 
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	config "github.com/ipfs/go-ipfs-config"
 
 	"github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-core/host"

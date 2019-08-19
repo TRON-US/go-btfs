@@ -16,9 +16,9 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	humanize "github.com/dustin/go-humanize"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	cid "github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	cmds "github.com/ipfs/go-ipfs-cmds"
 )
 
 type RepoVersion struct {

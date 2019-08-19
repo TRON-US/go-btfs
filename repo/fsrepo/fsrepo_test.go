@@ -9,8 +9,8 @@ import (
 
 	"github.com/TRON-US/go-btfs/thirdparty/assert"
 
+	config "github.com/TRON-US/go-btfs-config"
 	datastore "github.com/ipfs/go-datastore"
-	config "github.com/ipfs/go-ipfs-config"
 )
 
 // swap arg order

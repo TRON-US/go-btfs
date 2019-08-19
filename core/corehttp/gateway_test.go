@@ -16,9 +16,9 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	repo "github.com/TRON-US/go-btfs/repo"
 
+	config "github.com/TRON-US/go-btfs-config"
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 	path "github.com/ipfs/go-path"
 	iface "github.com/ipfs/interface-go-ipfs-core"

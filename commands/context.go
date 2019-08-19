@@ -10,8 +10,8 @@ import (
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	loader "github.com/TRON-US/go-btfs/plugin/loader"
 
-	"github.com/ipfs/go-ipfs-cmds"
-	config "github.com/ipfs/go-ipfs-config"
+	"github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	logging "github.com/ipfs/go-log"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	options "github.com/ipfs/interface-go-ipfs-core/options"

@@ -8,7 +8,7 @@ import (
 	"github.com/TRON-US/go-btfs/namesys/resolve"
 	tar "github.com/TRON-US/go-btfs/tar"
 
-	"github.com/ipfs/go-ipfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds"
 	dag "github.com/ipfs/go-merkledag"
 	"github.com/ipfs/go-path"
 )

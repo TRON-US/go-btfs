@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
-	cmds "github.com/ipfs/go-ipfs-cmds"
 	mbase "github.com/multiformats/go-multibase"
 )
 

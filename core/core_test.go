@@ -7,9 +7,9 @@ import (
 
 	"github.com/TRON-US/go-btfs/repo"
 
+	config "github.com/TRON-US/go-btfs-config"
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	config "github.com/ipfs/go-ipfs-config"
 )
 
 func TestInitialization(t *testing.T) {
