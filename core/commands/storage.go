@@ -69,7 +69,14 @@ var storageUploadCmd = &cmds.Command{
 		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
-		price, found := req.Options[uploadPriceOptionName].(int64);
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return nil
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("client remoteAPI is not ENABLED")
+		}
+		price, found := req.Options[uploadPriceOptionName].(int64)
 		if found && price < 0 {
 			return fmt.Errorf("cannot input a negative price")
 		} else if !found {
@@ -137,6 +144,16 @@ var storageUploadInitCmd = &cmds.Command{
 		//cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
 		cmds.StringArg("channel-id", true, false, "open channel id for payment").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return nil
+		}
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("host remoteAPI is not ENABLED")
+		}
+		return nil
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cid := req.Arguments[0]
@@ -229,6 +246,16 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 		//cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return nil
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("client remote API is not enabled")
+		}
+		return nil
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		out := &ChallengeRes{
 			ID:        "1234567",
@@ -245,6 +272,16 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 		cmds.StringArg("challenge-id", true, false, "challenge id from uploader").EnableStdin(),
 		cmds.StringArg("challenge", true, false, "challenge response back to uploader.").EnableStdin(),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return nil
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("client remote API is not enabled")
+		}
+		return nil
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
