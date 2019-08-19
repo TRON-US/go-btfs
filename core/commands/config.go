@@ -14,9 +14,9 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 	"github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	"github.com/elgris/jsondiff"
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-config"
+	"github.com/elgris/jsondiff"
 )
 
 // ConfigUpdateOutput is config profile apply command's output

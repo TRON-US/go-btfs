@@ -11,8 +11,8 @@ import (
 	ncmd "github.com/TRON-US/go-btfs/core/commands/name"
 	ns "github.com/TRON-US/go-btfs/namesys"
 
-	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	ipfspath "github.com/ipfs/go-path"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
 	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"

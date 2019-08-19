@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
@@ -16,7 +17,6 @@ import (
 	bserv "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	dag "github.com/ipfs/go-merkledag"
 	verifcid "github.com/ipfs/go-verifcid"

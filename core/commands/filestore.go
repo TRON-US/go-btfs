@@ -10,8 +10,8 @@ import (
 	e "github.com/TRON-US/go-btfs/core/commands/e"
 	filestore "github.com/ipfs/go-filestore"
 
-	"github.com/ipfs/go-cid"
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/ipfs/go-cid"
 )
 
 var FileStoreCmd = &cmds.Command{

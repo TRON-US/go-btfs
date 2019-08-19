@@ -10,8 +10,8 @@ import (
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	cid "github.com/ipfs/go-cid"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"

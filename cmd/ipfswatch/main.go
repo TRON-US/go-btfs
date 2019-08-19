@@ -15,8 +15,8 @@ import (
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	fsnotify "github.com/fsnotify/fsnotify"
 	config "github.com/TRON-US/go-btfs-config"
+	fsnotify "github.com/fsnotify/fsnotify"
 	files "github.com/ipfs/go-ipfs-files"
 	process "github.com/jbenet/goprocess"
 	homedir "github.com/mitchellh/go-homedir"

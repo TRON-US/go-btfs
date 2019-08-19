@@ -10,8 +10,8 @@ import (
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	config "github.com/TRON-US/go-btfs-config"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
