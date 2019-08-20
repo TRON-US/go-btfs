@@ -67,7 +67,7 @@ environment variable:
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
 		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is Secp256k1"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
-		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
+		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files.").WithDefault(false),
 		cmds.StringOption(seedOptionName, "s", "Import seed phrase"),
 
 		// TODO need to decide whether to expose the override as a file or a
@@ -195,6 +195,7 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 		profiles = strings.Split(profile, ",")
 	}
 
+	// the last argument (false) refers to the configuration variable Experimental.RemoveOnUnpin
 	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", false)
 }
 
@@ -214,7 +215,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey)
+		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey, rmOnUnpin)
 		if err != nil {
 			return err
 		}

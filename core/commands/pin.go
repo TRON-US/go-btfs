@@ -2,11 +2,9 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -222,17 +220,6 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 			return err
 		}
 
-		var rmOnUnpin bool = false
-
-		var m map[string]string
-		if cfg.Datastore.Params != nil {
-			if err := json.Unmarshal(*cfg.Datastore.Params, &m); err != nil {
-				fmt.Println(err)
-			}
-		}
-
-		rmOnUnpin, _ = strconv.ParseBool(m["rmOnUnpin"])
-
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
@@ -269,7 +256,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 			return err
 		}
 
-		if rmOnUnpin {
+		if cfg.Experimental.RemoveOnUnpin {
 			RepoCmd.Subcommands["gc"].Run(req, res, env)
 		}
 
