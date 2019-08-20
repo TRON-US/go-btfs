@@ -93,6 +93,8 @@ func TestCommands(t *testing.T) {
 		"/config/show",
 		"/config/profile",
 		"/config/profile/apply",
+		"/config/optin",
+		"/config/optout",
 		"/dag",
 		"/dag/get",
 		"/dag/put",
