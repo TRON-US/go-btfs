@@ -6,17 +6,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/session"
-	cid2 "github.com/ipfs/go-cid"
 	"strconv"
 	"strings"
+	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/session"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
+	cid2 "github.com/ipfs/go-cid"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/interface-go-ipfs-core/path"
@@ -316,6 +317,7 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 		}
 		challenge[sch.ID] = sch.Hash
 		session.SessionMap[ssID].Challenge = challenge
+		session.SessionMap[ssID].Time = time.Now()
 		out := &ChallengeRes{
 			ID:    sch.ID,
 			Hash:  sch.Hash,
@@ -349,6 +351,10 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 		if ss := session.SessionMap[ssid]; ss == nil {
 			return fmt.Errorf("session id doesn't exist")
 		} else {
+			now := time.Now()
+			if now.After(ss.Time.Add(time.Second)) {
+				return fmt.Errorf("verification time out")
+			}
 			if ss.Challenge[challengeID] != challengeHash {
 				return fmt.Errorf("fail to verify challenge")
 			}
