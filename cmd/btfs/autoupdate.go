@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -43,7 +44,7 @@ type Config struct {
 }
 
 //var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-binary-releases/master/"
-var configRepoUrl = "https://dist.btfs.io/v0.1.0/"
+var configRepoUrl = "https://dist.btfs.io/release/"
 
 // Auto update function.
 func update() {
@@ -70,17 +71,17 @@ func update() {
 	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
 		ext := ""
 		sep := "/"
-		compressedExt := ".tar.gzip"
+		compressedExt := ".tar.gz"
 		if runtime.GOOS == "windows" {
 			ext = ".exe"
 			sep = "\\"
-			compressedExt = ".zip"
+			compressedExt = ".exe.zip"
 		}
 
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, ext)
 		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext)
-		latestBtfsBinaryCompressed = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext, compressedExt)
+		latestBtfsBinaryCompressed = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, compressedExt)
 
 		latestConfigPath = fmt.Sprint(defaultBtfsPath, sep, latestConfigFile)
 		currentConfigPath = fmt.Sprint(defaultBtfsPath, sep, CurrentConfigFile)
@@ -93,7 +94,8 @@ func update() {
 		return
 	}
 
-	sleepTimeSeconds := 20
+	//sleepTimeSeconds := 20
+	sleepTimeSeconds := 1
 	version := "0.0.0"
 	autoupdateFlg := true
 	routePath := fmt.Sprint(runtime.GOOS, "/", runtime.GOARCH, "/")
@@ -186,8 +188,11 @@ func update() {
 
 		fmt.Println("BTFS auto update begin.")
 
+
+		fmt.Println("latestBtfsBinary is: [%v]", latestBtfsBinary)
+
 		// Get the btfs latest binary file from btns.
-		err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinary))
+		err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinaryCompressed))
 		if err != nil {
 			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
 			continue
@@ -197,23 +202,19 @@ func update() {
 
 
 		fmt.Println("latestBtfsBinaryPathCompressed is: [%v]", latestBtfsBinaryPathCompressed)
-
+		fmt.Println("latestBtfsBinaryCompressed is: [%v]", latestBtfsBinaryCompressed)
+		fmt.Println("latestConfigPath is: [%v]", latestConfigPath)
 
 
 		//TODO figure out if linux or windows
 
 
-		// gunzip file
-		err = gunzipFile(latestBtfsBinaryPathCompressed, latestConfigPath)
+		// gunzip and untar file
+		err = gunzipAndUntarFile(latestBtfsBinaryPathCompressed)
 		if err != nil {
-			log.Errorf("Gunzip btfs latest binary error, reasons: [%v]", err)
+			log.Errorf("Gunzip and untar btfs latest binary error, reasons: [%v]", err)
 			continue
 		}
-
-		//untar file
-
-
-
 
 		// Md5 encode file.
 		latestMd5Hash, err := md5Encode(latestBtfsBinaryPath)
@@ -387,8 +388,11 @@ func download(downloadPath, url string) error {
 	return nil
 }
 
-// gunzip file takes in source file and writes to target directory
-func gunzipFile(source, target string) error {
+// gunzip and untar the binary btfs file
+func gunzipAndUntarFile(source string) error {
+	var tarFile string
+	var binaryFile string
+
         reader, err := os.Open(source)
         if err != nil {
                 log.Errorf("Error opening gzip file, reasons: [%v]", err)
@@ -403,8 +407,12 @@ func gunzipFile(source, target string) error {
         }
         defer archive.Close()
 
-        target = filepath.Join(target, archive.Name)
-        writer, err := os.Create(target)
+        // gunzipTarget is the source with the file extension trimmed
+        tarFile = strings.TrimSuffix(source, path.Ext(source))
+
+	fmt.Println("tarFile is: [%v]", tarFile)
+
+ 	writer, err := os.Create(tarFile)
         if err != nil {
                 log.Errorf("Error writing gunziped file, reasons: [%v]", err)
                 return err
@@ -412,31 +420,30 @@ func gunzipFile(source, target string) error {
         defer writer.Close()
 
         _, err = io.Copy(writer, archive)
-        return err
-}
 
+	// now untar file
+	reader2, err := os.Open(tarFile)
+	if err != nil {
+		log.Errorf("Error opening tar file, reasons: [%v]", err)
+		return err
+	}
+	defer reader2.Close()
 
-// untar file
-func untarFile(tarball, target string) error {
-	    reader, err := os.Open(tarball)
-	    if err != nil {
-		     log.Errorf("Error opening tarball file, reasons: [%v]", err)
-		     return err
-	    }
-	    defer reader.Close()
+	tarReader := tar.NewReader(reader2)
 
-	    tarReader := tar.NewReader(reader)
+	// binaryFile is the source with the file extension trimmed
+	binaryFile = strings.TrimSuffix(tarFile, path.Ext(tarFile))
 
-	    for {
-		    header, err := tarReader.Next()
-		    if err == io.EOF {
-		    		break
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
 		} else if err != nil {
-			    log.Errorf("Error reading tarball header, reasons: [%v]", err)
-			    return err
+			log.Errorf("Error reading tarball header, reasons: [%v]", err)
+			return err
 		}
 
-		path := filepath.Join(target, header.Name)
+		path := filepath.Join(binaryFile)
 		info := header.FileInfo()
 		if info.IsDir() {
 			if err = os.MkdirAll(path, info.Mode()); err != nil {
@@ -457,6 +464,7 @@ func untarFile(tarball, target string) error {
 			return err
 		}
 	}
+	return err
 }
 
 // Md5 encode file by file path.
