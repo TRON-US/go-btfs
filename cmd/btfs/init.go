@@ -129,31 +129,41 @@ environment variable:
 		importKey, _ := req.Options[importKeyOptionName].(string)
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
-		mnemonicLen := len(strings.Split(seedPhrase, ","))
-		mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-		if importKey != "" && keyType != "" {
-			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
-		} else if seedPhrase != "" {
-			if mnemonicLen != mnemonicLength {
-				return fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
-			}
-			if err := !bip39.IsMnemonicValid(mnemonic); err {
-				return fmt.Errorf("Entered seed phrase is not valid")
-			}
-			fmt.Println("Generating TRON key with BIP39 seed phrase...")
-			importKey = generatePrivKeyUsingBIP39(mnemonic)
+		finalImportKey, error := generateKey(importKey, keyType, seedPhrase)
+		if error == nil {
+			return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, finalImportKey, rmOnUnpin)
+		} else {
+			return error
 		}
 
-		if keyType == "" {
-			keyType = keyTypeDefault
-		} else if keyType == "BIP39" {
-			fmt.Println("Generating TRON key with BIP39 seed phrase...")
-			importKey = generatePrivKeyUsingBIP39("")
-		}
-
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, rmOnUnpin)
 	},
+}
+
+func generateKey(importKey string, keyType string, seedPhrase string) (string, error) {
+	mnemonicLen := len(strings.Split(seedPhrase, ","))
+	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
+
+	if importKey != "" && keyType != "" {
+		return "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+	} else if seedPhrase != "" {
+		if mnemonicLen != mnemonicLength {
+			return "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
+		}
+		if err := !bip39.IsMnemonicValid(mnemonic); err {
+			return "", fmt.Errorf("Entered seed phrase is not valid")
+		}
+		fmt.Println("Generating TRON key with BIP39 seed phrase...")
+		importKey = generatePrivKeyUsingBIP39(mnemonic)
+	}
+
+	if keyType == "" {
+		keyType = keyTypeDefault
+	} else if keyType == "BIP39" {
+		fmt.Println("Generating TRON key with BIP39 seed phrase...")
+		importKey = generatePrivKeyUsingBIP39("")
+	}
+	return importKey, nil
 }
 
 var errRepoExists = errors.New(`btfs configuration file already exists!
