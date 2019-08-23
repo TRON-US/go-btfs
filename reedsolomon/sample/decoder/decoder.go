@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	reedsol "github.com/tron-us/go-btfs/reedsolomon"
+	reedsol "github.com/TRON-US/go-btfs/reedsolomon"
 
 	"github.com/klauspost/reedsolomon"
 )
@@ -25,7 +25,7 @@ func main() {
 
 	//Validate reed-solomon config.
 	isValid := reedsol.ValidateConfig(dataShards, parShards)
-	if (!isValid) {
+	if !isValid {
 		fmt.Fprintf(os.Stderr, "Error: sum of data and parity shards cannot exceed 256\n")
 		os.Exit(1)
 	}
@@ -35,10 +35,10 @@ func main() {
 	reedsol.CheckErr(err)
 
 	// Create shards and load the data.
-	shards:=reedsol.CreateShardsFromData(dataShards, parShards, fname)
+	shards := reedsol.CreateShardsFromData(dataShards, parShards, fname)
 
 	// Verify the shards created from files
-	reedsol.VerifyShards(shards,enc)
+	reedsol.VerifyShards(shards, enc)
 
 	// Join the shards and write them
 	outfn := *outFile

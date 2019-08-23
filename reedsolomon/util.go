@@ -27,14 +27,14 @@ func ParseCommandLine() (*int, *int, *string, string) {
 	return dataShards, parShards, out, fname
 }
 
-func ValidateConfig(dataShards *int, parShards *int) bool{
+func ValidateConfig(dataShards *int, parShards *int) bool {
 	if (*dataShards + *parShards) > 256 {
 		return false
 	}
 	return true
 }
 
-func CreateShardsFromData(dataShards *int, parShards *int, fname string) [][]byte{
+func CreateShardsFromData(dataShards *int, parShards *int, fname string) [][]byte {
 	shards := make([][]byte, *dataShards+*parShards)
 	for i := range shards {
 		infn := fmt.Sprintf("%s.%d", fname, i)
@@ -49,7 +49,7 @@ func CreateShardsFromData(dataShards *int, parShards *int, fname string) [][]byt
 	return shards
 }
 
-func VerifyShards(shards [][] byte, enc reedsolomon.Encoder) {
+func VerifyShards(shards [][]byte, enc reedsolomon.Encoder) {
 	ok, err := enc.Verify(shards)
 	if ok {
 		fmt.Println("No reconstruction needed")
@@ -69,7 +69,7 @@ func VerifyShards(shards [][] byte, enc reedsolomon.Encoder) {
 	}
 }
 
-func SplitFileData(enc reedsolomon.Encoder,fname string) [][]byte {
+func SplitFileData(enc reedsolomon.Encoder, fname string) [][]byte {
 	fmt.Println("Opening", fname)
 	data, err := ioutil.ReadFile(fname)
 	CheckErr(err)
