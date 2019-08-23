@@ -5,15 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/session"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
@@ -104,8 +103,8 @@ var storageUploadCmd = &cmds.Command{
 		peers := strings.Split(list, ",")
 
 		// start new session
-		ss := &session.Session{}
-		ssID, err := session.NewSessionID()
+		ss := &storage.Session{}
+		ssID, err := storage.NewSessionID()
 		if err != nil {
 			return err
 		}
@@ -230,7 +229,7 @@ var storageUploadInitCmd = &cmds.Command{
 		}
 
 		// compute challenge on host
-		sc := NewStorageChallengeResponse(req.Context, n, api, r.ID)
+		sc := storage.NewStorageChallengeResponse(req.Context, n, api, r.ID)
 		if err = sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
 			return err
 		}
@@ -294,14 +293,14 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 		}
 
 		ssID := req.Arguments[0]
-		if session.SessionMap[ssID] == nil {
+		if storage.SessionMap[ssID] == nil {
 			return fmt.Errorf("session id doesn't exist")
 		}
 		return nil
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssID := req.Arguments[0]
-		ss := session.SessionMap[ssID]
+		ss := storage.SessionMap[ssID]
 		chunkHash := req.Arguments[1]
 
 		n, err := cmdenv.GetNode(env)
@@ -317,26 +316,12 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 			return err
 		}
 
-		var mutex = sync.Mutex{}
-		mutex.Lock()
-		defer mutex.Unlock()
-
-		var sch *StorageChallenge
-		// in multi-process taling to mulltiple hosts, different cids can only generate one storage challenge
-		// if existing challenge with the same cid, means this challenge has been generated and sent
-		if sch == nil || sch.ID != cid.String() {
-			sch, err = NewStorageChallenge(req.Context, n, api, cid)
-			if err != nil {
-				return err
-			}
-		} else {
-			return nil
-		}
-
-		if err = sch.GenChallenge(); err != nil {
+		// when multi-process talking to multiple hosts, different cids can only generate one storage challenge,
+		// and stored the latest one in session map
+		sch, err := ss.SetChallenge(req.Context, n, api, ssID, cid)
+		if err != nil {
 			return err
 		}
-		ss.SetChallenge(ssID, sch.ID, sch.Hash)
 		out := &ChallengeRes{
 			ID:    sch.ID,
 			Hash:  sch.Hash,
@@ -349,10 +334,10 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 
 var storageUploadResponseChallengeCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		//cmds.StringArg("peer-id", true, false, "peer to initiate storage upload with").EnableStdin(),
 		cmds.StringArg("session-id", true, false, "chunk the storage node should fetch").EnableStdin(),
-		cmds.StringArg("challenge-id", true, false, "challenge id from uploader").EnableStdin(),
+		//cmds.StringArg("challenge-id", true, false, "challenge id from uploader").EnableStdin(),
 		cmds.StringArg("challenge-hash", true, false, "challenge response back to uploader.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		// pre-check
@@ -365,16 +350,16 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 		}
 		// verify challenge
 		ssID := req.Arguments[0]
-		challengeID := req.Arguments[1]
-		challengeHash := req.Arguments[2]
-		if ss := session.SessionMap[ssID]; ss == nil {
+		challengeHash := req.Arguments[1]
+		chunkHash := req.Arguments[2]
+		if ss := storage.SessionMap[ssID]; ss == nil {
 			return fmt.Errorf("session id doesn't exist")
 		} else {
 			now := time.Now()
 			if now.After(ss.Time.Add(challengeTimeOut)) {
 				return fmt.Errorf("verification time out")
 			}
-			if ss.Challenge[challengeID] != challengeHash {
+			if ss.Challenge[chunkHash].Hash != challengeHash {
 				return fmt.Errorf("fail to verify challenge")
 			}
 		}
@@ -408,11 +393,11 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 			return nil
 		}
 		r := &PaymentRes{
-			SignedPayment:signedBytes,
+			SignedPayment: signedBytes,
 		}
 		return cmds.EmitOnce(res, r)
 	},
-	Type:PaymentRes{},
+	Type: PaymentRes{},
 }
 
 type PaymentRes struct {
