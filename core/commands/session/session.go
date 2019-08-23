@@ -1,6 +1,7 @@
 package session
 
 import (
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +10,8 @@ import (
 var SessionMap map[string]*Session
 
 type Session struct {
+	sync.Mutex
+
 	Time      time.Time
 	FileHash  string
 	Status    string
@@ -28,14 +31,22 @@ func NewSessionID() (string, error) {
 	return seid.String(), nil
 }
 
-func NewSession(ssid string, fileHash string) (*Session, error) {
-	time := time.Now()
-	//challenge := make(map[string]interface{})
+func (s *Session) NewSession(ssID string, fileHash string) error {
+	s.Lock()
+	defer s.Unlock()
+
 	session := &Session{
-		Time:     time,
+		Time:     time.Now(),
 		Status:   "init",
 		FileHash: fileHash,
 	}
-	SessionMap[ssid] = session
-	return session, nil
+	SessionMap[ssID] = session
+	return nil
+}
+
+func (s *Session) SetChallenge(ssID string, challengeID string, challengeHash string)  {
+	challenge := make(map[string]interface{})
+	challenge[challengeID] = challengeHash
+	SessionMap[ssID].Challenge = challenge
+	SessionMap[ssID].Time = time.Now()
 }

@@ -1,13 +1,13 @@
 package commands
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -17,7 +17,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
-	cid2 "github.com/ipfs/go-cid"
+	cidlib "github.com/ipfs/go-cid"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/interface-go-ipfs-core/path"
@@ -30,6 +30,8 @@ const (
 	replicationFactorOptionName = "replication-factor"
 	hostSelectModeOptionName    = "host-select-mode"
 	hostSelectionOptionName     = "host-selection"
+
+	challengeTimeOut = time.Second
 )
 
 var (
@@ -102,12 +104,12 @@ var storageUploadCmd = &cmds.Command{
 		peers := strings.Split(list, ",")
 
 		// start new session
+		ss := &session.Session{}
 		ssID, err := session.NewSessionID()
 		if err != nil {
 			return err
 		}
-		_, err = session.NewSession(ssID, fileHash)
-		if err != nil {
+		if err = ss.NewSession(ssID, fileHash); err != nil {
 			return err
 		}
 		// get self key pair
@@ -181,7 +183,7 @@ var storageUploadInitCmd = &cmds.Command{
 		ssID := req.Arguments[0]
 		channelID := req.Arguments[1]
 		hash := req.Arguments[2]
-		hashToCid, err := cid2.Parse(hash)
+		hashToCid, err := cidlib.Parse(hash)
 		if err != nil {
 			return err
 		}
@@ -238,8 +240,12 @@ var storageUploadInitCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		payment := PaymentRes{}
+		if err := json.Unmarshal(signedPaymentBody, &payment); err != nil {
+			return err
+		}
 		var halfSignedChannelState ledgerPb.SignedChannelState
-		err = proto.Unmarshal(signedPaymentBody, &halfSignedChannelState)
+		err = proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
 		if err != nil {
 			return err
 		}
@@ -286,15 +292,17 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("client remote API is not enabled")
 		}
+
+		ssID := req.Arguments[0]
+		if session.SessionMap[ssID] == nil {
+			return fmt.Errorf("session id doesn't exist")
+		}
 		return nil
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssID := req.Arguments[0]
+		ss := session.SessionMap[ssID]
 		chunkHash := req.Arguments[1]
-		challenge := make(map[string]interface{})
-		if session.SessionMap[ssID] == nil {
-			return fmt.Errorf("session id doesn't exist")
-		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -304,20 +312,31 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		cid, err := cid2.Parse(chunkHash)
+		cid, err := cidlib.Parse(chunkHash)
 		if err != nil {
 			return err
 		}
-		sch, err := NewStorageChallenge(req.Context, n, api, cid)
-		if err != nil {
-			return err
+
+		var mutex = sync.Mutex{}
+		mutex.Lock()
+		defer mutex.Unlock()
+
+		var sch *StorageChallenge
+		// in multi-process taling to mulltiple hosts, different cids can only generate one storage challenge
+		// if existing challenge with the same cid, means this challenge has been generated and sent
+		if sch == nil || sch.ID != cid.String() {
+			sch, err = NewStorageChallenge(req.Context, n, api, cid)
+			if err != nil {
+				return err
+			}
+		} else {
+			return nil
 		}
+
 		if err = sch.GenChallenge(); err != nil {
 			return err
 		}
-		challenge[sch.ID] = sch.Hash
-		session.SessionMap[ssID].Challenge = challenge
-		session.SessionMap[ssID].Time = time.Now()
+		ss.SetChallenge(ssID, sch.ID, sch.Hash)
 		out := &ChallengeRes{
 			ID:    sch.ID,
 			Hash:  sch.Hash,
@@ -345,14 +364,14 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 			return fmt.Errorf("client remote API is not enabled")
 		}
 		// verify challenge
-		ssid := req.Arguments[0]
+		ssID := req.Arguments[0]
 		challengeID := req.Arguments[1]
 		challengeHash := req.Arguments[2]
-		if ss := session.SessionMap[ssid]; ss == nil {
+		if ss := session.SessionMap[ssID]; ss == nil {
 			return fmt.Errorf("session id doesn't exist")
 		} else {
 			now := time.Now()
-			if now.After(ss.Time.Add(time.Second)) {
+			if now.After(ss.Time.Add(challengeTimeOut)) {
 				return fmt.Errorf("verification time out")
 			}
 			if ss.Challenge[challengeID] != challengeHash {
@@ -388,9 +407,16 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 			log.Error("fail to marshal signed payment: ", err)
 			return nil
 		}
-		r := bytes.NewReader(signedBytes)
+		r := &PaymentRes{
+			SignedPayment:signedBytes,
+		}
 		return cmds.EmitOnce(res, r)
 	},
+	Type:PaymentRes{},
+}
+
+type PaymentRes struct {
+	SignedPayment []byte
 }
 
 func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...string) ([]byte, error) {
@@ -401,14 +427,14 @@ func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...string) ([]byte, 
 	return remoteCall.CallGet(api, arg)
 }
 
-func getChannelInfo(ctx context.Context, cid string) (*ledgerPb.ChannelInfo, error) {
+func getChannelInfo(ctx context.Context, chanID string) (*ledgerPb.ChannelInfo, error) {
 	clientConn, err := ledger.LedgerConnection()
 	defer ledger.CloseConnection(clientConn)
 	if err != nil {
 		return nil, err
 	}
 	ledgerClient := ledger.NewClient(clientConn)
-	cidInt64, err := strconv.ParseInt(cid, 10, 64)
+	cidInt64, err := strconv.ParseInt(chanID, 10, 64)
 	if err != nil {
 		return nil, err
 	}
@@ -489,9 +515,5 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 	if err != nil {
 		return nil, err
 	}
-	cid, err := ledger.CreateChannel(ctx, ledgerClient, cc, sig)
-	if err != nil {
-		return nil, err
-	}
-	return cid, nil
+	return ledger.CreateChannel(ctx, ledgerClient, cc, sig)
 }
