@@ -2,7 +2,9 @@
 package main
 
 import (
+	"archive/tar"
 	"bufio"
+	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -40,7 +42,8 @@ type Config struct {
 	EndNumber        int    `yaml:"endNumber"`
 }
 
-var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-binary-releases/master/"
+//var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-binary-releases/master/"
+var configRepoUrl = "https://dist.btfs.io/v0.1.0/"
 
 // Auto update function.
 func update() {
@@ -54,28 +57,36 @@ func update() {
 	var latestConfigFile string
 	var updateBinary string
 	var latestBtfsBinary string
+	var latestBtfsBinaryCompressed string
+
 
 	var latestConfigPath string
 	var currentConfigPath string
 	var latestBtfsBinaryPath string
+	var latestBtfsBinaryPathCompressed string
 	var updateBinaryPath string
 
 	// Select binary files based on operating system.
 	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
 		ext := ""
 		sep := "/"
+		compressedExt := ".tar.gzip"
 		if runtime.GOOS == "windows" {
 			ext = ".exe"
 			sep = "\\"
+			compressedExt = ".zip"
 		}
 
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, ext)
 		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext)
+		latestBtfsBinaryCompressed = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext, compressedExt)
 
 		latestConfigPath = fmt.Sprint(defaultBtfsPath, sep, latestConfigFile)
 		currentConfigPath = fmt.Sprint(defaultBtfsPath, sep, CurrentConfigFile)
 		latestBtfsBinaryPath = fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinary)
+		latestBtfsBinaryPathCompressed = fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinaryCompressed)
+
 		updateBinaryPath = fmt.Sprint(defaultBtfsPath, sep, updateBinary)
 	} else {
 		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
@@ -99,6 +110,8 @@ func update() {
 		} else {
 			version = btfs_version.CurrentVersionNumber
 		}
+
+		fmt.Println(version)
 
 		if !autoupdateFlg {
 			continue
@@ -174,7 +187,7 @@ func update() {
 		fmt.Println("BTFS auto update begin.")
 
 		// Get the btfs latest binary file from btns.
-		err = download(latestBtfsBinaryPath, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinary))
+		err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinary))
 		if err != nil {
 			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
 			continue
@@ -182,12 +195,35 @@ func update() {
 
 		fmt.Println("Download btfs binary file success!")
 
+
+		fmt.Println("latestBtfsBinaryPathCompressed is: [%v]", latestBtfsBinaryPathCompressed)
+
+
+
+		//TODO figure out if linux or windows
+
+
+		// gunzip file
+		err = gunzipFile(latestBtfsBinaryPathCompressed, latestConfigPath)
+		if err != nil {
+			log.Errorf("Gunzip btfs latest binary error, reasons: [%v]", err)
+			continue
+		}
+
+		//untar file
+
+
+
+
 		// Md5 encode file.
 		latestMd5Hash, err := md5Encode(latestBtfsBinaryPath)
 		if err != nil {
 			log.Error("Md5 encode file failed.")
 			continue
 		}
+
+		fmt.Println("latest md5 hash is: [%v]", latestMd5Hash)
+		fmt.Println("latest config md5 check is: [%v]", latestConfig.Md5Check)
 
 		if latestMd5Hash != latestConfig.Md5Check {
 			log.Error("Md5 verify failed.")
@@ -349,6 +385,78 @@ func download(downloadPath, url string) error {
 
 	log.Infof("Download success, file size :[%f]M", float32(written)/(1024*1024))
 	return nil
+}
+
+// gunzip file takes in source file and writes to target directory
+func gunzipFile(source, target string) error {
+        reader, err := os.Open(source)
+        if err != nil {
+                log.Errorf("Error opening gzip file, reasons: [%v]", err)
+                return err
+        }
+        defer reader.Close()
+
+        archive, err := gzip.NewReader(reader)
+        if err != nil {
+                log.Errorf("Error creating new reader, reasons: [%v]", err)
+                return err
+        }
+        defer archive.Close()
+
+        target = filepath.Join(target, archive.Name)
+        writer, err := os.Create(target)
+        if err != nil {
+                log.Errorf("Error writing gunziped file, reasons: [%v]", err)
+                return err
+        }
+        defer writer.Close()
+
+        _, err = io.Copy(writer, archive)
+        return err
+}
+
+
+// untar file
+func untarFile(tarball, target string) error {
+	    reader, err := os.Open(tarball)
+	    if err != nil {
+		     log.Errorf("Error opening tarball file, reasons: [%v]", err)
+		     return err
+	    }
+	    defer reader.Close()
+
+	    tarReader := tar.NewReader(reader)
+
+	    for {
+		    header, err := tarReader.Next()
+		    if err == io.EOF {
+		    		break
+		} else if err != nil {
+			    log.Errorf("Error reading tarball header, reasons: [%v]", err)
+			    return err
+		}
+
+		path := filepath.Join(target, header.Name)
+		info := header.FileInfo()
+		if info.IsDir() {
+			if err = os.MkdirAll(path, info.Mode()); err != nil {
+				log.Errorf("Error recreating dirs, reasons: [%v]", err)
+				return err
+			}
+			continue
+		}
+
+		file, err:= os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+		if err != nil {
+			log.Errorf("Error creating file, reasons: [%v]", err)
+			return err
+		}
+		defer file.Close()
+		_, err =io.Copy(file, tarReader)
+		if err != nil {
+			return err
+		}
+	}
 }
 
 // Md5 encode file by file path.
