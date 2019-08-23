@@ -29,6 +29,8 @@ const (
 	replicationFactorOptionName = "replication-factor"
 	hostSelectModeOptionName    = "host-select-mode"
 	hostSelectionOptionName     = "host-selection"
+	hostInfoModeOptionName      = "host-info-mode"
+	hostSyncModeOptionName      = "host-sync-mode"
 
 	challengeTimeOut = time.Second
 )
@@ -40,20 +42,21 @@ var (
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "pay to store a file on btfs node.",
+		Tagline: "Pay to store files on BTFS network nodes.",
 		ShortDescription: `
-To UPLOAD a file using select hosts: 
+To UPLOAD a file using specific hosts:
     using -m with "custom" mode, and put host identifier in -l, multiple hosts separate by ','
 For example:
 
     btfs storage upload -m=custom -l=host_address1,address2
 
-Or it will select a node based on reputation for you.
+Or it will select a node based on overall score for you.
 And receiving a Collateral Proof as evidence when selected node stores your file.
 	`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"upload": storageUploadCmd,
+		"hosts":  storageHostsCmd,
 	},
 }
 
@@ -64,7 +67,7 @@ var storageUploadCmd = &cmds.Command{
 		"respc": storageUploadResponseChallengeCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "add hash of file to upload").EnableStdin(),
+		cmds.StringArg("file-hash", true, false, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
@@ -164,9 +167,9 @@ type UploadRes struct {
 
 var storageUploadInitCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, " ID for the entire storage upload session").EnableStdin(),
-		cmds.StringArg("channel-id", true, false, "open channel id for payment").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -280,8 +283,8 @@ type ChallengeRes struct {
 
 var storageUploadRequestChallengeCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -334,10 +337,10 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 
 var storageUploadResponseChallengeCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "chunk the storage node should fetch").EnableStdin(),
-		//cmds.StringArg("challenge-id", true, false, "challenge id from uploader").EnableStdin(),
-		cmds.StringArg("challenge-hash", true, false, "challenge response back to uploader.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
+		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		// pre-check
@@ -501,4 +504,29 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 		return nil, err
 	}
 	return ledger.CreateChannel(ctx, ledgerClient, cc, sig)
+}
+
+var storageHostsCmd = &cmds.Command{
+	Subcommands: map[string]*cmds.Command{
+		"info": storageHostsInfoCmd,
+		"sync": storageHostsSyncCmd,
+	},
+}
+
+var storageHostsInfoCmd = &cmds.Command{
+	Options: []cmds.Option{
+		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault("all"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		return nil
+	},
+}
+
+var storageHostsSyncCmd = &cmds.Command{
+	Options: []cmds.Option{
+		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault("all"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		return nil
+	},
 }
