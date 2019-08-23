@@ -369,6 +369,10 @@ github.com/kisielk/gotool v0.0.0-20161130080628-0de1eaf82fa3/go.mod h1:jxZFDH7IL
 github.com/kisielk/gotool v1.0.0 h1:AV2c/EiW3KqPNT9ZKl07ehoAGi4C5/01Cfbblndcapg=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kkdai/bstream v0.0.0-20161212061736-f391b8402d23/go.mod h1:J+Gs4SYgM6CZQHDETBtE9HaSEkGmuNXF86RwHhHUvq4=
+github.com/klauspost/cpuid v1.2.1 h1:vJi+O/nMdFt0vqm8NZBI6wzALWdA2X+egi0ogNyrC/w=
+github.com/klauspost/cpuid v1.2.1/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
+github.com/klauspost/reedsolomon v1.9.2 h1:E9CMS2Pqbv+C7tsrYad4YC9MfhnMVWhMRsTi7U0UB18=
+github.com/klauspost/reedsolomon v1.9.2/go.mod h1:CwCi+NUr9pqSVktrkN+Ondf06rkhYZ/pcNv7fu+8Un4=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1 h1:mweAR1A6xJ3oS2pRaGiHgQ4OO8tzTaLawm8vnODuwDk=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b h1:wxtKgYHEncAU00muMD06dzLiahtGM1eouRNOzVV7tdQ=
@@ -736,6 +740,7 @@ github.com/syndtr/goleveldb v1.0.0 h1:fBdIW9lB4Iz0n9khmH8w27SJ3QEJ7+IgjPEwGSZiFd
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:T5PdfK/M1xyrHwynxMIVMWLS7f/qHwfslZphxtGnw7s=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
+github.com/tron-us/go-btfs v0.4.20 h1:K6NoyTBw4FG3uX3sLvwX05owu1dhJJfTHe9M0OnP72k=
 github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564 h1:NXXyQVeRVLK8Xu27/hkkjwVOZLk5v4ZBEvvMtqMqznM=
 github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564/go.mod h1:0/YuQQF676+d4CMNclTqGUam1EDwz0B8o03K9pQqA3c=
 github.com/tyler-smith/go-bip39 v1.0.0 h1:FOHg9gaQLeBBRbHE/QrTLfEiBHy5pQ/yXzf9JG5pYFM=
