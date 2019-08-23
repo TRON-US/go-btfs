@@ -69,6 +69,8 @@ require (
 	github.com/jbenet/go-random-files v0.0.0-20190219210431-31b3f20ebded
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2
 	github.com/jbenet/goprocess v0.1.3
+	github.com/klauspost/cpuid v1.2.1 // indirect
+	github.com/klauspost/reedsolomon v1.9.2
 	github.com/libp2p/go-eventbus v0.0.3 // indirect
 	github.com/libp2p/go-libp2p v0.2.0
 	github.com/libp2p/go-libp2p-autonat-svc v0.1.0
@@ -111,17 +113,16 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7
 	github.com/syndtr/goleveldb v1.0.0
+	github.com/tron-us/tron-query v0.5.1 // indirect
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-sysinfo v0.0.0-20190219211824-4a357d4b90b1
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c
-	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/dig v1.7.0 // indirect
 	go.uber.org/fx v1.9.0
 	go.uber.org/goleak v0.10.0 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
 	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
