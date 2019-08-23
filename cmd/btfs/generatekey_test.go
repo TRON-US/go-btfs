@@ -4,22 +4,6 @@ import (
 	"testing"
 )
 
-// func generateKey(importKey string, keyType string, seedPhrase string, mnemonicLen int, mnemonic string ) error {
-//record
-//access
-// aerobic
-// glow
-// retreat
-// language
-// distance
-// stamp
-// cattle
-// arrive
-// defy
-// movie
-// TSZKYA3bd4sJEmthPk1Z9hfD5ijpaDM1QE
-// db6bf5da1c2225d76356df2f59ebd3207b91228bcf429f0c791f94e9095a1f8e
-
 func TestSeedsPhrase(t *testing.T) {
 	const PRIVATE_KEY = "db6bf5da1c2225d76356df2f59ebd3207b91228bcf429f0c791f94e9095a1f8e"
 	finalImportKey, err := generateKey(PRIVATE_KEY, "",
