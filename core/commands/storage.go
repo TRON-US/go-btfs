@@ -14,6 +14,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/hub"
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 	cidlib "github.com/ipfs/go-cid"
@@ -515,7 +516,7 @@ var storageHostsCmd = &cmds.Command{
 
 var storageHostsInfoCmd = &cmds.Command{
 	Options: []cmds.Option{
-		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault("all"),
+		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		return nil
@@ -524,9 +525,21 @@ var storageHostsInfoCmd = &cmds.Command{
 
 var storageHostsSyncCmd = &cmds.Command{
 	Options: []cmds.Option{
-		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault("all"),
+		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		mode, _ := req.Options[hostSyncModeOptionName].(string)
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		nodes, err := hub.QueryHub(n.Identity.Pretty(), mode)
+		if err != nil {
+			return err
+		}
+		fmt.Println(nodes)
 		return nil
 	},
 }
