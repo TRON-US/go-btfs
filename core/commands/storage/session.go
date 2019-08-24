@@ -64,12 +64,13 @@ func (s *Session) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreif
 		if err != nil {
 			return nil, err
 		}
+		SessionMap[ssID].Challenge[hash] = sch
 	}
+	sch = s.Challenge[hash]
 
-	if err := sch.GenChallenge(); err != nil {
+	if err = sch.GenChallenge(); err != nil {
 		return nil, err
 	}
-	SessionMap[ssID].Challenge[hash] = sch
 	SessionMap[ssID].Time = time.Now()
 	return sch, nil
 }
