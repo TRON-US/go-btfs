@@ -318,7 +318,7 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 
 		// when multi-process talking to multiple hosts, different cids can only generate one storage challenge,
 		// and stored the latest one in session map
-		sch, err := ss.SetChallenge(req.Context, n, api, ssID, cid)
+		sch, err := ss.SetChallenge(req.Context, n, api, cid)
 		if err != nil {
 			return err
 		}

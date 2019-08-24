@@ -51,7 +51,7 @@ func (s *Session) NewSession(ssID string, fileHash string) error {
 	return nil
 }
 
-func (s *Session) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, ssID string, cid cid.Cid) (*StorageChallenge, error) {
+func (s *Session) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cid cid.Cid) (*StorageChallenge, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -64,13 +64,14 @@ func (s *Session) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreif
 		if err != nil {
 			return nil, err
 		}
-		SessionMap[ssID].Challenge[hash] = sch
+		s.Challenge[hash] = sch
+	} else {
+		sch = s.Challenge[hash]
 	}
-	sch = s.Challenge[hash]
 
 	if err = sch.GenChallenge(); err != nil {
 		return nil, err
 	}
-	SessionMap[ssID].Time = time.Now()
+	s.Time = time.Now()
 	return sch, nil
 }
