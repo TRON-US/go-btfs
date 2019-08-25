@@ -3,6 +3,9 @@ package main
 
 import (
 	"archive/tar"
+	"archive/zip"
+
+	//"archive/zip"
 	"bufio"
 	"compress/gzip"
 	"crypto/md5"
@@ -43,7 +46,6 @@ type Config struct {
 	EndNumber        int    `yaml:"endNumber"`
 }
 
-//var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-binary-releases/master/"
 var configRepoUrl = "https://dist.btfs.io/release/"
 
 // Auto update function.
@@ -57,6 +59,7 @@ func update() {
 
 	var latestConfigFile string
 	var updateBinary string
+	var updateBinaryCompressed string
 	var latestBtfsBinary string
 	var latestBtfsBinaryCompressed string
 
@@ -66,6 +69,7 @@ func update() {
 	var latestBtfsBinaryPath string
 	var latestBtfsBinaryPathCompressed string
 	var updateBinaryPath string
+	var updateBinaryPathCompressed string
 
 	// Select binary files based on operating system.
 	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
@@ -80,6 +84,8 @@ func update() {
 
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
 		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, ext)
+		updateBinaryCompressed = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, compressedExt)
+
 		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext)
 		latestBtfsBinaryCompressed = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, compressedExt)
 
@@ -89,6 +95,8 @@ func update() {
 		latestBtfsBinaryPathCompressed = fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinaryCompressed)
 
 		updateBinaryPath = fmt.Sprint(defaultBtfsPath, sep, updateBinary)
+		updateBinaryPathCompressed = fmt.Sprint(defaultBtfsPath, sep, updateBinaryCompressed)
+
 	} else {
 		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
 		return
@@ -188,10 +196,9 @@ func update() {
 
 		fmt.Println("BTFS auto update begin.")
 
-
 		fmt.Println("latestBtfsBinary is: [%v]", latestBtfsBinary)
 
-		// Get the btfs latest binary file from btns.
+		// Get the btfs latest compressed file.
 		err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinaryCompressed))
 		if err != nil {
 			log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
@@ -200,19 +207,32 @@ func update() {
 
 		fmt.Println("Download btfs binary file success!")
 
-
 		fmt.Println("latestBtfsBinaryPathCompressed is: [%v]", latestBtfsBinaryPathCompressed)
 		fmt.Println("latestBtfsBinaryCompressed is: [%v]", latestBtfsBinaryCompressed)
 		fmt.Println("latestConfigPath is: [%v]", latestConfigPath)
 
+		// Unzip or gunzip/untar depending on OS.
+		if runtime.GOOS == "windows" {
+			// Unzip.
+			//TODO unzip
+			//gunzipAndUntarFile(latestBtfsBinaryPathCompressed)
+			//if err != nil {
+			//	log.Error(err)
+			//	continue
+			//}
+		} else {
+			// Gunzip and untar.
+			err = gunzipAndUntarFile(latestBtfsBinaryPathCompressed)
+			if err != nil {
+				log.Errorf("Gunzip and untar btfs latest binary error, reasons: [%v]", err)
+				continue
+			}
+		}
 
-		//TODO figure out if linux or windows
-
-
-		// gunzip and untar file
-		err = gunzipAndUntarFile(latestBtfsBinaryPathCompressed)
+		// Delete the compressed files.
+		err = removeCompressedFiles(latestBtfsBinaryPathCompressed)
 		if err != nil {
-			log.Errorf("Gunzip and untar btfs latest binary error, reasons: [%v]", err)
+			log.Errorf("Remove btfs latest compressed file error, reasons: [%v]", err)
 			continue
 		}
 
@@ -242,14 +262,28 @@ func update() {
 			}
 		}
 
-		// Get the update binary file from btns.
-		err = download(updateBinaryPath, fmt.Sprint(configRepoUrl, routePath, updateBinary))
+		// Get the update binary compressed file from btns.
+		err = download(updateBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, updateBinaryCompressed))
 		if err != nil {
 			log.Error("Download update binary file failed.")
 			continue
 		}
 
 		fmt.Println("Download update binary file success!")
+
+		// ungzip and untar update file.
+		err = gunzipAndUntarFile(updateBinaryPathCompressed)
+		if err != nil {
+			log.Errorf("Gunzip and untar update binary error, reasons: [%v]", err)
+			continue
+		}
+
+		// Delete the update gzip and tar ball files.
+		err = removeCompressedFiles(updateBinaryPathCompressed)
+		if err != nil {
+			log.Errorf("Remove compressed files error, reasons: [%v]", err)
+			continue
+		}
 
 		// Add executable permissions to update binary file.
 		err = os.Chmod(updateBinaryPath, 0775)
@@ -388,7 +422,50 @@ func download(downloadPath, url string) error {
 	return nil
 }
 
-// gunzip and untar the binary btfs file
+// Unzip a file with .zip extension that contains a binary file
+func unzip(source string) error {
+	var binaryFile string
+
+	reader, err := zip.OpenReader(source)
+	if err != nil {
+		return err
+	}
+
+	binaryFile = strings.TrimSuffix(source, path.Ext(source))
+
+	//TODO dont need this i believe
+	//if err := os.MkdirAll(target, 0755); err != nil {
+	//	return err
+	//}
+
+	for _, file := range reader.File {
+		path := filepath.Join(binaryFile)
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, file.Mode())
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer fileReader.Close()
+
+		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+		defer targetFile.Close()
+
+		if _, err := io.Copy(targetFile, fileReader); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Gunzip and untar a file with the .tar.gz extension that contains a binary file.
 func gunzipAndUntarFile(source string) error {
 	var tarFile string
 	var binaryFile string
@@ -465,6 +542,31 @@ func gunzipAndUntarFile(source string) error {
 		}
 	}
 	return err
+}
+
+// Removes the gzip and tarball or the zip file from disk
+func removeCompressedFiles(name string) error {
+	if runtime.GOOS == "windows" {
+		err := os.Remove(name)
+		if err != nil {
+			log.Errorf("Remove zip file error, reasons: [%v]", err)
+			return err
+		}
+
+	} else {
+		err := os.Remove(name)
+		if err != nil {
+			log.Errorf("Remove gz file error, reasons: [%v]", err)
+			return err
+		}
+		tarFile := strings.TrimSuffix(name, path.Ext(name))
+		err = os.Remove(tarFile)
+		if err != nil {
+			log.Errorf("Remove tar file error, reasons: [%v]", err)
+			return err
+		}
+	}
+	return nil
 }
 
 // Md5 encode file by file path.
