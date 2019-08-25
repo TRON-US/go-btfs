@@ -4,8 +4,6 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
-
-	//"archive/zip"
 	"bufio"
 	"compress/gzip"
 	"crypto/md5"
@@ -215,11 +213,11 @@ func update() {
 		if runtime.GOOS == "windows" {
 			// Unzip.
 			//TODO unzip
-			//gunzipAndUntarFile(latestBtfsBinaryPathCompressed)
-			//if err != nil {
-			//	log.Error(err)
-			//	continue
-			//}
+			err = unzip(latestBtfsBinaryPathCompressed)
+			if err != nil {
+			log.Errorf("Gunzip and untar btfs latest binary error, reasons: [%v]", err)
+				continue
+			}
 		} else {
 			// Gunzip and untar.
 			err = gunzipAndUntarFile(latestBtfsBinaryPathCompressed)
