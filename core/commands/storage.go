@@ -9,19 +9,23 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/hub"
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 	cidlib "github.com/ipfs/go-cid"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/gogo/protobuf/proto"
+	ds "github.com/ipfs/go-datastore"
+	query "github.com/ipfs/go-datastore/query"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/tron-us/go-btfs-common/info"
 )
 
 const (
@@ -29,8 +33,12 @@ const (
 	replicationFactorOptionName = "replication-factor"
 	hostSelectModeOptionName    = "host-select-mode"
 	hostSelectionOptionName     = "host-selection"
+	hostInfoModeOptionName      = "host-info-mode"
+	hostSyncModeOptionName      = "host-sync-mode"
 
 	challengeTimeOut = time.Second
+
+	hostStorePrefix = "/hosts/"
 )
 
 var (
@@ -40,20 +48,21 @@ var (
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "pay to store a file on btfs node.",
+		Tagline: "Pay to store files on BTFS network nodes.",
 		ShortDescription: `
-To UPLOAD a file using select hosts: 
+To UPLOAD a file using specific hosts:
     using -m with "custom" mode, and put host identifier in -l, multiple hosts separate by ','
 For example:
 
     btfs storage upload -m=custom -l=host_address1,address2
 
-Or it will select a node based on reputation for you.
+Or it will select a node based on overall score for you.
 And receiving a Collateral Proof as evidence when selected node stores your file.
 	`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"upload": storageUploadCmd,
+		"hosts":  storageHostsCmd,
 	},
 }
 
@@ -64,7 +73,7 @@ var storageUploadCmd = &cmds.Command{
 		"respc": storageUploadResponseChallengeCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "add hash of file to upload").EnableStdin(),
+		cmds.StringArg("file-hash", true, false, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
@@ -164,9 +173,9 @@ type UploadRes struct {
 
 var storageUploadInitCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, " ID for the entire storage upload session").EnableStdin(),
-		cmds.StringArg("channel-id", true, false, "open channel id for payment").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -263,7 +272,7 @@ var storageUploadInitCmd = &cmds.Command{
 		proof := &ProofRes{
 			CollateralProof: "proof",
 		}
-		return res.Emit(proof)
+		return cmds.EmitOnce(res, proof)
 	},
 	Type: ProofRes{},
 }
@@ -280,8 +289,8 @@ type ChallengeRes struct {
 
 var storageUploadRequestChallengeCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -334,10 +343,10 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 
 var storageUploadResponseChallengeCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "chunk the storage node should fetch").EnableStdin(),
-		//cmds.StringArg("challenge-id", true, false, "challenge id from uploader").EnableStdin(),
-		cmds.StringArg("challenge-hash", true, false, "challenge response back to uploader.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "chunk the storage node should fetch").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
+		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		// pre-check
@@ -501,4 +510,115 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 		return nil, err
 	}
 	return ledger.CreateChannel(ctx, ledgerClient, cc, sig)
+}
+
+var storageHostsCmd = &cmds.Command{
+	Subcommands: map[string]*cmds.Command{
+		"info": storageHostsInfoCmd,
+		"sync": storageHostsSyncCmd,
+	},
+}
+
+var storageHostsInfoCmd = &cmds.Command{
+	Options: []cmds.Option{
+		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		mode, _ := req.Options[hostInfoModeOptionName].(string)
+		return hub.CheckValidMode(mode)
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		mode, _ := req.Options[hostInfoModeOptionName].(string)
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		rds := n.Repo.Datastore()
+
+		// All = display everything
+		if mode == hub.HubModeAll {
+			mode = ""
+		}
+		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+		if err != nil {
+			return err
+		}
+
+		var nodes []*info.Node
+		for r := range qr.Next() {
+			if r.Error != nil {
+				return r.Error
+			}
+			var ni info.Node
+			err := json.Unmarshal(r.Entry.Value, &ni)
+			if err != nil {
+				return err
+			}
+			nodes = append(nodes, &ni)
+		}
+
+		return cmds.EmitOnce(res, &HostInfoRes{nodes})
+	},
+	Type: HostInfoRes{},
+}
+
+type HostInfoRes struct {
+	Nodes []*info.Node
+}
+
+var storageHostsSyncCmd = &cmds.Command{
+	Options: []cmds.Option{
+		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		mode, _ := req.Options[hostSyncModeOptionName].(string)
+		return hub.CheckValidMode(mode)
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		mode, _ := req.Options[hostSyncModeOptionName].(string)
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		nodes, err := hub.QueryHub(n.Identity.Pretty(), mode)
+		if err != nil {
+			return err
+		}
+
+		rds := n.Repo.Datastore()
+
+		// Dumb strategy right now: remove all existing and add the new ones
+		// TODO: Update by timestamp and only overwrite updated
+		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+		if err != nil {
+			return err
+		}
+
+		for r := range qr.Next() {
+			if r.Error != nil {
+				return r.Error
+			}
+			err := rds.Delete(ds.NewKey(r.Entry.Key))
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, ni := range nodes {
+			b, err := json.Marshal(ni)
+			if err != nil {
+				return err
+			}
+			err = rds.Put(ds.NewKey(fmt.Sprintf("%s%s/%s", hostStorePrefix, mode, ni.NodeID)), b)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	},
 }
