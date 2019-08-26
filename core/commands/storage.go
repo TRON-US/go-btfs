@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -19,7 +18,10 @@ import (
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 	cidlib "github.com/ipfs/go-cid"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/gogo/protobuf/proto"
+	ds "github.com/ipfs/go-datastore"
+	query "github.com/ipfs/go-datastore/query"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -34,6 +36,8 @@ const (
 	hostSyncModeOptionName      = "host-sync-mode"
 
 	challengeTimeOut = time.Second
+
+	hostStorePrefix = "/hosts/"
 )
 
 var (
@@ -539,7 +543,37 @@ var storageHostsSyncCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println(nodes)
+
+		rds := n.Repo.Datastore()
+
+		// Dumb strategy right now: remove all existing and add the new ones
+		// TODO: Update by timestamp and only overwrite updated
+		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+		if err != nil {
+			return err
+		}
+
+		for r := range qr.Next() {
+			if r.Error != nil {
+				return r.Error
+			}
+			err := rds.Delete(ds.NewKey(r.Entry.Key))
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, ni := range nodes {
+			b, err := json.Marshal(ni)
+			if err != nil {
+				return err
+			}
+			err = rds.Put(ds.NewKey(fmt.Sprintf("%s%s/%s", hostStorePrefix, mode, ni.NodeID)), b)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	},
 }

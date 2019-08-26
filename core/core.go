@@ -13,7 +13,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/ipfs/go-filestore"
 	version "github.com/TRON-US/go-btfs"
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/node"
@@ -24,6 +23,7 @@ import (
 	"github.com/TRON-US/go-btfs/p2p"
 	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-btfs/repo"
+	"github.com/ipfs/go-filestore"
 
 	bserv "github.com/ipfs/go-blockservice"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
