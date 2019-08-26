@@ -27,6 +27,15 @@ type hostsQuery struct {
 	// Ignore other fields
 }
 
+// CheckValidMode checks if a given host selection/sync mode is valid or not.
+func CheckValidMode(mode string) error {
+	switch mode {
+	case HubModeAll, HubModeScore, HubModeGeo, HubModeRep, HubModePrice, HubModeSpeed:
+		return nil
+	}
+	return fmt.Errorf("Invalid host mode: %s", mode)
+}
+
 // QueryHub queries the BTFS-Hub to retrieve the latest list of hosts info
 // according to a certain mode.
 func QueryHub(nodeID, mode string) ([]*info.Node, error) {

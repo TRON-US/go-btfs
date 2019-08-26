@@ -25,6 +25,7 @@ import (
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/tron-us/go-btfs-common/info"
 )
 
 const (
@@ -271,7 +272,7 @@ var storageUploadInitCmd = &cmds.Command{
 		proof := &ProofRes{
 			CollateralProof: "proof",
 		}
-		return res.Emit(proof)
+		return cmds.EmitOnce(res, proof)
 	},
 	Type: ProofRes{},
 }
@@ -522,14 +523,58 @@ var storageHostsInfoCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
 	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		return nil
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		mode, _ := req.Options[hostInfoModeOptionName].(string)
+		return hub.CheckValidMode(mode)
 	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		mode, _ := req.Options[hostInfoModeOptionName].(string)
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		rds := n.Repo.Datastore()
+
+		// All = display everything
+		if mode == hub.HubModeAll {
+			mode = ""
+		}
+		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+		if err != nil {
+			return err
+		}
+
+		var nodes []*info.Node
+		for r := range qr.Next() {
+			if r.Error != nil {
+				return r.Error
+			}
+			var ni info.Node
+			err := json.Unmarshal(r.Entry.Value, &ni)
+			if err != nil {
+				return err
+			}
+			nodes = append(nodes, &ni)
+		}
+
+		return cmds.EmitOnce(res, &HostInfoRes{nodes})
+	},
+	Type: HostInfoRes{},
+}
+
+type HostInfoRes struct {
+	Nodes []*info.Node
 }
 
 var storageHostsSyncCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		mode, _ := req.Options[hostSyncModeOptionName].(string)
+		return hub.CheckValidMode(mode)
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		mode, _ := req.Options[hostSyncModeOptionName].(string)
