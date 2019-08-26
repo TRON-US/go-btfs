@@ -10,7 +10,7 @@ test_description="Test add and cat commands"
 
 test_add_skip() {
 
-  test_expect_success "'ipfs add -r' with hidden file succeeds" '
+  test_expect_success "'btfs add -r' with hidden file succeeds" '
     mkdir -p mountdir/planets/.asteroids &&
     echo "Hello Mars" >mountdir/planets/mars.txt &&
     echo "Hello Venus" >mountdir/planets/venus.txt &&
@@ -18,10 +18,10 @@ test_add_skip() {
     echo "Hello Charon" >mountdir/planets/.charon.txt &&
     echo "Hello Ceres" >mountdir/planets/.asteroids/ceres.txt &&
     echo "Hello Pallas" >mountdir/planets/.asteroids/pallas.txt &&
-    ipfs add -r mountdir/planets >actual
+    btfs add -r mountdir/planets >actual
   '
 
-  test_expect_success "'ipfs add -r' did not include . files" '
+  test_expect_success "'btfs add -r' did not include . files" '
     cat >expected <<-\EOF &&
 added QmZy3khu7qf696i5HtkgL2NotsCZ8wzvNZJ1eUdA5n8KaV planets/mars.txt
 added QmQnv4m3Q5512zgVtpbJ9z85osQrzZzGRn934AGh6iVEXz planets/venus.txt
@@ -30,11 +30,11 @@ EOF
     test_cmp expected actual
   '
 
-  test_expect_success "'ipfs add -r --hidden' succeeds" '
-    ipfs add -r --hidden mountdir/planets >actual
+  test_expect_success "'btfs add -r --hidden' succeeds" '
+    btfs add -r --hidden mountdir/planets >actual
   '
 
-  test_expect_success "'ipfs add -r --hidden' did include . files" '
+  test_expect_success "'btfs add -r --hidden' did include . files" '
     cat >expected <<-\EOF &&
 added QmcAREBcjgnUpKfyFmUGnfajA1NQS5ydqRp7WfqZ6JF8Dx planets/.asteroids/ceres.txt
 added QmZ5eaLybJ5GUZBNwy24AA9EEDTDpA4B8qXnuN3cGxu2uF planets/.asteroids/pallas.txt
@@ -48,13 +48,13 @@ EOF
     test_cmp expected actual
   '
 
-  test_expect_success "'ipfs add' includes hidden files given explicitly even without --hidden" '
+  test_expect_success "'btfs add' includes hidden files given explicitly even without --hidden" '
     mkdir -p mountdir/dotfiles &&
     echo "set nocompatible" > mountdir/dotfiles/.vimrc
     cat >expected <<-\EOF &&
 added QmT4uMRDCN7EMpFeqwvKkboszbqeW1kWVGrBxBuCGqZcQc .vimrc
 EOF
-    ipfs add mountdir/dotfiles/.vimrc >actual
+    btfs add mountdir/dotfiles/.vimrc >actual
     cat actual
     test_cmp expected actual
   '
@@ -62,12 +62,12 @@ EOF
 }
 
 # should work offline
-test_init_ipfs
+test_init_btfs
 test_add_skip
 
 # should work online
-test_launch_ipfs_daemon
+test_launch_btfs_daemon
 test_add_skip
-test_kill_ipfs_daemon
+test_kill_btfs_daemon
 
 test_done
