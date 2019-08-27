@@ -6,20 +6,19 @@ import (
 	"fmt"
 	"time"
 
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	"github.com/TRON-US/go-btfs-config"
-	util "github.com/ipfs/go-ipfs-util"
-	peer "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-peerstore/pstoremem"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-
 	"github.com/TRON-US/go-btfs/core/node/libp2p"
 	"github.com/TRON-US/go-btfs/p2p"
 
+	"github.com/TRON-US/go-btfs-config"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	offroute "github.com/ipfs/go-ipfs-routing/offline"
+	util "github.com/ipfs/go-ipfs-util"
 	"github.com/ipfs/go-path/resolver"
 	uio "github.com/ipfs/go-unixfs/io"
+	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-peerstore/pstoremem"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"go.uber.org/fx"
 )
 

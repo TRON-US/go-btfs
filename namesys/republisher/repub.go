@@ -21,7 +21,7 @@ import (
 
 var errNoEntry = errors.New("no previous entry")
 
-var log = logging.Logger("ipns-repub")
+var log = logging.Logger("btns-repub")
 
 // DefaultRebroadcastInterval is the default interval at which we rebroadcast IPNS records
 var DefaultRebroadcastInterval = time.Hour * 4
@@ -123,7 +123,7 @@ func (rp *Republisher) republishEntry(ctx context.Context, priv ic.PrivKey) erro
 		return err
 	}
 
-	log.Debugf("republishing ipns entry for %s", id)
+	log.Debugf("republishing btns entry for %s", id)
 
 	// Look for it locally only
 	p, err := rp.getLastVal(id)

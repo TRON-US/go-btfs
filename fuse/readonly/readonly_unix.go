@@ -23,7 +23,7 @@ import (
 	lgbl "github.com/libp2p/go-libp2p-loggables"
 )
 
-var log = logging.Logger("fuse/ipfs")
+var log = logging.Logger("fuse/btfs")
 
 // FileSystem is the readonly IPFS Fuse Filesystem.
 type FileSystem struct {

@@ -82,7 +82,7 @@ func (p *IpnsPublisher) ListPublished(ctx context.Context) (map[peer.ID]*pb.Ipns
 			e := new(pb.IpnsEntry)
 			if err := proto.Unmarshal(result.Value, e); err != nil {
 				// Might as well return what we can.
-				log.Error("found an invalid IPNS entry:", err)
+				log.Error("found an invalid BTNS entry:", err)
 				continue
 			}
 			if !strings.HasPrefix(result.Key, ipnsPrefix) {
@@ -124,7 +124,7 @@ func (p *IpnsPublisher) GetPublished(ctx context.Context, id peer.ID, checkRouti
 			// Not found or other network issue. Can't really do
 			// anything about this case.
 			if err != routing.ErrNotFound {
-				log.Debugf("error when determining the last published IPNS record for %s: %s", id, err)
+				log.Debugf("error when determining the last published BTNS record for %s: %s", id, err)
 			}
 
 			return nil, nil
@@ -280,7 +280,7 @@ func PublishEntry(ctx context.Context, r routing.ValueStore, ipnskey string, rec
 		return err
 	}
 
-	log.Debugf("Storing ipns entry at: %s", ipnskey)
+	log.Debugf("Storing btns entry at: %s", ipnskey)
 	// Store ipns entry at "/ipns/"+h(pubkey)
 	return r.PutValue(timectx, ipnskey, data)
 }

@@ -2,13 +2,12 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"time"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
@@ -16,7 +15,6 @@ import (
 	bserv "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	dag "github.com/ipfs/go-merkledag"
 	verifcid "github.com/ipfs/go-verifcid"
@@ -60,7 +58,7 @@ var addPinCmd = &cmds.Command{
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "Path to object(s) to be pinned.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "Path to object(s) to be pinned.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively pin the object linked to by the specified object(s).").WithDefault(true),
@@ -208,7 +206,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "Path to object(s) to be unpinned.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "Path to object(s) to be unpinned.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively unpin the object linked to by the specified object(s).").WithDefault(true),
@@ -221,17 +219,6 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 		if err != nil {
 			return err
 		}
-
-		var rmOnUnpin bool = false
-
-		var m map[string]string
-		if cfg.Datastore.Params != nil {
-			if err := json.Unmarshal(*cfg.Datastore.Params, &m); err != nil {
-				fmt.Println(err)
-			}
-		}
-
-		rmOnUnpin, _ = strconv.ParseBool(m["rmOnUnpin"])
 
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
@@ -269,7 +256,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 			return err
 		}
 
-		if rmOnUnpin {
+		if cfg.Experimental.RemoveOnUnpin {
 			RepoCmd.Subcommands["gc"].Run(req, res, env)
 		}
 
@@ -337,7 +324,7 @@ Example:
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", false, true, "Path to object(s) to be listed."),
+		cmds.StringArg("btfs-path", false, true, "Path to object(s) to be listed."),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(pinTypeOptionName, "t", "The type of pinned keys to list. Can be \"direct\", \"indirect\", \"recursive\", or \"all\".").WithDefault("all"),

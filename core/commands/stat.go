@@ -8,8 +8,8 @@ import (
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
-	humanize "github.com/dustin/go-humanize"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	humanize "github.com/dustin/go-humanize"
 	metrics "github.com/libp2p/go-libp2p-core/metrics"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	protocol "github.com/libp2p/go-libp2p-core/protocol"

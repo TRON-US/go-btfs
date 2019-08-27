@@ -88,10 +88,10 @@ The following examples use very small byte sizes to demonstrate the
 properties of the different chunkers on a small file. You'll likely
 want to use a 1024 times larger chunk sizes for most files.
 
-  > btfs add --chunker=size-2048 ipfs-logo.svg
-  added QmafrLBfzRLV4XSH1XcaMMeaXEUhDJjmtDfsYU95TrWG87 ipfs-logo.svg
-  > btfs add --chunker=rabin-512-1024-2048 ipfs-logo.svg
-  added Qmf1hDN65tR55Ubh2RN1FPxr69xq3giVBz1KApsresY8Gn ipfs-logo.svg
+  > btfs add --chunker=size-2048 btfs-logo.svg
+  added QmafrLBfzRLV4XSH1XcaMMeaXEUhDJjmtDfsYU95TrWG87 btfs-logo.svg
+  > btfs add --chunker=rabin-512-1024-2048 btfs-logo.svg
+  added Qmf1hDN65tR55Ubh2RN1FPxr69xq3giVBz1KApsresY8Gn btfs-logo.svg
 
 You can now check what blocks have been created by:
 

@@ -59,7 +59,7 @@ The JSON output contains type information.
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "The path to the BTFS object(s) to list links from.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "The path to the BTFS object(s) to list links from.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(lsHeadersOptionNameTime, "v", "Print table headers (Hash, Size, Name)."),

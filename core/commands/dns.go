@@ -21,17 +21,17 @@ var DNSCmd = &cmds.Command{
 		ShortDescription: `
 Multihashes are hard to remember, but domain names are usually easy to
 remember.  To create memorable aliases for multihashes, DNS TXT
-records can point to other DNS links, BTFS objects, IPNS keys, etc.
+records can point to other DNS links, BTFS objects, BTNS keys, etc.
 This command resolves those links to the referenced object.
 `,
 		LongDescription: `
 Multihashes are hard to remember, but domain names are usually easy to
 remember.  To create memorable aliases for multihashes, DNS TXT
-records can point to other DNS links, BTFS objects, IPNS keys, etc.
+records can point to other DNS links, BTFS objects, BTNS keys, etc.
 This command resolves those links to the referenced object.
 
 Note: This command can only recursively resolve DNS links,
-it will fail to recursively resolve through IPNS keys etc.
+it will fail to recursively resolve through BTNS keys etc.
 For general-purpose recursive resolution, use btfs name resolve -r.
 
 For example, with this DNS TXT record:

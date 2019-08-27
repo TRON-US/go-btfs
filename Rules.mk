@@ -119,7 +119,7 @@ help:
 	@echo 'BUILD TARGETS:'
 	@echo ''
 	@echo '  all          - print this help message'
-	@echo '  build        - Build binary at ./cmd/btfs/ipfs'
+	@echo '  build        - Build binary at ./cmd/btfs/btfs'
 	@echo '  nofuse       - Build binary with no fuse support'
 	@echo '  install      - Build binary and install into $$GOPATH/bin'
 #	@echo '  dist_install - TODO: c.f. ./cmd/btfs/dist/README.md'

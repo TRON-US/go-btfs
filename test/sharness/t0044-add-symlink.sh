@@ -17,8 +17,8 @@ test_expect_success "creating files succeeds" '
 '
 
 test_add_symlinks() {
-  test_expect_success "ipfs add files succeeds" '
-    ipfs add -q -r files >filehash_all &&
+  test_expect_success "btfs add files succeeds" '
+    btfs add -q -r files >filehash_all &&
     tail -n 1 filehash_all >filehash_out
   '
 
@@ -27,8 +27,8 @@ test_add_symlinks() {
     test_cmp filehash_exp filehash_out
   '
 
-  test_expect_success "ipfs add --cid-version=1 files succeeds" '
-    ipfs add -q -r --cid-version=1 files >filehash_all &&
+  test_expect_success "btfs add --cid-version=1 files succeeds" '
+    btfs add -q -r --cid-version=1 files >filehash_all &&
     tail -n 1 filehash_all >filehash_out
   '
 
@@ -39,7 +39,7 @@ test_add_symlinks() {
   '
 
   test_expect_success "adding a symlink adds the link itself" '
-    ipfs add -q files/bar/baz > goodlink_out
+    btfs add -q files/bar/baz > goodlink_out
   '
 
   test_expect_success "output looks good" '
@@ -48,7 +48,7 @@ test_add_symlinks() {
   '
 
   test_expect_success "adding a broken symlink works" '
-    ipfs add -q files/bad > badlink_out
+    btfs add -q files/bad > badlink_out
   '
 
   test_expect_success "output looks good" '
@@ -61,20 +61,20 @@ adding with no symlink" '
     mkdir -p files2/a/b/c &&
     echo "some other text" > files2/a/b/c/foo &&
     ln -s b files2/a/d
-    ipfs add -rq files2/a/b/c > no_sym &&
-    ipfs add -rq files2/a/d/c > sym &&
+    btfs add -rq files2/a/b/c > no_sym &&
+    btfs add -rq files2/a/d/c > sym &&
     test_cmp no_sym sym
   '
 }
 
-test_init_ipfs
+test_init_btfs
 
 test_add_symlinks
 
-test_launch_ipfs_daemon
+test_launch_btfs_daemon
 
 test_add_symlinks
 
-test_kill_ipfs_daemon
+test_kill_btfs_daemon
 
 test_done

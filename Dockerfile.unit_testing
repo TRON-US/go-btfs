@@ -1,0 +1,44 @@
+FROM golang:1.12-stretch
+MAINTAINER TRON-US <support@tron.network>
+# Dockerfile.unit_testing will build an image to run the go unit tests.
+# Use the regular Dockerfile to run a btfs daemon instead
+
+ENV SRC_DIR /go-btfs
+
+# Download packages first so they can be cached.
+COPY go.mod go.sum $SRC_DIR/
+RUN cd $SRC_DIR \
+  && go mod download
+
+COPY . $SRC_DIR
+
+# Install patch
+RUN apt-get update && apt-get install -y patch
+
+# Install FUSE
+RUN apt-get update && apt-get install -y fuse
+
+# Do this in the current container
+RUN mv /bin/fusermount /usr/local/bin/fusermount
+
+# Add suid bit on fusermount so it will run properly
+RUN chmod 4755 /usr/local/bin/fusermount
+
+# Create the fs-repo directory and switch to a non-privileged user.
+ENV BTFS_PATH /data/btfs
+RUN mkdir -p $BTFS_PATH
+
+# Create mount points for `btfs mount` command
+RUN mkdir /btfs /btns
+
+# Expose the fs-repo as a volume.
+# start_btfs initializes an fs-repo if none is mounted.
+# Important this happens after the USER directive so permission are correct.
+VOLUME $BTFS_PATH
+
+# The default logging level
+ENV BTFS_LOGGING ""
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# by default lets run the go unit tests
+CMD cd /go-btfs && make test_go_test 

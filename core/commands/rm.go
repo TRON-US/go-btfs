@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/namesys/resolve"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	path2 "github.com/ipfs/go-path"
 	"github.com/ipfs/interface-go-ipfs-core/options"

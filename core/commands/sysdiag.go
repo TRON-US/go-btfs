@@ -51,8 +51,8 @@ Prints out information about your computer to aid in easier debugging.
 			return err
 		}
 
-		info["ipfs_version"] = version.CurrentVersionNumber
-		info["ipfs_commit"] = version.CurrentCommit
+		info["btfs_version"] = version.CurrentVersionNumber
+		info["btfs_commit"] = version.CurrentCommit
 		return cmds.EmitOnce(res, info)
 	},
 }

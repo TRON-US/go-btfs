@@ -19,7 +19,7 @@ var (
 )
 
 const (
-	ipfsPathOptionName     = "ipfs-path"
+	ipfsPathOptionName     = "btfs-path"
 	resolveOptionName      = "resolve"
 	allowOfflineOptionName = "allow-offline"
 	lifeTimeOptionName     = "lifetime"
@@ -30,46 +30,46 @@ const (
 
 var PublishCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Publish IPNS names.",
+		Tagline: "Publish BTNS names.",
 		ShortDescription: `
-IPNS is a PKI namespace, where names are the hashes of public keys, and
+BTNS is a PKI namespace, where names are the hashes of public keys, and
 the private key enables publishing new (signed) values. In both publish
 and resolve, the default name used is the node's own PeerID,
 which is the hash of its public key.
 `,
 		LongDescription: `
-IPNS is a PKI namespace, where names are the hashes of public keys, and
+BTNS is a PKI namespace, where names are the hashes of public keys, and
 the private key enables publishing new (signed) values. In both publish
 and resolve, the default name used is the node's own PeerID,
 which is the hash of its public key.
 
-You can use the 'ipfs key' commands to list and generate more names and their
+You can use the 'btfs key' commands to list and generate more names and their
 respective keys.
 
 Examples:
 
-Publish an <ipfs-path> with your default name:
+Publish an <btfs-path> with your default name:
 
-  > ipfs name publish /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
-  Published to QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n: /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  > btfs name publish /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  Published to QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n: /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
 
-Publish an <ipfs-path> with another name, added by an 'ipfs key' command:
+Publish an <btfs-path> with another name, added by an 'btfs key' command:
 
-  > ipfs key gen --type=rsa --size=2048 mykey
-  > ipfs name publish --key=mykey /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
-  Published to QmSrPmbaUKA3ZodhzPWZnpFgcPMFWF4QsxXbkWfEptTBJd: /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  > btfs key gen --type=rsa --size=2048 mykey
+  > btfs name publish --key=mykey /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  Published to QmSrPmbaUKA3ZodhzPWZnpFgcPMFWF4QsxXbkWfEptTBJd: /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
 
-Alternatively, publish an <ipfs-path> using a valid PeerID (as listed by 
-'ipfs key list -l'):
+Alternatively, publish an <btfs-path> using a valid PeerID (as listed by 
+'btfs key list -l'):
 
- > ipfs name publish --key=QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
-  Published to QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n: /ipfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+ > btfs name publish --key=QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
+  Published to QmbCMUZw6JFeZ7Wp9jkzbye3Fzp2GGcPgC3nmeUjfVF87n: /btfs/QmatmE9msSfkKxoffpHwNLNKgwZG8eT9Bud6YoPab52vpy
 
 `,
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg(ipfsPathOptionName, true, false, "ipfs path of the object to be published.").EnableStdin(),
+		cmds.StringArg(ipfsPathOptionName, true, false, "btfs path of the object to be published.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(resolveOptionName, "Check if the given path can be resolved before publishing.").WithDefault(true),
@@ -77,9 +77,9 @@ Alternatively, publish an <ipfs-path> using a valid PeerID (as listed by
 			`Time duration that the record will be valid for. <<default>>
     This accepts durations such as "300s", "1.5h" or "2h45m". Valid time units are
     "ns", "us" (or "µs"), "ms", "s", "m", "h".`).WithDefault("24h"),
-		cmds.BoolOption(allowOfflineOptionName, "When offline, save the IPNS record to the the local datastore without broadcasting to the network instead of simply failing."),
+		cmds.BoolOption(allowOfflineOptionName, "When offline, save the BTNS record to the the local datastore without broadcasting to the network instead of simply failing."),
 		cmds.StringOption(ttlOptionName, "Time duration this record should be cached for. Uses the same syntax as the lifetime option. (caution: experimental)"),
-		cmds.StringOption(keyOptionName, "k", "Name of the key to be used or a valid PeerID, as listed by 'ipfs key list -l'.").WithDefault("self"),
+		cmds.StringOption(keyOptionName, "k", "Name of the key to be used or a valid PeerID, as listed by 'btfs key list -l'.").WithDefault("self"),
 		cmds.BoolOption(quieterOptionName, "Q", "Write only final hash."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {

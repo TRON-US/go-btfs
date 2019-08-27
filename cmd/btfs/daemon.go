@@ -28,8 +28,8 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 
-	"github.com/hashicorp/go-multierror"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
 	goprocess "github.com/jbenet/goprocess"
@@ -43,8 +43,8 @@ const (
 	enableGCKwd               = "enable-gc"
 	initOptionKwd             = "init"
 	initProfileOptionKwd      = "init-profile"
-	ipfsMountKwd              = "mount-ipfs"
-	ipnsMountKwd              = "mount-ipns"
+	ipfsMountKwd              = "mount-btfs"
+	ipnsMountKwd              = "mount-btns"
 	migrateKwd                = "migrate"
 	mountKwd                  = "mount"
 	offlineKwd                = "offline" // global option
