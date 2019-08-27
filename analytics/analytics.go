@@ -83,6 +83,9 @@ func durationToSeconds(duration time.Duration) uint64 {
 
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion string) {
+	if n == nil {
+		return
+	}
 	var log = logging.Logger("cmd/btfs")
 	configuration, err := n.Repo.Config()
 	if err != nil {
@@ -101,6 +104,9 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 		}
 
 		dc.startTime = time.Now()
+		if n.Identity == "" {
+			return
+		}
 		dc.NodeID = n.Identity.Pretty()
 		dc.BTFSVersion = BTFSVersion
 		dc.OSType = runtime.GOOS
@@ -152,6 +158,10 @@ func (dc *dataCollection) sendData() {
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
+		return
+	}
+	if dc.node.PrivateKey == nil {
+		dc.reportHealthAlert("node's private key is null")
 		return
 	}
 	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
