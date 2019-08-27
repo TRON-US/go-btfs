@@ -524,6 +524,14 @@ var storageHostsInfoCmd = &cmds.Command{
 		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("client remote API is not enabled")
+		}
+
 		mode, _ := req.Options[hostInfoModeOptionName].(string)
 		return hub.CheckValidMode(mode)
 	},
@@ -573,6 +581,14 @@ var storageHostsSyncCmd = &cmds.Command{
 		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("client remote API is not enabled")
+		}
+
 		mode, _ := req.Options[hostSyncModeOptionName].(string)
 		return hub.CheckValidMode(mode)
 	},
