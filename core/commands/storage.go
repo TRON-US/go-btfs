@@ -48,17 +48,10 @@ var (
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Pay to store files on BTFS network nodes.",
+		Tagline: "Interact with storage services on BTFS.",
 		ShortDescription: `
-To UPLOAD a file using specific hosts:
-    using -m with "custom" mode, and put host identifier in -l, multiple hosts separate by ','
-For example:
-
-    btfs storage upload -m=custom -l=host_address1,address2
-
-Or it will select a node based on overall score for you.
-And receiving a Collateral Proof as evidence when selected node stores your file.
-	`,
+Storage services include client upload operations, host storage operations,
+host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"upload": storageUploadCmd,
@@ -67,6 +60,20 @@ And receiving a Collateral Proof as evidence when selected node stores your file
 }
 
 var storageUploadCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Store files on BTFS network nodes through BTT payment.",
+		ShortDescription: `
+To upload and store a file on specific hosts:
+    use -m with 'custom' mode, and put host identifiers in -l, with multiple hosts separated by ','
+
+For example:
+
+    btfs storage upload -m=custom -l=host_address1,host_address2
+
+If no hosts are given, BTFS will select nodes based on overall score according to current client's environment.
+
+Receive proofs as collateral evidence after selected nodes agree to store the file.`,
+	},
 	Subcommands: map[string]*cmds.Command{
 		"init":  storageUploadInitCmd,
 		"reqc":  storageUploadRequestChallengeCmd,
@@ -172,6 +179,13 @@ type UploadRes struct {
 }
 
 var storageUploadInitCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Initialize storage handshake with inquiring client.",
+		ShortDescription: `
+Storage host opens this endpoint to accept incoming upload/storage requests,
+If current host is interested and all validation checks out, host downloads
+the chunk and replies back to client for the next challenge step.`,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
@@ -288,6 +302,13 @@ type ChallengeRes struct {
 }
 
 var storageUploadRequestChallengeCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Request for a client challenge from storage host.",
+		ShortDescription: `
+Client opens this endpoint for interested hosts to ask for a challenge.
+A challenge contains a random file chunk hash and a nonce for hosts to hash
+the contents and nonce together to produce a final challenge response.`,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
@@ -342,6 +363,13 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 }
 
 var storageUploadResponseChallengeCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Respond to client challenge from storage host.",
+		ShortDescription: `
+Client opens this endpoint for interested hosts to respond with a previous
+challenge's response. If response is valid, client returns signed payment
+signature back to the host to complete payment.`,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
