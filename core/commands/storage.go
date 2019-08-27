@@ -279,7 +279,6 @@ the chunk and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		log.Info("Successfully close channel")
 
 		// prepare result
 		// TODO: CollateralProof
@@ -541,6 +540,11 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 }
 
 var storageHostsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Interact with information on hosts.",
+		ShortDescription: `
+Host information is synchronized from btfs-hub and saved in local datastore.`,
+	},
 	Subcommands: map[string]*cmds.Command{
 		"info": storageHostsInfoCmd,
 		"sync": storageHostsSyncCmd,
@@ -548,6 +552,20 @@ var storageHostsCmd = &cmds.Command{
 }
 
 var storageHostsInfoCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Display saved host information.",
+		ShortDescription: `
+This command displays saved information from btfs-hub under multiple modes.
+Each mode ranks hosts based on its criteria and is randomized based on current node location.
+
+Mode options include:
+- "score": top overall score
+- "geo":   closest location
+- "rep":   highest reputation
+- "price": lowest price
+- "speed": highest transfer speed
+- "all":   all existing hosts`,
+	},
 	Options: []cmds.Option{
 		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
 	},
@@ -605,6 +623,20 @@ type HostInfoRes struct {
 }
 
 var storageHostsSyncCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Synchronize host information from btfs-hub.",
+		ShortDescription: `
+This command synchronizes information from btfs-hub using multiple modes.
+Each mode ranks hosts based on its criteria and is randomized based on current node location.
+
+Mode options include:
+- "score": top overall score
+- "geo":   closest location
+- "rep":   highest reputation
+- "price": lowest price
+- "speed": highest transfer speed
+- "all":   update existing hosts`,
+	},
 	Options: []cmds.Option{
 		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
 	},
