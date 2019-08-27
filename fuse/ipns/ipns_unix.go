@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-var log = logging.Logger("fuse/ipns")
+var log = logging.Logger("fuse/btns")
 
 // FileSystem is the readwrite IPNS Fuse Filesystem.
 type FileSystem struct {
@@ -287,7 +287,7 @@ func (fi *FileNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	size, err := fi.fi.Size()
 	if err != nil {
 		// In this case, the dag node in question may not be unixfs
-		return fmt.Errorf("fuse/ipns: failed to get file.Size(): %s", err)
+		return fmt.Errorf("fuse/btns: failed to get file.Size(): %s", err)
 	}
 	a.Mode = os.FileMode(0666)
 	a.Size = uint64(size)

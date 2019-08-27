@@ -7,11 +7,11 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	humanize "github.com/dustin/go-humanize"
 	bitswap "github.com/ipfs/go-bitswap"
 	decision "github.com/ipfs/go-bitswap/decision"
 	cidutil "github.com/ipfs/go-cidutil"
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -171,7 +171,7 @@ var ledgerCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Show the current ledger for a peer.",
 		ShortDescription: `
-The Bitswap decision engine tracks the number of bytes exchanged between IPFS
+The Bitswap decision engine tracks the number of bytes exchanged between BTFS
 nodes, and stores this information as a collection of ledgers. This command
 prints the ledger associated with a given peer.
 `,

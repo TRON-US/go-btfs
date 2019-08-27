@@ -1,5 +1,5 @@
 diff --git a/tests/block.go b/tests/block.go
-index 34e47e9..8bdabb1 100644
+index 6b648f3..d71f3f5 100644
 --- a/tests/block.go
 +++ b/tests/block.go
 @@ -111,7 +111,7 @@ func (tp *TestSuite) TestBlockGet(t *testing.T) {
@@ -12,7 +12,7 @@ index 34e47e9..8bdabb1 100644
  	rp, err := api.ResolvePath(ctx, p)
  	if err != nil {
 diff --git a/tests/key.go b/tests/key.go
-index 7ff5f33..e207fef 100644
+index e3461f9..1eb3806 100644
 --- a/tests/key.go
 +++ b/tests/key.go
 @@ -64,8 +64,8 @@ func (tp *TestSuite) TestListSelf(t *testing.T) {
@@ -48,6 +48,17 @@ index 7ff5f33..e207fef 100644
  	}
  }
  
+@@ -183,8 +183,8 @@ func (tp *TestSuite) TestGenerateType(t *testing.T) {
+ 	}
+ 
+ 	// Expected to be an inlined identity hash.
+-	if !strings.HasPrefix(k.Path().String(), "/ipns/12") {
+-		t.Errorf("expected the key to be prefixed with '/ipns/12', got '%s'", k.Path().String())
++	if !strings.HasPrefix(k.Path().String(), "/btns/12") {
++		t.Errorf("expected the key to be prefixed with '/btns/12', got '%s'", k.Path().String())
+ 	}
+ }
+ 
 @@ -256,13 +256,13 @@ func (tp *TestSuite) TestList(t *testing.T) {
  		return
  	}
@@ -67,7 +78,7 @@ index 7ff5f33..e207fef 100644
  	}
  }
 diff --git a/tests/name.go b/tests/name.go
-index efaf1d3..db495c3 100644
+index 31a5c14..2e284e0 100644
 --- a/tests/name.go
 +++ b/tests/name.go
 @@ -212,7 +212,7 @@ func (tp *TestSuite) TestBasicPublishResolveKey(t *testing.T) {
@@ -80,7 +91,7 @@ index efaf1d3..db495c3 100644
  	}
  
 diff --git a/tests/object.go b/tests/object.go
-index 8682a2e..4f4fc25 100644
+index 2e066ca..a988289 100644
 --- a/tests/object.go
 +++ b/tests/object.go
 @@ -89,15 +89,15 @@ func (tp *TestSuite) TestObjectPut(t *testing.T) {
@@ -103,7 +114,7 @@ index 8682a2e..4f4fc25 100644
  	}
  }
 diff --git a/tests/path.go b/tests/path.go
-index 4fd18bd..a876053 100644
+index 2d94972..b0d59e3 100644
 --- a/tests/path.go
 +++ b/tests/path.go
 @@ -188,9 +188,9 @@ func (tp *TestSuite) TestPathRoot(t *testing.T) {
@@ -119,7 +130,7 @@ index 4fd18bd..a876053 100644
  	}
  }
 diff --git a/tests/unixfs.go b/tests/unixfs.go
-index c810167..a791ec7 100644
+index 47ce505..6839324 100644
 --- a/tests/unixfs.go
 +++ b/tests/unixfs.go
 @@ -50,12 +50,12 @@ func (tp *TestSuite) TestUnixfs(t *testing.T) {

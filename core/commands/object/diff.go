@@ -33,12 +33,12 @@ Example:
 
    > ls foo
    bar baz/ giraffe
-   > ipfs add -r foo
+   > btfs add -r foo
    ...
    Added QmegHcnrPgMwC7tBiMxChD54fgQMBUecNw9nE9UUU4x1bz foo
    > OBJ_A=QmegHcnrPgMwC7tBiMxChD54fgQMBUecNw9nE9UUU4x1bz
    > echo "different content" > foo/bar
-   > ipfs add -r foo
+   > btfs add -r foo
    ...
    Added QmcmRptkSPWhptCttgHg27QNDmnV33wAJyUkCnAvqD3eCD foo
    > OBJ_B=QmcmRptkSPWhptCttgHg27QNDmnV33wAJyUkCnAvqD3eCD

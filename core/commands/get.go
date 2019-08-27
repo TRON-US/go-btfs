@@ -47,7 +47,7 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, false, "The path to the BTFS object(s) to be outputted.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, false, "The path to the BTFS object(s) to be outputted.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(outputOptionName, "o", "The path where the output should be stored."),

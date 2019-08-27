@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipfs/go-filestore"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/coreapi"
@@ -16,9 +15,10 @@ import (
 	"github.com/TRON-US/go-btfs/keystore"
 	"github.com/TRON-US/go-btfs/repo"
 
+	"github.com/TRON-US/go-btfs-config"
 	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	"github.com/TRON-US/go-btfs-config"
+	"github.com/ipfs/go-filestore"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/tests"
 	ci "github.com/libp2p/go-libp2p-core/crypto"

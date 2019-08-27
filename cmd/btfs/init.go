@@ -18,10 +18,9 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs-config"
-	"github.com/ipfs/go-ipfs-files"
-
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
+	files "github.com/ipfs/go-ipfs-files"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -67,7 +66,7 @@ environment variable:
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
 		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is Secp256k1"),
 		cmds.StringOption(importKeyOptionName, "i", "Import TRON private key to generate btfs PeerID."),
-		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files."),
+		cmds.BoolOption(rmOnUnpinOptionName, "r", "Remove unpinned files.").WithDefault(false),
 		cmds.StringOption(seedOptionName, "s", "Import seed phrase"),
 
 		// TODO need to decide whether to expose the override as a file or a
@@ -129,28 +128,40 @@ environment variable:
 		importKey, _ := req.Options[importKeyOptionName].(string)
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
-		mnemonicLen := len(strings.Split(seedPhrase, ","))
-		mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-		if importKey != "" && keyType != "" {
-			return fmt.Errorf("cannot specify key type and import TRON private key at the same time")
-		} else if seedPhrase != "" {
-			if mnemonicLen != mnemonicLength {
-				return fmt.Errorf("mnemonic needs to contain 12 words")
-			}
-			fmt.Println("Generating TRON key with BIP39 seed phrase...")
-			importKey = generatePrivKeyUsingBIP39(mnemonic)
+		finalImportKey, error := generateKey(importKey, keyType, seedPhrase)
+		if error == nil {
+			return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, finalImportKey, rmOnUnpin)
+		} else {
+			return error
 		}
-
-		if keyType == "" {
-			keyType = keyTypeDefault
-		} else if keyType == "BIP39" {
-			fmt.Println("Generating TRON key with BIP39 seed phrase...")
-			importKey = generatePrivKeyUsingBIP39("")
-		}
-
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, rmOnUnpin)
 	},
+}
+
+func generateKey(importKey string, keyType string, seedPhrase string) (string, error) {
+	mnemonicLen := len(strings.Split(seedPhrase, ","))
+	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
+
+	if importKey != "" && keyType != "" {
+		return "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+	} else if seedPhrase != "" {
+		if mnemonicLen != mnemonicLength {
+			return "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
+		}
+		if err := !bip39.IsMnemonicValid(mnemonic); err {
+			return "", fmt.Errorf("Entered seed phrase is not valid")
+		}
+		fmt.Println("Generating TRON key with BIP39 seed phrase...")
+		importKey = generatePrivKeyUsingBIP39(mnemonic)
+	}
+
+	if keyType == "" {
+		keyType = keyTypeDefault
+	} else if keyType == "BIP39" {
+		fmt.Println("Generating TRON key with BIP39 seed phrase...")
+		importKey = generatePrivKeyUsingBIP39("")
+	}
+	return importKey, nil
 }
 
 var errRepoExists = errors.New(`btfs configuration file already exists!
@@ -192,6 +203,7 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 		profiles = strings.Split(profile, ",")
 	}
 
+	// the last argument (false) refers to the configuration variable Experimental.RemoveOnUnpin
 	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", false)
 }
 
@@ -211,7 +223,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey)
+		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey, rmOnUnpin)
 		if err != nil {
 			return err
 		}

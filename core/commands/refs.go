@@ -59,7 +59,7 @@ NOTE: List all references recursively by using the flag '-r'.
 		"local": RefsLocalCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "Path to the object(s) to list refs from.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "Path to the object(s) to list refs from.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(refsFormatOptionName, "Emit edges with given format. Available tokens: <src> <dst> <linkname>.").WithDefault("<dst>"),

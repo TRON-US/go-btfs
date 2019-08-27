@@ -170,7 +170,7 @@ Add a Merkle-link to the given object and return the hash of the result.
 Example:
 
     $ EMPTY_DIR=$(btfs object new unixfs-dir)
-    $ BAR=$(echo "bar" | ipfs add -q)
+    $ BAR=$(echo "bar" | btfs add -q)
     $ btfs object patch $EMPTY_DIR add-link foo $BAR
 
 This takes an empty directory, and adds a link named 'foo' under it, pointing

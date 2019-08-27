@@ -84,21 +84,28 @@ func durationToSeconds(duration time.Duration) uint64 {
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion string) {
 	var log = logging.Logger("cmd/btfs")
-
-	dc := new(dataCollection)
-	infoStats, err := cpu.Info()
-	if err == nil {
-		dc.CPUInfo = infoStats[0].ModelName
-	} else {
-		log.Warning(err.Error())
+	configuration, err := n.Repo.Config()
+	if err != nil {
+		return
 	}
 
+	dc := new(dataCollection)
 	dc.node = n
-	dc.startTime = time.Now()
-	dc.NodeID = n.Identity.Pretty()
-	dc.BTFSVersion = BTFSVersion
-	dc.OSType = runtime.GOOS
-	dc.ArchType = runtime.GOARCH
+
+	if configuration.Experimental.Analytics {
+		infoStats, err := cpu.Info()
+		if err == nil {
+			dc.CPUInfo = infoStats[0].ModelName
+		} else {
+			log.Warning(err.Error())
+		}
+
+		dc.startTime = time.Now()
+		dc.NodeID = n.Identity.Pretty()
+		dc.BTFSVersion = BTFSVersion
+		dc.OSType = runtime.GOOS
+		dc.ArchType = runtime.GOARCH
+	}
 
 	go dc.collectionAgent()
 }
@@ -187,10 +194,19 @@ func (dc *dataCollection) collectionAgent() {
 	tick := time.NewTicker(heartBeat)
 
 	defer tick.Stop()
-	dc.sendData()
 
-	for range tick.C {
+	config, _ := dc.node.Repo.Config()
+	if config.Experimental.Analytics {
 		dc.sendData()
+	}
+	// make the configuration available in the for loop
+	for range tick.C {
+		config, _ := dc.node.Repo.Config()
+		// check config for explicit consent to data collect
+		// consent can be changed without reinitializing data collection
+		if config.Experimental.Analytics {
+			dc.sendData()
+		}
 	}
 }
 

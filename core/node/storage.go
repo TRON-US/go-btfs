@@ -5,17 +5,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/retrystore"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	config "github.com/TRON-US/go-btfs-config"
-	"go.uber.org/fx"
-
-	"github.com/ipfs/go-filestore"
 	"github.com/TRON-US/go-btfs/core/node/helpers"
 	"github.com/TRON-US/go-btfs/repo"
 	"github.com/TRON-US/go-btfs/thirdparty/cidv0v1"
 	"github.com/TRON-US/go-btfs/thirdparty/verifbs"
+
+	config "github.com/TRON-US/go-btfs-config"
+	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/retrystore"
+	"github.com/ipfs/go-filestore"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
+	"go.uber.org/fx"
 )
 
 func isTooManyFDError(err error) bool {

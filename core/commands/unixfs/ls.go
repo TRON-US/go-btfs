@@ -68,7 +68,7 @@ possible, please use 'btfs ls' instead.
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("ipfs-path", true, true, "The path to the BTFS object(s) to list links from.").EnableStdin(),
+		cmds.StringArg("btfs-path", true, true, "The path to the BTFS object(s) to list links from.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		nd, err := cmdenv.GetNode(env)

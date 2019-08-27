@@ -13,7 +13,7 @@ import (
 
 var KeyCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Create and list IPNS name keypairs",
+		Tagline: "Create and list BTNS name keypairs",
 		ShortDescription: `
 'btfs key gen' generates a new keypair for usage with BTNS and 'btfs name
 publish'.

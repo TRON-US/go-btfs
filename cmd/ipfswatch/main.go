@@ -15,14 +15,14 @@ import (
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	fsnotify "github.com/fsnotify/fsnotify"
 	config "github.com/TRON-US/go-btfs-config"
+	fsnotify "github.com/fsnotify/fsnotify"
 	files "github.com/ipfs/go-ipfs-files"
 	process "github.com/jbenet/goprocess"
 	homedir "github.com/mitchellh/go-homedir"
 )
 
-var http = flag.Bool("http", false, "expose IPFS HTTP API")
+var http = flag.Bool("http", false, "expose BTFS HTTP API")
 var repoPath = flag.String("repo", os.Getenv("BTFS_PATH"), "BTFS_PATH to use")
 var watchPath = flag.String("path", ".", "the path to watch")
 
@@ -52,7 +52,7 @@ func main() {
 func run(ipfsPath, watchPath string) error {
 
 	proc := process.WithParent(process.Background())
-	log.Printf("running IPFSWatch on '%s' using repo at '%s'...", watchPath, ipfsPath)
+	log.Printf("running BTFSWatch on '%s' using repo at '%s'...", watchPath, ipfsPath)
 
 	ipfsPath, err := homedir.Expand(ipfsPath)
 	if err != nil {
