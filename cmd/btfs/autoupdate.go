@@ -29,7 +29,6 @@ const (
 	CurrentConfigFile = "config.yaml"
 	UpdateBinary      = "update-%s-%s%s"
 	LatestBtfsBinary  = "btfs-%s-%s%s"
-	url               = "localhost:5001"
 )
 
 type Config struct {
@@ -44,7 +43,7 @@ type Config struct {
 var configRepoUrl = "https://dist.btfs.io/release/"
 
 // Auto update function.
-func update() {
+func update(url string) {
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
 	if err != nil {

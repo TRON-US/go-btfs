@@ -192,9 +192,6 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
-	// Btfs auto update.
-	go update()
-
 	// Inject metrics before we do anything
 	err := mprome.Inject()
 	if err != nil {
@@ -476,6 +473,9 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		fmt.Printf("WebUI: http://%s/webui\n", apiLis.Addr())
 		listeners = append(listeners, apiLis)
 	}
+
+	// Btfs auto update.
+	go update(listeners[0].Addr().String())
 
 	// by default, we don't let you load arbitrary btfs objects through the api,
 	// because this would open up the api to scripting vulnerabilities.
