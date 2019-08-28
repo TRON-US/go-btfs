@@ -740,10 +740,6 @@ github.com/syndtr/goleveldb v1.0.0 h1:fBdIW9lB4Iz0n9khmH8w27SJ3QEJ7+IgjPEwGSZiFd
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:T5PdfK/M1xyrHwynxMIVMWLS7f/qHwfslZphxtGnw7s=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
-github.com/tron-us/go-btfs-common v0.0.1 h1:Cc7AwQ5pRMjx8E4GOSqUdhQK8Weqh0mNM81g+qj+04Q=
-github.com/tron-us/go-btfs-common v0.0.1/go.mod h1:eg2JWj7M+aBD8DOc+/RZ2VoSewmeZVYny1297+5NUt8=
-github.com/tron-us/go-btfs-common v0.0.2 h1:eW/ydHYdg0RB1mvoYn3/Bllsp79UDdRQzFUH6EbN3vA=
-github.com/tron-us/go-btfs-common v0.0.2/go.mod h1:eg2JWj7M+aBD8DOc+/RZ2VoSewmeZVYny1297+5NUt8=
 github.com/tron-us/go-btfs-common v0.0.3 h1:kipuHW3/bxD3o6eRU7ACk1V9WSRinYueaoPYwOApEi0=
 github.com/tron-us/go-btfs-common v0.0.3/go.mod h1:eg2JWj7M+aBD8DOc+/RZ2VoSewmeZVYny1297+5NUt8=
 github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564 h1:NXXyQVeRVLK8Xu27/hkkjwVOZLk5v4ZBEvvMtqMqznM=
