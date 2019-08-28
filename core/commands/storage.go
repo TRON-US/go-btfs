@@ -38,7 +38,10 @@ const (
 
 	challengeTimeOut = time.Second
 
-	hostStorePrefix = "/hosts/"
+	hostStorePrefix       = "/hosts/"        // from btfs-hub
+	hostStorageInfoPrefix = "/host_storage/" // self or from network
+
+	defaultRepFactor = 3
 )
 
 var (
@@ -56,6 +59,7 @@ host information sync/display operations, and BTT payment-related routines.`,
 	Subcommands: map[string]*cmds.Command{
 		"upload": storageUploadCmd,
 		"hosts":  storageHostsCmd,
+		"info":   storageInfoCmd,
 	},
 }
 
@@ -84,7 +88,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
-		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(int64(3)),
+		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
 		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
@@ -94,7 +98,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remoteAPI is not ENABLED")
+			return fmt.Errorf("storage client api not enabled")
 		}
 		price, found := req.Options[uploadPriceOptionName].(int64)
 		if found && price < 0 {
@@ -197,7 +201,7 @@ the chunk and replies back to client for the next challenge step.`,
 			return err
 		}
 		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("host remoteAPI is not ENABLED")
+			return fmt.Errorf("storage host api not enabled")
 		}
 		return nil
 	},
@@ -318,7 +322,7 @@ the contents and nonce together to produce a final challenge response.`,
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remote API is not enabled")
+			return fmt.Errorf("storage client api not enabled")
 		}
 
 		ssID := req.Arguments[0]
@@ -382,7 +386,7 @@ signature back to the host to complete payment.`,
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remote API is not enabled")
+			return fmt.Errorf("storage client api not enabled")
 		}
 		// verify challenge
 		ssID := req.Arguments[0]
@@ -575,7 +579,7 @@ Mode options include:
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remote API is not enabled")
+			return fmt.Errorf("storage client api not enabled")
 		}
 
 		mode, _ := req.Options[hostInfoModeOptionName].(string)
@@ -646,7 +650,7 @@ Mode options include:
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remote API is not enabled")
+			return fmt.Errorf("storage client api not enabled")
 		}
 
 		mode, _ := req.Options[hostSyncModeOptionName].(string)
@@ -697,4 +701,77 @@ Mode options include:
 
 		return nil
 	},
+}
+
+var storageInfoCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Show storage host information.",
+		ShortDescription: `
+This command displays host information synchronized from the BTFS network.
+By default it shows local host node information.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self").EnableStdin(),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if len(req.Arguments) > 0 {
+			if !cfg.Experimental.StorageClientEnabled {
+				return fmt.Errorf("storage client api not enabled")
+			}
+			// TODO: Implement syncing other peers' storage info
+			return fmt.Errorf("showing other peer's info not supported yet")
+		} else if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+		return nil
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		var peerID string
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		// Default to self
+		if len(req.Arguments) > 0 {
+			peerID = req.Arguments[0]
+		} else {
+			peerID = n.Identity.Pretty()
+		}
+
+		rds := n.Repo.Datastore()
+
+		b, err := rds.Get(ds.NewKey(fmt.Sprintf("%s%s", hostStorageInfoPrefix, peerID)))
+		if err != nil {
+			return err
+		}
+
+		var ns info.NodeStorage
+		err = json.Unmarshal(b, &ns)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &StorageHostInfoRes{
+			StoragePrice:    ns.StoragePriceAsk,
+			BandwidthPrice:  ns.BandwidthPriceAsk,
+			CollateralPrice: ns.CollateralStake,
+			BandwidthLimit:  ns.BandwidthLimit,
+			StorageTimeMin:  ns.StorageTimeMin,
+		})
+	},
+	Type: StorageHostInfoRes{},
+}
+
+type StorageHostInfoRes struct {
+	StoragePrice    uint64
+	BandwidthPrice  uint64
+	CollateralPrice uint64
+	BandwidthLimit  float64
+	StorageTimeMin  uint64
 }

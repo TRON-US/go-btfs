@@ -114,7 +114,7 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/go-btfs-common v0.0.2
+	github.com/tron-us/go-btfs-common v0.0.3
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc

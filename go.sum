@@ -744,6 +744,8 @@ github.com/tron-us/go-btfs-common v0.0.1 h1:Cc7AwQ5pRMjx8E4GOSqUdhQK8Weqh0mNM81g
 github.com/tron-us/go-btfs-common v0.0.1/go.mod h1:eg2JWj7M+aBD8DOc+/RZ2VoSewmeZVYny1297+5NUt8=
 github.com/tron-us/go-btfs-common v0.0.2 h1:eW/ydHYdg0RB1mvoYn3/Bllsp79UDdRQzFUH6EbN3vA=
 github.com/tron-us/go-btfs-common v0.0.2/go.mod h1:eg2JWj7M+aBD8DOc+/RZ2VoSewmeZVYny1297+5NUt8=
+github.com/tron-us/go-btfs-common v0.0.3 h1:kipuHW3/bxD3o6eRU7ACk1V9WSRinYueaoPYwOApEi0=
+github.com/tron-us/go-btfs-common v0.0.3/go.mod h1:eg2JWj7M+aBD8DOc+/RZ2VoSewmeZVYny1297+5NUt8=
 github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564 h1:NXXyQVeRVLK8Xu27/hkkjwVOZLk5v4ZBEvvMtqMqznM=
 github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564/go.mod h1:0/YuQQF676+d4CMNclTqGUam1EDwz0B8o03K9pQqA3c=
 github.com/tyler-smith/go-bip39 v1.0.0 h1:FOHg9gaQLeBBRbHE/QrTLfEiBHy5pQ/yXzf9JG5pYFM=
