@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -21,7 +22,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
-	query "github.com/ipfs/go-datastore/query"
+	"github.com/ipfs/go-datastore/query"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -41,7 +42,9 @@ const (
 	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
 
-	challengeTimeOut = time.Second
+	challengeTimeOut   = time.Second
+	chunkUploadTimeOut = time.Second * 30
+	fileUploadTimeOut  = time.Minute * 5
 
 	hostStorePrefix       = "/hosts/"        // from btfs-hub
 	hostStorageInfoPrefix = "/host_storage/" // self or from network
@@ -124,9 +127,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fileHash := req.Arguments[0]
-		price, _ := req.Options[uploadPriceOptionName].(int64)
-		list, _ := req.Options[hostSelectionOptionName].(string)
-		peers := strings.Split(list, ",")
+		price, _ = req.Options[uploadPriceOptionName].(int64)
+		hosts, _ := req.Options[hostSelectionOptionName].(string)
+		peers := strings.Split(hosts, ",")
 
 		// start new session
 		ss := &storage.Session{}
@@ -147,34 +150,62 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 
 		// get other node's public key as address
 		// create channel between them
-		var pid peer.ID
-		for _, str := range peers {
-			_, pid, err = ParsePeerParam(str)
-			if err != nil {
-				return fmt.Errorf("failed to parse peer address '%s': %s", str, err)
-			}
-			peerPubKey, err := pid.ExtractPublicKey()
-			if err != nil {
-				return fmt.Errorf("fail to extract public key from peer ID: %s", err)
-			}
-			channelID, err = initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, price)
-			if err != nil {
-				continue
-			}
-			if channelID != nil {
-				break
+		var wg sync.WaitGroup
+		wg.Add(len(fileHash))
+		chunkChan := make(chan *storage.Chunks)
+		go func() {
+			wg.Wait()
+			close(chunkChan)
+		}()
+		// FIXME: Fake multiple chunk hash as chunk hash
+		for i, chunk := range req.Arguments {
+			go func(chunkHash string, i int) {
+				defer wg.Done()
+				_, hostPid, err := ParsePeerParam(peers[i])
+				if err != nil {
+					chunkChan <- &storage.Chunks{
+						ChunkHash: chunkHash,
+						Err:       err,
+					}
+					return
+				}
+				peerPubKey, err := hostPid.ExtractPublicKey()
+				if err != nil {
+					chunkChan <- &storage.Chunks{
+						ChunkHash: chunkHash,
+						Err:       err,
+					}
+					return
+				}
+				channelID, err = initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, price)
+				if err != nil {
+					chunkChan <- &storage.Chunks{
+						ChunkHash: chunkHash,
+						Err:       err,
+					}
+					return
+				}
+				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash)
+				if err != nil {
+					chunkChan <- &storage.Chunks{
+						ChunkHash: chunkHash,
+						Err:       err,
+					}
+					return
+				}
+				chunkChan <- &storage.Chunks{
+					ChunkHash: chunkHash,
+					Err:       nil,
+				}
+			}(chunk, i)
+		}
+		for range req.Arguments {
+			chunk := <- chunkChan
+			ss.Chunk = append(ss.Chunk, *chunk)
+			if chunk.Err != nil {
+				return err
 			}
 		}
-		if channelID == nil || channelID.GetId() == 0 {
-			return fmt.Errorf("fail to create channel ID")
-		}
-
-		// call server
-		respBody, err := p2pCall(n, pid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), fileHash)
-		if err != nil {
-			return fmt.Errorf("fail to get response from: %s", err)
-		}
-		log.Info("Upload success, get proof: ", respBody)
 
 		seRes := &UploadRes{
 			ID: ssID,

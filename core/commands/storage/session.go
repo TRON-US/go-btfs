@@ -16,12 +16,17 @@ var SessionMap map[string]*Session
 
 type Session struct {
 	sync.Mutex
+	Chunk 	[]Chunks
 
 	Time      time.Time
 	FileHash  string
 	Status    string
-	Chunks    map[string]interface{}
 	Challenge map[string]*StorageChallenge
+}
+
+type Chunks struct {
+	ChunkHash string
+	Err 	error
 }
 
 func init() {
