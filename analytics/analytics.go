@@ -54,10 +54,11 @@ type healthData struct {
 }
 
 //Server URL for data collection
+var statusServerDomain string
+
 const (
-	statusServerDomain = "https://db.btfs.io"
-	routeMetrics       = "/metrics"
-	routeHealth        = "/health"
+	routeMetrics = "/metrics"
+	routeHealth  = "/health"
 )
 
 // other constants
@@ -88,6 +89,8 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 	if err != nil {
 		return
 	}
+
+	statusServerDomain = configuration.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = n
