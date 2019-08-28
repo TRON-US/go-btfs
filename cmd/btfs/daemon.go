@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
@@ -296,6 +297,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
 	mplex, _ := req.Options[enableMultiplexKwd].(bool)
 
+	// Btfs auto update.
+	url := fmt.Sprint("localhost:", strings.Split(cfg.Addresses.API[0], "/")[4])
+	go update(url)
+
 	// Start assembling node config
 	ncfg := &core.BuildCfg{
 		Repo:                        repo,
@@ -473,9 +478,6 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		fmt.Printf("WebUI: http://%s/webui\n", apiLis.Addr())
 		listeners = append(listeners, apiLis)
 	}
-
-	// Btfs auto update.
-	go update(listeners[0].Addr().String())
 
 	// by default, we don't let you load arbitrary btfs objects through the api,
 	// because this would open up the api to scripting vulnerabilities.
