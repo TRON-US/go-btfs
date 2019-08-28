@@ -29,12 +29,17 @@ import (
 )
 
 const (
-	uploadPriceOptionName       = "price"
-	replicationFactorOptionName = "replication-factor"
-	hostSelectModeOptionName    = "host-select-mode"
-	hostSelectionOptionName     = "host-selection"
-	hostInfoModeOptionName      = "host-info-mode"
-	hostSyncModeOptionName      = "host-sync-mode"
+	uploadPriceOptionName         = "price"
+	replicationFactorOptionName   = "replication-factor"
+	hostSelectModeOptionName      = "host-select-mode"
+	hostSelectionOptionName       = "host-selection"
+	hostInfoModeOptionName        = "host-info-mode"
+	hostSyncModeOptionName        = "host-sync-mode"
+	hostStoragePriceOptionName    = "host-storage-price"
+	hostBandwidthPriceOptionName  = "host-bandwidth-price"
+	hostCollateralPriceOptionName = "host-collateral-price"
+	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
+	hostStorageTimeMinOptionName  = "host-storage-time-min"
 
 	challengeTimeOut = time.Second
 
@@ -57,9 +62,10 @@ Storage services include client upload operations, host storage operations,
 host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"upload": storageUploadCmd,
-		"hosts":  storageHostsCmd,
-		"info":   storageInfoCmd,
+		"upload":   storageUploadCmd,
+		"hosts":    storageHostsCmd,
+		"info":     storageInfoCmd,
+		"announce": storageAnnounceCmd,
 	},
 }
 
@@ -118,7 +124,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fileHash := req.Arguments[0]
-		price, _ = req.Options[uploadPriceOptionName].(int64)
+		price, _ := req.Options[uploadPriceOptionName].(int64)
 		list, _ := req.Options[hostSelectionOptionName].(string)
 		peers := strings.Split(list, ",")
 
@@ -774,4 +780,88 @@ type StorageHostInfoRes struct {
 	CollateralPrice uint64
 	BandwidthLimit  float64
 	StorageTimeMin  uint64
+}
+
+var storageAnnounceCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Update and announce storage host information.",
+		ShortDescription: `
+This command updates host information and broadcasts to the BTFS network.`,
+	},
+	Options: []cmds.Option{
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GB of storage in BTT."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MB of bandwidth in BTT."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GB in BTT."),
+		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
+		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+		return nil
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
+		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
+		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
+		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
+		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		rds := n.Repo.Datastore()
+
+		selfKey := ds.NewKey(fmt.Sprintf("%s%s", hostStorageInfoPrefix, n.Identity.Pretty()))
+		b, err := rds.Get(selfKey)
+		// If key not found, create new
+		if err != nil && err != ds.ErrNotFound {
+			return err
+		}
+
+		var ns info.NodeStorage
+		if err == nil {
+			// TODO: Set default values if unset
+			err = json.Unmarshal(b, &ns)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Update fields if set
+		if spFound {
+			ns.StoragePriceAsk = sp
+		}
+		if bpFound {
+			ns.BandwidthPriceAsk = bp
+		}
+		if cpFound {
+			ns.CollateralStake = cp
+		}
+		if blFound {
+			ns.BandwidthLimit = bl
+		}
+		if stmFound {
+			ns.StorageTimeMin = stm
+		}
+
+		nb, err := json.Marshal(ns)
+		if err != nil {
+			return err
+		}
+
+		err = rds.Put(selfKey, nb)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
 }
