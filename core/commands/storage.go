@@ -29,16 +29,24 @@ import (
 )
 
 const (
-	uploadPriceOptionName       = "price"
-	replicationFactorOptionName = "replication-factor"
-	hostSelectModeOptionName    = "host-select-mode"
-	hostSelectionOptionName     = "host-selection"
-	hostInfoModeOptionName      = "host-info-mode"
-	hostSyncModeOptionName      = "host-sync-mode"
+	uploadPriceOptionName         = "price"
+	replicationFactorOptionName   = "replication-factor"
+	hostSelectModeOptionName      = "host-select-mode"
+	hostSelectionOptionName       = "host-selection"
+	hostInfoModeOptionName        = "host-info-mode"
+	hostSyncModeOptionName        = "host-sync-mode"
+	hostStoragePriceOptionName    = "host-storage-price"
+	hostBandwidthPriceOptionName  = "host-bandwidth-price"
+	hostCollateralPriceOptionName = "host-collateral-price"
+	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
+	hostStorageTimeMinOptionName  = "host-storage-time-min"
 
 	challengeTimeOut = time.Second
 
-	hostStorePrefix = "/hosts/"
+	hostStorePrefix       = "/hosts/"        // from btfs-hub
+	hostStorageInfoPrefix = "/host_storage/" // self or from network
+
+	defaultRepFactor = 3
 )
 
 var (
@@ -48,25 +56,34 @@ var (
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Pay to store files on BTFS network nodes.",
+		Tagline: "Interact with storage services on BTFS.",
 		ShortDescription: `
-To UPLOAD a file using specific hosts:
-    using -m with "custom" mode, and put host identifier in -l, multiple hosts separate by ','
-For example:
-
-    btfs storage upload -m=custom -l=host_address1,address2
-
-Or it will select a node based on overall score for you.
-And receiving a Collateral Proof as evidence when selected node stores your file.
-	`,
+Storage services include client upload operations, host storage operations,
+host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"upload": storageUploadCmd,
-		"hosts":  storageHostsCmd,
+		"upload":   storageUploadCmd,
+		"hosts":    storageHostsCmd,
+		"info":     storageInfoCmd,
+		"announce": storageAnnounceCmd,
 	},
 }
 
 var storageUploadCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Store files on BTFS network nodes through BTT payment.",
+		ShortDescription: `
+To upload and store a file on specific hosts:
+    use -m with 'custom' mode, and put host identifiers in -l, with multiple hosts separated by ','
+
+For example:
+
+    btfs storage upload -m=custom -l=host_address1,host_address2
+
+If no hosts are given, BTFS will select nodes based on overall score according to current client's environment.
+
+Receive proofs as collateral evidence after selected nodes agree to store the file.`,
+	},
 	Subcommands: map[string]*cmds.Command{
 		"init":  storageUploadInitCmd,
 		"reqc":  storageUploadRequestChallengeCmd,
@@ -77,7 +94,7 @@ var storageUploadCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
-		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(int64(3)),
+		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
 		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
@@ -87,7 +104,7 @@ var storageUploadCmd = &cmds.Command{
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remoteAPI is not ENABLED")
+			return fmt.Errorf("storage client api not enabled")
 		}
 		price, found := req.Options[uploadPriceOptionName].(int64)
 		if found && price < 0 {
@@ -107,7 +124,7 @@ var storageUploadCmd = &cmds.Command{
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fileHash := req.Arguments[0]
-		price, _ = req.Options[uploadPriceOptionName].(int64)
+		price, _ := req.Options[uploadPriceOptionName].(int64)
 		list, _ := req.Options[hostSelectionOptionName].(string)
 		peers := strings.Split(list, ",")
 
@@ -172,6 +189,13 @@ type UploadRes struct {
 }
 
 var storageUploadInitCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Initialize storage handshake with inquiring client.",
+		ShortDescription: `
+Storage host opens this endpoint to accept incoming upload/storage requests,
+If current host is interested and all validation checks out, host downloads
+the chunk and replies back to client for the next challenge step.`,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
@@ -183,7 +207,7 @@ var storageUploadInitCmd = &cmds.Command{
 			return err
 		}
 		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("host remoteAPI is not ENABLED")
+			return fmt.Errorf("storage host api not enabled")
 		}
 		return nil
 	},
@@ -265,7 +289,6 @@ var storageUploadInitCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		log.Info("Successfully close channel")
 
 		// prepare result
 		// TODO: CollateralProof
@@ -288,6 +311,13 @@ type ChallengeRes struct {
 }
 
 var storageUploadRequestChallengeCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Request for a client challenge from storage host.",
+		ShortDescription: `
+Client opens this endpoint for interested hosts to ask for a challenge.
+A challenge contains a random file chunk hash and a nonce for hosts to hash
+the contents and nonce together to produce a final challenge response.`,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
@@ -298,7 +328,7 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remote API is not enabled")
+			return fmt.Errorf("storage client api not enabled")
 		}
 
 		ssID := req.Arguments[0]
@@ -342,6 +372,13 @@ var storageUploadRequestChallengeCmd = &cmds.Command{
 }
 
 var storageUploadResponseChallengeCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Respond to client challenge from storage host.",
+		ShortDescription: `
+Client opens this endpoint for interested hosts to respond with a previous
+challenge's response. If response is valid, client returns signed payment
+signature back to the host to complete payment.`,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
@@ -355,7 +392,7 @@ var storageUploadResponseChallengeCmd = &cmds.Command{
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("client remote API is not enabled")
+			return fmt.Errorf("storage client api not enabled")
 		}
 		// verify challenge
 		ssID := req.Arguments[0]
@@ -513,6 +550,11 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 }
 
 var storageHostsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Interact with information on hosts.",
+		ShortDescription: `
+Host information is synchronized from btfs-hub and saved in local datastore.`,
+	},
 	Subcommands: map[string]*cmds.Command{
 		"info": storageHostsInfoCmd,
 		"sync": storageHostsSyncCmd,
@@ -520,10 +562,32 @@ var storageHostsCmd = &cmds.Command{
 }
 
 var storageHostsInfoCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Display saved host information.",
+		ShortDescription: `
+This command displays saved information from btfs-hub under multiple modes.
+Each mode ranks hosts based on its criteria and is randomized based on current node location.
+
+Mode options include:
+- "score": top overall score
+- "geo":   closest location
+- "rep":   highest reputation
+- "price": lowest price
+- "speed": highest transfer speed
+- "all":   all existing hosts`,
+	},
 	Options: []cmds.Option{
 		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
 		mode, _ := req.Options[hostInfoModeOptionName].(string)
 		return hub.CheckValidMode(mode)
 	},
@@ -569,10 +633,32 @@ type HostInfoRes struct {
 }
 
 var storageHostsSyncCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Synchronize host information from btfs-hub.",
+		ShortDescription: `
+This command synchronizes information from btfs-hub using multiple modes.
+Each mode ranks hosts based on its criteria and is randomized based on current node location.
+
+Mode options include:
+- "score": top overall score
+- "geo":   closest location
+- "rep":   highest reputation
+- "price": lowest price
+- "speed": highest transfer speed
+- "all":   update existing hosts`,
+	},
 	Options: []cmds.Option{
 		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
 		mode, _ := req.Options[hostSyncModeOptionName].(string)
 		return hub.CheckValidMode(mode)
 	},
@@ -617,6 +703,163 @@ var storageHostsSyncCmd = &cmds.Command{
 			if err != nil {
 				return err
 			}
+		}
+
+		return nil
+	},
+}
+
+var storageInfoCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Show storage host information.",
+		ShortDescription: `
+This command displays host information synchronized from the BTFS network.
+By default it shows local host node information.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self").EnableStdin(),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if len(req.Arguments) > 0 {
+			if !cfg.Experimental.StorageClientEnabled {
+				return fmt.Errorf("storage client api not enabled")
+			}
+			// TODO: Implement syncing other peers' storage info
+			return fmt.Errorf("showing other peer's info not supported yet")
+		} else if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+		return nil
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		var peerID string
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		// Default to self
+		if len(req.Arguments) > 0 {
+			peerID = req.Arguments[0]
+		} else {
+			peerID = n.Identity.Pretty()
+		}
+
+		rds := n.Repo.Datastore()
+
+		b, err := rds.Get(ds.NewKey(fmt.Sprintf("%s%s", hostStorageInfoPrefix, peerID)))
+		if err != nil {
+			return err
+		}
+
+		var ns info.NodeStorage
+		err = json.Unmarshal(b, &ns)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &StorageHostInfoRes{
+			StoragePrice:    ns.StoragePriceAsk,
+			BandwidthPrice:  ns.BandwidthPriceAsk,
+			CollateralPrice: ns.CollateralStake,
+			BandwidthLimit:  ns.BandwidthLimit,
+			StorageTimeMin:  ns.StorageTimeMin,
+		})
+	},
+	Type: StorageHostInfoRes{},
+}
+
+type StorageHostInfoRes struct {
+	StoragePrice    uint64
+	BandwidthPrice  uint64
+	CollateralPrice uint64
+	BandwidthLimit  float64
+	StorageTimeMin  uint64
+}
+
+var storageAnnounceCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Update and announce storage host information.",
+		ShortDescription: `
+This command updates host information and broadcasts to the BTFS network.`,
+	},
+	Options: []cmds.Option{
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GB of storage in BTT."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MB of bandwidth in BTT."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GB in BTT."),
+		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
+		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
+	},
+	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+		return nil
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
+		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
+		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
+		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
+		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		rds := n.Repo.Datastore()
+
+		selfKey := ds.NewKey(fmt.Sprintf("%s%s", hostStorageInfoPrefix, n.Identity.Pretty()))
+		b, err := rds.Get(selfKey)
+		// If key not found, create new
+		if err != nil && err != ds.ErrNotFound {
+			return err
+		}
+
+		var ns info.NodeStorage
+		if err == nil {
+			// TODO: Set default values if unset
+			err = json.Unmarshal(b, &ns)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Update fields if set
+		if spFound {
+			ns.StoragePriceAsk = sp
+		}
+		if bpFound {
+			ns.BandwidthPriceAsk = bp
+		}
+		if cpFound {
+			ns.CollateralStake = cp
+		}
+		if blFound {
+			ns.BandwidthLimit = bl
+		}
+		if stmFound {
+			ns.StorageTimeMin = stm
+		}
+
+		nb, err := json.Marshal(ns)
+		if err != nil {
+			return err
+		}
+
+		err = rds.Put(selfKey, nb)
+		if err != nil {
+			return err
 		}
 
 		return nil
