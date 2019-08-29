@@ -25,6 +25,8 @@ const testfilecontent = "Hello BTFS!"
 
 // Log print initialization, get *zap.Logger Info.
 func initLogger(logPath string) *zap.Logger {
+	fmt.Println("in autoupdate.main.initLogger")
+	fmt.Println("logPath is: [%v]", logPath)
 	hook := lumberjack.Logger{
 		Filename:   logPath, // log file path
 		MaxSize:    128,     // megabytes
@@ -51,6 +53,9 @@ func initLogger(logPath string) *zap.Logger {
 // Rollback function of auto update.
 
 func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath string) {
+	fmt.Println("in autoupdate.main.rollback")
+	fmt.Println("defaultProjectPath is: [%v]", defaultProjectPath)
+	fmt.Println("defaultDownloadPath is: [%v]", defaultDownloadPath)
 	defer func() {
 		wg.Done()
 	}()
@@ -144,6 +149,7 @@ func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDo
 }
 
 func update(log *zap.Logger) int {
+	fmt.Println("in autoupdate.main.update")
 	time.Sleep(time.Second * 5)
 	defaultProjectPath := flag.String("project", "", "default project path")
 	defaultDownloadPath := flag.String("download", "", "default download path")
@@ -261,12 +267,16 @@ func update(log *zap.Logger) int {
 }
 
 func main() {
+	fmt.Println("in autoupdate.main.main")
 	log := initLogger("update.log")
 	os.Exit(update(log))
 }
 
 // Determine if the path file exists.
 func pathExists(path string) bool {
+	fmt.Println("in autoupdate.main.pathExists")
+	fmt.Println("path is: [%v]", path)
+
 	_, err := os.Stat(path)
 	if err == nil {
 		return true
@@ -280,6 +290,15 @@ func pathExists(path string) bool {
 // Select binary files and configure file path based on operating system.
 func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConfigPath string, backupConfigPath string,
 	latestConfigPath string, btfsBinaryPath string, btfsBackupPath string, latestBtfsBinaryPath string, err error) {
+	fmt.Println("in autoupdate.main.getProjectPath")
+	fmt.Println("defaultProjectPath is: [%v]", defaultProjectPath)
+	fmt.Println("defaultDownloadPath is: [%v]", defaultDownloadPath)
+	fmt.Println("currentConfigPath is: [%v]", currentConfigPath)
+	fmt.Println("backupConfigPath is: [%v]", backupConfigPath)
+	fmt.Println("latestConfigPath is: [%v]", latestConfigPath)
+	fmt.Println("btfsBinaryPath is: [%v]", btfsBinaryPath)
+	fmt.Println("btfsBackupPath is: [%v]", btfsBackupPath)
+	fmt.Println("latestBtfsBinaryPath is: [%v]", latestBtfsBinaryPath)
 	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
 		ext := ""
 		if runtime.GOOS == "windows" {
@@ -301,6 +320,9 @@ func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConf
 
 // we need to delete the file for get test from last run
 func prepare_test(log *zap.Logger, btfsBinaryPath string) bool {
+	fmt.Println("in autoupdate.main.prepare_test")
+	fmt.Println("btfsBinaryPath is: [%v]", btfsBinaryPath)
+
 	cmd := exec.Command(btfsBinaryPath, "rm", testfile)
 	err := cmd.Start()
 
@@ -314,6 +336,9 @@ func prepare_test(log *zap.Logger, btfsBinaryPath string) bool {
 }
 
 func get_functest(log *zap.Logger, btfsBinaryPath string) bool {
+	fmt.Println("in autoupdate.main.get_functest")
+	fmt.Println("btfsBinaryPath is: [%v]", btfsBinaryPath)
+
 	// btfs get file saved to current working directory
 	dir, err := os.Getwd()
 	if err != nil {
@@ -346,6 +371,9 @@ func get_functest(log *zap.Logger, btfsBinaryPath string) bool {
 }
 
 func add_functest(log *zap.Logger, btfsBinaryPath string) bool {
+	fmt.Println("in autoupdate.main.functest")
+	fmt.Println("btfsBinaryPath is: [%v]", btfsBinaryPath)
+
 	// write btfs id command output to a file in current working directory
 	// then btfs add that file for test
 	dir, err := os.Getwd()

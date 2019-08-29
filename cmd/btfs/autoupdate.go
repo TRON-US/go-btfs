@@ -44,6 +44,7 @@ var configRepoUrl = "https://raw.githubusercontent.com/TRON-US/btfs-binary-relea
 
 // Auto update function.
 func update() {
+	fmt.Println("in cmd.btfs.autoupdate.update")
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
 	if err != nil {
@@ -245,6 +246,8 @@ func update() {
 
 // Determine if the path file exists.
 func pathExists(path string) bool {
+	fmt.Println("in cmd.btfs.autoupdate.pathExists")
+	fmt.Println("path is: [%v]", path)
 	_, err := os.Stat(path)
 	if err == nil {
 		return true
@@ -257,6 +260,8 @@ func pathExists(path string) bool {
 
 // Get config struct from yaml file.
 func getConfigure(fileName string) (*Config, error) {
+	fmt.Println("in cmd.btfs.autoupdate.getConfigure")
+	fmt.Println("fileName is: [%v]", fileName)
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return nil, err
@@ -272,6 +277,10 @@ func getConfigure(fileName string) (*Config, error) {
 
 // Compare version.
 func versionCompare(version1, version2 string) (int, error) {
+	fmt.Println("in cmd.btfs.autoupdate.versionCompare")
+	fmt.Println("version1 is: [%v]", version1)
+	fmt.Println("version2 is: [%v]", version2)
+
 	// Split string of version1.
 	s1 := strings.Split(version1, ".")
 	if s1 == nil || len(s1) != 3 {
@@ -312,6 +321,7 @@ func versionCompare(version1, version2 string) (int, error) {
 
 // Get current program execution path.
 func getCurrentPath() (string, error) {
+	fmt.Println("in cmd.btfs.autoupdate.getCurrentPath")
 	ex, err := os.Executable()
 	if err != nil {
 		return "", err
@@ -322,7 +332,10 @@ func getCurrentPath() (string, error) {
 
 // http get download function.
 func download(downloadPath, url string) error {
-	// http get.
+	fmt.Println("in cmd.btfs.autoupdate.download")
+	// http get
+	fmt.Println("downloadPath is: [%v]", downloadPath)
+	fmt.Println("url is: [%v]", url)
 	res, err := http.Get(url)
 	if err != nil {
 		log.Errorf("Http get error, reasons: [%v]", err)
@@ -353,6 +366,8 @@ func download(downloadPath, url string) error {
 
 // Md5 encode file by file path.
 func md5Encode(name string) (string, error) {
+	fmt.Println("in cmd.btfs.autoupdate.md5Encode")
+	fmt.Println("name is: [%v]", name)
 	// Open file.
 	file, err := os.Open(name)
 	if err != nil {
@@ -380,6 +395,9 @@ func md5Encode(name string) (string, error) {
 
 // Convert string to int.
 func convertStringToInt(s string) int {
+	fmt.Println("in cmd.btfs.autoupdate.convertStringToInt")
+	fmt.Println("s is: [%v]", s)
+
 	sum := 0
 	for _, v := range []byte(s) {
 		sum += int(v)
