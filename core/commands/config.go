@@ -14,8 +14,6 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 	"github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/elgris/jsondiff"
 )
 
@@ -64,8 +62,6 @@ Set the value of the 'Datastore.Path' key:
 		"edit":    configEditCmd,
 		"replace": configReplaceCmd,
 		"profile": configProfileCmd,
-		"optin":   optInCmd,
-		"optout":  optOutCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("key", true, false, "The key of the config entry (e.g. \"Addresses.API\")."),
@@ -357,104 +353,6 @@ var configProfileApplyCmd = &cmds.Command{
 		}),
 	},
 	Type: ConfigUpdateOutput{},
-}
-
-var optInCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "Opt-in enables analytic data collection (default).",
-		ShortDescription: `To change the setting (to opt-out), execute 'btfs config optout'.`,
-		LongDescription: `
-'btfs config optin' controls configuration variable 'Experimental.Analytics'.
-By setting the configuration value to 'true', you agree to the collection of the following data:
-1. A random, generated BTFS Node ID
-2. Aggregate Node Uptime
-3. BTFS version; e.g. 0.1.0
-4. OS Type
-5. CPU Architecture Type
-6. Node GPS location (longitute, latitude)
-`,
-	},
-
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		config, err := n.Repo.Config()
-		if err != nil {
-			return err
-		}
-
-		config.Experimental.Analytics = true
-
-		var output *ConfigField
-
-		cfgRoot, err := cmdenv.GetConfigRoot(env)
-		if err != nil {
-			return err
-		}
-		r, err := fsrepo.Open(cfgRoot)
-		if err != nil {
-			return err
-		}
-
-		output, err = setConfig(r, "Experimental.Analytics", true)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, output)
-	},
-}
-
-var optOutCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "Opt-out disables collection of the analytics data (enabled by default).",
-		ShortDescription: `In order to opt out of the collection of analytics data, execute 'btfs config optout.`,
-		LongDescription: `
-'btfs config optout' controls configuration variable 'Experimental.Analytics'.
-By setting the configuration value to 'false', you disable the collection of the following analytics data:
-1. A random, generated BTFS Node ID
-2. Aggregate Node Uptime
-3. BTFS version; e.g. 0.1.0
-4. OS Type
-5. CPU Architecture Type
-6. Node GPS location (longitute, latitude)
-`,
-	},
-
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		config, err := n.Repo.Config()
-		if err != nil {
-			return err
-		}
-
-		config.Experimental.Analytics = false
-
-		var output *ConfigField
-
-		cfgRoot, err := cmdenv.GetConfigRoot(env)
-		if err != nil {
-			return err
-		}
-		r, err := fsrepo.Open(cfgRoot)
-		if err != nil {
-			return err
-		}
-
-		output, err = setConfig(r, "Experimental.Analytics", false)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, output)
-	},
 }
 
 func buildProfileHelp() string {
