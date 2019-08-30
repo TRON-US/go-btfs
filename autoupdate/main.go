@@ -19,7 +19,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const url = "localhost:5001"
 const testfile = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
 const testfilecontent = "Hello BTFS!"
 
@@ -50,7 +49,7 @@ func initLogger(logPath string) *zap.Logger {
 
 // Rollback function of auto update.
 
-func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath string) {
+func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath, url string) {
 	defer func() {
 		wg.Done()
 	}()
@@ -58,7 +57,6 @@ func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDo
 	// Check if the BTFS daemon server is up every 5 seconds, checked a total of five times.
 	for i := 0; i < 5; i++ {
 		time.Sleep(time.Second * 5)
-		// Where your local node is running on localhost:5001
 		sh := shell.NewShell(url)
 		if sh.IsUp() {
 			log.Info("BTFS node started successfully!")
@@ -147,6 +145,8 @@ func update(log *zap.Logger) int {
 	time.Sleep(time.Second * 5)
 	defaultProjectPath := flag.String("project", "", "default project path")
 	defaultDownloadPath := flag.String("download", "", "default download path")
+	// Input Where your local node is running on, default value is localhost:5001.
+	url := flag.String("url", "localhost:5001", "your node's http server addr")
 
 	flag.Parse()
 
@@ -223,7 +223,7 @@ func update(log *zap.Logger) int {
 
 	wg.Add(1)
 
-	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath)
+	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath, *url)
 
 	// prepare functional test before start btfs daemon
 	ready_to_test := prepare_test(log, btfsBinaryPath)
