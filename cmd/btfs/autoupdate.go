@@ -261,7 +261,7 @@ func update(url string) {
 
 		if runtime.GOOS == "windows" {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "\\"), "-download", fmt.Sprint(defaultBtfsPath, "\\"))
+			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "\\"), "-download", fmt.Sprint(defaultBtfsPath, "\\"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
@@ -269,7 +269,7 @@ func update(url string) {
 			}
 		} else {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultBtfsPath, "/"))
+			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultBtfsPath, "/"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
