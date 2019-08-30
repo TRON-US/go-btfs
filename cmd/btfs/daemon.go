@@ -426,7 +426,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	//Begin sending analytics to hosted server
 	collectData, _ := req.Options[enableDataCollection].(bool)
 	if collectData {
+		fmt.Println("Collecting Data")
 		analytics.Initialize(node, version.CurrentVersionNumber)
+	} else {
+		fmt.Println("Not Collectng Data")
 	}
 
 	// Give the user some immediate feedback when they hit C-c

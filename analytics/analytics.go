@@ -84,9 +84,6 @@ func durationToSeconds(duration time.Duration) uint64 {
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion string) {
 	var log = logging.Logger("cmd/btfs")
-	if err != nil {
-		return
-	}
 
 	dc := new(dataCollection)
 	dc.node = n
@@ -145,6 +142,7 @@ func (dc *dataCollection) update() {
 }
 
 func (dc *dataCollection) sendData() {
+	fmt.Println("Data Sent")
 	dc.update()
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
@@ -192,18 +190,10 @@ func (dc *dataCollection) collectionAgent() {
 
 	defer tick.Stop()
 
-	config, _ := dc.node.Repo.Config()
-	if config.Experimental.Analytics {
-		dc.sendData()
-	}
+	dc.sendData()
 	// make the configuration available in the for loop
 	for range tick.C {
-		config, _ := dc.node.Repo.Config()
-		// check config for explicit consent to data collect
-		// consent can be changed without reinitializing data collection
-		if config.Experimental.Analytics {
-			dc.sendData()
-		}
+		dc.sendData()
 	}
 }
 

@@ -14,6 +14,9 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 	"github.com/TRON-US/go-btfs/repo/fsrepo"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
+
 	"github.com/elgris/jsondiff"
 )
 
