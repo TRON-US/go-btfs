@@ -18,7 +18,7 @@ import (
 
 var log = logging.Logger("ledger")
 var (
-	ledgerAddr = "ledger.bt.co:443"
+	ledgerAddr = "ledger-nginx.bt.co:443"
 	certFile   = `-----BEGIN CERTIFICATE-----
 MIIEADCCAuigAwIBAgIBADANBgkqhkiG9w0BAQUFADBjMQswCQYDVQQGEwJVUzEh
 MB8GA1UEChMYVGhlIEdvIERhZGR5IEdyb3VwLCBJbmMuMTEwLwYDVQQLEyhHbyBE

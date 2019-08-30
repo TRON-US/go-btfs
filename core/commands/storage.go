@@ -43,7 +43,7 @@ const (
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
 
 	challengeTimeOut   = time.Second
-	chunkUploadTimeOut = time.Second * 30
+	chunkUploadTimeOut = time.Second
 	fileUploadTimeOut  = time.Minute * 5
 
 	hostStorePrefix       = "/hosts/"        // from btfs-hub
@@ -93,7 +93,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		"respc": storageUploadResponseChallengeCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "Add hash of file to upload.").EnableStdin(),
+		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
@@ -101,7 +101,22 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
 		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		price, found := req.Options[uploadPriceOptionName].(int64)
+		if found && price < 0 {
+			return fmt.Errorf("cannot input a negative price")
+		} else if !found {
+			// TODO: Select best price from top candidates
+			price = int64(1)
+		}
+		mode, _ := req.Options[hostSelectModeOptionName].(string)
+		hosts, found := req.Options[hostSelectionOptionName].(string)
+		if mode == "custom" && !found {
+			return fmt.Errorf("custom mode needs input host lists")
+		}
+		fileHash := req.Arguments[0]
+		peers := strings.Split(hosts, ",")
+
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -109,27 +124,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
-		price, found := req.Options[uploadPriceOptionName].(int64)
-		if found && price < 0 {
-			return fmt.Errorf("cannot input a negative price")
-		} else if !found {
-			// TODO: Select best price from top candidates
-			req.Options[uploadPriceOptionName] = int64(10)
-		}
-
-		mode, _ := req.Options[hostSelectModeOptionName].(string)
-		_, found = req.Options[hostSelectionOptionName].(string)
-		if mode == "custom" && !found {
-			return fmt.Errorf("custom mode needs input host lists")
-		}
-
-		return nil
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		fileHash := req.Arguments[0]
-		price, _ = req.Options[uploadPriceOptionName].(int64)
-		hosts, _ := req.Options[hostSelectionOptionName].(string)
-		peers := strings.Split(hosts, ",")
 
 		// start new session
 		ss := &storage.Session{}
@@ -192,10 +186,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 						Err:       err,
 					}
 					return
-				}
-				chunkChan <- &storage.Chunks{
-					ChunkHash: chunkHash,
-					Err:       nil,
+				} else {
+					chunkChan <- &storage.Chunks{
+						ChunkHash: chunkHash,
+						Err:       nil,
+					}
 				}
 			}(chunk, i)
 		}
@@ -203,7 +198,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			chunk := <- chunkChan
 			ss.Chunk = append(ss.Chunk, *chunk)
 			if chunk.Err != nil {
-				return err
+				return chunk.Err
 			}
 		}
 
@@ -228,11 +223,11 @@ If current host is interested and all validation checks out, host downloads
 the chunk and replies back to client for the next challenge step.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("session-id", false, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("channel-id", false, false, "Open channel id for payment.").EnableStdin(),
+		cmds.StringArg("chunk-hash", false, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -240,9 +235,7 @@ the chunk and replies back to client for the next challenge step.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
-		return nil
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+
 		ssID := req.Arguments[0]
 		channelID := req.Arguments[1]
 		hash := req.Arguments[2]
@@ -299,7 +292,7 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 
 		// RemoteCall(user, CHID, CHR) to get signedPayment
-		signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.ID, r.Hash)
+		signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, hash)
 		if err != nil {
 			return err
 		}
@@ -313,11 +306,22 @@ the chunk and replies back to client for the next challenge step.`,
 			return err
 		}
 
+		// verify and sign
 		signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
-
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 		// Close channel
+		channelInfo, err = getChannelInfo(req.Context, channelID)
+		if err != nil {
+			return err
+		}
+		//log.Error("channel info's toAcc: ", channelID, channelInfo.ToAccount.Address)
+		//log.Error("signed channel's toAcc: ", channelID, signedchannelState)
 		err = ledger.CloseChannel(req.Context, signedchannelState)
 		if err != nil {
+			log.Error(err)
 			return err
 		}
 
@@ -353,7 +357,7 @@ the contents and nonce together to produce a final challenge response.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -366,10 +370,6 @@ the contents and nonce together to produce a final challenge response.`,
 		if storage.SessionMap[ssID] == nil {
 			return fmt.Errorf("session id doesn't exist")
 		}
-		return nil
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ssID := req.Arguments[0]
 		ss := storage.SessionMap[ssID]
 		chunkHash := req.Arguments[1]
 
@@ -416,7 +416,7 @@ signature back to the host to complete payment.`,
 		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// pre-check
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -425,6 +425,7 @@ signature back to the host to complete payment.`,
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
+
 		// verify challenge
 		ssID := req.Arguments[0]
 		challengeHash := req.Arguments[1]
@@ -434,16 +435,17 @@ signature back to the host to complete payment.`,
 		} else {
 			now := time.Now()
 			if now.After(ss.Time.Add(challengeTimeOut)) {
-				return fmt.Errorf("verification time out")
+				return fmt.Errorf("challenge verification time out")
 			}
-			if ss.Challenge[chunkHash].Hash != challengeHash {
-				return fmt.Errorf("fail to verify challenge")
+			if c := ss.Challenge[chunkHash]; c != nil {
+				if c.Hash != challengeHash {
+					return fmt.Errorf("fail to verify challenge")
+				}
+			} else {
+				return fmt.Errorf("chunk related challenge doesn't exist")
 			}
 		}
 
-		return nil
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// prepare payment
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -558,7 +560,6 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 	}
 	// new ledger client
 	ledgerClient := ledger.NewClient(clientConn)
-
 	// create account
 	_, err = ledger.ImportAccount(ctx, payerPubKey, ledgerClient)
 	if err != nil {
@@ -570,6 +571,7 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 	}
 	// prepare channel commit and sign
 	cc, err := ledger.NewChannelCommit(payerPubKey, recvPubKey, amount)
+	log.Error("channel commit:", cc)
 	if err != nil {
 		return nil, err
 	}
@@ -750,7 +752,7 @@ By default it shows local host node information.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self").EnableStdin(),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -764,9 +766,7 @@ By default it shows local host node information.`,
 		} else if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
-		return nil
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+
 		var peerID string
 
 		n, err := cmdenv.GetNode(env)
@@ -826,7 +826,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -834,9 +834,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
-		return nil
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+
 		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
 		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
 		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
