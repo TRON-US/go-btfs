@@ -142,7 +142,6 @@ func (dc *dataCollection) update() {
 }
 
 func (dc *dataCollection) sendData() {
-	fmt.Println("Data Sent")
 	dc.update()
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
