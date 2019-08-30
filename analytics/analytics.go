@@ -186,10 +186,10 @@ func (dc *dataCollection) sendData() {
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
-		if res != nil {
-			res.Body.Close()
-		}
 		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
@@ -236,10 +236,10 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
-		if res != nil {
-			res.Body.Close()
-		}
 		log.Warning(err.Error())
 		return
 	}
