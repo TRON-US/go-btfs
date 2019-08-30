@@ -22,7 +22,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/query"
+	query "github.com/ipfs/go-datastore/query"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"

@@ -67,9 +67,6 @@ The JSON output contains type information.
 		cmds.BoolOption(lsSizeOptionName, "Resolve linked objects to find out their file size.").WithDefault(true),
 		cmds.BoolOption(lsStreamOptionName, "s", "Enable experimental streaming of directory entries as they are traversed."),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
-		return fmt.Errorf("error")
-	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {

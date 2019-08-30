@@ -16,17 +16,17 @@ var SessionMap map[string]*Session
 
 type Session struct {
 	sync.Mutex
-	Chunk 	[]Chunks
 
 	Time      time.Time
 	FileHash  string
 	Status    string
+	Chunk     []Chunks // will merge chunk with challenge in session ticket
 	Challenge map[string]*StorageChallenge
 }
 
 type Chunks struct {
 	ChunkHash string
-	Err 	error
+	Err       error
 }
 
 func init() {
