@@ -298,7 +298,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	mplex, _ := req.Options[enableMultiplexKwd].(bool)
 
 	// Btfs auto update.
-	url := fmt.Sprint("localhost:", strings.Split(cfg.Addresses.API[0], "/")[4])
+	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
 	go update(url)
 
 	// Start assembling node config
