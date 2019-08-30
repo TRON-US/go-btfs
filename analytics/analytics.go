@@ -187,7 +187,9 @@ func (dc *dataCollection) sendData() {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		res.Body.Close()
+		if res != nil {
+			res.Body.Close()
+		}
 		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
@@ -227,11 +229,17 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 		return
 	}
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeHealth), bytes.NewReader(hdMarshaled))
+	if err != nil {
+		log.Warning(err.Error())
+		return
+	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		res.Body.Close()
+		if res != nil {
+			res.Body.Close()
+		}
 		log.Warning(err.Error())
 		return
 	}
