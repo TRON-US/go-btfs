@@ -144,17 +144,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 
 		// get other node's public key as address
 		// create channel between them
-		var wg sync.WaitGroup
-		wg.Add(len(fileHash))
 		chunkChan := make(chan *storage.Chunks)
-		go func() {
-			wg.Wait()
-			close(chunkChan)
-		}()
 		// FIXME: Fake multiple chunk hash as chunk hash
 		for i, chunk := range req.Arguments {
 			go func(chunkHash string, i int) {
-				defer wg.Done()
 				_, hostPid, err := ParsePeerParam(peers[i])
 				if err != nil {
 					chunkChan <- &storage.Chunks{
@@ -196,10 +189,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		}
 		for range req.Arguments {
 			chunk := <- chunkChan
-			ss.Chunk = append(ss.Chunk, *chunk)
 			if chunk.Err != nil {
 				return chunk.Err
 			}
+			ss.Chunk = append(ss.Chunk, chunk)
 		}
 
 		seRes := &UploadRes{
@@ -223,9 +216,9 @@ If current host is interested and all validation checks out, host downloads
 the chunk and replies back to client for the next challenge step.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", false, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("channel-id", false, false, "Open channel id for payment.").EnableStdin(),
-		cmds.StringArg("chunk-hash", false, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -309,7 +302,6 @@ the chunk and replies back to client for the next challenge step.`,
 		// verify and sign
 		signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 		if err != nil {
-			log.Error(err)
 			return err
 		}
 		// Close channel
@@ -317,11 +309,9 @@ the chunk and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		//log.Error("channel info's toAcc: ", channelID, channelInfo.ToAccount.Address)
-		//log.Error("signed channel's toAcc: ", channelID, signedchannelState)
+
 		err = ledger.CloseChannel(req.Context, signedchannelState)
 		if err != nil {
-			log.Error(err)
 			return err
 		}
 
@@ -468,7 +458,6 @@ signature back to the host to complete payment.`,
 
 		signedBytes, err := proto.Marshal(signedPayment)
 		if err != nil {
-			log.Error("fail to marshal signed payment: ", err)
 			return nil
 		}
 		r := &PaymentRes{
@@ -571,7 +560,6 @@ func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.Pri
 	}
 	// prepare channel commit and sign
 	cc, err := ledger.NewChannelCommit(payerPubKey, recvPubKey, amount)
-	log.Error("channel commit:", cc)
 	if err != nil {
 		return nil, err
 	}

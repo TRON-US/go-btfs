@@ -20,7 +20,7 @@ type Session struct {
 	Time      time.Time
 	FileHash  string
 	Status    string
-	Chunk     []Chunks // will merge chunk with challenge in session ticket
+	Chunk     []*Chunks // will merge chunk with challenge in session ticket
 	Challenge map[string]*StorageChallenge
 }
 
