@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +16,12 @@ import (
 type P2PRemoteCall struct {
 	Node *core.IpfsNode
 	ID   peer.ID
+}
+
+type ErrorMessage struct {
+	Message string
+	Code int
+	Type string
 }
 
 const P2PRemoteCallProto = "/rapi"
@@ -39,13 +46,22 @@ func (r *P2PRemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("fail to read response body: %s", err)
 	}
+	if resp.StatusCode != 200 {
+		e := &ErrorMessage{}
+		if err = json.Unmarshal(body, e); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf(e.Message)
+	}
 	return body, nil
 }
+
 
 func (r *P2PRemoteCall) CallPost() {
 }

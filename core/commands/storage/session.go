@@ -20,8 +20,13 @@ type Session struct {
 	Time      time.Time
 	FileHash  string
 	Status    string
-	Chunks    map[string]interface{}
+	Chunk     []*Chunks // will merge chunk with challenge in session ticket
 	Challenge map[string]*StorageChallenge
+}
+
+type Chunks struct {
+	ChunkHash string
+	Err       error
 }
 
 func init() {
