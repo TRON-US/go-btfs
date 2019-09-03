@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"runtime"
 	"time"
 
@@ -65,7 +66,11 @@ const (
 	kilobyte = 1024
 
 	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
-	heartBeat = 15 * time.Minute
+	//heartBeat = 15 * time.Minute
+	//heartBeat is changed to each second for load test
+	heartBeat = 1 * time.Second
+	//repeats is the number of extra times to send data for the load test
+	repeats   = 5
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -190,6 +195,19 @@ func (dc *dataCollection) sendData() {
 		dc.reportHealthAlert(fmt.Sprintf("failed to make new http request: %s", err.Error()))
 		return
 	}
+
+	// print time
+	t := time.Now()
+	fmt.Println(t.Format("2006-01-02 15:04:05.999999999"))
+
+	// Save a copy of this request for debugging.
+	requestDump, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(requestDump))
+	fmt.Sprintf("hostname is: : %s", statusServerDomain)
+
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
@@ -209,12 +227,11 @@ func (dc *dataCollection) collectionAgent() {
 	if config.Experimental.Analytics {
 		dc.sendData()
 	}
-	// make the configuration available in the for loop
 	for range tick.C {
-		config, _ := dc.node.Repo.Config()
-		// check config for explicit consent to data collect
-		// consent can be changed without reinitializing data collection
-		if config.Experimental.Analytics {
+		fmt.Println("== in inner range tick.C ==")
+		// repeat sending data for load test
+		for i := 1; i <= repeats; i++ {
+			fmt.Print("=== repeating ", i, " ===\n")
 			dc.sendData()
 		}
 	}
