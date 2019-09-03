@@ -1,6 +1,7 @@
 package coreunix
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -53,6 +54,7 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 		Pin:        true,
 		Trickle:    false,
 		Chunker:    "",
+		tokenMetadata: nil,
 	}, nil
 }
 
@@ -76,6 +78,7 @@ type Adder struct {
 	tempRoot   cid.Cid
 	CidBuilder cid.Builder
 	liveNodes  uint64
+	tokenMetadata *map[string]string
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -104,12 +107,15 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		return nil, err
 	}
 
+	bytes := adder.convertMetadataToBytes()
+
 	params := ihelper.DagBuilderParams{
 		Dagserv:    adder.bufferedDS,
 		RawLeaves:  adder.RawLeaves,
 		Maxlinks:   ihelper.DefaultLinksPerBlock,
 		NoCopy:     adder.NoCopy,
 		CidBuilder: adder.CidBuilder,
+		TokenMetadata: bytes,
 	}
 
 	db, err := params.New(chnk)
@@ -386,6 +392,9 @@ func (adder *Adder) addFile(path string, file files.File) error {
 		}
 	}
 
+	// set tokenMetaData here from the given token metadata map.
+	adder.setTokenMetadata(nil)
+
 	dagnode, err := adder.add(reader)
 	if err != nil {
 		return err
@@ -423,6 +432,27 @@ func (adder *Adder) addDir(path string, dir files.Directory, toplevel bool) erro
 	}
 
 	return it.Err()
+}
+
+func (adder *Adder) setTokenMetadata(m *map[string]string) {
+	metaMap := make(map[string]string)
+	metaMap["price"] = "1.20"
+	metaMap["nodeId"] = "Qmxxxx4"
+	m = &metaMap
+	adder.tokenMetadata = m
+}
+
+// Convert token metadata map to byte array: map -> csv string.
+// E.g., {"price":"12.0", "nodeid":"Qmxxxx1"} -> "2,1,12.0,2,Qmxxxx1"
+func (adder *Adder) convertMetadataToBytes() []byte {
+	m := *adder.tokenMetadata
+	bf := new(bytes.Buffer)
+	fmt.Fprintf(bf, "%d,", len(m))
+
+	for k,v := range m {
+		fmt.Fprintf(bf, "%s,%s,", k, v)
+	}
+	return bf.Bytes()
 }
 
 func (adder *Adder) maybePauseForGC() error {
