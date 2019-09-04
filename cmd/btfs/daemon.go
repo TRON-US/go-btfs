@@ -61,7 +61,7 @@ const (
 	enableIPNSPubSubKwd       = "enable-namesys-pubsub"
 	enableMultiplexKwd        = "enable-mplex-experiment"
 	hValuekwd                 = "hval"
-	enableDataCollection      = "enable-data-collection"
+	enableDataCollection      = "dc"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
