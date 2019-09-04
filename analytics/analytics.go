@@ -117,7 +117,6 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 		dc.OSType = runtime.GOOS
 		dc.ArchType = runtime.GOARCH
 	}
-
 	go dc.collectionAgent()
 }
 
@@ -198,7 +197,11 @@ func (dc *dataCollection) sendData() {
 
 	// print time
 	t := time.Now()
-	fmt.Println(t.Format("2006-01-02 15:04:05.999999999"))
+	fmt.Println("===", t.Format("2006-01-02 15:04:05.999999999"))
+	fmt.Println("=== Sending data collection")
+	fmt.Println("=== Hostname is: ", statusServerDomain)
+
+	req.Header.Add("Content-Type", "application/json")
 
 	// Save a copy of this request for debugging.
 	requestDump, err := httputil.DumpRequest(req, true)
@@ -206,9 +209,7 @@ func (dc *dataCollection) sendData() {
 		fmt.Println(err)
 	}
 	fmt.Println(string(requestDump))
-	fmt.Sprintf("hostname is: : %s", statusServerDomain)
 
-	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -252,6 +253,16 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	}
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeHealth), bytes.NewReader(hdMarshaled))
 	req.Header.Add("Content-Type", "application/json")
+
+	t := time.Now()
+	fmt.Println("=== ", t.Format("2006-01-02 15:04:05.999999999"))
+	fmt.Println("=== Sending routeHealth")
+	// Save a copy of this request for debugging.
+	requestDump, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(requestDump))
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
