@@ -2,6 +2,7 @@ package coreunix
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -53,6 +54,7 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 		Pin:        true,
 		Trickle:    false,
 		Chunker:    "",
+		tokenMetadata: nil,
 	}, nil
 }
 
@@ -76,6 +78,7 @@ type Adder struct {
 	tempRoot   cid.Cid
 	CidBuilder cid.Builder
 	liveNodes  uint64
+	tokenMetadata *map[string]interface{}
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -104,12 +107,21 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		return nil, err
 	}
 
+	var metaBytes []byte
+	if adder.tokenMetadata != nil {
+		metaBytes, err = adder.convertMetadataToBytes()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	params := ihelper.DagBuilderParams{
 		Dagserv:    adder.bufferedDS,
 		RawLeaves:  adder.RawLeaves,
 		Maxlinks:   ihelper.DefaultLinksPerBlock,
 		NoCopy:     adder.NoCopy,
 		CidBuilder: adder.CidBuilder,
+		TokenMetadata: metaBytes,
 	}
 
 	db, err := params.New(chnk)
@@ -386,6 +398,9 @@ func (adder *Adder) addFile(path string, file files.File) error {
 		}
 	}
 
+	// set tokenMetaData here from the given token metadata map.
+	adder.setTokenMetadata(nil)    // TODO: nil is to be replaced by real map
+
 	dagnode, err := adder.add(reader)
 	if err != nil {
 		return err
@@ -423,6 +438,29 @@ func (adder *Adder) addDir(path string, dir files.Directory, toplevel bool) erro
 	}
 
 	return it.Err()
+}
+const DEBUG = false
+func (adder *Adder) setTokenMetadata(m *map[string]interface{}) {
+	if DEBUG {
+		metaMap := make(map[string]interface{})
+		metaMap["price"] = 1.23
+		metaMap["nodeId"] = "Qmxxxx4"
+		m = &metaMap
+		// TODO: this block will be removed.
+	}
+	adder.tokenMetadata = m
+}
+
+// Convert token metadata map to byte array in JSON encoding.
+// E.g., {"price":12.0, "nodeid":"Qmxxxx1"} -> "{"price":12.0,"nodeid":"Qmxxxx1"}"
+func (adder *Adder) convertMetadataToBytes() ([]byte, error) {
+	m := *adder.tokenMetadata
+	b, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, err
 }
 
 func (adder *Adder) maybePauseForGC() error {
