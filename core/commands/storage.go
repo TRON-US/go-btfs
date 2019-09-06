@@ -51,11 +51,6 @@ const (
 	defaultRepFactor = 3
 )
 
-var (
-	channelID *ledgerPb.ChannelID
-	price     int64
-)
-
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Interact with storage services on BTFS.",
@@ -92,6 +87,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		"respc": storageUploadResponseChallengeCmd,
 	},
 	Arguments: []cmds.Argument{
+		// FIXME: change file hash to limit 1
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
@@ -101,13 +97,14 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		price, found := req.Options[uploadPriceOptionName].(int64)
-		if found && price < 0 {
+		p, found := req.Options[uploadPriceOptionName].(int64)
+		if found && p < 0 {
 			return fmt.Errorf("cannot input a negative price")
 		} else if !found {
 			// TODO: Select best price from top candidates
-			price = int64(1)
+			p = int64(1)
 		}
+
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		hosts, found := req.Options[hostSelectionOptionName].(string)
 		if mode == "custom" && !found {
@@ -130,9 +127,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
-		if err = ss.NewSession(ssID, fileHash); err != nil {
-			return err
-		}
+		ss.NewSession(ssID)
+		ss.SetFileHash(fileHash)
+
 		// get self key pair
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -143,44 +140,53 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 
 		// get other node's public key as address
 		// create channel between them
-		chunkChan := make(chan *storage.Chunks)
+		chunkChan := make(chan *ChunkRes)
 		// FIXME: Fake multiple chunk hash as chunk hash
 		for i, chunk := range req.Arguments {
 			go func(chunkHash string, i int) {
 				_, hostPid, err := ParsePeerParam(peers[i])
 				if err != nil {
-					chunkChan <- &storage.Chunks{
-						ChunkHash: chunkHash,
+					chunkChan <- &ChunkRes{
+						Hash: chunkHash,
 						Err:       err,
 					}
 					return
 				}
 				peerPubKey, err := hostPid.ExtractPublicKey()
 				if err != nil {
-					chunkChan <- &storage.Chunks{
-						ChunkHash: chunkHash,
+					chunkChan <- &ChunkRes{
+						Hash: chunkHash,
 						Err:       err,
 					}
 					return
 				}
-				channelID, err = initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, price)
+				channelID, err := initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, p)
 				if err != nil {
-					chunkChan <- &storage.Chunks{
-						ChunkHash: chunkHash,
+					chunkChan <- &ChunkRes{
+						Hash: chunkHash,
 						Err:       err,
 					}
 					return
 				}
-				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash)
+				chunkInfo, err := ss.NewChunk(chunkHash, n.Identity, hostPid, channelID, p)
 				if err != nil {
-					chunkChan <- &storage.Chunks{
-						ChunkHash: chunkHash,
+					chunkChan <- &ChunkRes{
+						Hash: chunkHash,
+						Err:       err,
+					}
+					return
+				}
+				log.Debug("Created chunk info in client:", chunkInfo)
+				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
+				if err != nil {
+					chunkChan <- &ChunkRes {
+						Hash: chunkHash,
 						Err:       err,
 					}
 					return
 				} else {
-					chunkChan <- &storage.Chunks{
-						ChunkHash: chunkHash,
+					chunkChan <- &ChunkRes {
+						Hash: chunkHash,
 						Err:       nil,
 					}
 				}
@@ -191,7 +197,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if chunk.Err != nil {
 				return chunk.Err
 			}
-			ss.Chunk = append(ss.Chunk, chunk)
 		}
 
 		seRes := &UploadRes{
@@ -206,6 +211,11 @@ type UploadRes struct {
 	ID string
 }
 
+type ChunkRes struct {
+	Hash string
+	Err error
+}
+
 var storageUploadInitCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Initialize storage handshake with inquiring client.",
@@ -218,8 +228,10 @@ the chunk and replies back to client for the next challenge step.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("price", true, false, "price per GB in BTT for storing this chunk offered by client").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// check flags
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -230,12 +242,15 @@ the chunk and replies back to client for the next challenge step.`,
 
 		ssID := req.Arguments[0]
 		channelID := req.Arguments[1]
-		hash := req.Arguments[2]
-		hashToCid, err := cidlib.Parse(hash)
+		chunkHash := req.Arguments[2]
+		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
 		}
-
+		hashToCid, err := cidlib.Parse(chunkHash)
+		if err != nil {
+			return err
+		}
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -245,19 +260,34 @@ the chunk and replies back to client for the next challenge step.`,
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
+		// build session
+		ss := storage.SessionMap[ssID]
+		if ss == nil {
+			ss = &storage.Session{}
+			ss.NewSession(ssID)
+		}
+		temp, err := strconv.ParseInt(channelID, 10, 64)
+		chID := &ledgerPb.ChannelID{
+			Id:temp,
+		}
+		chunkInfo, err := ss.NewChunk(chunkHash, pid, n.Identity, chID, price)
+		if err != nil {
+			return err
+		}
+
 		// build connection with ledger
 		channelInfo, err := getChannelInfo(req.Context, channelID)
 		if err != nil {
 			return err
 		}
-		log.Debug("Verified channel info: ", channelInfo)
+		log.Debug("Verified channel:", channelInfo)
 
 		// Get file
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
-		p := path.New(hash)
+		p := path.New(chunkHash)
 		file, err := api.Unixfs().Get(req.Context, p)
 		if err != nil {
 			return err
@@ -268,7 +298,7 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 
 		// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
-		reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, hash)
+		reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
 		if err != nil {
 			return err
 		}
@@ -282,9 +312,12 @@ the chunk and replies back to client for the next challenge step.`,
 		if err = sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
 			return err
 		}
+		// update session to store challenge info there
+		chunkInfo.UpdateChallenge(sc)
+		log.Debug("session info after challenge generate on host:", ss)
 
 		// RemoteCall(user, CHID, CHR) to get signedPayment
-		signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, hash)
+		signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
 		if err != nil {
 			return err
 		}
@@ -303,12 +336,10 @@ the chunk and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		// Close channel
-		channelInfo, err = getChannelInfo(req.Context, channelID)
-		if err != nil {
-			return err
-		}
 
+		// Close channel
+		channelstate := signedchannelState.GetChannel()
+		log.Debug("channel state before closing: %v", channelstate)
 		err = ledger.CloseChannel(req.Context, signedchannelState)
 		if err != nil {
 			return err
@@ -374,10 +405,14 @@ the contents and nonce together to produce a final challenge response.`,
 		if err != nil {
 			return err
 		}
-
+		// previous step should have information with channel id and price
+		chunkInfo := ss.ChunkInfo[chunkHash]
+		if chunkInfo == nil {
+			return fmt.Errorf("no chunk information found")
+		}
 		// when multi-process talking to multiple hosts, different cids can only generate one storage challenge,
 		// and stored the latest one in session map
-		sch, err := ss.SetChallenge(req.Context, n, api, cid)
+		sch, err := chunkInfo.SetChallenge(req.Context, n, api, cid)
 		if err != nil {
 			return err
 		}
@@ -415,24 +450,27 @@ signature back to the host to complete payment.`,
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-		// verify challenge
 		ssID := req.Arguments[0]
 		challengeHash := req.Arguments[1]
 		chunkHash := req.Arguments[2]
-		if ss := storage.SessionMap[ssID]; ss == nil {
+		// get info from session
+		ss := storage.SessionMap[ssID]
+		if ss == nil {
 			return fmt.Errorf("session id doesn't exist")
 		} else {
+			// time out check
 			now := time.Now()
 			if now.After(ss.Time.Add(challengeTimeOut)) {
 				return fmt.Errorf("challenge verification time out")
 			}
-			if c := ss.Challenge[chunkHash]; c != nil {
-				if c.Hash != challengeHash {
-					return fmt.Errorf("fail to verify challenge")
-				}
-			} else {
-				return fmt.Errorf("chunk related challenge doesn't exist")
-			}
+		}
+		// verify challenge
+		c := ss.ChunkInfo[chunkHash]
+		if c == nil {
+			return fmt.Errorf("chunk related challenge doesn't exist")
+		}
+		if c.Challenge.Hash != challengeHash {
+			return fmt.Errorf("fail to verify challenge")
 		}
 
 		// prepare payment
@@ -445,7 +483,7 @@ signature back to the host to complete payment.`,
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
-		channelState, err := prepareChannelState(n, pid)
+		channelState, err := prepareChannelState(n, pid, c.Price, c.ChannelID)
 		if err != nil {
 			return err
 		}
@@ -459,6 +497,8 @@ signature back to the host to complete payment.`,
 		if err != nil {
 			return nil
 		}
+		// TODO: Update chunk state in session later in status ticket
+
 		r := &PaymentRes{
 			SignedPayment: signedBytes,
 		}
@@ -514,7 +554,7 @@ func verifyAndSign(pid peer.ID, n *core.IpfsNode, signedChannelState *ledgerPb.S
 	return signedChannelState, nil
 }
 
-func prepareChannelState(n *core.IpfsNode, pid peer.ID) (*ledgerPb.ChannelState, error) {
+func prepareChannelState(n *core.IpfsNode, pid peer.ID, price int64, channelID *ledgerPb.ChannelID) (*ledgerPb.ChannelState, error) {
 	fromAccount, err := ledger.NewAccount(n.PrivateKey.GetPublic(), 0)
 	if err != nil {
 		return nil, err
