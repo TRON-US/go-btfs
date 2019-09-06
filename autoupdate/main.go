@@ -242,6 +242,7 @@ func update(log *zap.Logger) int {
 	// start btfs function test
 	if ready_to_test {
 		test_success := false
+		// try up to two times
 		for i := 0; i < 2; i++ {
 			if get_functest(log, btfsBinaryPath) {
 				log.Info("BTFS daemon get file test succeeded!")
@@ -255,6 +256,7 @@ func update(log *zap.Logger) int {
 			os.Exit(101)
 		}
 		test_success = false
+		// try up to two times
 		for i := 0; i < 2; i++ {
 			if add_functest(log, btfsBinaryPath) {
 				log.Info("BTFS daemon add file test succeeded!")
