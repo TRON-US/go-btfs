@@ -9,7 +9,7 @@ import (
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
 	"github.com/google/uuid"
-	"github.com/ipfs/go-cid"
+	cidlib "github.com/ipfs/go-cid"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
@@ -19,9 +19,9 @@ var SessionMap map[string]*Session
 type Session struct {
 	sync.Mutex
 
-	Time     time.Time
-	FileHash string
-	Status   string
+	Time      time.Time
+	FileHash  string
+	Status    string
 	ChunkInfo map[string]*Chunk // mapping chunkHash with Chunk info
 }
 
@@ -33,7 +33,7 @@ type Chunk struct {
 	Payer     peer.ID
 	Receiver  peer.ID
 	Price     int64
-	State    string
+	State     string
 	Err       error
 }
 
@@ -73,11 +73,11 @@ func (s *Session) NewChunk(hash string, payerPid peer.ID, recvPid peer.ID, chann
 	chunk, ok := s.ChunkInfo[hash]
 	if !ok {
 		chunk = &Chunk{
-			ChannelID:channelID,
-			Payer:payerPid,
-			Receiver:recvPid,
-			Price:price,
-			State:"init",
+			ChannelID: channelID,
+			Payer:     payerPid,
+			Receiver:  recvPid,
+			Price:     price,
+			State:     "init",
 		}
 		s.ChunkInfo[hash] = chunk
 	}
@@ -85,7 +85,7 @@ func (s *Session) NewChunk(hash string, payerPid peer.ID, recvPid peer.ID, chann
 	return chunk, nil
 }
 
-func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cid cid.Cid) (*StorageChallenge, error) {
+func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cid cidlib.Cid) (*StorageChallenge, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -105,7 +105,7 @@ func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreifac
 	return sch, nil
 }
 
-func (c *Chunk) UpdateChallenge(sch *StorageChallenge)  {
+func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
 	c.Lock()
 	defer c.Unlock()
 

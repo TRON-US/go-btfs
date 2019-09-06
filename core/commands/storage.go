@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -16,12 +17,11 @@ import (
 	"github.com/TRON-US/go-btfs/core/hub"
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
-	cidlib "github.com/ipfs/go-cid"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/gogo/protobuf/proto"
+	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
-	query "github.com/ipfs/go-datastore/query"
+	"github.com/ipfs/go-datastore/query"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -148,7 +148,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
-						Err:       err,
+						Err:  err,
 					}
 					return
 				}
@@ -156,7 +156,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
-						Err:       err,
+						Err:  err,
 					}
 					return
 				}
@@ -164,7 +164,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
-						Err:       err,
+						Err:  err,
 					}
 					return
 				}
@@ -172,28 +172,28 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
-						Err:       err,
+						Err:  err,
 					}
 					return
 				}
 				log.Debug("Created chunk info in client:", chunkInfo)
 				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
 				if err != nil {
-					chunkChan <- &ChunkRes {
+					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
-						Err:       err,
+						Err:  err,
 					}
 					return
 				} else {
-					chunkChan <- &ChunkRes {
+					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
-						Err:       nil,
+						Err:  nil,
 					}
 				}
 			}(chunk, i)
 		}
 		for range req.Arguments {
-			chunk := <- chunkChan
+			chunk := <-chunkChan
 			if chunk.Err != nil {
 				return chunk.Err
 			}
@@ -213,7 +213,7 @@ type UploadRes struct {
 
 type ChunkRes struct {
 	Hash string
-	Err error
+	Err  error
 }
 
 var storageUploadInitCmd = &cmds.Command{
@@ -268,7 +268,7 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 		temp, err := strconv.ParseInt(channelID, 10, 64)
 		chID := &ledgerPb.ChannelID{
-			Id:temp,
+			Id: temp,
 		}
 		chunkInfo, err := ss.NewChunk(chunkHash, pid, n.Identity, chID, price)
 		if err != nil {
