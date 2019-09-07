@@ -40,7 +40,10 @@ type Config struct {
 	EndNumber        int    `yaml:"endNumber"`
 }
 
-var configRepoUrl = "https://dist.btfs.io/release/"
+type Repo struct {
+	url        string
+	compressed bool
+}
 
 // Auto update function.
 func update(url string) {
@@ -49,6 +52,11 @@ func update(url string) {
 	if err != nil {
 		log.Errorf("Get current program execution path error, reasons: [%v]", err)
 		return
+	}
+
+	configRepo := Repo{
+		url:        "https://dist.btfs.io/release/",
+		compressed: true,
 	}
 
 	var latestConfigFile string
@@ -124,7 +132,7 @@ func update(url string) {
 		}
 
 		// Get latest btfs config file.
-		err = download(latestConfigPath, fmt.Sprint(configRepoUrl, routePath, latestConfigFile))
+		err = download(latestConfigPath, fmt.Sprint(configRepo.url, routePath, latestConfigFile))
 		if err != nil {
 			log.Errorf("Download latest btfs config file error, reasons: [%v]", err)
 			continue
@@ -183,27 +191,35 @@ func update(url string) {
 
 		fmt.Println("BTFS auto update begin.")
 
-		// Get the btfs latest compressed file.
-		err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, latestBtfsBinaryCompressed))
-		if err != nil {
-			log.Errorf("Download btfs latest compressed file error, reasons: [%v]", err)
-			continue
-		}
+		if configRepo.compressed {
+			// Get the btfs latest compressed file.
+			err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepo.url, routePath, latestBtfsBinaryCompressed))
+			if err != nil {
+				log.Errorf("Download btfs latest compressed file error, reasons: [%v]", err)
+				continue
+			}
+			fmt.Println("Download btfs latest compressed file success!")
 
-		fmt.Println("Download btfs latest compressed file success!")
+			// Unarchive the tar.gz or .zip binary file
+			err = archiver.Unarchive(latestBtfsBinaryPathCompressed, defaultBtfsPath)
+			if err != nil {
+				log.Errorf("Unarchive of btfs latest binary file error, reasons: [%v]", err)
+				continue
+			}
 
-		// Unarchive the tar.gz or .zip binary file
-		err = archiver.Unarchive(latestBtfsBinaryPathCompressed, defaultBtfsPath)
-		if err != nil {
-			log.Errorf("Unarchive of btfs latest binary file error, reasons: [%v]", err)
-			continue
-		}
-
-		// Delete the archive file.
-		err = removeCompressedFile(latestBtfsBinaryPathCompressed)
-		if err != nil {
-			log.Errorf("Remove btfs latest compressed file error, reasons: [%v]", err)
-			continue
+			// Delete the archive file.
+			err = removeCompressedFile(latestBtfsBinaryPathCompressed)
+			if err != nil {
+				log.Errorf("Remove btfs latest compressed file error, reasons: [%v]", err)
+				continue
+			}
+		} else {
+			err = download(latestBtfsBinaryPath, fmt.Sprint(configRepo.url, routePath, latestBtfsBinary))
+			if err != nil {
+				log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
+				continue
+			}
+			fmt.Println("Download btfs binary file success!")
 		}
 
 		// Md5 encode file.
@@ -229,29 +245,37 @@ func update(url string) {
 			}
 		}
 
-		// Get the update binary compressed file.
-		err = download(updateBinaryPathCompressed, fmt.Sprint(configRepoUrl, routePath, updateBinaryCompressed))
-		if err != nil {
-			log.Error("Download update compressed file failed.")
-			continue
+		if configRepo.compressed {
+			// Get the update binary compressed file.
+			err = download(updateBinaryPathCompressed, fmt.Sprint(configRepo.url, routePath, updateBinaryCompressed))
+			if err != nil {
+				log.Error("Download update compressed file failed.")
+				continue
+			}
+
+			fmt.Println("Download update compressed file success!")
+
+			// Unarchive the tar.gz or .zip update binary file
+			err = archiver.Unarchive(updateBinaryPathCompressed, defaultBtfsPath)
+			if err != nil {
+				log.Errorf("Unarchive of update btfs binary file error, reasons: [%v]", err)
+				continue
+			}
+
+			// Delete the update archive file.
+			err = removeCompressedFile(updateBinaryPathCompressed)
+			if err != nil {
+				log.Errorf("Remove compressed files error, reasons: [%v]", err)
+				continue
+			}
+		} else {
+			// Get the update binary file.
+			err = download(updateBinaryPath, fmt.Sprint(configRepo.url, routePath, updateBinary))
+			if err != nil {
+				log.Error("Download update binary file failed.")
+				continue
+			}
 		}
-
-		fmt.Println("Download update compressed file success!")
-
-		// Unarchive the tar.gz or .zip update binary file
-		err = archiver.Unarchive(updateBinaryPathCompressed, defaultBtfsPath)
-		if err != nil {
-			log.Errorf("Unarchive of update btfs binary file error, reasons: [%v]", err)
-			continue
-		}
-
-		// Delete the update archive file.
-		err = removeCompressedFile(updateBinaryPathCompressed)
-		if err != nil {
-			log.Errorf("Remove compressed files error, reasons: [%v]", err)
-			continue
-		}
-
 		// Add executable permissions to update binary file.
 		err = os.Chmod(updateBinaryPath, 0775)
 		if err != nil {
