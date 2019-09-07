@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -11,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/ipfs/go-ipfs-api"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/pkg/errors"
@@ -19,8 +22,18 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const testfile = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
-const testfilecontent = "Hello BTFS!"
+const (
+	testfile        = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
+	testfilecontent = "Hello BTFS!"
+
+	routeError = "/error"
+)
+
+type errorData struct {
+	HVal        string `json:"h_val"`
+	PeerId      string `json:"peer_id"`
+	ErrorStatus string `json:"error_status"`
+}
 
 // Log print initialization, get *zap.Logger Info.
 func initLogger(logPath string) *zap.Logger {
@@ -147,6 +160,8 @@ func update(log *zap.Logger) int {
 	defaultDownloadPath := flag.String("download", "", "default download path")
 	// Input Where your local node is running on, default value is localhost:5001.
 	url := flag.String("url", "localhost:5001", "your node's http server addr")
+	statusServerDomain := flag.String("ssd", "https://db.btfs.io", "the status server domain")
+	peerId := flag.String("id", "", "the node's peer id")
 
 	flag.Parse()
 
@@ -226,7 +241,7 @@ func update(log *zap.Logger) int {
 	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath, *url)
 
 	// prepare functional test before start btfs daemon
-	ready_to_test := prepare_test(log, btfsBinaryPath)
+	ready_to_test := prepare_test(log, btfsBinaryPath, *statusServerDomain, *peerId)
 
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command(btfsBinaryPath, "daemon")
@@ -244,12 +259,13 @@ func update(log *zap.Logger) int {
 		test_success := false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if get_functest(log, btfsBinaryPath) {
+			if err := get_functest(btfsBinaryPath); err != nil {
+				log.Error("BTFS daemon get file test failed!")
+				send_error(log, err.Error(), *statusServerDomain, *peerId)
+			} else {
 				log.Info("BTFS daemon get file test succeeded!")
 				test_success = true
 				break
-			} else {
-				log.Error("BTFS daemon get file test failed!")
 			}
 		}
 		if !test_success {
@@ -258,11 +274,13 @@ func update(log *zap.Logger) int {
 		test_success = false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if add_functest(log, btfsBinaryPath) {
+			if err := add_functest(btfsBinaryPath); err != nil {
+				log.Error(fmt.Sprintf("BTFS daemon add file test failed! Reason: %v", err))
+				send_error(log, err.Error(), *statusServerDomain, *peerId)
+			} else {
 				log.Info("BTFS daemon add file test succeeded!")
 				test_success = true
-			} else {
-				log.Error("BTFS daemon add file test failed!")
+				break
 			}
 		}
 		if !test_success {
@@ -317,12 +335,14 @@ func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConf
 }
 
 // we need to delete the file for get test from last run
-func prepare_test(log *zap.Logger, btfsBinaryPath string) bool {
+func prepare_test(log *zap.Logger, btfsBinaryPath, statusServerDomain, peerId string) bool {
 	cmd := exec.Command(btfsBinaryPath, "rm", testfile)
 	err := cmd.Start()
 
 	if err != nil {
-		log.Info(fmt.Sprintf("btfs rm failed with message: [%v]", err))
+		errMsg := fmt.Sprintf("btfs rm failed with message: [%v]", err)
+		log.Info(errMsg)
+		send_error(log, errMsg, statusServerDomain, peerId)
 		return false
 	} else {
 		log.Info("btfs test preparation succeed")
@@ -330,52 +350,43 @@ func prepare_test(log *zap.Logger, btfsBinaryPath string) bool {
 	return true
 }
 
-func get_functest(log *zap.Logger, btfsBinaryPath string) bool {
+func get_functest(btfsBinaryPath string) error {
 	// btfs get file saved to current working directory
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(fmt.Sprintf("get working directory failed: [%v]", err))
-		return false
+		return errors.New(fmt.Sprintf("get working directory failed: [%v]", err))
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "get", "-o", dir, testfile)
 	out, err := cmd.Output()
 	if err != nil {
-		log.Info(fmt.Sprintf("btfs get test failed: [%v]", err))
-		log.Info(string(out))
-		return false
+		return errors.New(fmt.Sprintf("btfs get test failed: [%v], Out[%s]", err, string(out)))
 	}
 
 	data, err := ioutil.ReadFile(dir + "/" + testfile)
 	if err != nil {
-		log.Info(fmt.Sprintf("btfs get test: read file failed: [%v]", err))
-		return false
+		return errors.New(fmt.Sprintf("btfs get test: read file failed: [%v]", err))
 	}
 	// remote last "\n" before compare
 	if string(data[:len(data)-1]) != testfilecontent {
-		log.Info("btfs get test: get different content")
-		log.Info(string(data))
-		return false
+		return errors.New(fmt.Sprintf("btfs get test: get different content[%s]", string(data)))
 	}
 
-	log.Info("btfs get test succeeded")
-	return true
+	return nil
 }
 
-func add_functest(log *zap.Logger, btfsBinaryPath string) bool {
+func add_functest(btfsBinaryPath string) error {
 	// write btfs id command output to a file in current working directory
 	// then btfs add that file for test
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(fmt.Sprintf("get working directory failed: [%v]", err))
-		return false
+		return errors.New(fmt.Sprintf("get working directory failed: [%v]", err))
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "id")
 	out, err := cmd.Output()
 	if err != nil {
-		log.Info(fmt.Sprintf("btfs add test: btfs id failed: [%v]", err))
-		return false
+		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
 	}
 
 	// add current time stamp to file content so every time adding-file hash is different
@@ -386,22 +397,18 @@ func add_functest(log *zap.Logger, btfsBinaryPath string) bool {
 	filename := dir + "/btfstest.txt"
 	err = ioutil.WriteFile(filename, out, 0644)
 	if err != nil {
-		log.Info(fmt.Sprintf("btfs add test: write file failed: [%v]", err))
-		return false
+		return errors.New(fmt.Sprintf("btfs add test: write file failed: [%v]", err))
 	}
 
 	cmd = exec.Command(btfsBinaryPath, "add", filename)
 	out, err = cmd.Output()
 	if err != nil {
-		log.Info(fmt.Sprintf("btfs add test failed: [%v]", err))
-		return false
+		return errors.New(fmt.Sprintf("btfs add test failed: [%v]", err))
 	}
 
 	s := strings.Split(string(out), " ")
 	if len(s) < 2 {
-		log.Info("btfs add test failed: invalid add result")
-		log.Info(string(out))
-		return false
+		return errors.New(fmt.Sprintf("btfs add test failed: invalid add result[%s]", string(out)))
 	}
 
 	addfilehash := s[1]
@@ -409,14 +416,32 @@ func add_functest(log *zap.Logger, btfsBinaryPath string) bool {
 	out, err = cmd.Output()
 
 	if string(out) != string(origin) {
-		log.Info("btfs add test failed: cat different content")
-		log.Info("btfs add file:")
-		log.Info(string(origin))
-		log.Info("btfs cat file:")
-		log.Info(string(out))
-		return false
+		return errors.New(fmt.Sprintf("btfs add test failed: cat different content, btfs add file:[%s], btfs cat file:[%s]",
+			string(origin), string(out)))
 	}
 
-	log.Info("btfs add test succeeded")
-	return true
+	return nil
+}
+
+// function to send error message to status server
+func send_error(log *zap.Logger, errMsg, statusServerDomain, peerId string) {
+	errData := new(errorData)
+	errData.ErrorStatus = errMsg
+	errData.PeerId = peerId
+	errDataMarshaled, err := json.Marshal(errData)
+
+	// reports to status server by making HTTP request
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeError), bytes.NewReader(errDataMarshaled))
+	if err != nil {
+		log.Info(fmt.Sprintf("failed to make new http request: %s", err.Error()))
+		return
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Info(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
+		return
+	}
+	defer res.Body.Close()
 }
