@@ -308,7 +308,7 @@ make test
 If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
 
 
-## License
+### License
 
 [MIT](./LICENSE)
 
