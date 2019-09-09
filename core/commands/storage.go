@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -18,6 +17,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
@@ -122,12 +122,12 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		}
 
 		// start new session
-		ss := &storage.Session{}
+		sm := storage.GlobalSession
 		ssID, err := storage.NewSessionID()
 		if err != nil {
 			return err
 		}
-		ss.NewSession(ssID)
+		ss := sm.GetOrDefault(ssID)
 		ss.SetFileHash(fileHash)
 
 		// get self key pair
@@ -168,15 +168,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					}
 					return
 				}
-				chunkInfo, err := ss.NewChunk(chunkHash, n.Identity, hostPid, channelID, p)
-				if err != nil {
-					chunkChan <- &ChunkRes{
-						Hash: chunkHash,
-						Err:  err,
-					}
-					return
-				}
-				log.Debug("Created chunk info in client:", chunkInfo)
+				chunk := ss.GetOrDefault(chunkHash)
+				chunk.NewChunk(n.Identity, hostPid, channelID, p)
 				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
 				if err != nil {
 					chunkChan <- &ChunkRes{
@@ -261,19 +254,17 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 
 		// build session
-		ss := storage.SessionMap[ssID]
-		if ss == nil {
-			ss = &storage.Session{}
-			ss.NewSession(ssID)
-		}
+		sm := storage.GlobalSession
+		ss := sm.GetOrDefault(ssID)
 		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
-		chID := &ledgerPb.ChannelID{
-			Id: chidInt64,
-		}
-		chunkInfo, err := ss.NewChunk(chunkHash, pid, n.Identity, chID, price)
 		if err != nil {
 			return err
 		}
+		chID := &ledgerPb.ChannelID{
+			Id: chidInt64,
+		}
+		chunkInfo := ss.GetOrDefault(chunkHash)
+		chunkInfo.NewChunk(pid, n.Identity, chID, price)
 
 		// build connection with ledger
 		channelInfo, err := getChannelInfo(req.Context, channelID)
@@ -387,11 +378,16 @@ the contents and nonce together to produce a final challenge response.`,
 		}
 
 		ssID := req.Arguments[0]
-		if storage.SessionMap[ssID] == nil {
-			return fmt.Errorf("session id doesn't exist")
+		ss, err := storage.GlobalSession.GetSession(ssID)
+		if err != nil {
+			return err
 		}
-		ss := storage.SessionMap[ssID]
 		chunkHash := req.Arguments[1]
+		// previous step should have information with channel id and price
+		chunkInfo, err := ss.GetChunk(chunkHash)
+		if err != nil {
+			return err
+		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -405,11 +401,7 @@ the contents and nonce together to produce a final challenge response.`,
 		if err != nil {
 			return err
 		}
-		// previous step should have information with channel id and price
-		chunkInfo := ss.ChunkInfo[chunkHash]
-		if chunkInfo == nil {
-			return fmt.Errorf("no chunk information found")
-		}
+
 		// when multi-process talking to multiple hosts, different cids can only generate one storage challenge,
 		// and stored the latest one in session map
 		sch, err := chunkInfo.SetChallenge(req.Context, n, api, cid)
@@ -451,18 +443,20 @@ signature back to the host to complete payment.`,
 		}
 
 		ssID := req.Arguments[0]
+		ss, err := storage.GlobalSession.GetSession(ssID)
+		if err != nil {
+			return err
+		}
+
 		challengeHash := req.Arguments[1]
 		chunkHash := req.Arguments[2]
 		// get info from session
-		ss := storage.SessionMap[ssID]
-		if ss == nil {
-			return fmt.Errorf("session id doesn't exist")
+		// previous step should have information with channel id and price
+		chunkInfo, err := ss.GetChunk(chunkHash)
+		if err != nil {
+			return err
 		}
 
-		chunkInfo := ss.ChunkInfo[chunkHash]
-		if chunkInfo == nil {
-			return fmt.Errorf("chunk related challenge doesn't exist")
-		}
 		// time out check
 		now := time.Now()
 		if now.After(chunkInfo.Time.Add(challengeTimeOut)) {

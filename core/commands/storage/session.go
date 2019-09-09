@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,7 +15,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-var SessionMap map[string]*Session
+var GlobalSession *SessionMap
+
+type SessionMap struct {
+	sync.Mutex
+	Map map[string]*Session
+}
 
 type Session struct {
 	sync.Mutex
@@ -38,7 +44,41 @@ type Chunk struct {
 }
 
 func init() {
-	SessionMap = make(map[string]*Session)
+	GlobalSession = &SessionMap{}
+	GlobalSession.Map = make(map[string]*Session)
+}
+
+func (sm *SessionMap) PutSession(ssID string, ss *Session) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if ss == nil {
+		ss = &Session{}
+	}
+	sm.Map[ssID] = ss
+}
+
+func (sm *SessionMap) GetSession(ssID string) (*Session, error) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if sm.Map[ssID] == nil {
+		return nil, fmt.Errorf("session id doesn't exist")
+	}
+	return sm.Map[ssID], nil
+}
+
+func (sm *SessionMap) GetOrDefault(ssID string) *Session {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if sm.Map[ssID] == nil {
+		ss := &Session{}
+		ss.new()
+		sm.Map[ssID] = ss
+		return ss
+	}
+	return sm.Map[ssID]
 }
 
 func NewSessionID() (string, error) {
@@ -49,41 +89,64 @@ func NewSessionID() (string, error) {
 	return seid.String(), nil
 }
 
-func (s *Session) NewSession(ssID string) {
-	s.Lock()
-	defer s.Unlock()
+func (ss *Session) new() {
+	ss.Lock()
+	defer ss.Unlock()
 
-	s.Time = time.Now()
-	s.Status = "init"
-	s.ChunkInfo = make(map[string]*Chunk)
-	SessionMap[ssID] = s
+	ss.Time = time.Now()
+	ss.Status = "init"
+	ss.ChunkInfo = make(map[string]*Chunk)
 }
 
-func (s *Session) SetFileHash(fileHash string) {
-	s.Lock()
-	defer s.Unlock()
+func (ss *Session) SetFileHash(fileHash string) {
+	ss.Lock()
+	defer ss.Unlock()
 
-	s.FileHash = fileHash
+	ss.FileHash = fileHash
 }
 
-func (s *Session) NewChunk(hash string, payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) (*Chunk, error) {
-	s.Lock()
-	defer s.Unlock()
+func (ss *Session) PutChunk(hash string, chunk *Chunk) {
+	ss.Lock()
+	defer ss.Unlock()
 
-	chunk, ok := s.ChunkInfo[hash]
-	if !ok {
-		chunk = &Chunk{
-			ChannelID:  channelID,
-			Payer:      payerPid,
-			Receiver:   recvPid,
-			Price:      price,
-			State:      "init",
-			Time: time.Now(),
-		}
-		s.ChunkInfo[hash] = chunk
+	ss.ChunkInfo[hash] = chunk
+	ss.Time = time.Now()
+}
+
+func (ss *Session) GetChunk(hash string) (*Chunk, error) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if ss.ChunkInfo[hash] == nil {
+		return nil, fmt.Errorf("chunk hash doesn't exist ")
 	}
-	s.Time = time.Now()
-	return chunk, nil
+	return ss.ChunkInfo[hash], nil
+}
+
+func (ss *Session) GetOrDefault(hash string) *Chunk {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if ss.ChunkInfo[hash] == nil {
+		c := &Chunk{}
+		c.Time = time.Now()
+		c.State = "init"
+		ss.ChunkInfo[hash] = c
+		return c
+	}
+	return ss.ChunkInfo[hash]
+}
+
+func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.ChannelID = channelID
+	c.Payer =     payerPid
+	c.Receiver = recvPid
+	c.Price =      price
+	c.State =     "init"
+	c.Time = time.Now()
 }
 
 // used on client to record a new challenge
