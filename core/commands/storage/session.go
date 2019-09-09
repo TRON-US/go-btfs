@@ -28,13 +28,13 @@ type Session struct {
 type Chunk struct {
 	sync.Mutex
 
-	Challenge *StorageChallenge
-	ChannelID *ledgerPb.ChannelID
-	Payer     peer.ID
-	Receiver  peer.ID
-	Price     int64
-	State     string
-	Err       error
+	Challenge  *StorageChallenge
+	ChannelID  *ledgerPb.ChannelID
+	Payer      peer.ID
+	Receiver   peer.ID
+	Price      int64
+	State      string
+	Time time.Time
 }
 
 func init() {
@@ -73,11 +73,12 @@ func (s *Session) NewChunk(hash string, payerPid peer.ID, recvPid peer.ID, chann
 	chunk, ok := s.ChunkInfo[hash]
 	if !ok {
 		chunk = &Chunk{
-			ChannelID: channelID,
-			Payer:     payerPid,
-			Receiver:  recvPid,
-			Price:     price,
-			State:     "init",
+			ChannelID:  channelID,
+			Payer:      payerPid,
+			Receiver:   recvPid,
+			Price:      price,
+			State:      "init",
+			Time: time.Now(),
 		}
 		s.ChunkInfo[hash] = chunk
 	}
@@ -85,6 +86,7 @@ func (s *Session) NewChunk(hash string, payerPid peer.ID, recvPid peer.ID, chann
 	return chunk, nil
 }
 
+// used on client to record a new challenge
 func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cid cidlib.Cid) (*StorageChallenge, error) {
 	c.Lock()
 	defer c.Unlock()
@@ -97,17 +99,23 @@ func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreifac
 		if err != nil {
 			return nil, err
 		}
+		c.Challenge = sch
+	} else {
+		sch = c.Challenge
 	}
-	c.Challenge = sch
+
 	if err = sch.GenChallenge(); err != nil {
 		return nil, err
 	}
+	c.Time = time.Now()
 	return sch, nil
 }
 
+// usually used on host, to record host challenge info
 func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.Challenge = sch
+	c.Time = time.Now()
 }

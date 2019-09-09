@@ -228,7 +228,7 @@ the chunk and replies back to client for the next challenge step.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
-		cmds.StringArg("price", true, false, "price per GB in BTT for storing this chunk offered by client").EnableStdin(),
+		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// check flags
@@ -266,9 +266,9 @@ the chunk and replies back to client for the next challenge step.`,
 			ss = &storage.Session{}
 			ss.NewSession(ssID)
 		}
-		temp, err := strconv.ParseInt(channelID, 10, 64)
+		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
 		chID := &ledgerPb.ChannelID{
-			Id: temp,
+			Id: chidInt64,
 		}
 		chunkInfo, err := ss.NewChunk(chunkHash, pid, n.Identity, chID, price)
 		if err != nil {
@@ -457,19 +457,19 @@ signature back to the host to complete payment.`,
 		ss := storage.SessionMap[ssID]
 		if ss == nil {
 			return fmt.Errorf("session id doesn't exist")
-		} else {
-			// time out check
-			now := time.Now()
-			if now.After(ss.Time.Add(challengeTimeOut)) {
-				return fmt.Errorf("challenge verification time out")
-			}
 		}
-		// verify challenge
-		c := ss.ChunkInfo[chunkHash]
-		if c == nil {
+
+		chunkInfo := ss.ChunkInfo[chunkHash]
+		if chunkInfo == nil {
 			return fmt.Errorf("chunk related challenge doesn't exist")
 		}
-		if c.Challenge.Hash != challengeHash {
+		// time out check
+		now := time.Now()
+		if now.After(chunkInfo.Time.Add(challengeTimeOut)) {
+			return fmt.Errorf("challenge verification time out")
+		}
+		// verify challenge
+		if chunkInfo.Challenge.Hash != challengeHash {
 			return fmt.Errorf("fail to verify challenge")
 		}
 
@@ -483,7 +483,7 @@ signature back to the host to complete payment.`,
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
-		channelState, err := prepareChannelState(n, pid, c.Price, c.ChannelID)
+		channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
 		if err != nil {
 			return err
 		}
