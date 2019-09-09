@@ -29,7 +29,7 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
 - [License](#license)
 
 
-### Install
+## Install
 
 ### System Requirements
 
