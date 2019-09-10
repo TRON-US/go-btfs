@@ -34,13 +34,13 @@ type Session struct {
 type Chunk struct {
 	sync.Mutex
 
-	Challenge  *StorageChallenge
-	ChannelID  *ledgerPb.ChannelID
-	Payer      peer.ID
-	Receiver   peer.ID
-	Price      int64
-	State      string
-	Time time.Time
+	Challenge *StorageChallenge
+	ChannelID *ledgerPb.ChannelID
+	Payer     peer.ID
+	Receiver  peer.ID
+	Price     int64
+	State     string
+	Time      time.Time
 }
 
 func init() {
@@ -142,10 +142,10 @@ func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.
 	defer c.Unlock()
 
 	c.ChannelID = channelID
-	c.Payer =     payerPid
+	c.Payer = payerPid
 	c.Receiver = recvPid
-	c.Price =      price
-	c.State =     "init"
+	c.Price = price
+	c.State = "init"
 	c.Time = time.Now()
 }
 
