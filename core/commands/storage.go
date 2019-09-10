@@ -41,9 +41,7 @@ const (
 	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
 
-	challengeTimeOut   = time.Second
-	chunkUploadTimeOut = time.Second
-	fileUploadTimeOut  = time.Minute * 5
+	challengeTimeOut = time.Second
 
 	hostStorePrefix       = "/hosts/"        // from btfs-hub
 	hostStorageInfoPrefix = "/host_storage/" // self or from network
@@ -96,6 +94,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
 		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
+	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		p, found := req.Options[uploadPriceOptionName].(int64)
 		if found && p < 0 {
@@ -223,6 +222,7 @@ the chunk and replies back to client for the next challenge step.`,
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client.").EnableStdin(),
 	},
+	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// check flags
 		cfg, err := cmdenv.GetConfig(env)
@@ -368,6 +368,7 @@ the contents and nonce together to produce a final challenge response.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
+	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -432,6 +433,7 @@ signature back to the host to complete payment.`,
 		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
+	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// pre-check
 		cfg, err := cmdenv.GetConfig(env)
