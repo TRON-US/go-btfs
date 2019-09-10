@@ -3,11 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,13 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/TRON-US/go-btfs/autoupdate/remote"
-)
-
-const (
-	testfile        = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
-	testfilecontent = "Hello BTFS!"
 )
 
 // Log print initialization, get *zap.Logger Info.
@@ -150,9 +141,6 @@ func update(log *zap.Logger) int {
 	defaultDownloadPath := flag.String("download", "", "default download path")
 	// Input Where your local node is running on, default value is localhost:5001.
 	url := flag.String("url", "localhost:5001", "your node's http server addr")
-	statusServerDomain := flag.String("ssd", "https://db.btfs.io", "the status server domain")
-	peerId := flag.String("id", "", "the node's peer id")
-	hVal := flag.String("hval", "", "the HValue")
 
 	flag.Parse()
 
@@ -231,9 +219,6 @@ func update(log *zap.Logger) int {
 
 	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath, *url)
 
-	// prepare functional test before start btfs daemon
-	ready_to_test := prepare_test(log, btfsBinaryPath, *statusServerDomain, *peerId, *hVal)
-
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command(btfsBinaryPath, "daemon")
 		err = cmd.Start()
@@ -244,48 +229,6 @@ func update(log *zap.Logger) int {
 
 	// Wait for the rollback program to complete.
 	wg.Wait()
-
-	// start btfs function test
-	if ready_to_test {
-		test_success := false
-		// try up to two times
-		for i := 0; i < 2; i++ {
-			if err = get_functest(btfsBinaryPath); err != nil {
-				log.Error("BTFS daemon get file test failed!")
-				err = remote.SendError(err.Error(), *statusServerDomain, *peerId, *hVal)
-				if err != nil {
-					log.Info(fmt.Sprintf("Send error to status server error: %v", err))
-				}
-			} else {
-				log.Info("BTFS daemon get file test succeeded!")
-				test_success = true
-				break
-			}
-		}
-		if !test_success {
-			os.Exit(101)
-		}
-		test_success = false
-		// try up to two times
-		for i := 0; i < 2; i++ {
-			if err = add_functest(btfsBinaryPath); err != nil {
-				log.Error(fmt.Sprintf("BTFS daemon add file test failed! Reason: %v", err))
-				err = remote.SendError(err.Error(), *statusServerDomain, *peerId, *hVal)
-				if err != nil {
-					log.Info(fmt.Sprintf("Send error to status server error: %v", err))
-				}
-			} else {
-				log.Info("BTFS daemon add file test succeeded!")
-				test_success = true
-				break
-			}
-		}
-		if !test_success {
-			os.Exit(102)
-		}
-	} else {
-		log.Info("BTFS daemon test skipped")
-	}
 
 	log.Info("BTFS auto update SUCCESS!")
 
@@ -329,96 +272,4 @@ func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConf
 		return currentConfigPath, backupConfigPath, latestConfigPath, btfsBinaryPath, btfsBackupPath, latestBtfsBinaryPath, errors.New("os does not support automatic updates")
 	}
 	return
-}
-
-// we need to delete the file for get test from last run
-func prepare_test(log *zap.Logger, btfsBinaryPath, statusServerDomain, peerId, hVal string) bool {
-	cmd := exec.Command(btfsBinaryPath, "rm", testfile)
-	err := cmd.Start()
-
-	if err != nil {
-		errMsg := fmt.Sprintf("btfs rm failed with message: [%v]", err)
-		log.Info(errMsg)
-		err = remote.SendError(errMsg, statusServerDomain, peerId, hVal)
-		if err != nil {
-			log.Info(fmt.Sprintf("Send error to status server error: %v", err))
-		}
-		return false
-	} else {
-		log.Info("btfs test preparation succeed")
-	}
-	return true
-}
-
-func get_functest(btfsBinaryPath string) error {
-	// btfs get file saved to current working directory
-	dir, err := os.Getwd()
-	if err != nil {
-		return errors.New(fmt.Sprintf("get working directory failed: [%v]", err))
-	}
-
-	cmd := exec.Command(btfsBinaryPath, "get", "-o", dir, testfile)
-	out, err := cmd.Output()
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs get test failed: [%v], Out[%s]", err, string(out)))
-	}
-
-	data, err := ioutil.ReadFile(dir + "/" + testfile)
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs get test: read file failed: [%v]", err))
-	}
-	// remote last "\n" before compare
-	if string(data[:len(data)-1]) != testfilecontent {
-		return errors.New(fmt.Sprintf("btfs get test: get different content[%s]", string(data)))
-	}
-
-	return nil
-}
-
-func add_functest(btfsBinaryPath string) error {
-	// write btfs id command output to a file in current working directory
-	// then btfs add that file for test
-	dir, err := os.Getwd()
-	if err != nil {
-		return errors.New(fmt.Sprintf("get working directory failed: [%v]", err))
-	}
-
-	cmd := exec.Command(btfsBinaryPath, "id")
-	out, err := cmd.Output()
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
-	}
-
-	// add current time stamp to file content so every time adding-file hash is different
-	currentTime := time.Now().String()
-	out = append(out, currentTime...)
-
-	origin := out
-	filename := dir + "/btfstest.txt"
-	err = ioutil.WriteFile(filename, out, 0644)
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs add test: write file failed: [%v]", err))
-	}
-
-	cmd = exec.Command(btfsBinaryPath, "add", filename)
-	out, err = cmd.Output()
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs add test failed: [%v]", err))
-	}
-
-	s := strings.Split(string(out), " ")
-	if len(s) < 2 {
-		return errors.New(fmt.Sprintf("btfs add test failed: invalid add result[%s]", string(out)))
-	}
-
-	addfilehash := s[1]
-	cmd = exec.Command(btfsBinaryPath, "cat", addfilehash)
-	out, err = cmd.Output()
-
-	if string(out) != string(origin) {
-		return errors.New(fmt.Sprintf("btfs add test failed: cat different content, btfs add file:[%s], btfs cat file:[%s]",
-			string(origin), string(out)))
-	}
-
-	return nil
 }
