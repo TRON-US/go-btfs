@@ -428,9 +428,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	fmt.Printf("Daemon is ready\n")
 
 	//Begin sending analytics to hosted server
+	hValue, _ := req.Options[hValuekwd].(string)
 	collectData, _ := req.Options[enableDataCollection].(bool)
 	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
-	analytics.Initialize(node, version.CurrentVersionNumber)
+	analytics.Initialize(node, version.CurrentVersionNumber, hValue)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {

@@ -20,6 +20,7 @@ type programInfo struct {
 	node        *core.IpfsNode
 	startTime   time.Time //Time at which the Daemon was ready and analytics started
 	NodeID      string    `json:"node_id"`
+	HVal        string    `json:"h_val"`
 	CPUInfo     string    `json:"cpu_info"`
 	BTFSVersion string    `json:"btfs_version"`
 	OSType      string    `json:"os_type"`
@@ -83,7 +84,7 @@ func durationToSeconds(duration time.Duration) uint64 {
 }
 
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
-func Initialize(n *core.IpfsNode, BTFSVersion string) {
+func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
 	if n == nil {
 		return
 	}
@@ -111,6 +112,7 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 			return
 		}
 		dc.NodeID = n.Identity.Pretty()
+		dc.HVal = hValue
 		dc.BTFSVersion = BTFSVersion
 		dc.OSType = runtime.GOOS
 		dc.ArchType = runtime.GOARCH
