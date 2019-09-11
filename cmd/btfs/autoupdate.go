@@ -46,7 +46,7 @@ type Repo struct {
 }
 
 // Auto update function.
-func update(url, statusServerDomain, peerId string) {
+func update(url, statusServerDomain, peerId, hVal string) {
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
 	if err != nil {
@@ -286,7 +286,7 @@ func update(url, statusServerDomain, peerId string) {
 		if runtime.GOOS == "windows" {
 			// Start the btfs-updater binary process.
 			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "\\"),
-				"-download", fmt.Sprint(defaultBtfsPath, "\\"), "-ssd", statusServerDomain, "-id", peerId)
+				"-download", fmt.Sprint(defaultBtfsPath, "\\"), "-ssd", statusServerDomain, "-id", peerId, "-hval", hVal)
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
@@ -295,7 +295,7 @@ func update(url, statusServerDomain, peerId string) {
 		} else {
 			// Start the btfs-updater binary process.
 			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "/"),
-				"-download", fmt.Sprint(defaultBtfsPath, "/"), "-ssd", statusServerDomain, "-id", peerId)
+				"-download", fmt.Sprint(defaultBtfsPath, "/"), "-ssd", statusServerDomain, "-id", peerId, "-hval", hVal)
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
