@@ -302,8 +302,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	mplex, _ := req.Options[enableMultiplexKwd].(bool)
 
 	// Btfs auto update.
+	hValue, _ := req.Options[hValuekwd].(string)
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
-	go update(url, cfg.StatusServerDomain, cfg.Identity.PeerID)
+	go update(url, cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
 
 	// Start assembling node config
 	ncfg := &core.BuildCfg{
@@ -428,7 +429,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	fmt.Printf("Daemon is ready\n")
 
 	//Begin sending analytics to hosted server
-	hValue, _ := req.Options[hValuekwd].(string)
 	collectData, _ := req.Options[enableDataCollection].(bool)
 	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
 	analytics.Initialize(node, version.CurrentVersionNumber, hValue)

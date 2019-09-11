@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -15,25 +12,18 @@ import (
 	"time"
 
 	"github.com/ipfs/go-ipfs-api"
-
 	"github.com/natefinch/lumberjack"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/TRON-US/go-btfs/autoupdate/remote"
 )
 
 const (
 	testfile        = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
 	testfilecontent = "Hello BTFS!"
-
-	routeError = "/error"
 )
-
-type errorData struct {
-	HVal        string `json:"h_val"`
-	PeerId      string `json:"peer_id"`
-	ErrorStatus string `json:"error_status"`
-}
 
 // Log print initialization, get *zap.Logger Info.
 func initLogger(logPath string) *zap.Logger {
@@ -162,6 +152,7 @@ func update(log *zap.Logger) int {
 	url := flag.String("url", "localhost:5001", "your node's http server addr")
 	statusServerDomain := flag.String("ssd", "https://db.btfs.io", "the status server domain")
 	peerId := flag.String("id", "", "the node's peer id")
+	hVal := flag.String("hval", "", "the HValue")
 
 	flag.Parse()
 
@@ -241,7 +232,7 @@ func update(log *zap.Logger) int {
 	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath, *url)
 
 	// prepare functional test before start btfs daemon
-	ready_to_test := prepare_test(log, btfsBinaryPath, *statusServerDomain, *peerId)
+	ready_to_test := prepare_test(log, btfsBinaryPath, *statusServerDomain, *peerId, *hVal)
 
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command(btfsBinaryPath, "daemon")
@@ -259,9 +250,12 @@ func update(log *zap.Logger) int {
 		test_success := false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if err := get_functest(btfsBinaryPath); err != nil {
+			if err = get_functest(btfsBinaryPath); err != nil {
 				log.Error("BTFS daemon get file test failed!")
-				send_error(log, err.Error(), *statusServerDomain, *peerId)
+				err = remote.SendError(err.Error(), *statusServerDomain, *peerId, *hVal)
+				if err != nil {
+					log.Info(fmt.Sprintf("Send error to status server error: %v", err))
+				}
 			} else {
 				log.Info("BTFS daemon get file test succeeded!")
 				test_success = true
@@ -274,9 +268,12 @@ func update(log *zap.Logger) int {
 		test_success = false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if err := add_functest(btfsBinaryPath); err != nil {
+			if err = add_functest(btfsBinaryPath); err != nil {
 				log.Error(fmt.Sprintf("BTFS daemon add file test failed! Reason: %v", err))
-				send_error(log, err.Error(), *statusServerDomain, *peerId)
+				err = remote.SendError(err.Error(), *statusServerDomain, *peerId, *hVal)
+				if err != nil {
+					log.Info(fmt.Sprintf("Send error to status server error: %v", err))
+				}
 			} else {
 				log.Info("BTFS daemon add file test succeeded!")
 				test_success = true
@@ -335,14 +332,17 @@ func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConf
 }
 
 // we need to delete the file for get test from last run
-func prepare_test(log *zap.Logger, btfsBinaryPath, statusServerDomain, peerId string) bool {
+func prepare_test(log *zap.Logger, btfsBinaryPath, statusServerDomain, peerId, hVal string) bool {
 	cmd := exec.Command(btfsBinaryPath, "rm", testfile)
 	err := cmd.Start()
 
 	if err != nil {
 		errMsg := fmt.Sprintf("btfs rm failed with message: [%v]", err)
 		log.Info(errMsg)
-		send_error(log, errMsg, statusServerDomain, peerId)
+		err = remote.SendError(errMsg, statusServerDomain, peerId, hVal)
+		if err != nil {
+			log.Info(fmt.Sprintf("Send error to status server error: %v", err))
+		}
 		return false
 	} else {
 		log.Info("btfs test preparation succeed")
@@ -421,27 +421,4 @@ func add_functest(btfsBinaryPath string) error {
 	}
 
 	return nil
-}
-
-// function to send error message to status server
-func send_error(log *zap.Logger, errMsg, statusServerDomain, peerId string) {
-	errData := new(errorData)
-	errData.ErrorStatus = errMsg
-	errData.PeerId = peerId
-	errDataMarshaled, err := json.Marshal(errData)
-
-	// reports to status server by making HTTP request
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeError), bytes.NewReader(errDataMarshaled))
-	if err != nil {
-		log.Info(fmt.Sprintf("failed to make new http request: %s", err.Error()))
-		return
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Info(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
-		return
-	}
-	defer res.Body.Close()
 }
