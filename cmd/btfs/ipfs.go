@@ -94,4 +94,5 @@ var cmdDetailsMap = map[string]cmdDetails{
 	"config/edit": {cannotRunOnDaemon: true, doesNotUseRepo: true},
 	"cid":         {doesNotUseRepo: true},
 	"rm":          {cannotRunOnClient: false, cannotRunOnDaemon: false},
+	"storage/upload": {cannotRunOnClient: true},
 }
