@@ -783,7 +783,7 @@ func getBtfsBinaryPath() (string, error) {
 func functest(statusServerDomain, peerId, hValue string) {
 	btfsBinaryPath, err := getBtfsBinaryPath()
 	if err != nil {
-		fmt.Printf("Get btfs path failed, BTFS daemon test skipped\n")
+		log.Errorf("Get btfs path failed, BTFS daemon test skipped\n")
 		//TODO: do we want to exit with some error code here
 		return
 	}
@@ -796,7 +796,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 		// try up to two times
 		for i := 0; i < 2; i++ {
 			if err := get_functest(btfsBinaryPath); err != nil {
-				fmt.Printf("BTFS daemon get file test failed!\n")
+				log.Errorf("BTFS daemon get file test failed!\n")
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
 				fmt.Printf("BTFS daemon get file test succeeded!\n")
@@ -811,7 +811,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 		// try up to two times
 		for i := 0; i < 2; i++ {
 			if err := add_functest(btfsBinaryPath); err != nil {
-				fmt.Sprintf("BTFS daemon add file test failed! Reason: %v\n", err)
+				log.Errorf("BTFS daemon add file test failed! Reason: %v\n", err)
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
 				fmt.Printf("BTFS daemon add file test succeeded!\n")

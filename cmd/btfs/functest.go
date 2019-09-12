@@ -7,8 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
+	"errors"
 )
 
 const (
@@ -22,9 +21,8 @@ func prepare_test(btfsBinaryPath, statusServerDomain, peerId, hValue string) boo
 	err := cmd.Start()
 
 	if err != nil {
-		fmt.Printf("btfs rm failed with message: [%v]\n", err)
 		errMsg := fmt.Sprintf("btfs rm failed with message: [%v]", err)
-		log.Info(errMsg)
+		log.Errorf(errMsg)
 		SendError(errMsg, statusServerDomain, peerId, hValue)
 		return false
 	} else {
@@ -48,13 +46,13 @@ func get_functest(btfsBinaryPath string) error {
 
 	data, err := ioutil.ReadFile(dir + "/" + testfile)
 	if err != nil {
-		fmt.Sprintf("btfs get test: read file failed: [%v]\n", err)
+		log.Errorf("btfs get test: read file failed: [%v]\n", err)
 		return errors.New(fmt.Sprintf("btfs get test: read file failed: [%v]", err))
 	}
 
 	// remote last "\n" before compare
 	if string(data[:len(data)-1]) != testfilecontent {
-		fmt.Sprintf("btfs get test: get different content[%s]\n", string(data))
+		log.Errorf("btfs get test: get different content[%s]\n", string(data))
 		return errors.New(fmt.Sprintf("btfs get test: get different content[%s]", string(data)))
 	}
 
