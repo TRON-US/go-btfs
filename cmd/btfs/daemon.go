@@ -69,6 +69,7 @@ const (
 
 // BTFS daemon test exit error code
 const (
+	findBTFSBinaryFailed = 100
 	getFileTestFailed = 101
 	addFileTestFailed = 102
 )
@@ -784,8 +785,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 	btfsBinaryPath, err := getBtfsBinaryPath()
 	if err != nil {
 		log.Errorf("Get btfs path failed, BTFS daemon test skipped\n")
-		//TODO: do we want to exit with some error code here
-		return
+		os.Exit(findBTFSBinaryFailed)
 	}
 
 	// prepare functional test before start btfs daemon
