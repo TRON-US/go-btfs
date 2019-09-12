@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,18 +14,10 @@ import (
 const (
 	testfile        = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
 	testfilecontent = "Hello BTFS!"
-
-	routeError = "/error"
 )
 
-type errorData struct {
-	HVal        string `json:"h_val"`
-	PeerId      string `json:"peer_id"`
-	ErrorStatus string `json:"error_status"`
-}
-
 // we need to delete the file for get test from last run
-func prepare_test(btfsBinaryPath, statusServerDomain, peerId string) bool {
+func prepare_test(btfsBinaryPath, statusServerDomain, peerId, hValue string) bool {
 	cmd := exec.Command(btfsBinaryPath, "rm", testfile)
 	err := cmd.Start()
 
@@ -36,7 +25,7 @@ func prepare_test(btfsBinaryPath, statusServerDomain, peerId string) bool {
 		fmt.Printf("btfs rm failed with message: [%v]\n", err)
 		errMsg := fmt.Sprintf("btfs rm failed with message: [%v]", err)
 		log.Info(errMsg)
-		send_error(errMsg, statusServerDomain, peerId)
+		SendError(errMsg, statusServerDomain, peerId, hValue)
 		return false
 	} else {
 		log.Info("btfs test preparation succeed\n")
@@ -118,27 +107,4 @@ func add_functest(btfsBinaryPath string) error {
 	}
 
 	return nil
-}
-
-// function to send error message to status server
-func send_error(errMsg, statusServerDomain, peerId string) {
-	errData := new(errorData)
-	errData.ErrorStatus = errMsg
-	errData.PeerId = peerId
-	errDataMarshaled, err := json.Marshal(errData)
-
-	// reports to status server by making HTTP request
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeError), bytes.NewReader(errDataMarshaled))
-	if err != nil {
-		log.Info(fmt.Sprintf("failed to make new http request: %s", err.Error()))
-		return
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Info(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
-		return
-	}
-	defer res.Body.Close()
 }

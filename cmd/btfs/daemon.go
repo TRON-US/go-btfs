@@ -307,11 +307,11 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
 	mplex, _ := req.Options[enableMultiplexKwd].(bool)
+	hValue, _ := req.Options[hValuekwd].(string)
 
 	// Btfs auto update.
-	hValue, _ := req.Options[hValuekwd].(string)
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
-	go update(url, cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
+	go update(url)
 
 	// Start assembling node config
 	ncfg := &core.BuildCfg{
@@ -435,7 +435,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// The daemon is *finally* ready.
 	fmt.Printf("Daemon is ready\n")
 	// BTFS functional test
-	functest(cfg.StatusServerDomain, cfg.Identity.PeerID)
+	functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
 
 	//Begin sending analytics to hosted server
 	collectData, _ := req.Options[enableDataCollection].(bool)
@@ -458,7 +458,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}
 
-	//functest(cfg.StatusServerDomain, cfg.Identity.PeerID)
 	return errs
 }
 
@@ -781,7 +780,7 @@ func getBtfsBinaryPath() (string, error) {
 	return latestBtfsBinaryPath, nil
 }
 
-func functest(statusServerDomain, peerId string) {
+func functest(statusServerDomain, peerId, hValue string) {
 	btfsBinaryPath, err := getBtfsBinaryPath()
 	if err != nil {
 		fmt.Printf("Get btfs path failed, BTFS daemon test skipped\n")
@@ -790,7 +789,7 @@ func functest(statusServerDomain, peerId string) {
 	}
 
 	// prepare functional test before start btfs daemon
-	ready_to_test := prepare_test(btfsBinaryPath, statusServerDomain, peerId)
+	ready_to_test := prepare_test(btfsBinaryPath, statusServerDomain, peerId, hValue)
 	// start btfs functional test
 	if ready_to_test {
 		test_success := false
@@ -798,7 +797,7 @@ func functest(statusServerDomain, peerId string) {
 		for i := 0; i < 2; i++ {
 			if err := get_functest(btfsBinaryPath); err != nil {
 				fmt.Printf("BTFS daemon get file test failed!\n")
-				send_error(err.Error(), statusServerDomain, peerId)
+				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
 				fmt.Printf("BTFS daemon get file test succeeded!\n")
 				test_success = true
@@ -813,7 +812,7 @@ func functest(statusServerDomain, peerId string) {
 		for i := 0; i < 2; i++ {
 			if err := add_functest(btfsBinaryPath); err != nil {
 				fmt.Sprintf("BTFS daemon add file test failed! Reason: %v\n", err)
-				send_error(err.Error(), statusServerDomain, peerId)
+				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
 				fmt.Printf("BTFS daemon add file test succeeded!\n")
 				test_success = true
