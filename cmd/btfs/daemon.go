@@ -70,8 +70,8 @@ const (
 // BTFS daemon test exit error code
 const (
 	findBTFSBinaryFailed = 100
-	getFileTestFailed = 101
-	addFileTestFailed = 102
+	getFileTestFailed    = 101
+	addFileTestFailed    = 102
 )
 
 var daemonCmd = &cmds.Command{
