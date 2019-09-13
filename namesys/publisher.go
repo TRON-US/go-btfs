@@ -14,7 +14,7 @@ import (
 	ipns "github.com/ipfs/go-ipns"
 	pb "github.com/ipfs/go-ipns/pb"
 	path "github.com/ipfs/go-path"
-	ft "github.com/ipfs/go-unixfs"
+	ft "github.com/TRON-US/go-unixfs"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"

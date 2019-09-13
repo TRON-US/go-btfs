@@ -28,8 +28,8 @@ import (
 	u "github.com/ipfs/go-ipfs-util"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	importer "github.com/ipfs/go-unixfs/importer"
-	uio "github.com/ipfs/go-unixfs/io"
+	importer "github.com/TRON-US/go-unixfs/importer"
+	uio "github.com/TRON-US/go-unixfs/io"
 	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 	ci "github.com/libp2p/go-libp2p-testing/ci"
 )

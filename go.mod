@@ -6,8 +6,10 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
-	github.com/TRON-US/go-btfs-cmds v0.1.3
+	github.com/TRON-US/go-btfs-cmds v0.1.4
 	github.com/TRON-US/go-btfs-config v0.1.5
+	github.com/TRON-US/go-mfs v0.2.0
+	github.com/TRON-US/go-unixfs v0.3.0
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
@@ -25,7 +27,7 @@ require (
 	github.com/ipfs/dir-index-html v1.0.3
 	github.com/ipfs/go-bitswap v0.1.6
 	github.com/ipfs/go-block-format v0.0.2
-	github.com/ipfs/go-blockservice v0.1.0
+	github.com/ipfs/go-blockservice v0.1.1
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-cidutil v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
@@ -58,7 +60,6 @@ require (
 	github.com/ipfs/go-metrics-prometheus v0.0.2
 	github.com/ipfs/go-mfs v0.1.0
 	github.com/ipfs/go-path v0.0.7
-	github.com/ipfs/go-unixfs v0.2.1
 	github.com/ipfs/go-verifcid v0.0.1
 	github.com/ipfs/hang-fds v0.0.1
 	github.com/ipfs/interface-go-ipfs-core v0.1.0
@@ -139,3 +140,5 @@ require (
 go 1.12
 
 replace github.com/golangci/golangci-lint => github.com/mhutchinson/golangci-lint v1.17.2-0.20190909151044-da0150b86be6
+
+replace github.com/ipfs/interface-go-ipfs-core => ../../ipfs/interface-go-ipfs-core

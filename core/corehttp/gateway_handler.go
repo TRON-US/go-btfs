@@ -16,7 +16,7 @@ import (
 	"github.com/ipfs/go-cid"
 	files "github.com/ipfs/go-ipfs-files"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-mfs"
+	"github.com/TRON-US/go-mfs"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"

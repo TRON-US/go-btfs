@@ -10,8 +10,8 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	unixfs "github.com/ipfs/go-unixfs"
-	unixfs_pb "github.com/ipfs/go-unixfs/pb"
+	unixfs "github.com/TRON-US/go-unixfs"
+	unixfs_pb "github.com/TRON-US/go-unixfs/pb"
 	iface "github.com/ipfs/interface-go-ipfs-core"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
 	path "github.com/ipfs/interface-go-ipfs-core/path"

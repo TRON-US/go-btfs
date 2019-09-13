@@ -10,7 +10,7 @@ import (
 	offroute "github.com/ipfs/go-ipfs-routing/offline"
 	ipns "github.com/ipfs/go-ipns"
 	path "github.com/ipfs/go-path"
-	"github.com/ipfs/go-unixfs"
+	"github.com/TRON-US/go-unixfs"
 	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
