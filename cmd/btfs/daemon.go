@@ -802,7 +802,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 			go func() {
 				<-timer.C
 				fmt.Println("BTFS daemon get file test timed out!")
-				os.Exit(101)
+				os.Exit(getFileTestFailed)
 			}()
 			err := get_functest(btfsBinaryPath)
 			// cancel the time once we get a response
