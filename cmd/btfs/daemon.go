@@ -4,6 +4,7 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"time"
 
 	"net"
 	"net/http"
@@ -72,6 +73,7 @@ const (
 	findBTFSBinaryFailed = 100
 	getFileTestFailed    = 101
 	addFileTestFailed    = 102
+	timeoutSeconds       = 100
 )
 
 var daemonCmd = &cmds.Command{
@@ -784,7 +786,7 @@ func getBtfsBinaryPath() (string, error) {
 func functest(statusServerDomain, peerId, hValue string) {
 	btfsBinaryPath, err := getBtfsBinaryPath()
 	if err != nil {
-		log.Errorf("Get btfs path failed, BTFS daemon test skipped\n")
+		fmt.Printf("Get btfs path failed, BTFS daemon test skipped\n")
 		os.Exit(findBTFSBinaryFailed)
 	}
 
@@ -795,8 +797,18 @@ func functest(statusServerDomain, peerId, hValue string) {
 		test_success := false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if err := get_functest(btfsBinaryPath); err != nil {
-				log.Errorf("BTFS daemon get file test failed!\n")
+			timer := time.NewTimer(timeoutSeconds * time.Second)
+			// if it's timeout, it will only do once
+			go func() {
+				<-timer.C
+				fmt.Println("BTFS daemon get file test timed out!")
+				os.Exit(101)
+			}()
+			err := get_functest(btfsBinaryPath)
+			// cancel the time once we get a response
+			timer.Stop()
+			if err != nil {
+				fmt.Printf("BTFS daemon get file test failed! Reason: %v\n", err)
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
 				fmt.Printf("BTFS daemon get file test succeeded!\n")
@@ -805,13 +817,14 @@ func functest(statusServerDomain, peerId, hValue string) {
 			}
 		}
 		if !test_success {
+			fmt.Printf("BTFS daemon get file test failed twice! exiting\n")
 			os.Exit(getFileTestFailed)
 		}
 		test_success = false
 		// try up to two times
 		for i := 0; i < 2; i++ {
 			if err := add_functest(btfsBinaryPath); err != nil {
-				log.Errorf("BTFS daemon add file test failed! Reason: %v\n", err)
+				fmt.Printf("BTFS daemon add file test failed! Reason: %v\n", err)
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
 				fmt.Printf("BTFS daemon add file test succeeded!\n")
@@ -820,6 +833,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 			}
 		}
 		if !test_success {
+			fmt.Printf("BTFS daemon add file test failed twice! exiting\n")
 			os.Exit(addFileTestFailed)
 		}
 	} else {
