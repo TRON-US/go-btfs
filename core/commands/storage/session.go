@@ -41,6 +41,7 @@ type Chunk struct {
 	Price     int64
 	State     string
 	Time      time.Time
+	Err       error
 }
 
 func init() {
@@ -103,6 +104,26 @@ func (ss *Session) SetFileHash(fileHash string) {
 	defer ss.Unlock()
 
 	ss.FileHash = fileHash
+}
+
+func (ss *Session) GetFileHash() string {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.FileHash
+}
+
+func (ss *Session) SetStatus(status string)  {
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.Status = status
+}
+func (ss *Session) GetStatus() string {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.Status
 }
 
 func (ss *Session) PutChunk(hash string, chunk *Chunk) {
@@ -181,4 +202,32 @@ func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
 
 	c.Challenge = sch
 	c.Time = time.Now()
+}
+
+func (c *Chunk) SetState(state string) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.State = state
+}
+
+func (c *Chunk) GetState() string {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.State
+}
+
+func (c *Chunk) SetPrice(price int64) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Price = price
+}
+
+func (c *Chunk) GetPrice() int64 {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Price
 }
