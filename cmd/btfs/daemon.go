@@ -4,6 +4,8 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"time"
+
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -64,6 +66,14 @@ const (
 	enableDataCollection      = "dc"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
+)
+
+// BTFS daemon test exit error code
+const (
+	findBTFSBinaryFailed = 100
+	getFileTestFailed    = 101
+	addFileTestFailed    = 102
+	timeoutSeconds       = 100
 )
 
 var daemonCmd = &cmds.Command{
@@ -300,6 +310,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
 	mplex, _ := req.Options[enableMultiplexKwd].(bool)
+	hValue, _ := req.Options[hValuekwd].(string)
 
 	// Btfs auto update.
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
@@ -426,11 +437,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// The daemon is *finally* ready.
 	fmt.Printf("Daemon is ready\n")
+	// BTFS functional test
+	functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
 
 	//Begin sending analytics to hosted server
 	collectData, _ := req.Options[enableDataCollection].(bool)
 	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
-	analytics.Initialize(node, version.CurrentVersionNumber)
+	analytics.Initialize(node, version.CurrentVersionNumber, hValue)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
@@ -749,4 +762,81 @@ func printVersion() {
 	fmt.Printf("Repo version: %d\n", fsrepo.RepoVersion)
 	fmt.Printf("System version: %s\n", runtime.GOARCH+"/"+runtime.GOOS)
 	fmt.Printf("Golang version: %s\n", runtime.Version())
+}
+
+func getBtfsBinaryPath() (string, error) {
+	defaultBtfsPath, err := getCurrentPath()
+	if err != nil {
+		log.Errorf("Get current program execution path error, reasons: [%v]", err)
+		return "", err
+	}
+
+	ext := ""
+	sep := "/"
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+		sep = "\\"
+	}
+	latestBtfsBinary := "btfs" + ext
+	latestBtfsBinaryPath := fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinary)
+
+	return latestBtfsBinaryPath, nil
+}
+
+func functest(statusServerDomain, peerId, hValue string) {
+	btfsBinaryPath, err := getBtfsBinaryPath()
+	if err != nil {
+		fmt.Printf("Get btfs path failed, BTFS daemon test skipped\n")
+		os.Exit(findBTFSBinaryFailed)
+	}
+
+	// prepare functional test before start btfs daemon
+	ready_to_test := prepare_test(btfsBinaryPath, statusServerDomain, peerId, hValue)
+	// start btfs functional test
+	if ready_to_test {
+		test_success := false
+		// try up to two times
+		for i := 0; i < 2; i++ {
+			timer := time.NewTimer(timeoutSeconds * time.Second)
+			// if it's timeout, it will only do once
+			go func() {
+				<-timer.C
+				fmt.Println("BTFS daemon get file test timed out!")
+				os.Exit(getFileTestFailed)
+			}()
+			err := get_functest(btfsBinaryPath)
+			// cancel the time once we get a response
+			timer.Stop()
+			if err != nil {
+				fmt.Printf("BTFS daemon get file test failed! Reason: %v\n", err)
+				SendError(err.Error(), statusServerDomain, peerId, hValue)
+			} else {
+				fmt.Printf("BTFS daemon get file test succeeded!\n")
+				test_success = true
+				break
+			}
+		}
+		if !test_success {
+			fmt.Printf("BTFS daemon get file test failed twice! exiting\n")
+			os.Exit(getFileTestFailed)
+		}
+		test_success = false
+		// try up to two times
+		for i := 0; i < 2; i++ {
+			if err := add_functest(btfsBinaryPath); err != nil {
+				fmt.Printf("BTFS daemon add file test failed! Reason: %v\n", err)
+				SendError(err.Error(), statusServerDomain, peerId, hValue)
+			} else {
+				fmt.Printf("BTFS daemon add file test succeeded!\n")
+				test_success = true
+				break
+			}
+		}
+		if !test_success {
+			fmt.Printf("BTFS daemon add file test failed twice! exiting\n")
+			os.Exit(addFileTestFailed)
+		}
+	} else {
+		fmt.Printf("BTFS daemon test skipped\n")
+	}
 }

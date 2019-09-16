@@ -18,7 +18,7 @@ import (
 	"time"
 
 	btfs_version "github.com/TRON-US/go-btfs"
-	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/ipfs/go-ipfs-api"
 	"github.com/mholt/archiver"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -285,7 +285,8 @@ func update(url string) {
 
 		if runtime.GOOS == "windows" {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "\\"), "-download", fmt.Sprint(defaultBtfsPath, "\\"))
+			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "\\"),
+				"-download", fmt.Sprint(defaultBtfsPath, "\\"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
@@ -293,7 +294,8 @@ func update(url string) {
 			}
 		} else {
 			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "/"), "-download", fmt.Sprint(defaultBtfsPath, "/"))
+			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "/"),
+				"-download", fmt.Sprint(defaultBtfsPath, "/"))
 			err = cmd.Start()
 			if err != nil {
 				log.Error(err)
