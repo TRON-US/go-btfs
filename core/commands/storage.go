@@ -1011,7 +1011,7 @@ var storageUploadStatusCmd = &cmds.Command{
 This command print upload and payment status by the time queried.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		status := &StatusRes{}
