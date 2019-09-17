@@ -49,14 +49,14 @@ const (
 
 	defaultRepFactor = 3
 
-	initState = "init"
-	uploadState = "upload"
+	initState      = "init"
+	uploadState    = "upload"
 	challengeState = "challenge"
-	solveState = "solve"
-	verifyState = "verify"
-	paymentState = "payment"
-	completeState = "complete"
-	errState = "error"
+	solveState     = "solve"
+	verifyState    = "verify"
+	paymentState   = "payment"
+	completeState  = "complete"
+	errState       = "error"
 )
 
 var StorageCmd = &cmds.Command{
@@ -90,11 +90,11 @@ If no hosts are given, BTFS will select nodes based on overall score according t
 Receive proofs as collateral evidence after selected nodes agree to store the file.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":  storageUploadInitCmd,
-		"reqc":  storageUploadRequestChallengeCmd,
-		"respc": storageUploadResponseChallengeCmd,
-		"status":storageUploadStatusCmd,
-		"prrof": storageUploadProofCmd,
+		"init":   storageUploadInitCmd,
+		"reqc":   storageUploadRequestChallengeCmd,
+		"respc":  storageUploadResponseChallengeCmd,
+		"status": storageUploadStatusCmd,
+		"proof":  storageUploadProofCmd,
 	},
 	Arguments: []cmds.Argument{
 		// FIXME: change file hash to limit 1
@@ -192,7 +192,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					}
 					return
 				} else {
-					chunk.SetState(completeState)
+					chunk.SetState(uploadState)
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
 						Err:  nil,
@@ -208,7 +208,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 		}
 
-		ss.SetStatus(completeState)
 		seRes := &UploadRes{
 			ID: ssID,
 		}
@@ -216,7 +215,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	Type: UploadRes{},
 }
-
 
 type UploadRes struct {
 	ID string
@@ -293,7 +291,7 @@ the chunk and replies back to client for the next challenge step.`,
 		log.Debug("Verified channel:", channelInfo)
 
 		go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
-		return nil
+		return res.Emit("Init success")
 	},
 }
 
@@ -302,17 +300,20 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	p := path.New(chunkHash)
 	file, err := api.Unixfs().Get(req.Context, p)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 
@@ -321,15 +322,17 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	go solveChallenge(chunkInfo, chunkHash, ssID, reqcBody, n, pid, &api, req)
 }
 
-func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api *coreiface.CoreAPI, req *cmds.Request)  {
+func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api *coreiface.CoreAPI, req *cmds.Request) {
 	r := ChallengeRes{}
 	if err := json.Unmarshal(resBytes, &r); err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	// compute challenge on host
@@ -338,10 +341,12 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	hashToCid, err := cidlib.Parse(chunkHash)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	if err := sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	// update session to store challenge info there
@@ -352,22 +357,25 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 
-	go completePayment(chunkInfo, signedPaymentBody, n, pid, req)
+	go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid, req)
 }
 
-func completePayment(chunkInfo *storage.Chunk, resBytes []byte, n *core.IpfsNode, pid peer.ID, req *cmds.Request)  {
+func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, req *cmds.Request) {
 	payment := PaymentRes{}
 	if err := json.Unmarshal(resBytes, &payment); err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 	var halfSignedChannelState ledgerPb.SignedChannelState
 	err := proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
 	if err != nil {
 		log.Error(err)
+		chunkInfo.SetState(errState)
 		return
 	}
 
@@ -375,21 +383,23 @@ func completePayment(chunkInfo *storage.Chunk, resBytes []byte, n *core.IpfsNode
 	chunkInfo.SetState(paymentState)
 	signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 	if err != nil {
-		log.Error(err)
+		log.Error("fail to verify and sign", err)
+		chunkInfo.SetState(errState)
 		return
 	}
 
 	// Close channel
 	channelstate := signedchannelState.GetChannel()
 	log.Debug("channel state before closing: %v", channelstate)
-	err = ledger.CloseChannel(req.Context, signedchannelState)
+	// timeout mechanism with context cancel, can't reuse req.context here
+	err = ledger.CloseChannel(context.Background(), signedchannelState)
 	if err != nil {
-		log.Error(err)
+		log.Error("fail to close channel", err)
 		return
 	}
 
 	chunkInfo.SetState(completeState)
-	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof")
+	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
 		return
@@ -433,20 +443,26 @@ the contents and nonce together to produce a final challenge response.`,
 		// previous step should have information with channel id and price
 		chunkInfo, err := ss.GetChunk(chunkHash)
 		if err != nil {
+			if chunkInfo != nil {
+				chunkInfo.SetState(errState)
+			}
 			return err
 		}
 		chunkInfo.SetState(challengeState)
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
 		cid, err := cidlib.Parse(chunkHash)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
 
@@ -454,8 +470,11 @@ the contents and nonce together to produce a final challenge response.`,
 		// and stored the latest one in session map
 		sch, err := chunkInfo.SetChallenge(req.Context, n, api, cid)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
+		// waiting for host to solve challenge
+		chunkInfo.SetState(solveState)
 		out := &ChallengeRes{
 			ID:    sch.ID,
 			Hash:  sch.Hash,
@@ -510,36 +529,43 @@ signature back to the host to complete payment.`,
 		// time out check
 		now := time.Now()
 		if now.After(chunkInfo.Time.Add(challengeTimeOut)) {
+			chunkInfo.SetState(errState)
 			return fmt.Errorf("challenge verification time out")
 		}
 		// verify challenge
 		if chunkInfo.Challenge.Hash != challengeHash {
+			chunkInfo.SetState(errState)
 			return fmt.Errorf("fail to verify challenge")
 		}
 
 		// prepare payment
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
 		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
 		if !ok {
+			chunkInfo.SetState(errState)
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
 		channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
 
 		signedPayment, err := signChannelState(n.PrivateKey, channelState)
 		if err != nil {
+			chunkInfo.SetState(errState)
 			return err
 		}
 
 		signedBytes, err := proto.Marshal(signedPayment)
 		if err != nil {
-			return nil
+			chunkInfo.SetState(errState)
+			return err
 		}
 		// TODO: Update chunk state in session later in status ticket
 
@@ -967,14 +993,14 @@ This command updates host information and broadcasts to the BTFS network.`,
 }
 
 type StatusRes struct {
-	Status string
+	Status   string
 	FileHash string
-	Chunks map[string]ChunkStatus
+	Chunks   map[string]ChunkStatus
 }
 
-type ChunkStatus struct{
-	Price int64
-	Host string
+type ChunkStatus struct {
+	Price  int64
+	Host   string
 	Status string
 }
 
@@ -1012,8 +1038,8 @@ This command print upload and payment status by the time queried.`,
 		status.Chunks = chunks
 		for hash, info := range ss.ChunkInfo {
 			c := ChunkStatus{
-				Price: info.GetPrice(),
-				Host: info.Receiver.String(),
+				Price:  info.GetPrice(),
+				Host:   info.Receiver.String(),
 				Status: info.GetState(),
 			}
 			chunks[hash] = c
@@ -1026,9 +1052,33 @@ This command print upload and payment status by the time queried.`,
 var storageUploadProofCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("proof", true, false, "Collateral Proof.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fmt.Println(req.Arguments[0])
+		ssID := req.Arguments[1]
+		ss, err := storage.GlobalSession.GetSession(ssID)
+		if err != nil {
+
+			return err
+		}
+		chunkHash := req.Arguments[2]
+		// get info from session
+		// previous step should have information with channel id and price
+		chunkInfo, err := ss.GetChunk(chunkHash)
+		if err != nil {
+			if chunkInfo != nil {
+				chunkInfo.SetState(errState)
+			}
+			return err
+		}
+		chunkInfo.SetState(completeState)
+		ss.UpdateCompleteChunkNum(1)
+		// check whether all chunk is complete
+		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
+			ss.SetStatus(completeState)
+		}
 		return nil
 	},
 }
