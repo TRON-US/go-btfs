@@ -494,7 +494,7 @@ challenge's response. If response is valid, client returns signed payment
 signature back to the host to complete payment.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch."),
 		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
 		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader.").EnableStdin(),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
@@ -1054,9 +1054,9 @@ var storageUploadProofCmd = &cmds.Command{
 		Tagline: "For client to receive collateral proof.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("proof", true, false, "Collateral Proof.").EnableStdin(),
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("proof", true, false, "Collateral Proof."),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fmt.Println(req.Arguments[0])
