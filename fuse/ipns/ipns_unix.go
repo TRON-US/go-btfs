@@ -17,13 +17,13 @@ import (
 
 	dag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"
-	ft "github.com/ipfs/go-unixfs"
+	ft "github.com/TRON-US/go-unixfs"
 
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
-	mfs "github.com/ipfs/go-mfs"
+	mfs "github.com/TRON-US/go-mfs"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )

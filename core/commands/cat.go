@@ -10,8 +10,8 @@ import (
 
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 const (

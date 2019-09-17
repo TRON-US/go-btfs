@@ -8,7 +8,7 @@ import (
 	"github.com/TRON-US/go-btfs/dagutils"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 const (

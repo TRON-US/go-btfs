@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 

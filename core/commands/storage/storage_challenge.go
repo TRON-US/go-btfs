@@ -11,8 +11,8 @@ import (
 
 	core "github.com/TRON-US/go-btfs/core"
 	cid "github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 
 	uuid "github.com/google/uuid"
 )
