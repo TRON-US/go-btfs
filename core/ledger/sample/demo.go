@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	PayerPrivKeyString = "CAISIARweyYgg5rglWg3mYmOue0/ekWwl1TwT7nDIzb4MjUm"
+	PayerPrivKeyString    = "CAISIARweyYgg5rglWg3mYmOue0/ekWwl1TwT7nDIzb4MjUm"
 	ReceiverPrivKeyString = "CAISIDm/qF5f98Jh8FGBUcFUhQvJPU8uEah1SZrR1BrGekC0"
 )
 
-func main()  {
+func main() {
 	ctx := context.Background()
 	// build connection with ledger
 	clientConn, err := ledger.LedgerConnection()
@@ -73,6 +73,9 @@ func main()  {
 	channelState := ledger.NewChannelState(channelID, 1, fromAcc, toAcc)
 	// need permission from both account, get signature from both
 	fromSigState, err := ledger.Sign(payerPrivKey, channelState)
+	if err != nil {
+		log.Panic("error when signing the channel state", err)
+	}
 	toSigState, err := ledger.Sign(recvPrivKey, channelState)
 	if err != nil {
 		log.Panic("error when signing the channel state", err)

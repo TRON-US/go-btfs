@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
@@ -84,14 +84,15 @@ func (d *cmdDetails) usesRepo() bool          { return !d.doesNotUseRepo }
 // properties so that other code can make decisions about whether to invoke a
 // command or return an error to the user.
 var cmdDetailsMap = map[string]cmdDetails{
-	"init":        {doesNotUseConfigAsInput: true, cannotRunOnDaemon: true, doesNotUseRepo: true},
-	"daemon":      {doesNotUseConfigAsInput: true, cannotRunOnDaemon: true},
-	"commands":    {doesNotUseRepo: true},
-	"version":     {doesNotUseConfigAsInput: true, doesNotUseRepo: true}, // must be permitted to run before init
-	"log":         {cannotRunOnClient: true},
-	"diag/cmds":   {cannotRunOnClient: true},
-	"repo/fsck":   {cannotRunOnDaemon: true},
-	"config/edit": {cannotRunOnDaemon: true, doesNotUseRepo: true},
-	"cid":         {doesNotUseRepo: true},
-	"rm":          {cannotRunOnClient: false, cannotRunOnDaemon: false},
+	"init":           {doesNotUseConfigAsInput: true, cannotRunOnDaemon: true, doesNotUseRepo: true},
+	"daemon":         {doesNotUseConfigAsInput: true, cannotRunOnDaemon: true},
+	"commands":       {doesNotUseRepo: true},
+	"version":        {doesNotUseConfigAsInput: true, doesNotUseRepo: true}, // must be permitted to run before init
+	"log":            {cannotRunOnClient: true},
+	"diag/cmds":      {cannotRunOnClient: true},
+	"repo/fsck":      {cannotRunOnDaemon: true},
+	"config/edit":    {cannotRunOnDaemon: true, doesNotUseRepo: true},
+	"cid":            {doesNotUseRepo: true},
+	"rm":             {cannotRunOnClient: false, cannotRunOnDaemon: false},
+	"storage/upload": {cannotRunOnClient: true},
 }
