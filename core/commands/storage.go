@@ -1050,6 +1050,9 @@ This command print upload and payment status by the time queried.`,
 }
 
 var storageUploadProofCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "For client to receive collateral proof.",
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("proof", true, false, "Collateral Proof.").EnableStdin(),
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
