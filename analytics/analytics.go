@@ -20,6 +20,7 @@ type programInfo struct {
 	node        *core.IpfsNode
 	startTime   time.Time //Time at which the Daemon was ready and analytics started
 	NodeID      string    `json:"node_id"`
+	HVal        string    `json:"h_val"`
 	CPUInfo     string    `json:"cpu_info"`
 	BTFSVersion string    `json:"btfs_version"`
 	OSType      string    `json:"os_type"`
@@ -54,10 +55,11 @@ type healthData struct {
 }
 
 //Server URL for data collection
+var statusServerDomain string
+
 const (
-	statusServerDomain = "https://db.btfs.io"
-	routeMetrics       = "/metrics"
-	routeHealth        = "/health"
+	routeMetrics = "/metrics"
+	routeHealth  = "/health"
 )
 
 // other constants
@@ -82,12 +84,17 @@ func durationToSeconds(duration time.Duration) uint64 {
 }
 
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
-func Initialize(n *core.IpfsNode, BTFSVersion string) {
+func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
+	if n == nil {
+		return
+	}
 	var log = logging.Logger("cmd/btfs")
 	configuration, err := n.Repo.Config()
 	if err != nil {
 		return
 	}
+
+	statusServerDomain = configuration.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = n
@@ -101,7 +108,11 @@ func Initialize(n *core.IpfsNode, BTFSVersion string) {
 		}
 
 		dc.startTime = time.Now()
+		if n.Identity == "" {
+			return
+		}
 		dc.NodeID = n.Identity.Pretty()
+		dc.HVal = hValue
 		dc.BTFSVersion = BTFSVersion
 		dc.OSType = runtime.GOOS
 		dc.ArchType = runtime.GOARCH
@@ -154,6 +165,10 @@ func (dc *dataCollection) sendData() {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
 		return
 	}
+	if dc.node.PrivateKey == nil {
+		dc.reportHealthAlert("node's private key is null")
+		return
+	}
 	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
@@ -184,10 +199,10 @@ func (dc *dataCollection) sendData() {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		res.Body.Close()
 		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
+	defer res.Body.Close()
 }
 
 func (dc *dataCollection) collectionAgent() {
@@ -224,12 +239,16 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 		return
 	}
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeHealth), bytes.NewReader(hdMarshaled))
+	if err != nil {
+		log.Warning(err.Error())
+		return
+	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		res.Body.Close()
 		log.Warning(err.Error())
 		return
 	}
+	defer res.Body.Close()
 }
