@@ -25,10 +25,11 @@ type SessionMap struct {
 type Session struct {
 	sync.Mutex
 
-	Time      time.Time
-	FileHash  string
-	Status    string
-	ChunkInfo map[string]*Chunk // mapping chunkHash with Chunk info
+	Time           time.Time
+	FileHash       string
+	Status         string
+	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
+	CompleteChunks int
 }
 
 type Chunk struct {
@@ -99,6 +100,20 @@ func (ss *Session) new() {
 	ss.ChunkInfo = make(map[string]*Chunk)
 }
 
+func (ss *Session) UpdateCompleteChunkNum(diff int) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.CompleteChunks += diff
+}
+
+func (ss *Session) GetCompleteChunks() int {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.CompleteChunks
+}
+
 func (ss *Session) SetFileHash(fileHash string) {
 	ss.Lock()
 	defer ss.Unlock()
@@ -113,7 +128,7 @@ func (ss *Session) GetFileHash() string {
 	return ss.FileHash
 }
 
-func (ss *Session) SetStatus(status string)  {
+func (ss *Session) SetStatus(status string) {
 	ss.Lock()
 	defer ss.Unlock()
 
