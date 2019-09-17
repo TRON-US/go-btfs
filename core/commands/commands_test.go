@@ -221,7 +221,7 @@ func TestCommands(t *testing.T) {
 		"/cid/bases",
 		"/cid/hashes",
 		"/storage/upload/status",
-		"storage",
+		"/storage",
 		"/storage/upload",
 		"/storage/upload/reqc",
 		"/storage/upload/respc",

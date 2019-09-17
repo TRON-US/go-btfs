@@ -234,10 +234,10 @@ If current host is interested and all validation checks out, host downloads
 the chunk and replies back to client for the next challenge step.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("channel-id", true, false, "Open channel id for payment.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
-		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("channel-id", true, false, "Open channel id for payment."),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
+		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client."),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -421,8 +421,8 @@ A challenge contains a random file chunk hash and a nonce for hosts to hash
 the contents and nonce together to produce a final challenge response.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -496,8 +496,8 @@ signature back to the host to complete payment.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch."),
 		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
-		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader.").EnableStdin(),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch.").EnableStdin(),
+		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader."),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -1011,7 +1011,7 @@ var storageUploadStatusCmd = &cmds.Command{
 This command print upload and payment status by the time queried.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		status := &StatusRes{}
