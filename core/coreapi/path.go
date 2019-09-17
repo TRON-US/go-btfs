@@ -12,8 +12,8 @@ import (
 	ipfspath "github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
 	uio "github.com/TRON-US/go-unixfs/io"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 // ResolveNode resolves the path `p` using Unixfs resolver, gets and returns the

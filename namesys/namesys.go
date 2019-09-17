@@ -8,7 +8,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	ds "github.com/ipfs/go-datastore"
 	path "github.com/ipfs/go-path"
-	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
+	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	isd "github.com/jbenet/go-is-domain"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"

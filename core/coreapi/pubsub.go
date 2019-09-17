@@ -8,8 +8,8 @@ import (
 	"time"
 
 	cid "github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	caopts "github.com/ipfs/interface-go-ipfs-core/options"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 	p2phost "github.com/libp2p/go-libp2p-core/host"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"

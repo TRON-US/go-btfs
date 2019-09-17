@@ -24,8 +24,8 @@ import (
 	dag "github.com/ipfs/go-merkledag"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
-	"github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/TRON-US/interface-go-btfs-core"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	mh "github.com/multiformats/go-multihash"
 )
 

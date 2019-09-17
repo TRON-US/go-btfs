@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 )
 
 var SessionMap map[string]*Session

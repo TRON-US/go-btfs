@@ -18,9 +18,9 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	ft "github.com/TRON-US/go-unixfs"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	caopts "github.com/ipfs/interface-go-ipfs-core/options"
-	ipath "github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	caopts "github.com/TRON-US/interface-go-btfs-core/options"
+	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 const inputLimit = 2 << 20

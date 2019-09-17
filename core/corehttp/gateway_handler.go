@@ -19,8 +19,8 @@ import (
 	"github.com/TRON-US/go-mfs"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	ipath "github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	routing "github.com/libp2p/go-libp2p-core/routing"
 	"github.com/multiformats/go-multibase"
 )

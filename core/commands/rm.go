@@ -6,8 +6,8 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	path2 "github.com/ipfs/go-path"
-	"github.com/ipfs/interface-go-ipfs-core/options"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 var RmCmd = &cmds.Command{

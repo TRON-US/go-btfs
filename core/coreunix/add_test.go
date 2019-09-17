@@ -25,7 +25,7 @@ import (
 	files "github.com/ipfs/go-ipfs-files"
 	pi "github.com/ipfs/go-ipfs-posinfo"
 	dag "github.com/ipfs/go-merkledag"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 )
 
 const testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"

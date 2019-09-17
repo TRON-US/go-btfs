@@ -24,8 +24,8 @@ import (
 	"github.com/TRON-US/go-unixfs/importer/balanced"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
 	"github.com/TRON-US/go-unixfs/importer/trickle"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 var log = logging.Logger("coreunix")

@@ -13,8 +13,8 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	files "github.com/ipfs/go-ipfs-files"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 
 	// this import keeps gx from thinking the dep isn't used
 	_ "github.com/ipfs/dir-index-html"

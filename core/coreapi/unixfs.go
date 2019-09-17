@@ -21,9 +21,9 @@ import (
 	ft "github.com/TRON-US/go-unixfs"
 	unixfile "github.com/TRON-US/go-unixfs/file"
 	uio "github.com/TRON-US/go-unixfs/io"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 type UnixfsAPI CoreAPI

@@ -10,6 +10,7 @@ require (
 	github.com/TRON-US/go-btfs-config v0.1.5
 	github.com/TRON-US/go-mfs v0.2.0
 	github.com/TRON-US/go-unixfs v0.3.0
+	github.com/TRON-US/interface-go-btfs-core v0.3.0
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
@@ -140,5 +141,3 @@ require (
 go 1.12
 
 replace github.com/golangci/golangci-lint => github.com/mhutchinson/golangci-lint v1.17.2-0.20190909151044-da0150b86be6
-
-replace github.com/ipfs/interface-go-ipfs-core => ../../ipfs/interface-go-ipfs-core
