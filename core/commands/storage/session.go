@@ -83,6 +83,15 @@ func (sm *SessionMap) GetOrDefault(ssID string) *Session {
 	return sm.Map[ssID]
 }
 
+func (sm *SessionMap) Remove(ssID string) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if sm.Map[ssID] != nil {
+		delete(sm.Map, ssID)
+	}
+}
+
 func NewSessionID() (string, error) {
 	seid, err := uuid.NewRandom()
 	if err != nil {
@@ -157,6 +166,15 @@ func (ss *Session) GetChunk(hash string) (*Chunk, error) {
 		return nil, fmt.Errorf("chunk hash doesn't exist ")
 	}
 	return ss.ChunkInfo[hash], nil
+}
+
+func (ss *Session) RemoveChunk(hash string) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if ss.ChunkInfo[hash] != nil {
+		delete(ss.ChunkInfo, hash)
+	}
 }
 
 func (ss *Session) GetOrDefault(hash string) *Chunk {

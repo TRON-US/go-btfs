@@ -48,7 +48,13 @@ const (
 	hostStorageInfoPrefix = "/host_storage/" // self or from network
 
 	defaultRepFactor = 3
+	// session status
+	initStatus     = "init"
+	uploadStatus   = "upload"
+	completeStatus = "complete"
+	errStatus      = "error"
 
+	// chunk state
 	initState      = "init"
 	uploadState    = "upload"
 	challengeState = "challenge"
@@ -56,7 +62,8 @@ const (
 	verifyState    = "verify"
 	paymentState   = "payment"
 	completeState  = "complete"
-	errState       = "error"
+	//FIXME: replace chunk error with retry
+	errState = "error"
 )
 
 var StorageCmd = &cmds.Command{
@@ -140,7 +147,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		}
 		ss := sm.GetOrDefault(ssID)
 		ss.SetFileHash(fileHash)
-		ss.SetStatus(initState)
+		ss.SetStatus(initStatus)
 
 		// get self key pair
 		n, err := cmdenv.GetNode(env)
@@ -154,7 +161,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		// create channel between them
 		chunkChan := make(chan *ChunkRes)
 		// FIXME: Fake multiple chunk hash as chunk hash
-		ss.SetStatus(uploadState)
+		ss.SetStatus(uploadStatus)
 		for i, chunk := range req.Arguments {
 			go func(chunkHash string, i int) {
 				_, hostPid, err := ParsePeerParam(peers[i])
@@ -203,7 +210,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		for range req.Arguments {
 			chunk := <-chunkChan
 			if chunk.Err != nil {
-				ss.SetStatus(errState)
+				ss.SetStatus(errStatus)
 				return chunk.Err
 			}
 		}
@@ -269,10 +276,10 @@ the chunk and replies back to client for the next challenge step.`,
 		// build session
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID)
-		ss.SetStatus(initState)
+		ss.SetStatus(initStatus)
 		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
 		if err != nil {
-			ss.SetStatus(errState)
+			sm.Remove(ssID)
 			return err
 		}
 		chID := &ledgerPb.ChannelID{
@@ -285,14 +292,23 @@ the chunk and replies back to client for the next challenge step.`,
 		// build connection with ledger
 		channelInfo, err := getChannelInfo(req.Context, channelID)
 		if err != nil {
-			ss.SetStatus(errState)
+			sm.Remove(ssID)
 			return err
 		}
 		log.Debug("Verified channel:", channelInfo)
 
 		go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
-		return res.Emit("Init success")
+		return nil
 	},
+}
+
+func removeSessionChunks(ssID string, chunkHash string) {
+	sm := storage.GlobalSession
+	ss := sm.Map[ssID]
+	ss.RemoveChunk(chunkHash)
+	if len(ss.ChunkInfo) == 0 {
+		sm.Remove(ssID)
+	}
 }
 
 func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
@@ -300,20 +316,20 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 	p := path.New(chunkHash)
-	file, err := api.Unixfs().Get(req.Context, p)
+	file, err := api.Unixfs().Get(context.Background(), p)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 	_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 
@@ -322,31 +338,31 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
-	go solveChallenge(chunkInfo, chunkHash, ssID, reqcBody, n, pid, &api, req)
+	go solveChallenge(chunkInfo, chunkHash, ssID, reqcBody, n, pid, api, req)
 }
 
-func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api *coreiface.CoreAPI, req *cmds.Request) {
+func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
 	r := ChallengeRes{}
 	if err := json.Unmarshal(resBytes, &r); err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 	// compute challenge on host
 	chunkInfo.SetState(solveState)
-	sc := storage.NewStorageChallengeResponse(req.Context, n, *api, r.ID)
+	sc := storage.NewStorageChallengeResponse(req.Context, n, api, r.ID)
 	hashToCid, err := cidlib.Parse(chunkHash)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 	if err := sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 	// update session to store challenge info there
@@ -357,7 +373,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 
@@ -368,14 +384,14 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	payment := PaymentRes{}
 	if err := json.Unmarshal(resBytes, &payment); err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 	var halfSignedChannelState ledgerPb.SignedChannelState
 	err := proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
 	if err != nil {
 		log.Error(err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 
@@ -384,7 +400,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 	if err != nil {
 		log.Error("fail to verify and sign", err)
-		chunkInfo.SetState(errState)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 
@@ -395,6 +411,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	err = ledger.CloseChannel(context.Background(), signedchannelState)
 	if err != nil {
 		log.Error("fail to close channel", err)
+		removeSessionChunks(ssID, chunkHash)
 		return
 	}
 
@@ -443,26 +460,20 @@ the contents and nonce together to produce a final challenge response.`,
 		// previous step should have information with channel id and price
 		chunkInfo, err := ss.GetChunk(chunkHash)
 		if err != nil {
-			if chunkInfo != nil {
-				chunkInfo.SetState(errState)
-			}
 			return err
 		}
 		chunkInfo.SetState(challengeState)
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 		cid, err := cidlib.Parse(chunkHash)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 
@@ -470,7 +481,6 @@ the contents and nonce together to produce a final challenge response.`,
 		// and stored the latest one in session map
 		sch, err := chunkInfo.SetChallenge(req.Context, n, api, cid)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 		// waiting for host to solve challenge
@@ -529,42 +539,35 @@ signature back to the host to complete payment.`,
 		// time out check
 		now := time.Now()
 		if now.After(chunkInfo.Time.Add(challengeTimeOut)) {
-			chunkInfo.SetState(errState)
 			return fmt.Errorf("challenge verification time out")
 		}
 		// verify challenge
 		if chunkInfo.Challenge.Hash != challengeHash {
-			chunkInfo.SetState(errState)
 			return fmt.Errorf("fail to verify challenge")
 		}
 
 		// prepare payment
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
 		if !ok {
-			chunkInfo.SetState(errState)
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
 		channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 
 		signedPayment, err := signChannelState(n.PrivateKey, channelState)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 
 		signedBytes, err := proto.Marshal(signedPayment)
 		if err != nil {
-			chunkInfo.SetState(errState)
 			return err
 		}
 		// TODO: Update chunk state in session later in status ticket
@@ -995,7 +998,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 type StatusRes struct {
 	Status   string
 	FileHash string
-	Chunks   map[string]ChunkStatus
+	Chunks   map[string]*ChunkStatus
 }
 
 type ChunkStatus struct {
@@ -1027,17 +1030,17 @@ This command print upload and payment status by the time queried.`,
 		if err != nil {
 			return err
 		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
+		if !cfg.Experimental.StorageClientEnabled || !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage client/host api not enabled")
 		}
 
 		// get chunks info from session
 		status.Status = ss.GetStatus()
 		status.FileHash = ss.GetFileHash()
-		chunks := make(map[string]ChunkStatus)
+		chunks := make(map[string]*ChunkStatus)
 		status.Chunks = chunks
 		for hash, info := range ss.ChunkInfo {
-			c := ChunkStatus{
+			c := &ChunkStatus{
 				Price:  info.GetPrice(),
 				Host:   info.Receiver.String(),
 				Status: info.GetState(),
@@ -1059,11 +1062,9 @@ var storageUploadProofCmd = &cmds.Command{
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		fmt.Println(req.Arguments[0])
 		ssID := req.Arguments[1]
 		ss, err := storage.GlobalSession.GetSession(ssID)
 		if err != nil {
-
 			return err
 		}
 		chunkHash := req.Arguments[2]
@@ -1072,6 +1073,7 @@ var storageUploadProofCmd = &cmds.Command{
 		chunkInfo, err := ss.GetChunk(chunkHash)
 		if err != nil {
 			if chunkInfo != nil {
+				//FIXME: retry
 				chunkInfo.SetState(errState)
 			}
 			return err
