@@ -1082,7 +1082,7 @@ var storageUploadProofCmd = &cmds.Command{
 		ss.UpdateCompleteChunkNum(1)
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
-			ss.SetStatus(completeState)
+			ss.SetStatus(completeStatus)
 		}
 		return nil
 	},
