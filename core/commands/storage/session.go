@@ -83,12 +83,17 @@ func (sm *SessionMap) GetOrDefault(ssID string) *Session {
 	return sm.Map[ssID]
 }
 
-func (sm *SessionMap) Remove(ssID string) {
+func (sm *SessionMap) Remove(ssID string, chunkHash string) {
 	sm.Lock()
 	defer sm.Unlock()
 
-	if sm.Map[ssID] != nil {
-		delete(sm.Map, ssID)
+	if ss := sm.Map[ssID]; ss != nil {
+		if chunkHash != "" {
+			ss.RemoveChunk(chunkHash)
+			if len(ss.ChunkInfo) == 0 {
+				delete(sm.Map, ssID)
+			}
+		}
 	}
 }
 

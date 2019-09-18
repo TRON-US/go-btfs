@@ -279,7 +279,7 @@ the chunk and replies back to client for the next challenge step.`,
 		ss.SetStatus(initStatus)
 		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
 		if err != nil {
-			sm.Remove(ssID)
+			sm.Remove(ssID, "")
 			return err
 		}
 		chID := &ledgerPb.ChannelID{
@@ -292,7 +292,7 @@ the chunk and replies back to client for the next challenge step.`,
 		// build connection with ledger
 		channelInfo, err := getChannelInfo(req.Context, channelID)
 		if err != nil {
-			sm.Remove(ssID)
+			sm.Remove(ssID, "")
 			return err
 		}
 		log.Debug("Verified channel:", channelInfo)
@@ -302,34 +302,25 @@ the chunk and replies back to client for the next challenge step.`,
 	},
 }
 
-func removeSessionChunks(ssID string, chunkHash string) {
-	sm := storage.GlobalSession
-	ss := sm.Map[ssID]
-	ss.RemoveChunk(chunkHash)
-	if len(ss.ChunkInfo) == 0 {
-		sm.Remove(ssID)
-	}
-}
-
 func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
 	chunkInfo.SetState(uploadState)
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	p := path.New(chunkHash)
 	file, err := api.Unixfs().Get(context.Background(), p)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 
@@ -338,7 +329,7 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	go solveChallenge(chunkInfo, chunkHash, ssID, reqcBody, n, pid, api, req)
@@ -348,8 +339,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	r := ChallengeRes{}
 	if err := json.Unmarshal(resBytes, &r); err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
-		return
+		storage.GlobalSession.Remove(ssID, chunkHash)
 	}
 	// compute challenge on host
 	chunkInfo.SetState(solveState)
@@ -357,12 +347,12 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	hashToCid, err := cidlib.Parse(chunkHash)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	if err := sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	// update session to store challenge info there
@@ -373,7 +363,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 
@@ -384,14 +374,14 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	payment := PaymentRes{}
 	if err := json.Unmarshal(resBytes, &payment); err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	var halfSignedChannelState ledgerPb.SignedChannelState
 	err := proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
 	if err != nil {
 		log.Error(err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 
@@ -400,7 +390,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 	if err != nil {
 		log.Error("fail to verify and sign", err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 
@@ -411,7 +401,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	err = ledger.CloseChannel(context.Background(), signedchannelState)
 	if err != nil {
 		log.Error("fail to close channel", err)
-		removeSessionChunks(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 
