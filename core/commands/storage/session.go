@@ -90,9 +90,9 @@ func (sm *SessionMap) Remove(ssID string, chunkHash string) {
 	if ss := sm.Map[ssID]; ss != nil {
 		if chunkHash != "" {
 			ss.RemoveChunk(chunkHash)
-			if len(ss.ChunkInfo) == 0 {
-				delete(sm.Map, ssID)
-			}
+		}
+		if len(ss.ChunkInfo) == 0 {
+			delete(sm.Map, ssID)
 		}
 	}
 }
