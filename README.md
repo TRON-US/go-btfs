@@ -1,5 +1,7 @@
 # go-btfs
 
+
+
 ## What is BTFS?
 
 BitTorrent File Sharing (BTFS) is a file-sharing protocol forked from 
@@ -308,10 +310,10 @@ make test
 If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
 
 
-## License
+### License
 
 [MIT](./LICENSE)
 
 
 ## TODO
-### Troubleshooting
+#### Troubleshooting
