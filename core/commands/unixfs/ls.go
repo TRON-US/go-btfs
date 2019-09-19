@@ -10,8 +10,8 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	merkledag "github.com/ipfs/go-merkledag"
-	unixfs "github.com/ipfs/go-unixfs"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	unixfs "github.com/TRON-US/go-unixfs"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 type LsLink struct {

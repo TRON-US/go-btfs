@@ -31,7 +31,7 @@ import (
 	"github.com/ipfs/go-ipfs-provider"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
-	mfs "github.com/ipfs/go-mfs"
+	mfs "github.com/TRON-US/go-mfs"
 	resolver "github.com/ipfs/go-path/resolver"
 	goprocess "github.com/jbenet/goprocess"
 	autonat "github.com/libp2p/go-libp2p-autonat-svc"

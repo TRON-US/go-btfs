@@ -2,6 +2,7 @@ package coreunix
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,13 +19,13 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-mfs"
-	"github.com/ipfs/go-unixfs"
-	"github.com/ipfs/go-unixfs/importer/balanced"
-	ihelper "github.com/ipfs/go-unixfs/importer/helpers"
-	"github.com/ipfs/go-unixfs/importer/trickle"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/TRON-US/go-mfs"
+	"github.com/TRON-US/go-unixfs"
+	"github.com/TRON-US/go-unixfs/importer/balanced"
+	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
+	"github.com/TRON-US/go-unixfs/importer/trickle"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 var log = logging.Logger("coreunix")
@@ -53,6 +54,7 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 		Pin:        true,
 		Trickle:    false,
 		Chunker:    "",
+		TokenMetadata: "",
 	}, nil
 }
 
@@ -76,6 +78,7 @@ type Adder struct {
 	tempRoot   cid.Cid
 	CidBuilder cid.Builder
 	liveNodes  uint64
+	TokenMetadata string
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -104,12 +107,21 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		return nil, err
 	}
 
+	var metaBytes []byte
+	if adder.TokenMetadata != "" {
+		metaBytes, err = adder.convertMetadataToBytes(true)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	params := ihelper.DagBuilderParams{
 		Dagserv:    adder.bufferedDS,
 		RawLeaves:  adder.RawLeaves,
 		Maxlinks:   ihelper.DefaultLinksPerBlock,
 		NoCopy:     adder.NoCopy,
 		CidBuilder: adder.CidBuilder,
+		TokenMetadata: metaBytes,
 	}
 
 	db, err := params.New(chnk)
@@ -423,6 +435,24 @@ func (adder *Adder) addDir(path string, dir files.Directory, toplevel bool) erro
 	}
 
 	return it.Err()
+}
+
+// Convert token metadata in JSON string to byte array in JSON encoding.
+func (adder *Adder) convertMetadataToBytes(checkString bool) ([]byte, error) {
+	s := adder.TokenMetadata
+	b := []byte(s)
+	// Optionally check if the input data is in JSON string.
+	// If not, return zero and error.
+	if checkString {
+		var a interface{}
+		var err error
+		err = json.Unmarshal(b[:len(b)], &a)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
 }
 
 func (adder *Adder) maybePauseForGC() error {
