@@ -433,7 +433,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	fmt.Printf("Daemon is ready\n")
 
 	//Begin sending analytics to hosted server
-	analytics.Initialize(node, version.CurrentVersionNumber)
+	analytics.Initialize(node, version.CurrentVersionNumber, env)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
