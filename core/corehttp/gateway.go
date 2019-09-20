@@ -10,7 +10,7 @@ import (
 	core "github.com/TRON-US/go-btfs/core"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 
-	options "github.com/ipfs/interface-go-ipfs-core/options"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 

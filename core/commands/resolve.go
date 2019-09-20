@@ -14,9 +14,9 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	ipfspath "github.com/ipfs/go-path"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 const (
