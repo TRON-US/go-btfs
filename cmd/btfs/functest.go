@@ -13,6 +13,7 @@ import (
 const (
 	testfile        = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
 	testfilecontent = "Hello BTFS!"
+	timeoutSeconds  = 100
 )
 
 // we need to delete the file for get test from last run
@@ -39,6 +40,16 @@ func get_functest(btfsBinaryPath string) error {
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "get", "-o", dir, testfile)
+	go func() {
+		time.Sleep(timeoutSeconds * time.Second)
+		err := cmd.Process.Kill()
+		if err != nil {
+			if !strings.Contains(err.Error(), "process already finished") {
+				fmt.Printf("cannot kill process: [%v] \n", err)
+			}
+		}
+	}()
+
 	out, err := cmd.Output()
 	if err != nil {
 		return errors.New(fmt.Sprintf("btfs get test failed: [%v], Out[%s]", err, string(out)))
@@ -68,6 +79,15 @@ func add_functest(btfsBinaryPath string) error {
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "id")
+	go func() {
+		time.Sleep(timeoutSeconds * time.Second)
+		err := cmd.Process.Kill()
+		if err != nil {
+			if !strings.Contains(err.Error(), "process already finished") {
+				fmt.Printf("cannot kill process: [%v] \n", err)
+			}
+		}
+	}()
 	out, err := cmd.Output()
 	if err != nil {
 		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))

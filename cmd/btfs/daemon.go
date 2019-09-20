@@ -4,7 +4,6 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
-	"time"
 
 	"net"
 	"net/http"
@@ -73,7 +72,6 @@ const (
 	findBTFSBinaryFailed = 100
 	getFileTestFailed    = 101
 	addFileTestFailed    = 102
-	timeoutSeconds       = 100
 )
 
 var daemonCmd = &cmds.Command{
@@ -797,16 +795,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 		test_success := false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			timer := time.NewTimer(timeoutSeconds * time.Second)
-			// if it's timeout, it will only do once
-			go func() {
-				<-timer.C
-				fmt.Println("BTFS daemon get file test timed out!")
-				os.Exit(getFileTestFailed)
-			}()
 			err := get_functest(btfsBinaryPath)
-			// cancel the time once we get a response
-			timer.Stop()
 			if err != nil {
 				fmt.Printf("BTFS daemon get file test failed! Reason: %v\n", err)
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
