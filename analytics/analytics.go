@@ -131,7 +131,7 @@ func (dc *dataCollection) update(env cmds.Environment) {
 	runtime.ReadMemStats(&m)
 
 	// get config info
-	var log = logging.Logger("cmd/btfs")
+	var log = logging.Logger("analytics")
 	node, err := cmdenv.GetNode(env)
 	if err != nil {
 		log.Warning(err.Error())
@@ -141,21 +141,22 @@ func (dc *dataCollection) update(env cmds.Environment) {
 	selfKey := ds.NewKey(fmt.Sprintf("%s%s", "/host_storage/", node.Identity.Pretty()))
 	b, err := rds.Get(selfKey)
 	if err != nil && err != ds.ErrNotFound {
-		return
+		dc.reportHealthAlert(fmt.Sprintf("cannot get selfKey: %s", err.Error()))
 	}
 	var ns info.NodeStorage
 	if err == nil {
 		err = json.Unmarshal(b, &ns)
 		if err != nil {
 			log.Warning(err.Error())
-			return
+			dc.reportHealthAlert(fmt.Sprintf("cannot parse nodestorage config: %s", err.Error()))
+		} else {
+			dc.StoragePriceAsk = ns.StoragePriceAsk
+			dc.BandwidthPriceAsk = ns.BandwidthPriceAsk
+			dc.StorageTimeMin = ns.StorageTimeMin
+			dc.BandwidthLimit = ns.BandwidthLimit
+			dc.CollateralStake = ns.CollateralStake
 		}
 	}
-	dc.StoragePriceAsk = ns.StoragePriceAsk
-	dc.BandwidthPriceAsk = ns.BandwidthPriceAsk
-	dc.StorageTimeMin = ns.StorageTimeMin
-	dc.BandwidthLimit = ns.BandwidthLimit
-	dc.CollateralStake = ns.CollateralStake
 
 	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
 	cpus, e := cpu.Percent(0, false)
