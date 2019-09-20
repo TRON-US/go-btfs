@@ -1,4 +1,4 @@
-FROM golang:1.12-stretch
+FROM golang:1.13-stretch
 MAINTAINER TRON-US <support@tron.network>
 
 ENV SRC_DIR /go-btfs

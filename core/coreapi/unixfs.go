@@ -17,13 +17,13 @@ import (
 	dag "github.com/ipfs/go-merkledag"
 	merkledag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
-	mfs "github.com/ipfs/go-mfs"
-	ft "github.com/ipfs/go-unixfs"
-	unixfile "github.com/ipfs/go-unixfs/file"
-	uio "github.com/ipfs/go-unixfs/io"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	mfs "github.com/TRON-US/go-mfs"
+	ft "github.com/TRON-US/go-unixfs"
+	unixfile "github.com/TRON-US/go-unixfs/file"
+	uio "github.com/TRON-US/go-unixfs/io"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 type UnixfsAPI CoreAPI
@@ -93,6 +93,9 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	fileAdder.NoCopy = settings.NoCopy
 	fileAdder.CidBuilder = prefix
 
+	if settings.TokenMetadata != "" {
+		fileAdder.TokenMetadata = settings.TokenMetadata
+	}
 	switch settings.Layout {
 	case options.BalancedLayout:
 		// Default

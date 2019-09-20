@@ -11,8 +11,8 @@ import (
 	"github.com/TRON-US/go-btfs/dagutils"
 	dag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"
-	importer "github.com/ipfs/go-unixfs/importer"
-	uio "github.com/ipfs/go-unixfs/io"
+	importer "github.com/TRON-US/go-unixfs/importer"
+	uio "github.com/TRON-US/go-unixfs/io"
 
 	chunker "github.com/ipfs/go-ipfs-chunker"
 	ipld "github.com/ipfs/go-ipld-format"

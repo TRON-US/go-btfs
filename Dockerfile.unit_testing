@@ -1,4 +1,4 @@
-FROM golang:1.12-stretch
+FROM golang:1.13-stretch
 MAINTAINER TRON-US <support@tron.network>
 # Dockerfile.unit_testing will build an image to run the go unit tests.
 # Use the regular Dockerfile to run a btfs daemon instead

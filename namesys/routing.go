@@ -11,7 +11,7 @@ import (
 	pb "github.com/ipfs/go-ipns/pb"
 	logging "github.com/ipfs/go-log"
 	path "github.com/ipfs/go-path"
-	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
+	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"
 	dht "github.com/libp2p/go-libp2p-kad-dht"

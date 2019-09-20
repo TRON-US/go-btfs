@@ -15,7 +15,7 @@ import (
 	offroute "github.com/ipfs/go-ipfs-routing/offline"
 	util "github.com/ipfs/go-ipfs-util"
 	"github.com/ipfs/go-path/resolver"
-	uio "github.com/ipfs/go-unixfs/io"
+	uio "github.com/TRON-US/go-unixfs/io"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/pstoremem"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"

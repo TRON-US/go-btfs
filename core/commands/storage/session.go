@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -25,10 +25,11 @@ type SessionMap struct {
 type Session struct {
 	sync.Mutex
 
-	Time      time.Time
-	FileHash  string
-	Status    string
-	ChunkInfo map[string]*Chunk // mapping chunkHash with Chunk info
+	Time           time.Time
+	FileHash       string
+	Status         string
+	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
+	CompleteChunks int
 }
 
 type Chunk struct {
@@ -41,6 +42,7 @@ type Chunk struct {
 	Price     int64
 	State     string
 	Time      time.Time
+	Err       error
 }
 
 func init() {
@@ -81,6 +83,20 @@ func (sm *SessionMap) GetOrDefault(ssID string) *Session {
 	return sm.Map[ssID]
 }
 
+func (sm *SessionMap) Remove(ssID string, chunkHash string) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if ss := sm.Map[ssID]; ss != nil {
+		if chunkHash != "" {
+			ss.RemoveChunk(chunkHash)
+		}
+		if len(ss.ChunkInfo) == 0 {
+			delete(sm.Map, ssID)
+		}
+	}
+}
+
 func NewSessionID() (string, error) {
 	seid, err := uuid.NewRandom()
 	if err != nil {
@@ -98,11 +114,45 @@ func (ss *Session) new() {
 	ss.ChunkInfo = make(map[string]*Chunk)
 }
 
+func (ss *Session) UpdateCompleteChunkNum(diff int) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.CompleteChunks += diff
+}
+
+func (ss *Session) GetCompleteChunks() int {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.CompleteChunks
+}
+
 func (ss *Session) SetFileHash(fileHash string) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.FileHash = fileHash
+}
+
+func (ss *Session) GetFileHash() string {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.FileHash
+}
+
+func (ss *Session) SetStatus(status string) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.Status = status
+}
+func (ss *Session) GetStatus() string {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.Status
 }
 
 func (ss *Session) PutChunk(hash string, chunk *Chunk) {
@@ -121,6 +171,15 @@ func (ss *Session) GetChunk(hash string) (*Chunk, error) {
 		return nil, fmt.Errorf("chunk hash doesn't exist ")
 	}
 	return ss.ChunkInfo[hash], nil
+}
+
+func (ss *Session) RemoveChunk(hash string) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if ss.ChunkInfo[hash] != nil {
+		delete(ss.ChunkInfo, hash)
+	}
 }
 
 func (ss *Session) GetOrDefault(hash string) *Chunk {
@@ -181,4 +240,32 @@ func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
 
 	c.Challenge = sch
 	c.Time = time.Now()
+}
+
+func (c *Chunk) SetState(state string) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.State = state
+}
+
+func (c *Chunk) GetState() string {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.State
+}
+
+func (c *Chunk) SetPrice(price int64) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Price = price
+}
+
+func (c *Chunk) GetPrice() int64 {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Price
 }
