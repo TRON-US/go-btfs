@@ -93,7 +93,7 @@ func Initialize(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environme
 	if n == nil {
 		return
 	}
-	var log = logging.Logger("cmd/btfs")
+	var log = logging.Logger("analytics")
 	configuration, err := n.Repo.Config()
 	if err != nil {
 		return
@@ -260,7 +260,7 @@ func (dc *dataCollection) collectionAgent(env cmds.Environment) {
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	// log is the command logger
-	var log = logging.Logger("cmd/btfs")
+	var log = logging.Logger("analytics")
 
 	hd := new(healthData)
 	hd.NodeId = dc.NodeID
