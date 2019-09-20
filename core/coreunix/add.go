@@ -11,6 +11,13 @@ import (
 
 	"github.com/TRON-US/go-btfs/pin"
 
+	"github.com/TRON-US/go-mfs"
+	"github.com/TRON-US/go-unixfs"
+	"github.com/TRON-US/go-unixfs/importer/balanced"
+	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
+	"github.com/TRON-US/go-unixfs/importer/trickle"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	chunker "github.com/ipfs/go-ipfs-chunker"
@@ -19,13 +26,6 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/TRON-US/go-mfs"
-	"github.com/TRON-US/go-unixfs"
-	"github.com/TRON-US/go-unixfs/importer/balanced"
-	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
-	"github.com/TRON-US/go-unixfs/importer/trickle"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
 )
 
 var log = logging.Logger("coreunix")
@@ -45,39 +45,39 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 	bufferedDS := ipld.NewBufferedDAG(ctx, ds)
 
 	return &Adder{
-		ctx:        ctx,
-		pinning:    p,
-		gcLocker:   bs,
-		dagService: ds,
-		bufferedDS: bufferedDS,
-		Progress:   false,
-		Pin:        true,
-		Trickle:    false,
-		Chunker:    "",
+		ctx:           ctx,
+		pinning:       p,
+		gcLocker:      bs,
+		dagService:    ds,
+		bufferedDS:    bufferedDS,
+		Progress:      false,
+		Pin:           true,
+		Trickle:       false,
+		Chunker:       "",
 		TokenMetadata: "",
 	}, nil
 }
 
 // Adder holds the switches passed to the `add` command.
 type Adder struct {
-	ctx        context.Context
-	pinning    pin.Pinner
-	gcLocker   bstore.GCLocker
-	dagService ipld.DAGService
-	bufferedDS *ipld.BufferedDAG
-	Out        chan<- interface{}
-	Progress   bool
-	Pin        bool
-	Trickle    bool
-	RawLeaves  bool
-	Silent     bool
-	NoCopy     bool
-	Chunker    string
-	mroot      *mfs.Root
-	unlocker   bstore.Unlocker
-	tempRoot   cid.Cid
-	CidBuilder cid.Builder
-	liveNodes  uint64
+	ctx           context.Context
+	pinning       pin.Pinner
+	gcLocker      bstore.GCLocker
+	dagService    ipld.DAGService
+	bufferedDS    *ipld.BufferedDAG
+	Out           chan<- interface{}
+	Progress      bool
+	Pin           bool
+	Trickle       bool
+	RawLeaves     bool
+	Silent        bool
+	NoCopy        bool
+	Chunker       string
+	mroot         *mfs.Root
+	unlocker      bstore.Unlocker
+	tempRoot      cid.Cid
+	CidBuilder    cid.Builder
+	liveNodes     uint64
 	TokenMetadata string
 }
 
@@ -116,11 +116,11 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 	}
 
 	params := ihelper.DagBuilderParams{
-		Dagserv:    adder.bufferedDS,
-		RawLeaves:  adder.RawLeaves,
-		Maxlinks:   ihelper.DefaultLinksPerBlock,
-		NoCopy:     adder.NoCopy,
-		CidBuilder: adder.CidBuilder,
+		Dagserv:       adder.bufferedDS,
+		RawLeaves:     adder.RawLeaves,
+		Maxlinks:      ihelper.DefaultLinksPerBlock,
+		NoCopy:        adder.NoCopy,
+		CidBuilder:    adder.CidBuilder,
 		TokenMetadata: metaBytes,
 	}
 
@@ -446,7 +446,7 @@ func (adder *Adder) convertMetadataToBytes(checkString bool) ([]byte, error) {
 	if checkString {
 		var a interface{}
 		var err error
-		err = json.Unmarshal(b[:len(b)], &a)
+		err = json.Unmarshal(b, &a)
 		if err != nil {
 			return nil, err
 		}

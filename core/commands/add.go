@@ -130,7 +130,7 @@ You can now check what blocks have been created by:
 		cmds.StringOption(hashOptionName, "Hash function to use. Implies CIDv1 if not sha2-256. (experimental)").WithDefault("sha2-256"),
 		cmds.BoolOption(inlineOptionName, "Inline small blocks into CIDs. (experimental)"),
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
-		cmds.StringOption(tokenMetaOptionName, "m", "token metadata in JSON string"),
+		cmds.StringOption(tokenMetaOptionName, "m", "Token metadata in JSON string"),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -205,7 +205,7 @@ You can now check what blocks have been created by:
 
 			options.Unixfs.Progress(progress),
 			options.Unixfs.Silent(silent),
-			 
+
 			options.Unixfs.TokenMetadata(tokenMetadata),
 		}
 
