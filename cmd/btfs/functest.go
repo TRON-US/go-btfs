@@ -79,6 +79,20 @@ func add_functest(btfsBinaryPath string) error {
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "id")
+
+	// add current time stamp to file content so every time adding-file hash is different
+	currentTime := time.Now().String()
+	out = append(out, currentTime...)
+
+	origin := out
+	filename := dir + "/btfstest.txt"
+	err = ioutil.WriteFile(filename, out, 0644)
+	if err != nil {
+		return errors.New(fmt.Sprintf("btfs add test: write file failed: [%v]", err))
+	}
+
+	cmd = exec.Command(btfsBinaryPath, "add", filename)
+
 	go func() {
 		time.Sleep(timeoutSeconds * time.Second)
 		err := cmd.Process.Kill()
@@ -93,18 +107,6 @@ func add_functest(btfsBinaryPath string) error {
 		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
 	}
 
-	// add current time stamp to file content so every time adding-file hash is different
-	currentTime := time.Now().String()
-	out = append(out, currentTime...)
-
-	origin := out
-	filename := dir + "/btfstest.txt"
-	err = ioutil.WriteFile(filename, out, 0644)
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs add test: write file failed: [%v]", err))
-	}
-
-	cmd = exec.Command(btfsBinaryPath, "add", filename)
 	out, err = cmd.Output()
 	if err != nil {
 		return errors.New(fmt.Sprintf("btfs add test failed: [%v]", err))
