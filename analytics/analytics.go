@@ -61,7 +61,10 @@ type healthData struct {
 }
 
 //Server URL for data collection
-var statusServerDomain string
+var (
+	log                = logging.Logger("analytics")
+	statusServerDomain string
+)
 
 const (
 	routeMetrics = "/metrics"
@@ -94,7 +97,6 @@ func Initialize(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environme
 	if n == nil {
 		return
 	}
-	var log = logging.Logger("analytics")
 	configuration, err := n.Repo.Config()
 	if err != nil {
 		return
@@ -132,7 +134,6 @@ func (dc *dataCollection) update(env cmds.Environment) {
 	runtime.ReadMemStats(&m)
 
 	// get config info
-	var log = logging.Logger("analytics")
 	node, err := cmdenv.GetNode(env)
 	if err != nil {
 		log.Warning(err.Error())
@@ -259,9 +260,6 @@ func (dc *dataCollection) collectionAgent(env cmds.Environment) {
 }
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
-	// log is the command logger
-	var log = logging.Logger("analytics")
-
 	hd := new(healthData)
 	hd.NodeId = dc.NodeID
 	hd.BTFSVersion = dc.BTFSVersion
