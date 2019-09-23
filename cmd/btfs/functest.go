@@ -40,6 +40,7 @@ func get_functest(btfsBinaryPath string) error {
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "get", "-o", dir, testfile)
+
 	go func() {
 		time.Sleep(timeoutSeconds * time.Second)
 		err := cmd.Process.Kill()
@@ -79,7 +80,6 @@ func add_functest(btfsBinaryPath string) error {
 	}
 
 	cmd := exec.Command(btfsBinaryPath, "id")
-
 	out, err := cmd.Output()
 	if err != nil {
 		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
