@@ -80,6 +80,11 @@ func add_functest(btfsBinaryPath string) error {
 
 	cmd := exec.Command(btfsBinaryPath, "id")
 
+	out, err := cmd.Output()
+	if err != nil {
+		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
+	}
+
 	// add current time stamp to file content so every time adding-file hash is different
 	currentTime := time.Now().String()
 	out = append(out, currentTime...)
@@ -102,10 +107,6 @@ func add_functest(btfsBinaryPath string) error {
 			}
 		}
 	}()
-	out, err := cmd.Output()
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
-	}
 
 	out, err = cmd.Output()
 	if err != nil {
