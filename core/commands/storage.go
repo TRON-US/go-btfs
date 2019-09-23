@@ -66,6 +66,10 @@ const (
 	errState = "error"
 )
 
+func GetHostStorageKey(pid string) ds.Key {
+	return newKeyHelper(hostStorageInfoPrefix, pid)
+}
+
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Interact with storage services on BTFS.",
@@ -873,7 +877,7 @@ By default it shows local host node information.`,
 
 		rds := n.Repo.Datastore()
 
-		b, err := rds.Get(newKeyHelper(hostStorageInfoPrefix, peerID))
+		b, err := rds.Get(GetHostStorageKey(peerID))
 		if err != nil {
 			return err
 		}
@@ -938,7 +942,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 
 		rds := n.Repo.Datastore()
 
-		selfKey := newKeyHelper(hostStorageInfoPrefix, n.Identity.Pretty())
+		selfKey := GetHostStorageKey(n.Identity.Pretty())
 		b, err := rds.Get(selfKey)
 		// If key not found, create new
 		if err != nil && err != ds.ErrNotFound {

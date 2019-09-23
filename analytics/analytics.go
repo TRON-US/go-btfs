@@ -10,6 +10,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/ipfs/go-bitswap"
 	ds "github.com/ipfs/go-datastore"
@@ -138,8 +139,7 @@ func (dc *dataCollection) update(env cmds.Environment) {
 		return
 	}
 	rds := node.Repo.Datastore()
-	selfKey := ds.NewKey(fmt.Sprintf("%s%s", "/host_storage/", node.Identity.Pretty()))
-	b, err := rds.Get(selfKey)
+	b, err := rds.Get(commands.GetHostStorageKey(node.Identity.Pretty()))
 	if err != nil && err != ds.ErrNotFound {
 		dc.reportHealthAlert(fmt.Sprintf("cannot get selfKey: %s", err.Error()))
 	}
