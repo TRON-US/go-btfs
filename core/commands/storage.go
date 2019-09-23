@@ -18,12 +18,12 @@ import (
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/go-btfs-common/info"
@@ -65,6 +65,10 @@ const (
 	//FIXME: replace chunk error with retry
 	errState = "error"
 )
+
+func GetHostStorageKey(pid string) ds.Key {
+	return newKeyHelper(hostStorageInfoPrefix, pid)
+}
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -811,7 +815,7 @@ Mode options include:
 			if r.Error != nil {
 				return r.Error
 			}
-			err := rds.Delete(ds.NewKey(r.Entry.Key))
+			err := rds.Delete(newKeyHelper(r.Entry.Key))
 			if err != nil {
 				return err
 			}
@@ -822,7 +826,7 @@ Mode options include:
 			if err != nil {
 				return err
 			}
-			err = rds.Put(ds.NewKey(fmt.Sprintf("%s%s/%s", hostStorePrefix, mode, ni.NodeID)), b)
+			err = rds.Put(newKeyHelper(hostStorePrefix, mode, ni.NodeID), b)
 			if err != nil {
 				return err
 			}
@@ -873,7 +877,7 @@ By default it shows local host node information.`,
 
 		rds := n.Repo.Datastore()
 
-		b, err := rds.Get(ds.NewKey(fmt.Sprintf("%s%s", hostStorageInfoPrefix, peerID)))
+		b, err := rds.Get(GetHostStorageKey(peerID))
 		if err != nil {
 			return err
 		}
@@ -938,7 +942,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 
 		rds := n.Repo.Datastore()
 
-		selfKey := ds.NewKey(fmt.Sprintf("%s%s", hostStorageInfoPrefix, n.Identity.Pretty()))
+		selfKey := GetHostStorageKey(n.Identity.Pretty())
 		b, err := rds.Get(selfKey)
 		// If key not found, create new
 		if err != nil && err != ds.ErrNotFound {
@@ -1076,4 +1080,8 @@ var storageUploadProofCmd = &cmds.Command{
 		}
 		return nil
 	},
+}
+
+func newKeyHelper(kss ...string) ds.Key {
+	return ds.NewKey(strings.Join(kss, ""))
 }
