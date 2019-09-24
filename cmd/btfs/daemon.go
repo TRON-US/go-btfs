@@ -812,7 +812,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 		test_success = false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if err := add_functest(btfsBinaryPath); err != nil {
+			if err := add_functest(btfsBinaryPath, peerId); err != nil {
 				fmt.Printf("BTFS daemon add file test failed! Reason: %v\n", err)
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
