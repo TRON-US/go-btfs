@@ -69,7 +69,7 @@ test_go_fmt:
 TEST_GO += test_go_fmt
 
 test_go_mod: 
-	bin/test_go_mod
+	bin/test-go-mod
 .PHONY: test_go_mod
 TEST_GO += test_go_mod
 
