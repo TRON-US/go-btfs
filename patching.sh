@@ -32,6 +32,9 @@ chmod -R 777 $patchdir
 if ! patch -R -s -f --dry-run $patchdir/dht_bootstrap.go < ./patches/go-libp2p-kad-dht-v0.0.13-dht_bootstrap.go.patch 1>/dev/null; then
     patch $patchdir/dht_bootstrap.go < ./patches/go-libp2p-kad-dht-v0.0.13-dht_bootstrap.go.patch;
 fi
+if ! patch -R -s -f --dry-run $patchdir/dht_net.go < ./patches/go-libp2p-kad-dht-dht_net.go.patch 1>/dev/null; then
+    patch $patchdir/dht_net.go < ./patches/go-libp2p-kad-dht-dht_net.go.patch;
+fi
 
 # patching $GOPATH/pkg/mod/github.com/libp2p/go-libp2p-record@v0.0.1
 patchdir=$GOPATH/pkg/mod/github.com/libp2p/go-libp2p-record@v0.1.0

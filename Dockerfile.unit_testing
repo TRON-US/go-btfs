@@ -5,6 +5,9 @@ MAINTAINER TRON-US <support@tron.network>
 
 ENV SRC_DIR /go-btfs
 
+#set timeout value for unit tests
+ENV GOTFLAGS -timeout 3m
+
 # Download packages first so they can be cached.
 COPY go.mod go.sum $SRC_DIR/
 RUN cd $SRC_DIR \
