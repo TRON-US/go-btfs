@@ -10,11 +10,11 @@ import (
 	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
 	pin "github.com/TRON-US/go-btfs/pin"
 
-	blocks "github.com/ipfs/go-block-format"
-	cid "github.com/ipfs/go-cid"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
+	blocks "github.com/ipfs/go-block-format"
+	cid "github.com/ipfs/go-cid"
 )
 
 type BlockAPI CoreAPI

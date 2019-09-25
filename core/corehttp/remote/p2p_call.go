@@ -20,8 +20,8 @@ type P2PRemoteCall struct {
 
 type ErrorMessage struct {
 	Message string
-	Code int
-	Type string
+	Code    int
+	Type    string
 }
 
 const P2PRemoteCallProto = "/rapi"
@@ -61,7 +61,6 @@ func (r *P2PRemoteCall) CallGet(api string, args []string) ([]byte, error) {
 	}
 	return body, nil
 }
-
 
 func (r *P2PRemoteCall) CallPost() {
 }

@@ -1,6 +1,7 @@
 package remote
 
 import logging "github.com/ipfs/go-log"
+
 type Call interface {
 	CallGet(string, []string) ([]byte, error)
 	CallPost()

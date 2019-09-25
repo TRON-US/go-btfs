@@ -9,9 +9,9 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 

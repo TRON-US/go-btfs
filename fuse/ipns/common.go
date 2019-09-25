@@ -5,8 +5,8 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	nsys "github.com/TRON-US/go-btfs/namesys"
-	path "github.com/ipfs/go-path"
 	ft "github.com/TRON-US/go-unixfs"
+	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 )
 

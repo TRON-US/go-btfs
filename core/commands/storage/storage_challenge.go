@@ -10,9 +10,9 @@ import (
 	"sync"
 
 	core "github.com/TRON-US/go-btfs/core"
-	cid "github.com/ipfs/go-cid"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
+	cid "github.com/ipfs/go-cid"
 
 	uuid "github.com/google/uuid"
 )

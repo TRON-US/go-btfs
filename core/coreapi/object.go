@@ -14,13 +14,13 @@ import (
 	"github.com/TRON-US/go-btfs/dagutils"
 	"github.com/TRON-US/go-btfs/pin"
 
-	cid "github.com/ipfs/go-cid"
-	ipld "github.com/ipfs/go-ipld-format"
-	dag "github.com/ipfs/go-merkledag"
 	ft "github.com/TRON-US/go-unixfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
+	cid "github.com/ipfs/go-cid"
+	ipld "github.com/ipfs/go-ipld-format"
+	dag "github.com/ipfs/go-merkledag"
 )
 
 const inputLimit = 2 << 20

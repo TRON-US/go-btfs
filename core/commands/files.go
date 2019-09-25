@@ -14,6 +14,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-mfs"
+	ft "github.com/TRON-US/go-unixfs"
+	"github.com/TRON-US/interface-go-btfs-core"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/dustin/go-humanize"
 	bservice "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -22,10 +26,6 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/TRON-US/go-mfs"
-	ft "github.com/TRON-US/go-unixfs"
-	"github.com/TRON-US/interface-go-btfs-core"
-	path "github.com/TRON-US/interface-go-btfs-core/path"
 	mh "github.com/multiformats/go-multihash"
 )
 

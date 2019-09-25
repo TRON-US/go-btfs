@@ -5,9 +5,9 @@ import (
 	"github.com/TRON-US/go-btfs/namesys/resolve"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	path2 "github.com/ipfs/go-path"
 	"github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	path2 "github.com/ipfs/go-path"
 )
 
 var RmCmd = &cmds.Command{
