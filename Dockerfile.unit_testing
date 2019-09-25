@@ -5,6 +5,9 @@ MAINTAINER TRON-US <support@tron.network>
 
 ENV SRC_DIR /go-btfs
 
+#set timeout value for unit tests
+ENV GOTFLAGS -timeout 3m
+
 # Download packages first so they can be cached.
 COPY go.mod go.sum $SRC_DIR/
 RUN cd $SRC_DIR \
@@ -40,5 +43,9 @@ VOLUME $BTFS_PATH
 ENV BTFS_LOGGING ""
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# by default lets run the go unit tests
-CMD cd /go-btfs && make test_go_test 
+WORKDIR /go-btfs
+RUN git init
+RUN git add .
+
+# by default lets run the go fmt, tidy and unit tests
+CMD make test_go_fmt test_go_mod test_go_test 

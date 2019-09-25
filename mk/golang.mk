@@ -68,6 +68,11 @@ test_go_fmt:
 .PHONY: test_go_fmt
 TEST_GO += test_go_fmt
 
+test_go_mod: 
+	bin/test-go-mod
+.PHONY: test_go_mod
+TEST_GO += test_go_mod
+
 test_go_lint: test/bin/golangci-lint
 	golangci-lint run ./...
 .PHONY: test_go_lint
@@ -82,4 +87,4 @@ check_go_version:
 DEPS_GO += check_go_version
 
 TEST += $(TEST_GO)
-TEST_SHORT += test_go_fmt test_go_short
+TEST_SHORT += test_go_fmt test_go_mod test_go_short

@@ -58,12 +58,12 @@ gcc --version
 
 #### Step1 Install Go
 
-The build process for btfs requires Go 1.12 or higher. If you don't 
-have it: [Download Go 1.12+](https://golang.org/dl/). Or use the 
+The build process for btfs requires Go 1.13 or higher. If you don't 
+have it: [Download Go 1.13+](https://golang.org/dl/). Or use the 
 following command:
 ```
 cd /tmp
-GO_PACKAGE=go1.12.4.linux-amd64.tar.gz
+GO_PACKAGE=go1.13.linux-amd64.tar.gz
 wget https://golang.org/dl/$GO_PACKAGE
 sudo tar -xvf $GO_PACKAGE
 sudo mv go /usr/local
@@ -109,9 +109,9 @@ Your can choose to using on-step script to compile and build or just follow step
 ```
 $ go clean -modcache
 $ make install
-go version go1.12.4 linux/amd64
-bin/check_go_version 1.12
-go install -ldflags="-X "github.com/btfs/go-btfs".CurrentCommit=63ae486fa-dirty" ./cmd/btfs
+go version go1.13 linux/amd64
+bin/check_go_version 1.13
+go install -ldflags="-X "github.com/btfs/go-btfs".CurrentCommit=<git hash>" ./cmd/btfs
 ```
 If you are building on FreeBSD instead of `make install` use `gmake install`.
 
@@ -126,7 +126,7 @@ $which btfs
 ```
 $ btfs init
 initializing BTFS node at /home/ubuntu/.btfs
-generating 2048-bit Secp256k1 keypair...done
+generating 2048-bit keypair...done
 peer identity: 16Uiu2HAmHmW9mHcE9c5UfUomy8caBuEgJVP99MDb4wFtzF8URgzE
 to get started, enter:
 

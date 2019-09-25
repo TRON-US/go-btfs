@@ -1,0 +1,11 @@
+--- go-libp2p-kad-dht@v0.1.1/dht_net.go	2019-09-18 17:21:33.000000000 -0700
++++ /tmp/go-libp2p-kad-dht/dht_net.go	2019-09-18 18:19:21.000000000 -0700
+@@ -114,7 +114,7 @@
+ 		timer.Reset(dhtStreamIdleTimeout)
+ 
+ 		startTime := time.Now()
+-		ctx, _ = tag.New(
++		ctx, _ := tag.New(
+ 			ctx,
+ 			tag.Upsert(metrics.KeyMessageType, req.GetType().String()),
+ 		)
