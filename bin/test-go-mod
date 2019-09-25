@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+go mod tidy
+git --no-pager diff go.mod >> diffs.txt
+if [ -n "$(cat diffs.txt)" ]; then
+	echo "The following packages are unused and need to be removed."
+	echo "-----------------------------------"
+	cat diffs.txt
+	echo "-----------------------------------"
+	echo "Run 'go mod tidy' in your source directory"
+	rm -f diffs.txt
+	exit 1
+fi
+rm -f diffs.txt

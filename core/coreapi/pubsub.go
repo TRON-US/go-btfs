@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	cid "github.com/ipfs/go-cid"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	caopts "github.com/TRON-US/interface-go-btfs-core/options"
+	cid "github.com/ipfs/go-cid"
 	p2phost "github.com/libp2p/go-libp2p-core/host"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"

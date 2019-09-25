@@ -17,13 +17,13 @@ import (
 	repo "github.com/TRON-US/go-btfs/repo"
 
 	config "github.com/TRON-US/go-btfs-config"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	files "github.com/ipfs/go-ipfs-files"
 	path "github.com/ipfs/go-path"
-	iface "github.com/TRON-US/interface-go-btfs-core"
-	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
-	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )

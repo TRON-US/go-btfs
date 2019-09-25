@@ -16,6 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 
 	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -25,7 +26,6 @@ import (
 	files "github.com/ipfs/go-ipfs-files"
 	pi "github.com/ipfs/go-ipfs-posinfo"
 	dag "github.com/ipfs/go-merkledag"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
 )
 
 const testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"

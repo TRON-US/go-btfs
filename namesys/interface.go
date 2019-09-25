@@ -35,8 +35,8 @@ import (
 
 	context "context"
 
-	path "github.com/ipfs/go-path"
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 )
 

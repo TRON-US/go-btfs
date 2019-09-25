@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/dagutils"
-	dag "github.com/ipfs/go-merkledag"
-	path "github.com/ipfs/go-path"
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
+	dag "github.com/ipfs/go-merkledag"
+	path "github.com/ipfs/go-path"
 
 	chunker "github.com/ipfs/go-ipfs-chunker"
 	ipld "github.com/ipfs/go-ipld-format"

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	path "github.com/ipfs/go-path"
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	path "github.com/ipfs/go-path"
 )
 
 type onceResult struct {
