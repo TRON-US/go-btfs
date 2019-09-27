@@ -23,6 +23,8 @@ github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrU
 github.com/Stebalien/go-bitfield v0.0.0-20180330043415-076a62f9ce6e/go.mod h1:3oM7gXIttpYDAJXpVNnSCiUMYBLIZ6cb1t+Ip982MRo=
 github.com/Stebalien/go-bitfield v0.0.1 h1:X3kbSSPUaJK60wV2hjOPZwmpljr6VGCqdq4cBLhbQBo=
 github.com/Stebalien/go-bitfield v0.0.1/go.mod h1:GNjFpasyUVkHMsfEOk8EFLJ9syQ6SI+XWrX9Wf2XH0s=
+github.com/TRON-US/go-btfs-chunker v0.1.0 h1:6jDA9mVhkN7zb1FT9EaAslwo/mt5Dl3LPyd7GI4lXL0=
+github.com/TRON-US/go-btfs-chunker v0.1.0/go.mod h1:nVpariZa+hcp/H3inapIeiyMNIKhme/hmMcdKRV9CE8=
 github.com/TRON-US/go-btfs-cmds v0.1.4 h1:4IOd5mg1uN5bGHD0AVQiYzowi3dmCla7vxLV49HBNuY=
 github.com/TRON-US/go-btfs-cmds v0.1.4/go.mod h1:6uNzACG1sRDKNSQY93gQhU5aLD6+mQ2uj3d+qVog7MA=
 github.com/TRON-US/go-btfs-config v0.1.6 h1:Oh4K+6emXFgqP5aGWhSlvG75m8LB19b9kxdBH6TQ43M=

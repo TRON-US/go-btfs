@@ -20,7 +20,7 @@ import (
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	chunker "github.com/ipfs/go-ipfs-chunker"
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs-posinfo"
 	ipld "github.com/ipfs/go-ipld-format"
