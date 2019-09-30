@@ -63,7 +63,7 @@ const (
 	enableMultiplexKwd        = "enable-mplex-experiment"
 	hValuekwd                 = "hval"
 	enableDataCollection      = "dc"
-	enableStartupTest		  = "enable-startup-test"
+	enableStartupTest         = "enable-startup-test"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
