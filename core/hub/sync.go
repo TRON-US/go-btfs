@@ -19,7 +19,7 @@ const (
 
 var (
 	// TODO: Use domain url
-	hubUrl = "http://35.165.30.189:5100/hosts"
+	hubUrl = "https://query-btfs-dev.bt.co/hosts"
 )
 
 type hostsQuery struct {
