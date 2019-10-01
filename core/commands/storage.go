@@ -119,6 +119,12 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// get node
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
 		p, found := req.Options[uploadPriceOptionName].(int64)
 		if found && p < 0 {
 			return fmt.Errorf("cannot input a negative price")
@@ -126,15 +132,40 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			// TODO: Select best price from top candidates
 			p = int64(1)
 		}
-
+		var peers []string
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
-		hosts, found := req.Options[hostSelectionOptionName].(string)
-		if mode == "custom" && !found {
-			return fmt.Errorf("custom mode needs input host lists")
+		if mode == "custom" {
+			hosts, found := req.Options[hostSelectionOptionName].(string)
+			if !found {
+				return fmt.Errorf("custom mode needs input host lists")
+			}
+			peers = strings.Split(hosts, ",")
+		} else {
+			// get host list from storage
+			rds := n.Repo.Datastore()
+			qr, err := rds.Query(query.Query{Prefix: hostStorePrefix})
+			if err != nil {
+				return err
+			}
+			// TODO: change default host amount -- get from config
+			hostAmount := 5
+			for r := range qr.Next() {
+				if r.Error != nil {
+					return r.Error
+				}
+				var ni info.Node
+				err := json.Unmarshal(r.Entry.Value, &ni)
+				if err != nil {
+					return err
+				}
+				peers = append(peers, ni.NodeID)
+				if len(peers) == hostAmount {
+					break
+				}
+			}
 		}
-		fileHash := req.Arguments[0]
-		peers := strings.Split(hosts, ",")
 
+		fileHash := req.Arguments[0]
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -154,10 +185,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		ss.SetStatus(initStatus)
 
 		// get self key pair
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
 		selfPrivKey := n.PrivateKey
 		selfPubKey := selfPrivKey.GetPublic()
 
