@@ -16,6 +16,12 @@ import (
 )
 
 var GlobalSession *SessionMap
+var StdChunkStateFlow []*ChunkFlowControl
+
+type ChunkFlowControl struct {
+	State   string
+	TimeOut time.Duration
+}
 
 type SessionMap struct {
 	sync.Mutex
@@ -30,6 +36,7 @@ type Session struct {
 	Status         string
 	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
 	CompleteChunks int
+	RetryQueue     *RetryQueue
 }
 
 type Chunk struct {
@@ -41,13 +48,44 @@ type Chunk struct {
 	Receiver  peer.ID
 	Price     int64
 	State     string
+	Proof     string
 	Time      time.Time
 	Err       error
+
+	RetryChan chan *StepRetryChan
+}
+
+type StepRetryChan struct {
+	CurrentStep int
+	Succeed     bool
+	ClientErr   error
+	HostErr     error
 }
 
 func init() {
 	GlobalSession = &SessionMap{}
 	GlobalSession.Map = make(map[string]*Session)
+	StdChunkStateFlow[0] = &ChunkFlowControl{
+		State:   "init",
+		TimeOut: time.Second}
+	StdChunkStateFlow[1] = &ChunkFlowControl{
+		State:   "upload",
+		TimeOut: time.Second}
+	StdChunkStateFlow[2] = &ChunkFlowControl{
+		State:   "challenge",
+		TimeOut: time.Second}
+	StdChunkStateFlow[3] = &ChunkFlowControl{
+		State:   "solve",
+		TimeOut: time.Second}
+	StdChunkStateFlow[4] = &ChunkFlowControl{
+		State:   "verify",
+		TimeOut: time.Second}
+	StdChunkStateFlow[5] = &ChunkFlowControl{
+		State:   "payment",
+		TimeOut: time.Second}
+	StdChunkStateFlow[6] = &ChunkFlowControl{
+		State:   "complete",
+		TimeOut: time.Second}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *Session) {
@@ -112,6 +150,20 @@ func (ss *Session) new() {
 	ss.Time = time.Now()
 	ss.Status = "init"
 	ss.ChunkInfo = make(map[string]*Chunk)
+}
+
+func (ss *Session) SetRetryQueue(q *RetryQueue) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.RetryQueue = q
+}
+
+func (ss *Session) GetRetryQueue() *RetryQueue {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.RetryQueue
 }
 
 func (ss *Session) UpdateCompleteChunkNum(diff int) {
@@ -206,6 +258,7 @@ func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.
 	c.Price = price
 	c.State = "init"
 	c.Time = time.Now()
+	c.RetryChan = make(chan *StepRetryChan)
 }
 
 // used on client to record a new challenge
@@ -247,6 +300,7 @@ func (c *Chunk) SetState(state string) {
 	defer c.Unlock()
 
 	c.State = state
+	c.Time = time.Now()
 }
 
 func (c *Chunk) GetState() string {
@@ -268,4 +322,32 @@ func (c *Chunk) GetPrice() int64 {
 	defer c.Unlock()
 
 	return c.Price
+}
+
+func (c *Chunk) SetProof(proof string) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Proof = proof
+}
+
+func (c *Chunk) GetProof() string {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Proof
+}
+
+func (c *Chunk) SetTime(time time.Time) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Time = time
+}
+
+func (c *Chunk) GetTime() time.Time {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Time
 }
