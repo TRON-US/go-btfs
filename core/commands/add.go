@@ -84,6 +84,9 @@ hashes for the same file. The default is a fixed block size of
 Rabin fingerprint chunker for content defined chunking by specifying
 rabin-[min]-[avg]-[max] (where min/avg/max refer to the desired
 chunk sizes in bytes), e.g. 'rabin-262144-524288-1048576'.
+For replicated files intended for host storage, reed-solomon should be
+used with default settings. It is also supported to customize data and
+parity shards using reed-solomon-[#data]-[#parity]-[size].
 
 The following examples use very small byte sizes to demonstrate the
 properties of the different chunkers on a small file. You'll likely
@@ -121,7 +124,7 @@ You can now check what blocks have been created by:
 		cmds.BoolOption(trickleOptionName, "t", "Use trickle-dag format for dag generation."),
 		cmds.BoolOption(onlyHashOptionName, "n", "Only chunk and hash - do not write to disk."),
 		cmds.BoolOption(wrapOptionName, "w", "Wrap files with a directory object."),
-		cmds.StringOption(chunkerOptionName, "s", "Chunking algorithm, size-[bytes] or rabin-[min]-[avg]-[max]").WithDefault("size-262144"),
+		cmds.StringOption(chunkerOptionName, "s", "Chunking algorithm, size-[bytes], rabin-[min]-[avg]-[max] or reed-solomon-[#data]-[#parity]-[size]").WithDefault("size-262144"),
 		cmds.BoolOption(pinOptionName, "Pin this object when adding.").WithDefault(true),
 		cmds.BoolOption(rawLeavesOptionName, "Use raw blocks for leaf nodes. (experimental)"),
 		cmds.BoolOption(noCopyOptionName, "Add the file using filestore. Implies raw-leaves. (experimental)"),
