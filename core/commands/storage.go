@@ -150,8 +150,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
-			// TODO: change default host amount -- get from config
-			hostAmount := 5
+			// get hosts amount according to file hashes num
+			hostAmount := len(req.Arguments)
 			for r := range qr.Next() {
 				if r.Error != nil {
 					return r.Error
