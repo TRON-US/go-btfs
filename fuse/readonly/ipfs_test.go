@@ -23,10 +23,10 @@ import (
 	coremock "github.com/TRON-US/go-btfs/core/mock"
 
 	fstest "bazil.org/fuse/fs/fstestutil"
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
-	chunker "github.com/TRON-US/go-btfs-chunker"
 	files "github.com/ipfs/go-ipfs-files"
 	u "github.com/ipfs/go-ipfs-util"
 	ipld "github.com/ipfs/go-ipld-format"
