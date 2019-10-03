@@ -39,8 +39,6 @@ func CheckValidMode(mode string) error {
 // QueryHub queries the BTFS-Hub to retrieve the latest list of hosts info
 // according to a certain mode.
 func QueryHub(nodeID, mode string) ([]*info.Node, error) {
-	// FIXME: Current hub does not support real node id yet
-	nodeID = "1"
 	params := "?id=" + nodeID
 	switch mode {
 	case HubModeScore:

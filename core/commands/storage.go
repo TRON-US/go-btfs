@@ -143,7 +143,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		} else {
 			// get host list from storage
 			rds := n.Repo.Datastore()
-			qr, err := rds.Query(query.Query{Prefix: hostStorePrefix})
+			qr, err := rds.Query(query.Query{
+				Prefix: hostStorePrefix + mode,
+				Orders: []query.Order{query.OrderByKey{}},
+			})
 			if err != nil {
 				return err
 			}
@@ -164,7 +167,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		}
-
+		fmt.Println("peers: ", peers) // TODO: remove this after demo
 		fileHash := req.Arguments[0]
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -759,7 +762,10 @@ Mode options include:
 		if mode == hub.HubModeAll {
 			mode = ""
 		}
-		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+		qr, err := rds.Query(query.Query{
+			Prefix: hostStorePrefix + mode,
+			Orders: []query.Order{query.OrderByKey{}},
+		})
 		if err != nil {
 			return err
 		}
@@ -848,12 +854,12 @@ Mode options include:
 			}
 		}
 
-		for _, ni := range nodes {
+		for i, ni := range nodes {
 			b, err := json.Marshal(ni)
 			if err != nil {
 				return err
 			}
-			err = rds.Put(newKeyHelper(hostStorePrefix, mode, ni.NodeID), b)
+			err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
 			if err != nil {
 				return err
 			}
