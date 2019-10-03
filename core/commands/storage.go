@@ -124,6 +124,29 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
+		// get core api
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+
+		fileHash := req.Arguments[0]
+		hashToCid, err := cidlib.Parse(fileHash)
+		if err != nil {
+			return err
+		}
+		rp, err := api.ResolvePath(req.Context, path.IpfsPath(hashToCid))
+		if err != nil {
+			return err
+		}
+		cids, err := api.Object().Links(req.Context, rp)
+		if err != nil {
+			return err
+		}
+		var chunckHashes []string
+		for _, cid := range cids {
+			chunckHashes = append(chunckHashes, cid.Cid.String())
+		}
 
 		p, found := req.Options[uploadPriceOptionName].(int64)
 		if found && p < 0 {
@@ -151,7 +174,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return err
 			}
 			// get hosts amount according to file hashes num
-			hostAmount := len(req.Arguments)
+			hostAmount := len(chunckHashes)
 			for r := range qr.Next() {
 				if r.Error != nil {
 					return r.Error
@@ -167,8 +190,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		}
-		fmt.Println("peers: ", peers) // TODO: remove this after demo
-		fileHash := req.Arguments[0]
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -196,7 +217,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		chunkChan := make(chan *ChunkRes)
 		// FIXME: Fake multiple chunk hash as chunk hash
 		ss.SetStatus(uploadStatus)
-		for i, chunk := range req.Arguments {
+		for i, chunk := range chunckHashes {
 			go func(chunkHash string, i int) {
 				_, hostPid, err := ParsePeerParam(peers[i])
 				if err != nil {
