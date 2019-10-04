@@ -30,6 +30,7 @@ import (
 )
 
 const (
+	leafHashOptionName            = "leaf-hash"
 	uploadPriceOptionName         = "price"
 	replicationFactorOptionName   = "replication-factor"
 	hostSelectModeOptionName      = "host-select-mode"
@@ -90,11 +91,12 @@ var storageUploadCmd = &cmds.Command{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
 		ShortDescription: `
 To upload and store a file on specific hosts:
-    use -m with 'custom' mode, and put host identifiers in -l, with multiple hosts separated by ','
+    use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','
 
 For example:
 
-    btfs storage upload -m=custom -l=host_address1,host_address2
+    btfs storage upload <filehash> -m=custom -s=<host_address1>,<host_address2>
+    btfs storage upload <leafhash1> <leafhash2> -l -m=custom -s=<host_address1>,<host_address2>
 
 If no hosts are given, BTFS will select nodes based on overall score according to current client's environment.
 
@@ -112,29 +114,99 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
+		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
 		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
-		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
+		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		p, found := req.Options[uploadPriceOptionName].(int64)
-		if found && p < 0 {
+		// get node
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		// get core api
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+		// check file hash
+		var (
+			chunkHashes []string
+			rootHash    string
+		)
+		lf, _ := req.Options[leafHashOptionName].(bool)
+		if lf == false {
+			if len(req.Arguments) != 1 {
+				return fmt.Errorf("need one and only one root hash.")
+			}
+			// get leaf hashes
+			rootHash = req.Arguments[0]
+			hashToCid, err := cidlib.Parse(rootHash)
+			if err != nil {
+				return err
+			}
+			rp, err := api.ResolvePath(req.Context, path.IpfsPath(hashToCid))
+			if err != nil {
+				return err
+			}
+			cids, err := api.Object().Links(req.Context, rp)
+			if err != nil {
+				return err
+			}
+			for _, cid := range cids {
+				chunkHashes = append(chunkHashes, cid.Cid.String())
+			}
+		} else {
+			rootHash = ""
+			chunkHashes = req.Arguments
+		}
+		// set price limit
+		price, found := req.Options[uploadPriceOptionName].(int64)
+		if found && price < 0 {
 			return fmt.Errorf("cannot input a negative price")
 		} else if !found {
 			// TODO: Select best price from top candidates
-			p = int64(1)
+			price = int64(1)
 		}
-
+		// get hosts/peers
+		var peers []string
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
-		hosts, found := req.Options[hostSelectionOptionName].(string)
-		if mode == "custom" && !found {
-			return fmt.Errorf("custom mode needs input host lists")
+		if mode == "custom" {
+			// get host list as user specified
+			hosts, found := req.Options[hostSelectionOptionName].(string)
+			if !found {
+				return fmt.Errorf("custom mode needs input host lists")
+			}
+			peers = strings.Split(hosts, ",")
+		} else {
+			// get host list from storage
+			rds := n.Repo.Datastore()
+			qr, err := rds.Query(query.Query{
+				Prefix: hostStorePrefix + mode,
+				Orders: []query.Order{query.OrderByKey{}},
+			})
+			if err != nil {
+				return err
+			}
+			for r := range qr.Next() {
+				if r.Error != nil {
+					return r.Error
+				}
+				var ni info.Node
+				err := json.Unmarshal(r.Entry.Value, &ni)
+				if err != nil {
+					return err
+				}
+				peers = append(peers, ni.NodeID)
+				if len(peers) == len(chunkHashes) {
+					qr.Close()
+					break
+				}
+			}
 		}
-		fileHash := req.Arguments[0]
-		peers := strings.Split(hosts, ",")
-
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -142,7 +214,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
-
 		// start new session
 		sm := storage.GlobalSession
 		ssID, err := storage.NewSessionID()
@@ -150,23 +221,17 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return err
 		}
 		ss := sm.GetOrDefault(ssID)
-		ss.SetFileHash(fileHash)
+		ss.SetFileHash(rootHash)
 		ss.SetStatus(initStatus)
-
 		// get self key pair
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
 		selfPrivKey := n.PrivateKey
 		selfPubKey := selfPrivKey.GetPublic()
-
 		// get other node's public key as address
 		// create channel between them
 		chunkChan := make(chan *ChunkRes)
 		// FIXME: Fake multiple chunk hash as chunk hash
 		ss.SetStatus(uploadStatus)
-		for i, chunk := range req.Arguments {
+		for i, chunk := range chunkHashes {
 			go func(chunkHash string, i int) {
 				_, hostPid, err := ParsePeerParam(peers[i])
 				if err != nil {
@@ -184,7 +249,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					}
 					return
 				}
-				channelID, err := initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, p)
+				channelID, err := initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, price)
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
@@ -193,9 +258,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					return
 				}
 				chunk := ss.GetOrDefault(chunkHash)
-				chunk.NewChunk(n.Identity, hostPid, channelID, p)
+				chunk.NewChunk(n.Identity, hostPid, channelID, price)
 				chunk.SetState(initState)
-				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
+				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(price, 10))
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
@@ -732,7 +797,10 @@ Mode options include:
 		if mode == hub.HubModeAll {
 			mode = ""
 		}
-		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+		qr, err := rds.Query(query.Query{
+			Prefix: hostStorePrefix + mode,
+			Orders: []query.Order{query.OrderByKey{}},
+		})
 		if err != nil {
 			return err
 		}
@@ -821,12 +889,12 @@ Mode options include:
 			}
 		}
 
-		for _, ni := range nodes {
+		for i, ni := range nodes {
 			b, err := json.Marshal(ni)
 			if err != nil {
 				return err
 			}
-			err = rds.Put(newKeyHelper(hostStorePrefix, mode, ni.NodeID), b)
+			err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
 			if err != nil {
 				return err
 			}
