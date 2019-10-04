@@ -30,6 +30,7 @@ import (
 )
 
 const (
+	leafHashOptionName            = "leaf-hash"
 	uploadPriceOptionName         = "price"
 	replicationFactorOptionName   = "replication-factor"
 	hostSelectModeOptionName      = "host-select-mode"
@@ -112,10 +113,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
+		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
 		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
-		cmds.StringOption(hostSelectionOptionName, "l", "Use only these hosts in order on 'custom' mode. Use ',' as delimiter."),
+		cmds.StringOption(hostSelectionOptionName, "s", "Use only select these hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -129,23 +131,36 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
-
-		fileHash := req.Arguments[0]
-		hashToCid, err := cidlib.Parse(fileHash)
-		if err != nil {
-			return err
-		}
-		rp, err := api.ResolvePath(req.Context, path.IpfsPath(hashToCid))
-		if err != nil {
-			return err
-		}
-		cids, err := api.Object().Links(req.Context, rp)
-		if err != nil {
-			return err
-		}
-		var chunckHashes []string
-		for _, cid := range cids {
-			chunckHashes = append(chunckHashes, cid.Cid.String())
+		// check file hash
+		var (
+			chunckHashes []string
+			rootHash     string
+		)
+		rootHashFlag, _ := req.Options[leafHashOptionName].(bool)
+		if rootHashFlag == false {
+			if len(req.Arguments) != 1 {
+				return fmt.Errorf("need one and only one root hash.")
+			}
+			// get leaf hashes
+			rootHash = req.Arguments[0]
+			hashToCid, err := cidlib.Parse(rootHash)
+			if err != nil {
+				return err
+			}
+			rp, err := api.ResolvePath(req.Context, path.IpfsPath(hashToCid))
+			if err != nil {
+				return err
+			}
+			cids, err := api.Object().Links(req.Context, rp)
+			if err != nil {
+				return err
+			}
+			for _, cid := range cids {
+				chunckHashes = append(chunckHashes, cid.Cid.String())
+			}
+		} else {
+			rootHash = ""
+			chunckHashes = req.Arguments
 		}
 
 		p, found := req.Options[uploadPriceOptionName].(int64)
@@ -205,7 +220,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return err
 		}
 		ss := sm.GetOrDefault(ssID)
-		ss.SetFileHash(fileHash)
+		ss.SetFileHash(rootHash)
 		ss.SetStatus(initStatus)
 
 		// get self key pair
