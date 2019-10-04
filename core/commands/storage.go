@@ -91,11 +91,12 @@ var storageUploadCmd = &cmds.Command{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
 		ShortDescription: `
 To upload and store a file on specific hosts:
-    use -m with 'custom' mode, and put host identifiers in -l, with multiple hosts separated by ','
+    use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','
 
 For example:
 
-    btfs storage upload -m=custom -l=host_address1,host_address2
+    btfs storage upload <filehash> -m=custom -s=<host_address1>,<host_address2>
+    btfs storage upload <leafhash1> <leafhash2> -l -m=custom -s=<host_address1>,<host_address2>
 
 If no hosts are given, BTFS will select nodes based on overall score according to current client's environment.
 
@@ -117,7 +118,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
 		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
-		cmds.StringOption(hostSelectionOptionName, "s", "Use only select these hosts in order on 'custom' mode. Use ',' as delimiter."),
+		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -133,8 +134,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		}
 		// check file hash
 		var (
-			chunckHashes []string
-			rootHash     string
+			chunkHashes []string
+			rootHash    string
 		)
 		lf, _ := req.Options[leafHashOptionName].(bool)
 		if lf == false {
@@ -156,11 +157,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return err
 			}
 			for _, cid := range cids {
-				chunckHashes = append(chunckHashes, cid.Cid.String())
+				chunkHashes = append(chunkHashes, cid.Cid.String())
 			}
 		} else {
 			rootHash = ""
-			chunckHashes = req.Arguments
+			chunkHashes = req.Arguments
 		}
 		// set price limit
 		price, found := req.Options[uploadPriceOptionName].(int64)
@@ -200,7 +201,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					return err
 				}
 				peers = append(peers, ni.NodeID)
-				if len(peers) == len(chunckHashes) {
+				if len(peers) == len(chunkHashes) {
+					qr.Close()
 					break
 				}
 			}
@@ -229,7 +231,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		chunkChan := make(chan *ChunkRes)
 		// FIXME: Fake multiple chunk hash as chunk hash
 		ss.SetStatus(uploadStatus)
-		for i, chunk := range chunckHashes {
+		for i, chunk := range chunkHashes {
 			go func(chunkHash string, i int) {
 				_, hostPid, err := ParsePeerParam(peers[i])
 				if err != nil {

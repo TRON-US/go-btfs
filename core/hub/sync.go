@@ -18,7 +18,6 @@ const (
 )
 
 var (
-	// TODO: Use domain url
 	hubUrl = "https://query-btfs-dev.bt.co/hosts"
 )
 
