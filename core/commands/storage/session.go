@@ -16,7 +16,7 @@ import (
 )
 
 var GlobalSession *SessionMap
-var StdChunkStateFlow []*ChunkFlowControl
+var StdChunkStateFlow [7]*ChunkFlowControl
 
 type ChunkFlowControl struct {
 	State   string
@@ -67,25 +67,25 @@ func init() {
 	GlobalSession.Map = make(map[string]*Session)
 	StdChunkStateFlow[0] = &ChunkFlowControl{
 		State:   "init",
-		TimeOut: time.Second}
+		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[1] = &ChunkFlowControl{
 		State:   "upload",
-		TimeOut: time.Second}
+		TimeOut: 5 * time.Second}
 	StdChunkStateFlow[2] = &ChunkFlowControl{
 		State:   "challenge",
-		TimeOut: time.Second}
+		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[3] = &ChunkFlowControl{
 		State:   "solve",
-		TimeOut: time.Second}
+		TimeOut: 30 * time.Second}
 	StdChunkStateFlow[4] = &ChunkFlowControl{
 		State:   "verify",
 		TimeOut: time.Second}
 	StdChunkStateFlow[5] = &ChunkFlowControl{
 		State:   "payment",
-		TimeOut: time.Second}
+		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[6] = &ChunkFlowControl{
 		State:   "complete",
-		TimeOut: time.Second}
+		TimeOut: 5 * time.Second}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *Session) {
