@@ -27,11 +27,25 @@ func (node *HostNode) IncrementRetry()  {
 	node.RetryTimes++
 }
 
+func (node *HostNode) GetRetryTimes() int {
+	node.Lock()
+	defer node.Unlock()
+
+	return node.RetryTimes
+}
+
 func (node *HostNode) IncrementFail()  {
 	node.Lock()
 	defer node.Unlock()
 
 	node.FailTimes++
+}
+
+func (node *HostNode) GetFailTimes() int {
+	node.Lock()
+	defer node.Unlock()
+
+	return node.FailTimes
 }
 
 type Hosts []*HostNode

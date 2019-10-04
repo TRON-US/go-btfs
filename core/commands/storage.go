@@ -254,7 +254,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		for _, singleChunk := range chunkHashes {
 			ss.GetOrDefault(singleChunk)
 		}
-		go retryMinotor(ss, n, price, ssID, req.Context)
+		go retryMinotor(ss, n, price, ssID, context.Background())
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -287,54 +287,59 @@ func retryMinotor(ss *storage.Session, n *core.IpfsNode, p int64, ssID string, c
 				case chunkRes := <-chunkInfo.RetryChan:
 					if !chunkRes.Succeed {
 						// if client itself has some error, no matter how many times it tries,
-						// it will fails,
-						// TODO: What do we do if client itself fails
+						// it will fail again, in this case, we don't need retry
 						if chunkRes.ClientErr != nil {
-							log.Error("client's error")
-							break
+							log.Error(chunkRes.ClientErr)
+							ss.SetStatus(errStatus)
+							return
 						}
 						// if host error, retry
 						if chunkRes.HostErr != nil {
+							// increment current host's retry times
 							candidateHost.IncrementRetry()
-							go retryProcess(candidateHost, ss, n, p, chunkHash, ssID, ctx)
-							curState = chunkRes.CurrentStep // reset current state to 'init'
+							// if reach retry limit, in retry process will select another host
+							// so in channel receiving should also return to 'init'
+							if candidateHost.GetRetryTimes() >= RetryLimit {
+								curState = initState
+								go retryProcess(candidateHost, ss, n, p, chunkHash, ssID, ctx)
+							} else {
+								// TODO: How to let single step retry?
+								curState = chunkRes.CurrentStep
+							}
 						}
 					} else {
 						// if success with current state, move on to next
-						curState++
+						// log.Error("succeed to pass state ", storage.StdChunkStateFlow[curState].State)
+						curState = chunkRes.CurrentStep + 1
 						chunkInfo.SetState(storage.StdChunkStateFlow[curState].State)
 					}
 				case <-time.After(storage.StdChunkStateFlow[curState].TimeOut):
 					{
-						log.Error("Time Out.", chunkHash)
+						log.Errorf("Time Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
+						curState = initState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
 						go retryProcess(candidateHost, ss, n, p, chunkHash, ssID, ctx)
-						curState = 0 // reset current state to 'init'
 					}
 				}
 			}
 		}(chunkHash, chunkInfo)
-
-		if chunkInfo.GetState() == errStatus {
-			ss.SetStatus(errStatus)
-			return
-		}
 	}
 }
 
-// TODO: mofify return channel info
 func retryProcess(candidateHost *storage.HostNode, ss *storage.Session, n *core.IpfsNode, p int64, chunkHash string, ssID string, ctx context.Context) {
-	//
-	if candidateHost != nil && candidateHost.RetryTimes < RetryLimit {
-		return
-	}
+	// record chunk info in session
+	chunk := ss.GetOrDefault(chunkHash)
 
 	// if candidate host passed in is not valid, fetch next valid one
-	if candidateHost == nil || candidateHost.FailTimes > FailLimit || candidateHost.RetryTimes > RetryLimit {
+	if candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
 		otherValidHost, err := getValidHost(ss.RetryQueue)
 		// either retry queue is empty or something wrong with retry queue
 		if err != nil {
-			ss.SetStatus(errStatus)
+			chunk.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: initState,
+				Succeed: false,
+				ClientErr: fmt.Errorf("no host available %v", err),
+			}
 			return
 		}
 		candidateHost = otherValidHost
@@ -347,25 +352,33 @@ func retryProcess(candidateHost *storage.HostNode, ss *storage.Session, n *core.
 	_, hostPid, err := ParsePeerParam(candidateHost.Identity)
 	if err != nil {
 		log.Error(err)
-		ss.SetStatus(errStatus)
+		chunk.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: initState,
+			Succeed: false,
+			ClientErr: fmt.Errorf("fail to parse host id %v", err),
+		}
 		return
 	}
 	peerPubKey, err := hostPid.ExtractPublicKey()
 	if err != nil {
-		log.Error(err)
-		ss.SetStatus(errStatus)
+		chunk.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: initState,
+			Succeed: false,
+			ClientErr: fmt.Errorf("fail to extract public key %v", err),
+		}
 		return
 	}
 	// establish connection with ledger
 	channelID, err := initChannel(ctx, selfPubKey, selfPrivKey, peerPubKey, p)
 	if err != nil {
-		log.Error("fail to connect with ledger")
-		ss.SetStatus(errStatus)
+		chunk.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: initState,
+			Succeed: false,
+			ClientErr: fmt.Errorf("fail to connect with ledger %v", err),
+		}
 		return
 	}
 
-	// record chunk info in session
-	chunk := ss.GetOrDefault(chunkHash)
 	chunk.NewChunk(n.Identity, hostPid, channelID, p)
 	chunk.SetState(storage.StdChunkStateFlow[0].State)
 
@@ -373,12 +386,13 @@ func retryProcess(candidateHost *storage.HostNode, ss *storage.Session, n *core.
 	// fail to connect with retry
 	if err != nil {
 		chunk.RetryChan <- &storage.StepRetryChan{
-			CurrentStep:0,
+			CurrentStep: initState,
 			Succeed: false,
 			HostErr: fmt.Errorf("fail on host %s with %d", hostPid, candidateHost.RetryTimes),
 		}
 	} else {
 		chunk.RetryChan <- &storage.StepRetryChan{
+			CurrentStep:initState, // init state success
 			Succeed: true,
 		}
 	}
@@ -397,7 +411,7 @@ func getValidHost(retryQueue *storage.RetryQueue) (*storage.HostNode, error) {
 		} else if nextHost.FailTimes >= FailLimit {
 			log.Info("Remove Host: ", nextHost)
 		} else if nextHost.RetryTimes >= RetryLimit {
-			nextHost.FailTimes++
+			nextHost.IncrementFail()
 			err = retryQueue.Offer(nextHost)
 			if err != nil {
 				return nil, err
@@ -430,17 +444,20 @@ var storageUploadProofCmd = &cmds.Command{
 		chunkInfo, err := ss.GetChunk(chunkHash)
 		if err != nil {
 			if chunkInfo != nil {
-				n, err := cmdenv.GetNode(env)
-				if err != nil {
-					return err
+				chunkInfo.RetryChan <- &storage.StepRetryChan{
+					CurrentStep: completeState,
+					Succeed: false,
+					ClientErr: err, // client can't get chunkInfo
 				}
-
-				go retryProcess(nil, ss, n, chunkInfo.Price, chunkHash, ssID, req.Context)
 			}
 			return err
 		}
 		chunkInfo.SetProof(req.Arguments[0])
 		ss.UpdateCompleteChunkNum(1)
+		chunkInfo.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: completeState,
+			Succeed: true,
+		}
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
 			ss.SetStatus(completeStatus)
@@ -659,14 +676,6 @@ the contents and nonce together to produce a final challenge response.`,
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
-		}
-
 		ssID := req.Arguments[0]
 		ss, err := storage.GlobalSession.GetSession(ssID)
 		if err != nil {
@@ -678,34 +687,85 @@ the contents and nonce together to produce a final challenge response.`,
 		if err != nil {
 			return err
 		}
+		// if client receive this call, means at least finish upload state
+		chunkInfo.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: uploadState,
+			Succeed: true,
+		}
+
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: challengeState,
+				Succeed: false,
+				ClientErr:err,
+			}
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			err := fmt.Errorf("storage client api not enabled")
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: challengeState,
+				Succeed: false,
+				ClientErr:err,
+			}
+			return err
+		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: challengeState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: challengeState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
 		cid, err := cidlib.Parse(chunkHash)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: challengeState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
 
 		// when multi-process talking to multiple hosts, different cids can only generate one storage challenge,
 		// and stored the latest one in session map
-		sch, err := chunkInfo.SetChallenge(req.Context, n, api, cid)
+		sch, err := chunkInfo.SetChallenge(context.Background(), n, api, cid)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: challengeState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
-		// waiting for host to solve challenge
-		//chunkInfo.SetState(solveState)
+		// challenge state finish, and waits for host to solve challenge
+		chunkInfo.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: challengeState,
+			Succeed: true,
+		}
+
+		//// set a time to verify challenge, since client cannot know the time host is solving
+		//chunkInfo.SetTime(time.Now())
 		out := &ChallengeRes{
 			ID:    sch.ID,
 			Hash:  sch.Hash,
 			Nonce: sch.Nonce,
 		}
-		return cmds.EmitOnce(res, out)
+		log.Error("challenge reqc finished")
+		return res.Emit(out)
 	},
 	Type: ChallengeRes{},
 }
@@ -720,22 +780,11 @@ signature back to the host to complete payment.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch."),
-		//cmds.StringArg("challenge-id", true, false, "Challenge id from uploader.").EnableStdin(),
 		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader."),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		// pre-check
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-
-			return fmt.Errorf("storage client api not enabled")
-		}
-
 		ssID := req.Arguments[0]
 		ss, err := storage.GlobalSession.GetSession(ssID)
 		if err != nil {
@@ -751,46 +800,116 @@ signature back to the host to complete payment.`,
 			return err
 		}
 
+		// pre-check
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: solveState,
+				Succeed: false,
+				ClientErr:err,
+			}
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: solveState,
+				Succeed: false,
+				ClientErr:err,
+			}
+			return fmt.Errorf("storage client api not enabled")
+		}
+
 		// time out check
 		//now := time.Now()
 		//if now.After(chunkInfo.GetTime().Add(challengeTimeOut)) {
 		//	return fmt.Errorf("challenge verification time out")
 		//}
+		// the time host solved the challenge,
+		// is the time we used call challengeTimeOut
+		// if client didn't receive succeed state in time,
+		// monitor would notice the timeout
+		chunkInfo.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: solveState,
+			Succeed: true,
+		}
 		// verify challenge
 		if chunkInfo.Challenge.Hash != challengeHash {
-			return fmt.Errorf("fail to verify challenge")
+			err := fmt.Errorf("fail to verify challenge")
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: verifyState,
+				Succeed: false,
+				HostErr: err,
+			}
+			return err
+		}
+		chunkInfo.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: verifyState,
+			Succeed: true,
 		}
 
 		// prepare payment
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: paymentState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
 		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
 		if !ok {
-			return fmt.Errorf("fail to get peer ID from request")
+			err := fmt.Errorf("fail to get peer ID from request")
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: paymentState,
+				Succeed: false,
+				ClientErr:err,
+			}
+			return err
 		}
 
 		channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: paymentState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
 
 		signedPayment, err := signChannelState(n.PrivateKey, channelState)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: paymentState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
 
 		signedBytes, err := proto.Marshal(signedPayment)
 		if err != nil {
+			chunkInfo.RetryChan <- &storage.StepRetryChan{
+				CurrentStep: paymentState,
+				Succeed: false,
+				ClientErr:err,
+			}
 			return err
 		}
-		// TODO: Update chunk state in session later in status ticket
 
+		// from client's perspective, prepared payment finished
+		// but the actual payment does not.
+		// only the complete state timeOut or receiving error means
+		// host having trouble with either agreeing on payment or closing channel
+		chunkInfo.RetryChan <- &storage.StepRetryChan{
+			CurrentStep: paymentState,
+			Succeed: true,
+		}
 		r := &PaymentRes{
 			SignedPayment: signedBytes,
 		}
-		return cmds.EmitOnce(res, r)
+		return res.Emit(r)
 	},
 	Type: PaymentRes{},
 }
