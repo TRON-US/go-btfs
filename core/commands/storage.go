@@ -136,8 +136,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			chunckHashes []string
 			rootHash     string
 		)
-		rootHashFlag, _ := req.Options[leafHashOptionName].(bool)
-		if rootHashFlag == false {
+		lf, _ := req.Options[leafHashOptionName].(bool)
+		if lf == false {
 			if len(req.Arguments) != 1 {
 				return fmt.Errorf("need one and only one root hash.")
 			}
@@ -162,17 +162,19 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			rootHash = ""
 			chunckHashes = req.Arguments
 		}
-
-		p, found := req.Options[uploadPriceOptionName].(int64)
-		if found && p < 0 {
+		// set price limit
+		price, found := req.Options[uploadPriceOptionName].(int64)
+		if found && price < 0 {
 			return fmt.Errorf("cannot input a negative price")
 		} else if !found {
 			// TODO: Select best price from top candidates
-			p = int64(1)
+			price = int64(1)
 		}
+		// get hosts/peers
 		var peers []string
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		if mode == "custom" {
+			// get host list as user specified
 			hosts, found := req.Options[hostSelectionOptionName].(string)
 			if !found {
 				return fmt.Errorf("custom mode needs input host lists")
@@ -188,8 +190,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
-			// get hosts amount according to file hashes num
-			hostAmount := len(chunckHashes)
 			for r := range qr.Next() {
 				if r.Error != nil {
 					return r.Error
@@ -200,7 +200,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					return err
 				}
 				peers = append(peers, ni.NodeID)
-				if len(peers) == hostAmount {
+				if len(peers) == len(chunckHashes) {
 					break
 				}
 			}
@@ -212,7 +212,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
-
 		// start new session
 		sm := storage.GlobalSession
 		ssID, err := storage.NewSessionID()
@@ -222,11 +221,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		ss := sm.GetOrDefault(ssID)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(initStatus)
-
 		// get self key pair
 		selfPrivKey := n.PrivateKey
 		selfPubKey := selfPrivKey.GetPublic()
-
 		// get other node's public key as address
 		// create channel between them
 		chunkChan := make(chan *ChunkRes)
@@ -250,7 +247,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					}
 					return
 				}
-				channelID, err := initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, p)
+				channelID, err := initChannel(req.Context, selfPubKey, selfPrivKey, peerPubKey, price)
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
@@ -259,7 +256,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					return
 				}
 				chunk := ss.GetOrDefault(chunkHash)
-				chunk.NewChunk(n.Identity, hostPid, channelID, p)
+				chunk.NewChunk(n.Identity, hostPid, channelID, price)
 				chunk.SetState(initState)
 				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
 				if err != nil {
