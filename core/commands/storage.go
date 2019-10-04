@@ -258,7 +258,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				chunk := ss.GetOrDefault(chunkHash)
 				chunk.NewChunk(n.Identity, hostPid, channelID, price)
 				chunk.SetState(initState)
-				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
+				_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(price, 10))
 				if err != nil {
 					chunkChan <- &ChunkRes{
 						Hash: chunkHash,
