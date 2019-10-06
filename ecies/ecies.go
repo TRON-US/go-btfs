@@ -7,6 +7,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 )
 
 type text struct {
@@ -16,7 +17,21 @@ type text struct {
 	Mac            string `json:"mac"`
 }
 
-func Encrypt(pubkeyHex string, plaintext string) (string, error) {
+const (
+	B        = iota
+	KB int64 = 1 << (10 * iota)
+	MB
+	GB
+	TB
+)
+
+func Encrypt(pubkeyHex string, plainbytes []byte) (string, error) {
+
+	// make sure size of input bytes lt 2g
+	if plainbytes == nil || int64(len(plainbytes)) >= 2*GB {
+		return "", errors.New("file exceeds the maximum file-size(lt 2G)")
+	}
+
 	// derive Share Secret
 	priv, err := GenerateKey()
 	if err != nil {
@@ -38,7 +53,7 @@ func Encrypt(pubkeyHex string, plaintext string) (string, error) {
 	sha512hash := sha512.Sum512(shareSecret[1:])
 	encryptionKey := sha512hash[0:32]
 	macKey := sha512hash[32:]
-	ciphertext, err := aesCBCEnc(encryptionKey, []byte(plaintext), iv)
+	ciphertext, err := aesCBCEnc(encryptionKey, plainbytes, iv)
 	if err != nil {
 		return "", err
 	}
@@ -67,9 +82,9 @@ func randBytes(bits int) ([]byte, error) {
 	return key, nil
 }
 
-func Decrypt(privateKeyHex string, ciphertext string) (string, error) {
+func Decrypt(privateKeyHex string, cipherbytes []byte) (string, error) {
 	t := &text{}
-	err := json.Unmarshal([]byte(ciphertext), t)
+	err := json.Unmarshal([]byte(cipherbytes), t)
 	if err != nil {
 		return "", err
 	}
