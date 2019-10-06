@@ -13,10 +13,16 @@ const pkHex = "048903aca62f342426d0595597bcd4b03519723c7292f231a5d40c02" +
 const privHex = "0abfa58854e585d9bb04a1ffad0f5ac507ac042e7aa69abbcf18f3103a936f6f"
 
 func TestEncrypt(t *testing.T) {
-	s, err := Encrypt(pkHex, msg)
+
+	twogBytes := make([]byte, 2*GB)
+	twogBytes[2*GB-1] = 1
+	_, err := Encrypt(pkHex, twogBytes)
+	assert.Errorf(t, err, "")
+
+	s, err := Encrypt(pkHex, []byte(msg))
 	assert.NoError(t, err)
 
-	decrypted, err := Decrypt(privHex, s)
+	decrypted, err := Decrypt(privHex, []byte(s))
 	assert.NoError(t, err)
 	assert.Equal(t, msg, decrypted)
 }
