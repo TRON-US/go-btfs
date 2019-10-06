@@ -15,7 +15,7 @@ import (
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/ipfs/interface-go-ipfs-core/options"
 	mh "github.com/multiformats/go-multihash"
-	pb "gopkg.in/cheggaaa/pb.v1"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 // ErrDepthLimitExceeded indicates that the max depth has been exceeded.
@@ -45,6 +45,8 @@ const (
 	hashOptionName        = "hash"
 	inlineOptionName      = "inline"
 	inlineLimitOptionName = "inline-limit"
+	encryptName           = "encrypt"
+	pubkeyName            = "public-key"
 )
 
 const adderOutChanSize = 8
@@ -129,6 +131,8 @@ You can now check what blocks have been created by:
 		cmds.StringOption(hashOptionName, "Hash function to use. Implies CIDv1 if not sha2-256. (experimental)").WithDefault("sha2-256"),
 		cmds.BoolOption(inlineOptionName, "Inline small blocks into CIDs. (experimental)"),
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
+		cmds.BoolOption(encryptName, "Encrypt the file."),
+		cmds.StringOption(pubkeyName, "The public key to encrypt the file."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -169,6 +173,8 @@ You can now check what blocks have been created by:
 		hashFunStr, _ := req.Options[hashOptionName].(string)
 		inline, _ := req.Options[inlineOptionName].(bool)
 		inlineLimit, _ := req.Options[inlineLimitOptionName].(int)
+		encrypt, _ := req.Options[encryptName].(bool)
+		pubkey, _ := req.Options[pubkeyName].(string)
 
 		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
 		if !ok {
@@ -214,6 +220,11 @@ You can now check what blocks have been created by:
 
 		if trickle {
 			opts = append(opts, options.Unixfs.Layout(options.TrickleLayout))
+		}
+
+		if encrypt {
+			opts = append(opts, options.Unixfs.Encrypt(encrypt))
+			opts = append(opts, options.Unixfs.Pubkey(pubkey))
 		}
 
 		opts = append(opts, nil) // events option placeholder

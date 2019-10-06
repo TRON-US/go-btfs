@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/ipfs/interface-go-ipfs-core/options"
 	"io"
 	"os"
 	gopath "path"
@@ -28,6 +29,8 @@ const (
 	archiveOptionName          = "archive"
 	compressOptionName         = "compress"
 	compressionLevelOptionName = "compression-level"
+	decryptName                = "decrypt"
+	privateKeyName             = "private-key"
 )
 
 var GetCmd = &cmds.Command{
@@ -54,6 +57,8 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 		cmds.BoolOption(archiveOptionName, "a", "Output a TAR archive."),
 		cmds.BoolOption(compressOptionName, "C", "Compress the output with GZIP compression."),
 		cmds.IntOption(compressionLevelOptionName, "l", "The level of compression (1-9)."),
+		cmds.BoolOption(decryptName, "Decrypt the file."),
+		cmds.StringOption(privateKeyName, "The private key to decrypt file."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		_, err := getCompressOptions(req)
@@ -72,7 +77,13 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 
 		p := path.New(req.Arguments[0])
 
-		file, err := api.Unixfs().Get(req.Context, p)
+		decrypt, _ := req.Options[decryptName].(bool)
+		privateKey, _ := req.Options[privateKeyName].(string)
+		opts := []options.UnixfsGetOption{
+			options.Unixfs.Decrypt(decrypt),
+			options.Unixfs.PrivateKey(privateKey),
+		}
+		file, err := api.Unixfs().Get(req.Context, p, opts...)
 		if err != nil {
 			return err
 		}

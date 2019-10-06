@@ -2,7 +2,10 @@ package coreapi
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"github.com/TRON-US/go-btfs/ecies"
+	"io/ioutil"
 
 	"github.com/TRON-US/go-btfs/core"
 
@@ -30,10 +33,38 @@ type UnixfsAPI CoreAPI
 
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
-func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
+func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved,
+	error) {
 	settings, prefix, err := options.UnixfsAddOptions(opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if settings.Encrypt {
+		pubKey := settings.Pubkey
+		if pubKey == "" {
+			bytes, err := api.privateKey.Bytes()
+			if err != nil {
+				return nil, err
+			}
+			pubKey = ecies.NewPrivateKeyFromBytes(bytes).PublicKey.Hex(false)
+		}
+		log.Infof("The file will be encrypted with pubkey: %s", settings.Pubkey)
+		switch f := node.(type) {
+		case files.File:
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
+			}
+
+			ciphertext, err := ecies.Encrypt(pubKey, bytes)
+			if err != nil {
+				return nil, err
+			}
+
+			node = files.NewBytesFile([]byte(ciphertext))
+		default:
+		}
 	}
 
 	cfg, err := api.repo.Config()
@@ -122,7 +153,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 		fileAdder.SetMfsRoot(mr)
 	}
 
-	nd, err := fileAdder.AddAllAndPin(files)
+	nd, err := fileAdder.AddAllAndPin(node)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +165,13 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	return path.IpfsPath(nd.Cid()), nil
 }
 
-func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) {
+func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.UnixfsGetOption) (files.Node, error) {
+
+	settings, err := options.UnixfsGetOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
+
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
@@ -142,7 +179,35 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) 
 		return nil, err
 	}
 
-	return unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+	node, err := unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+
+	if settings.Decrypt {
+		privKey := settings.PrivateKey
+		if privKey == "" {
+			bytes, err := api.privateKey.Bytes()
+			if err != nil {
+				return nil, err
+			}
+			privKey = hex.EncodeToString(bytes)
+			fmt.Println("privKey", privKey)
+		}
+		switch f := node.(type) {
+		case files.File:
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
+			}
+
+			s, err := ecies.Decrypt(privKey, bytes)
+			if err != nil {
+				return nil, err
+			}
+			node = files.NewBytesFile([]byte(s))
+		default:
+		}
+	}
+
+	return node, err
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
