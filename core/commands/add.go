@@ -295,6 +295,10 @@ You can now check what blocks have been created by:
 
 			// Could be slow.
 			go func() {
+				var entriesCount int64 = 0
+				for req.Files.Entries().Next() {
+					entriesCount += 1
+				}
 				size, err := req.Files.Size()
 				if err != nil {
 					log.Warningf("error getting files size: %s", err)
@@ -302,6 +306,8 @@ You can now check what blocks have been created by:
 					return
 				}
 
+				blockCount := size/16 + 1
+				size = 280*entriesCount + (blockCount)*32
 				sizeChan <- size
 			}()
 

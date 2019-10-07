@@ -189,7 +189,6 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 				return nil, err
 			}
 			privKey = hex.EncodeToString(bytes)
-			fmt.Println("privKey", privKey)
 		}
 		switch f := node.(type) {
 		case files.File:
