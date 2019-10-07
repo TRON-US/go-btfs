@@ -245,7 +245,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(initStatus)
 
-		// FIXME: getting all hosts ip from hub, for now it is from input
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
 
@@ -1293,7 +1292,6 @@ This command print upload and payment status by the time queried.`,
 	},
 	Type: StatusRes{},
 }
-
 
 func newKeyHelper(kss ...string) ds.Key {
 	return ds.NewKey(strings.Join(kss, ""))
