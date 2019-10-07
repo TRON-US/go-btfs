@@ -14,13 +14,13 @@ type RetryQueue struct {
 type HostNode struct {
 	sync.Mutex
 
-	Identity string
-	Score int64
+	Identity   string
+	Score      int64
 	RetryTimes int
-	FailTimes int
+	FailTimes  int
 }
 
-func (node *HostNode) IncrementRetry()  {
+func (node *HostNode) IncrementRetry() {
 	node.Lock()
 	defer node.Unlock()
 
@@ -34,7 +34,7 @@ func (node *HostNode) GetRetryTimes() int {
 	return node.RetryTimes
 }
 
-func (node *HostNode) IncrementFail()  {
+func (node *HostNode) IncrementFail() {
 	node.Lock()
 	defer node.Unlock()
 
@@ -58,7 +58,7 @@ func (h Hosts) Less(i, j int) bool {
 	return h[i].Score > h[j].Score
 }
 
-func (h Hosts) Swap(i, j int)      {
+func (h Hosts) Swap(i, j int) {
 	h[i], h[j] = h[j], h[i]
 }
 
@@ -72,7 +72,7 @@ func (h Hosts) Sort() {
 
 // init retry queue with 30 initial capacity
 func New(capacity int64) *RetryQueue {
-	r := &RetryQueue{Queue:queue.New(capacity)}
+	r := &RetryQueue{Queue: queue.New(capacity)}
 	return r
 }
 
@@ -114,4 +114,3 @@ func (q *RetryQueue) Size() int64 {
 func (q *RetryQueue) Empty() bool {
 	return q.Queue.Empty()
 }
-

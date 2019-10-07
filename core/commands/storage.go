@@ -388,7 +388,7 @@ func retryProcess(candidateHost *storage.HostNode, ss *storage.Session, n *core.
 // find next available host
 func getValidHost(retryQueue *storage.RetryQueue) (*storage.HostNode, error) {
 	var candidateHost *storage.HostNode
-	for ; candidateHost == nil; {
+	for candidateHost == nil {
 		if retryQueue.Empty() {
 			return nil, fmt.Errorf("retry queue is empty")
 		}
