@@ -309,7 +309,7 @@ You can now check what blocks have been created by:
 						}
 						blockCount := s/16 + 1
 						size += 280 + blockCount*32
-						sizeChan <-size
+						sizeChan <- size
 					}
 				} else {
 					size, err := req.Files.Size()
