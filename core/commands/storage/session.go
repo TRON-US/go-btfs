@@ -240,6 +240,7 @@ func (ss *Session) GetOrDefault(hash string) *Chunk {
 
 	if ss.ChunkInfo[hash] == nil {
 		c := &Chunk{}
+		c.RetryChan = make(chan *StepRetryChan)
 		c.Time = time.Now()
 		c.State = "init"
 		ss.ChunkInfo[hash] = c
@@ -248,7 +249,7 @@ func (ss *Session) GetOrDefault(hash string) *Chunk {
 	return ss.ChunkInfo[hash]
 }
 
-func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
+func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -256,9 +257,7 @@ func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.
 	c.Payer = payerPid
 	c.Receiver = recvPid
 	c.Price = price
-	c.State = "init"
 	c.Time = time.Now()
-	c.RetryChan = make(chan *StepRetryChan)
 }
 
 // used on client to record a new challenge
