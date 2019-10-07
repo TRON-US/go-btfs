@@ -173,6 +173,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		}
 		// get hosts/peers
 		var peers []string
+		// init retry queue
+		retryQueue := storage.New(int64(len(peers)))
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		if mode == "custom" {
 			// get host list as user specified
@@ -181,6 +183,16 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return fmt.Errorf("custom mode needs input host lists")
 			}
 			peers = strings.Split(hosts, ",")
+			for _, ip := range peers {
+				host := &storage.HostNode{
+					Identity:   ip,
+					RetryTimes: 0,
+					FailTimes:  0,
+				}
+				if err := retryQueue.Offer(host); err != nil {
+					return err
+				}
+			}
 		} else {
 			// get host list from storage
 			rds := n.Repo.Datastore()
@@ -200,8 +212,17 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err != nil {
 					return err
 				}
-				peers = append(peers, ni.NodeID)
-				if len(peers) == len(chunkHashes) {
+				// add host to retry queue
+				host := &storage.HostNode{
+					Identity:   ni.NodeID,
+					RetryTimes: 0,
+					FailTimes:  0,
+				}
+				if err := retryQueue.Offer(host); err != nil {
+					return err
+				}
+				// FIXME: retryQueue's size should be more than chunkHash?
+				if int(retryQueue.Size()) == len(chunkHashes) {
 					qr.Close()
 					break
 				}
@@ -224,23 +245,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(initStatus)
 
-		// init retry queue
-		retryQueue := storage.New(int64(len(peers)))
 		// FIXME: getting all hosts ip from hub, for now it is from input
-		hostList := &storage.Hosts{}
-		for i, ip := range peers {
-			host := &storage.HostNode{
-				Identity:   ip,
-				Score:      retryQueue.Size() - int64(i),
-				RetryTimes: 0,
-				FailTimes:  0,
-			}
-			hostList.Add(host)
-		}
-		err = retryQueue.AddAll(*hostList)
-		if err != nil {
-			return err
-		}
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
 
@@ -299,13 +304,8 @@ func retryMinotor(ss *storage.Session, n *core.IpfsNode, p int64, ssID string, c
 							candidateHost.IncrementRetry()
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
-							if candidateHost.GetRetryTimes() >= RetryLimit {
-								curState = initState
-								go retryProcess(candidateHost, ss, n, p, chunkHash, ssID, ctx)
-							} else {
-								// TODO: How to let single step retry?
-								curState = chunkRes.CurrentStep
-							}
+							curState = initState
+							go retryProcess(candidateHost, ss, n, p, chunkHash, ssID, ctx)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -377,7 +377,6 @@ func retryProcess(candidateHost *storage.HostNode, ss *storage.Session, n *core.
 	chunk.UpdateChunk(n.Identity, hostPid, channelID, p)
 	chunk.SetState(storage.StdChunkStateFlow[0].State)
 
-	log.Error("start to call init host")
 	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
 	// fail to connect with retry
 	if err != nil {
