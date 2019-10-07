@@ -295,25 +295,31 @@ You can now check what blocks have been created by:
 
 			// Could be slow.
 			go func() {
-
-				size, err := req.Files.Size()
-				if err != nil {
-					log.Warningf("error getting files size: %s", err)
-					// see comment above
-					return
-				}
-
 				op := res.Request().Options[encryptName]
 				encrypt := op != nil && op.(bool)
 				if encrypt {
-					blockCount := size/16 + 1
-					for req.Files.Entries().Next() {
-						size = 280 + blockCount * 32
-						sizeChan <- size
+					it := req.Files.Entries()
+					var size int64 = 0
+					for it.Next() {
+						s, err := it.Node().Size()
+						if err != nil {
+							log.Warningf("error getting files size: %s", err)
+							// see comment above
+							return
+						}
+						blockCount := s/16 + 1
+						size += 280 + blockCount*32
+						sizeChan <-size
 					}
+				} else {
+					size, err := req.Files.Size()
+					if err != nil {
+						log.Warningf("error getting files size: %s", err)
+						// see comment above
+						return
+					}
+					sizeChan <- size
 				}
-
-				sizeChan <- size
 			}()
 
 			progressBar := func(wait chan struct{}) {
