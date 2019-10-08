@@ -114,7 +114,7 @@ func (sc *StorageChallenge) GenChallenge() error {
 	sc.CID = sc.allCIDs[n.Int64()]
 
 	// Fetch the raw data
-	r, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(sc.CID))
+	r, _, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(sc.CID), true, false)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (sc *StorageChallenge) SolveChallenge(chHash cid.Cid, chNonce string) error
 	defer sc.Unlock()
 
 	// Fetch the raw data
-	r, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(chHash))
+	r, _, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(chHash), true, false)
 	if err != nil {
 		return err
 	}

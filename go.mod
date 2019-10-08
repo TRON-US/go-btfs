@@ -9,8 +9,8 @@ require (
 	github.com/TRON-US/go-btfs-cmds v0.1.4
 	github.com/TRON-US/go-btfs-config v0.1.6
 	github.com/TRON-US/go-mfs v0.2.0
-	github.com/TRON-US/go-unixfs v0.3.0
-	github.com/TRON-US/interface-go-btfs-core v0.3.5
+	github.com/TRON-US/go-unixfs v0.3.3
+	github.com/TRON-US/interface-go-btfs-core v0.3.8
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
@@ -71,7 +71,6 @@ require (
 	github.com/jbenet/go-random-files v0.0.0-20190219210431-31b3f20ebded
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2
 	github.com/jbenet/goprocess v0.1.3
-	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/klauspost/reedsolomon v1.9.2
 	github.com/libp2p/go-eventbus v0.0.3 // indirect
 	github.com/libp2p/go-libp2p v0.2.0
