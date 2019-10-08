@@ -1,5 +1,5 @@
---- interface-go-ipfs-core@v0.1.0/options/unixfs.go	2019-10-07 16:57:33.000000000 -0700
-+++ /tmp/interface-go-ipfs-core/unixfs.go	2019-10-07 17:04:41.000000000 -0700
+--- unixfs.go	2019-10-08 11:06:14.000000000 -0700
++++ /tmp/interface-go-ipfs-core/options/unixfs.go	2019-10-08 11:04:41.000000000 -0700
 @@ -4,7 +4,7 @@
  	"errors"
  	"fmt"
@@ -42,18 +42,7 @@
  	}
  
  	for _, opt := range opts {
-@@ -108,6 +120,10 @@
- 		options.RawLeaves = true
- 	}
- 
-+	if options.Encrypt && options.Pubkey == "" {
-+		return nil, cid.Prefix{}, errors.New("pubkey shouldn't be empty")
-+	}
-+
- 	prefix, err := dag.PrefixForCidVersion(options.CidVersion)
- 	if err != nil {
- 		return nil, cid.Prefix{}, err
-@@ -119,6 +135,20 @@
+@@ -119,6 +131,20 @@
  	return options, prefix, nil
  }
  
@@ -74,7 +63,7 @@
  func UnixfsLsOptions(opts ...UnixfsLsOption) (*UnixfsLsSettings, error) {
  	options := &UnixfsLsSettings{
  		ResolveChildren: true,
-@@ -283,3 +313,32 @@
+@@ -283,3 +309,33 @@
  		return nil
  	}
  }
@@ -106,4 +95,5 @@
 +		return nil
 +	}
 +}
++
 +
