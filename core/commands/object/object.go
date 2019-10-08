@@ -589,10 +589,10 @@ func getObject(res cmds.ResponseEmitter, r io.Reader, dfenc string, nd ipld.Node
 	return cmds.EmitOnce(res, node)
 }
 
-func returnMetaString(metaData []byte, out string, dfenc string, nd ipld.Node, enc cidenc.Encoder) (NodeWithMetaString, error) {
+func returnMetaString(metaData []byte, out string, dfenc string, nd ipld.Node, enc cidenc.Encoder) (*NodeWithMetaString, error) {
 	mout, err := encodeData(metaData, dfenc)
 	if err != nil {
-		return NodeWithMetaString{}, err
+		return nil, err
 	}
 
 	node := &NodeWithMetaString{
@@ -611,20 +611,20 @@ func returnMetaString(metaData []byte, out string, dfenc string, nd ipld.Node, e
 		}
 	}
 
-	return *node, nil
+	return node, nil
 }
 
-func returnMetaMap(data []byte, metaData []byte, out string, dfenc string, nd ipld.Node, enc cidenc.Encoder) (NodeWithMetaMap, error) {
+func returnMetaMap(data []byte, metaData []byte, out string, dfenc string, nd ipld.Node, enc cidenc.Encoder) (*NodeWithMetaMap, error) {
 	var md interface{}
 
 	err := json.Unmarshal(metaData, &md)
 	if err != nil {
-		return NodeWithMetaMap{}, err
+		return nil, err
 	}
 
 	mm, ok := md.(map[string]interface{})
 	if !ok {
-		return NodeWithMetaMap{}, err
+		return nil, err
 	}
 
 	node := &NodeWithMetaMap{
@@ -643,7 +643,7 @@ func returnMetaMap(data []byte, metaData []byte, out string, dfenc string, nd ip
 		}
 	}
 
-	return *node, nil
+	return node, nil
 }
 
 func getObjectWithMeta(res cmds.ResponseEmitter, r io.Reader, mr io.Reader, dfenc string, nd ipld.Node, enc cidenc.Encoder) error {
