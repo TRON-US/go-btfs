@@ -1,0 +1,14 @@
+--- unixfs.go	2019-10-07 16:57:33.000000000 -0700
++++ /tmp/interface-go-ipfs-core/unixfs.go	2019-10-07 18:15:22.000000000 -0700
+@@ -71,9 +71,10 @@
+ 	//
+ 	// Note that some implementations of this API may apply the specified context
+ 	// to operations performed on the returned file
+-	Get(context.Context, path.Path) (files.Node, error)
++	Get(context.Context, path.Path, ...options.UnixfsGetOption) (files.Node, error)
+ 
+ 	// Ls returns the list of links in a directory. Links aren't guaranteed to be
+ 	// returned in order
+ 	Ls(context.Context, path.Path, ...options.UnixfsLsOption) (<-chan DirEntry, error)
+ }
++

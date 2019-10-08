@@ -1,0 +1,109 @@
+--- interface-go-ipfs-core@v0.1.0/options/unixfs.go	2019-10-07 16:57:33.000000000 -0700
++++ /tmp/interface-go-ipfs-core/unixfs.go	2019-10-07 17:04:41.000000000 -0700
+@@ -4,7 +4,7 @@
+ 	"errors"
+ 	"fmt"
+ 
+-	cid "github.com/ipfs/go-cid"
++	"github.com/ipfs/go-cid"
+ 	dag "github.com/ipfs/go-merkledag"
+ 	mh "github.com/multiformats/go-multihash"
+ )
+@@ -36,6 +36,14 @@
+ 	Events   chan<- interface{}
+ 	Silent   bool
+ 	Progress bool
++
++	Encrypt bool
++	Pubkey  string
++}
++
++type UnixfsGetSettings struct {
++	Decrypt    bool
++	PrivateKey string
+ }
+ 
+ type UnixfsLsSettings struct {
+@@ -43,6 +51,7 @@
+ }
+ 
+ type UnixfsAddOption func(*UnixfsAddSettings) error
++type UnixfsGetOption func(*UnixfsGetSettings) error
+ type UnixfsLsOption func(*UnixfsLsSettings) error
+ 
+ func UnixfsAddOptions(opts ...UnixfsAddOption) (*UnixfsAddSettings, cid.Prefix, error) {
+@@ -66,6 +75,9 @@
+ 		Events:   nil,
+ 		Silent:   false,
+ 		Progress: false,
++
++		Encrypt: false,
++		Pubkey:  "",
+ 	}
+ 
+ 	for _, opt := range opts {
+@@ -108,6 +120,10 @@
+ 		options.RawLeaves = true
+ 	}
+ 
++	if options.Encrypt && options.Pubkey == "" {
++		return nil, cid.Prefix{}, errors.New("pubkey shouldn't be empty")
++	}
++
+ 	prefix, err := dag.PrefixForCidVersion(options.CidVersion)
+ 	if err != nil {
+ 		return nil, cid.Prefix{}, err
+@@ -119,6 +135,20 @@
+ 	return options, prefix, nil
+ }
+ 
++func UnixfsGetOptions(opts ...UnixfsGetOption) (*UnixfsGetSettings, error) {
++	options := &UnixfsGetSettings{
++		Decrypt:    false,
++		PrivateKey: "",
++	}
++	for _, opt := range opts {
++		err := opt(options)
++		if err != nil {
++			return nil, err
++		}
++	}
++	return options, nil
++}
++
+ func UnixfsLsOptions(opts ...UnixfsLsOption) (*UnixfsLsSettings, error) {
+ 	options := &UnixfsLsSettings{
+ 		ResolveChildren: true,
+@@ -283,3 +313,32 @@
+ 		return nil
+ 	}
+ }
++
++func (unixfsOpts) Encrypt(encrypt bool) UnixfsAddOption {
++	return func(settings *UnixfsAddSettings) error {
++		settings.Encrypt = encrypt
++		return nil
++	}
++}
++
++func (unixfsOpts) Pubkey(pubkey string) UnixfsAddOption {
++	return func(settings *UnixfsAddSettings) error {
++		settings.Pubkey = pubkey
++		return nil
++	}
++}
++
++func (unixfsOpts) Decrypt(decrypt bool) UnixfsGetOption {
++	return func(settings *UnixfsGetSettings) error {
++		settings.Decrypt = decrypt
++		return nil
++	}
++}
++
++func (unixfsOpts) PrivateKey(privateKey string) UnixfsGetOption {
++	return func(settings *UnixfsGetSettings) error {
++		settings.PrivateKey = privateKey
++		return nil
++	}
++}
++
