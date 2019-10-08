@@ -71,7 +71,7 @@ func (h Hosts) Sort() {
 }
 
 // init retry queue with 30 initial capacity
-func New(capacity int64) *RetryQueue {
+func NewRetryQueue(capacity int64) *RetryQueue {
 	r := &RetryQueue{Queue: queue.New(capacity)}
 	return r
 }

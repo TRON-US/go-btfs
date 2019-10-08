@@ -18,6 +18,17 @@ import (
 var GlobalSession *SessionMap
 var StdChunkStateFlow [7]*ChunkFlowControl
 
+const (
+	// chunk state
+	InitState      = 0
+	UploadState    = 1
+	ChallengeState = 2
+	SolveState     = 3
+	VerifyState    = 4
+	PaymentState   = 5
+	CompleteState  = 6
+)
+
 type ChunkFlowControl struct {
 	State   string
 	TimeOut time.Duration
@@ -65,25 +76,25 @@ type StepRetryChan struct {
 func init() {
 	GlobalSession = &SessionMap{}
 	GlobalSession.Map = make(map[string]*Session)
-	StdChunkStateFlow[0] = &ChunkFlowControl{
+	StdChunkStateFlow[InitState] = &ChunkFlowControl{
 		State:   "init",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[1] = &ChunkFlowControl{
+	StdChunkStateFlow[UploadState] = &ChunkFlowControl{
 		State:   "upload",
 		TimeOut: 5 * time.Second}
-	StdChunkStateFlow[2] = &ChunkFlowControl{
+	StdChunkStateFlow[ChallengeState] = &ChunkFlowControl{
 		State:   "challenge",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[3] = &ChunkFlowControl{
+	StdChunkStateFlow[SolveState] = &ChunkFlowControl{
 		State:   "solve",
 		TimeOut: 30 * time.Second}
-	StdChunkStateFlow[4] = &ChunkFlowControl{
+	StdChunkStateFlow[VerifyState] = &ChunkFlowControl{
 		State:   "verify",
 		TimeOut: time.Second}
-	StdChunkStateFlow[5] = &ChunkFlowControl{
+	StdChunkStateFlow[PaymentState] = &ChunkFlowControl{
 		State:   "payment",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[6] = &ChunkFlowControl{
+	StdChunkStateFlow[CompleteState] = &ChunkFlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
 }
