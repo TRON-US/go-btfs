@@ -184,7 +184,7 @@ Headers.
 		cmds.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
 		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 		cmds.StringOption(hValuekwd, "The h value identifying the hosting bit torrent client"),
-		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
+		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics.").WithDefault(nil),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
@@ -449,10 +449,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// BTFS functional test
 	functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
 
-	//Begin sending analytics to hosted server
-	collectData, _ := req.Options[enableDataCollection].(bool)
-	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
-	analytics.Initialize(node, version.CurrentVersionNumber, hValue, env)
+	// set Analytics flag if specified
+	if dc, _ := req.Options[enableDataCollection]; dc != nil {
+		node.Repo.SetConfigKey("Experimental.Analytics", dc)
+	}
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
