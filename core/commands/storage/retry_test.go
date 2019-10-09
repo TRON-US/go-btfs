@@ -4,13 +4,13 @@ import (
 	"testing"
 )
 
-func TestRetry(t *testing.T)  {
+func TestRetry(t *testing.T) {
 	retryQueue := NewRetryQueue(2)
 	host1 := &HostNode{
-		Identity:   "test1",
+		Identity: "test1",
 	}
 	host2 := &HostNode{
-		Identity:   "test2",
+		Identity: "test2",
 	}
 	// offer 2
 	if err := retryQueue.Offer(host1); err != nil {
