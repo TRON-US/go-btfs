@@ -124,9 +124,7 @@ func getPaths(t *testing.T, ipfs *core.IpfsNode, name string, n *dag.ProtoNode) 
 
 // Perform a large number of concurrent reads to stress the system
 func TestIpfsStressRead(t *testing.T) {
-	//if testing.Short() {
 	t.SkipNow()
-	//}
 	nd, mnt := setupIpfsTest(t, nil)
 	defer mnt.Close()
 
