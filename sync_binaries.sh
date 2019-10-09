@@ -1,4 +1,4 @@
-!#bin/bash
+#!bin/bash
 #this script downloads the necessary files from distributions.btfs.io into the btfs-binary-releases repo
 
 #make sure the S3Location is set
