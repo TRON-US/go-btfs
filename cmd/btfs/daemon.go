@@ -16,7 +16,6 @@ import (
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
-	"github.com/TRON-US/go-btfs/analytics"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
@@ -29,6 +28,7 @@ import (
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
+	"github.com/TRON-US/go-btfs/spin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/hashicorp/go-multierror"
@@ -453,6 +453,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if dc, _ := req.Options[enableDataCollection]; dc != nil {
 		node.Repo.SetConfigKey("Experimental.Analytics", dc)
 	}
+	// Spin jobs in the background
+	spin.Analytics(node, version.CurrentVersionNumber, hValue, env)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {

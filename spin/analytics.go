@@ -1,4 +1,4 @@
-package analytics
+package spin
 
 import (
 	"bytes"
@@ -92,8 +92,8 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
-//Initialize starts the process to collect data and starts the GoRoutine for constant collection
-func Initialize(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environment) {
+//Analytics starts the process to collect data and starts the GoRoutine for constant collection
+func Analytics(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environment) {
 	if n == nil {
 		return
 	}
