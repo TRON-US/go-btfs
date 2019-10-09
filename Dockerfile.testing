@@ -4,6 +4,7 @@ MAINTAINER TRON-US <support@tron.network>
 # It is quite large.  Its primary use case is to run the unit tests and test/sharness tests.
 # Use Dockerfile to run a btfs daemon instead
 ENV SRC_DIR /go-btfs
+ENV TEST_NO_FUSE 1
 
 # Download packages first so they can be cached.
 COPY go.mod go.sum $SRC_DIR/
