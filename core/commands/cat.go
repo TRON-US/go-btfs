@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"github.com/ipfs/interface-go-ipfs-core/options"
 	"io"
 	"os"
 
@@ -32,6 +33,8 @@ var CatCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.Int64Option(offsetOptionName, "o", "Byte offset to begin reading from."),
 		cmds.Int64Option(lengthOptionName, "l", "Maximum number of bytes to read."),
+		cmds.BoolOption(decryptName, "Decrypt the file."),
+		cmds.StringOption(privateKeyName, "The private key to decrypt file."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
@@ -58,7 +61,7 @@ var CatCmd = &cmds.Command{
 			return err
 		}
 
-		readers, length, err := cat(req.Context, api, req.Arguments, int64(offset), int64(max))
+		readers, length, err := cat(req.Context, api, req.Arguments, int64(offset), int64(max), req.Options)
 		if err != nil {
 			return err
 		}
@@ -107,22 +110,29 @@ var CatCmd = &cmds.Command{
 					log.Warningf("cat postrun: received unexpected type %T", val)
 				}
 			}
+
 		},
 	},
 }
 
-func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, max int64) ([]io.Reader, uint64, error) {
+func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64,
+	max int64, opts cmds.OptMap) ([]io.Reader, uint64, error) {
 	readers := make([]io.Reader, 0, len(paths))
 	length := uint64(0)
 	if max == 0 {
 		return nil, 0, nil
 	}
+	getOptions := []options.UnixfsGetOption{
+		options.Unixfs.Decrypt(opts[decryptName].(bool)),
+	}
+	if opts[privateKeyName] != nil {
+		getOptions = append(getOptions, options.Unixfs.PrivateKey(opts[privateKeyName].(string)))
+	}
 	for _, p := range paths {
-		f, err := api.Unixfs().Get(ctx, path.New(p))
+		f, err := api.Unixfs().Get(ctx, path.New(p), getOptions...)
 		if err != nil {
 			return nil, 0, err
 		}
-
 		var file files.File
 		switch f := f.(type) {
 		case files.File:
@@ -143,7 +153,12 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, m
 			continue
 		}
 
-		count, err := file.Seek(offset, io.SeekStart)
+		var count int64
+		if opts[decryptName].(bool) {
+			count = 0
+		} else {
+			count, err = file.Seek(offset, io.SeekStart)
+		}
 		if err != nil {
 			return nil, 0, err
 		}
