@@ -47,6 +47,7 @@ const (
 	inlineLimitOptionName = "inline-limit"
 	encryptName           = "encrypt"
 	pubkeyName            = "public-key"
+	peerIdName            = "peer-id"
 )
 
 const adderOutChanSize = 8
@@ -133,6 +134,7 @@ You can now check what blocks have been created by:
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
 		cmds.BoolOption(encryptName, "Encrypt the file."),
 		cmds.StringOption(pubkeyName, "The public key to encrypt the file."),
+		cmds.StringOption(peerIdName, "The peer id to encrypt the file."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -175,6 +177,7 @@ You can now check what blocks have been created by:
 		inlineLimit, _ := req.Options[inlineLimitOptionName].(int)
 		encrypt, _ := req.Options[encryptName].(bool)
 		pubkey, _ := req.Options[pubkeyName].(string)
+		peerId, _ := req.Options[peerIdName].(string)
 
 		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
 		if !ok {
@@ -225,6 +228,7 @@ You can now check what blocks have been created by:
 		if encrypt {
 			opts = append(opts, options.Unixfs.Encrypt(encrypt))
 			opts = append(opts, options.Unixfs.Pubkey(pubkey))
+			opts = append(opts, options.Unixfs.PeerId(peerId))
 		}
 
 		opts = append(opts, nil) // events option placeholder

@@ -122,12 +122,18 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64,
 	if max == 0 {
 		return nil, 0, nil
 	}
+
+	if opts[decryptName] == nil {
+		opts[decryptName] = false
+	}
+	if opts[privateKeyName] == nil {
+		opts[privateKeyName] = ""
+	}
 	getOptions := []options.UnixfsGetOption{
 		options.Unixfs.Decrypt(opts[decryptName].(bool)),
+		options.Unixfs.PrivateKey(opts[privateKeyName].(string)),
 	}
-	if opts[privateKeyName] != nil {
-		getOptions = append(getOptions, options.Unixfs.PrivateKey(opts[privateKeyName].(string)))
-	}
+
 	for _, p := range paths {
 		f, err := api.Unixfs().Get(ctx, path.New(p), getOptions...)
 		if err != nil {
@@ -154,7 +160,7 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64,
 		}
 
 		var count int64
-		if opts[decryptName].(bool) {
+		if opts[decryptName] != nil && opts[decryptName].(bool) {
 			count = 0
 		} else {
 			count, err = file.Seek(offset, io.SeekStart)

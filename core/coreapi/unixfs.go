@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/TRON-US/go-btfs/ecies"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"io/ioutil"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -31,6 +32,23 @@ import (
 
 type UnixfsAPI CoreAPI
 
+func peerId2pubkey(peerId string) (string, error) {
+	id, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return "", err
+	}
+	publicKey, err := id.ExtractPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	bytes, err := publicKey.Bytes()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes[4:]), nil
+}
+
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
 func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved,
@@ -43,11 +61,14 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	if settings.Encrypt {
 		pubKey := settings.Pubkey
 		if pubKey == "" {
-			bytes, err := api.privateKey.Bytes()
+			peerId := settings.PeerId
+			if peerId == "" {
+				peerId = api.identity.Pretty()
+			}
+			pubKey, err = peerId2pubkey(peerId)
 			if err != nil {
 				return nil, err
 			}
-			pubKey = ecies.NewPrivateKeyFromBytes(bytes).PublicKey.Hex(false)
 		}
 		log.Infof("The file will be encrypted with pubkey: %s", settings.Pubkey)
 		switch f := node.(type) {
@@ -166,7 +187,6 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 }
 
 func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.UnixfsGetOption) (files.Node, error) {
-
 	settings, err := options.UnixfsGetOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -188,7 +208,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 			if err != nil {
 				return nil, err
 			}
-			privKey = hex.EncodeToString(bytes)
+			privKey = hex.EncodeToString(bytes[4:])
 		}
 		switch f := node.(type) {
 		case files.File:

@@ -1,5 +1,5 @@
---- unixfs.go	2019-10-08 11:06:14.000000000 -0700
-+++ /tmp/interface-go-ipfs-core/options/unixfs.go	2019-10-08 11:04:41.000000000 -0700
+--- /Users/tron/go/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0/options/unixfs.go	2019-10-09 11:19:32.000000000 -0700
++++ /tmp/interface-go-ipfs-core/options/unixfs.go	2019-10-09 11:22:39.000000000 -0700
 @@ -4,7 +4,7 @@
  	"errors"
  	"fmt"
@@ -9,13 +9,14 @@
  	dag "github.com/ipfs/go-merkledag"
  	mh "github.com/multiformats/go-multihash"
  )
-@@ -36,6 +36,14 @@
+@@ -36,6 +36,15 @@
  	Events   chan<- interface{}
  	Silent   bool
  	Progress bool
 +
 +	Encrypt bool
 +	Pubkey  string
++	PeerId  string
 +}
 +
 +type UnixfsGetSettings struct {
@@ -24,7 +25,7 @@
  }
  
  type UnixfsLsSettings struct {
-@@ -43,6 +51,7 @@
+@@ -43,6 +52,7 @@
  }
  
  type UnixfsAddOption func(*UnixfsAddSettings) error
@@ -32,17 +33,18 @@
  type UnixfsLsOption func(*UnixfsLsSettings) error
  
  func UnixfsAddOptions(opts ...UnixfsAddOption) (*UnixfsAddSettings, cid.Prefix, error) {
-@@ -66,6 +75,9 @@
+@@ -66,6 +76,10 @@
  		Events:   nil,
  		Silent:   false,
  		Progress: false,
 +
 +		Encrypt: false,
 +		Pubkey:  "",
++		PeerId:  "",
  	}
  
  	for _, opt := range opts {
-@@ -119,6 +131,20 @@
+@@ -119,6 +133,20 @@
  	return options, prefix, nil
  }
  
@@ -63,7 +65,7 @@
  func UnixfsLsOptions(opts ...UnixfsLsOption) (*UnixfsLsSettings, error) {
  	options := &UnixfsLsSettings{
  		ResolveChildren: true,
-@@ -283,3 +309,33 @@
+@@ -283,3 +311,40 @@
  		return nil
  	}
  }
@@ -78,6 +80,13 @@
 +func (unixfsOpts) Pubkey(pubkey string) UnixfsAddOption {
 +	return func(settings *UnixfsAddSettings) error {
 +		settings.Pubkey = pubkey
++		return nil
++	}
++}
++
++func (unixfsOpts) PeerId(peerId string) UnixfsAddOption {
++	return func(settings *UnixfsAddSettings) error {
++		settings.PeerId = peerId
 +		return nil
 +	}
 +}
