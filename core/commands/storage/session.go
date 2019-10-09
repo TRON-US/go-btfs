@@ -58,7 +58,7 @@ type Chunk struct {
 	Payer     peer.ID
 	Receiver  peer.ID
 	Price     int64
-	State     string
+	State     int
 	Proof     string
 	Time      time.Time
 	Err       error
@@ -253,7 +253,7 @@ func (ss *Session) GetOrDefault(hash string) *Chunk {
 		c := &Chunk{}
 		c.RetryChan = make(chan *StepRetryChan)
 		c.Time = time.Now()
-		c.State = "init"
+		c.State = InitState
 		ss.ChunkInfo[hash] = c
 		return c
 	}
@@ -305,7 +305,7 @@ func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
 	c.Time = time.Now()
 }
 
-func (c *Chunk) SetState(state string) {
+func (c *Chunk) SetState(state int) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -317,7 +317,7 @@ func (c *Chunk) GetState() string {
 	c.Lock()
 	defer c.Unlock()
 
-	return c.State
+	return StdChunkStateFlow[c.State].State
 }
 
 func (c *Chunk) SetPrice(price int64) {

@@ -303,7 +303,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						}
 						curState = chunkRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
-							chunkInfo.SetState(storage.StdChunkStateFlow[curState].State)
+							chunkInfo.SetState(curState)
 						}
 					}
 				case <-time.After(storage.StdChunkStateFlow[curState].TimeOut):
@@ -366,7 +366,7 @@ func retryProcess(ctx context.Context, candidateHost *storage.HostNode, ss *stor
 	}
 
 	chunk.UpdateChunk(n.Identity, hostPid, channelID, p)
-	chunk.SetState(storage.StdChunkStateFlow[0].State)
+	chunk.SetState(storage.InitState)
 
 	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
 	// fail to connect with retry
@@ -503,7 +503,7 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 		chunkInfo := ss.GetOrDefault(chunkHash)
 		chunkInfo.UpdateChunk(pid, n.Identity, chID, price)
-		chunkInfo.SetState(storage.StdChunkStateFlow[storage.InitState].State)
+		chunkInfo.SetState(storage.InitState)
 
 		// build connection with ledger
 		channelInfo, err := getChannelInfo(req.Context, channelID)
@@ -519,7 +519,7 @@ the chunk and replies back to client for the next challenge step.`,
 }
 
 func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
-	chunkInfo.SetState(storage.StdChunkStateFlow[storage.UploadState].State)
+	chunkInfo.SetState(storage.UploadState)
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
@@ -541,7 +541,7 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	}
 
 	// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
-	chunkInfo.SetState(storage.StdChunkStateFlow[storage.ChallengeState].State)
+	chunkInfo.SetState(storage.ChallengeState)
 	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
 	if err != nil {
 		// Why timed out??????
@@ -559,7 +559,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 		storage.GlobalSession.Remove(ssID, chunkHash)
 	}
 	// compute challenge on host
-	chunkInfo.SetState(storage.StdChunkStateFlow[storage.SolveState].State)
+	chunkInfo.SetState(storage.SolveState)
 	sc := storage.NewStorageChallengeResponse(req.Context, n, api, r.ID)
 	hashToCid, err := cidlib.Parse(chunkHash)
 	if err != nil {
@@ -576,7 +576,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	chunkInfo.UpdateChallenge(sc)
 
 	// RemoteCall(user, CHID, CHR) to get signedPayment
-	chunkInfo.SetState(storage.StdChunkStateFlow[storage.VerifyState].State)
+	chunkInfo.SetState(storage.VerifyState)
 	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
 	if err != nil {
 		log.Error(err)
@@ -603,7 +603,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	}
 
 	// verify and sign
-	chunkInfo.SetState(storage.StdChunkStateFlow[storage.PaymentState].State)
+	chunkInfo.SetState(storage.PaymentState)
 	signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 	if err != nil {
 		log.Error("fail to verify and sign", err)
@@ -622,7 +622,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 		return
 	}
 
-	chunkInfo.SetState(storage.StdChunkStateFlow[storage.CompleteState].State)
+	chunkInfo.SetState(storage.CompleteState)
 	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
