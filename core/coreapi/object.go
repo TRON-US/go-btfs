@@ -132,18 +132,31 @@ func (api *ObjectAPI) Get(ctx context.Context, path ipath.Path) (ipld.Node, erro
 	return api.core().ResolveNode(ctx, path)
 }
 
-func (api *ObjectAPI) Data(ctx context.Context, path ipath.Path) (io.Reader, error) {
+func (api *ObjectAPI) Data(ctx context.Context, path ipath.Path, unixfs bool, meta bool) (io.Reader, io.Reader, error) {
 	nd, err := api.core().ResolveNode(ctx, path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	pbnd, ok := nd.(*dag.ProtoNode)
 	if !ok {
-		return nil, dag.ErrNotProtobuf
+		return nil, nil, dag.ErrNotProtobuf
 	}
 
-	return bytes.NewReader(pbnd.Data()), nil
+	if unixfs {
+		pData, metaData, err := ft.StripOffTokenMetadata(pbnd.Data())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if meta && metaData != nil {
+			return bytes.NewReader(pData), bytes.NewReader(metaData), nil
+		} else {
+			return bytes.NewReader(pData), nil, nil
+		}
+	} else {
+		return bytes.NewReader(pbnd.Data()), nil, nil
+	}
 }
 
 func (api *ObjectAPI) Links(ctx context.Context, path ipath.Path) ([]*ipld.Link, error) {

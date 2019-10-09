@@ -16,6 +16,23 @@ import (
 )
 
 var GlobalSession *SessionMap
+var StdChunkStateFlow [7]*ChunkFlowControl
+
+const (
+	// chunk state
+	InitState      = 0
+	UploadState    = 1
+	ChallengeState = 2
+	SolveState     = 3
+	VerifyState    = 4
+	PaymentState   = 5
+	CompleteState  = 6
+)
+
+type ChunkFlowControl struct {
+	State   string
+	TimeOut time.Duration
+}
 
 type SessionMap struct {
 	sync.Mutex
@@ -30,6 +47,7 @@ type Session struct {
 	Status         string
 	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
 	CompleteChunks int
+	RetryQueue     *RetryQueue
 }
 
 type Chunk struct {
@@ -40,14 +58,45 @@ type Chunk struct {
 	Payer     peer.ID
 	Receiver  peer.ID
 	Price     int64
-	State     string
+	State     int
+	Proof     string
 	Time      time.Time
 	Err       error
+
+	RetryChan chan *StepRetryChan
+}
+
+type StepRetryChan struct {
+	CurrentStep int
+	Succeed     bool
+	ClientErr   error
+	HostErr     error
 }
 
 func init() {
 	GlobalSession = &SessionMap{}
 	GlobalSession.Map = make(map[string]*Session)
+	StdChunkStateFlow[InitState] = &ChunkFlowControl{
+		State:   "init",
+		TimeOut: 10 * time.Second}
+	StdChunkStateFlow[UploadState] = &ChunkFlowControl{
+		State:   "upload",
+		TimeOut: 5 * time.Second}
+	StdChunkStateFlow[ChallengeState] = &ChunkFlowControl{
+		State:   "challenge",
+		TimeOut: 10 * time.Second}
+	StdChunkStateFlow[SolveState] = &ChunkFlowControl{
+		State:   "solve",
+		TimeOut: 30 * time.Second}
+	StdChunkStateFlow[VerifyState] = &ChunkFlowControl{
+		State:   "verify",
+		TimeOut: time.Second}
+	StdChunkStateFlow[PaymentState] = &ChunkFlowControl{
+		State:   "payment",
+		TimeOut: 10 * time.Second}
+	StdChunkStateFlow[CompleteState] = &ChunkFlowControl{
+		State:   "complete",
+		TimeOut: 5 * time.Second}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *Session) {
@@ -112,6 +161,20 @@ func (ss *Session) new() {
 	ss.Time = time.Now()
 	ss.Status = "init"
 	ss.ChunkInfo = make(map[string]*Chunk)
+}
+
+func (ss *Session) SetRetryQueue(q *RetryQueue) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.RetryQueue = q
+}
+
+func (ss *Session) GetRetryQueue() *RetryQueue {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.RetryQueue
 }
 
 func (ss *Session) UpdateCompleteChunkNum(diff int) {
@@ -188,15 +251,16 @@ func (ss *Session) GetOrDefault(hash string) *Chunk {
 
 	if ss.ChunkInfo[hash] == nil {
 		c := &Chunk{}
+		c.RetryChan = make(chan *StepRetryChan)
 		c.Time = time.Now()
-		c.State = "init"
+		c.State = InitState
 		ss.ChunkInfo[hash] = c
 		return c
 	}
 	return ss.ChunkInfo[hash]
 }
 
-func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
+func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -204,7 +268,6 @@ func (c *Chunk) NewChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.
 	c.Payer = payerPid
 	c.Receiver = recvPid
 	c.Price = price
-	c.State = "init"
 	c.Time = time.Now()
 }
 
@@ -242,18 +305,19 @@ func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
 	c.Time = time.Now()
 }
 
-func (c *Chunk) SetState(state string) {
+func (c *Chunk) SetState(state int) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.State = state
+	c.Time = time.Now()
 }
 
 func (c *Chunk) GetState() string {
 	c.Lock()
 	defer c.Unlock()
 
-	return c.State
+	return StdChunkStateFlow[c.State].State
 }
 
 func (c *Chunk) SetPrice(price int64) {
@@ -268,4 +332,32 @@ func (c *Chunk) GetPrice() int64 {
 	defer c.Unlock()
 
 	return c.Price
+}
+
+func (c *Chunk) SetProof(proof string) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Proof = proof
+}
+
+func (c *Chunk) GetProof() string {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Proof
+}
+
+func (c *Chunk) SetTime(time time.Time) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Time = time
+}
+
+func (c *Chunk) GetTime() time.Time {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Time
 }
