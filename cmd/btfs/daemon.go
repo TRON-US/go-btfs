@@ -64,6 +64,7 @@ const (
 	enableMultiplexKwd        = "enable-mplex-experiment"
 	hValuekwd                 = "hval"
 	enableDataCollection      = "dc"
+	enableStartupTest         = "enable-startup-test"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -185,6 +186,7 @@ Headers.
 		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 		cmds.StringOption(hValuekwd, "The h value identifying the hosting bit torrent client"),
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
+		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(true),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
@@ -446,8 +448,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// The daemon is *finally* ready.
 	fmt.Printf("Daemon is ready\n")
+
+	runStartupTest, _ := req.Options[enableStartupTest].(bool)
+
 	// BTFS functional test
-	functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
+	if runStartupTest {
+		functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
+	}
 
 	//Begin sending analytics to hosted server
 	collectData, _ := req.Options[enableDataCollection].(bool)
@@ -889,7 +896,7 @@ func functest(statusServerDomain, peerId, hValue string) {
 		test_success = false
 		// try up to two times
 		for i := 0; i < 2; i++ {
-			if err := add_functest(btfsBinaryPath); err != nil {
+			if err := add_functest(btfsBinaryPath, peerId); err != nil {
 				fmt.Printf("BTFS daemon add file test failed! Reason: %v\n", err)
 				SendError(err.Error(), statusServerDomain, peerId, hValue)
 			} else {
