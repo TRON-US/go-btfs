@@ -186,7 +186,7 @@ Headers.
 		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 		cmds.StringOption(hValuekwd, "The h value identifying the hosting bit torrent client"),
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
-		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(true),
+		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
