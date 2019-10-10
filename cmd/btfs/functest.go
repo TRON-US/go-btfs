@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	testfile        = "QmZHeNJTU4jFzgBAouHSqbT2tyYJxgk6i15e7x5pudBune"
+	testfile        = "QmPdsdr4JznLs2FFFhjDbMzrnXmNfny8wpKXETKfbXdeK7"
 	testfilecontent = "Hello BTFS!"
 	timeoutSeconds  = 100
 )
