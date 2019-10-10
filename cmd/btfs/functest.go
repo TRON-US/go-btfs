@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -51,9 +52,13 @@ func get_functest(btfsBinaryPath string) error {
 		}
 	}()
 
-	out, err := cmd.Output()
+	var outbuf, errbuf bytes.Buffer
+	cmd.Stdout = &outbuf
+	cmd.Stderr = &errbuf
+
+	err = cmd.Run()
 	if err != nil {
-		return errors.New(fmt.Sprintf("btfs get test failed: [%v], Out[%s]", err, string(out)))
+		return errors.New(fmt.Sprintf("btfs get test failed: [%v], [%s]", err, errbuf.String()))
 	}
 
 	data, err := ioutil.ReadFile(dir + "/" + testfile)
@@ -71,20 +76,15 @@ func get_functest(btfsBinaryPath string) error {
 	return nil
 }
 
-func add_functest(btfsBinaryPath string) error {
-	// write btfs id command output to a file in current working directory
+func add_functest(btfsBinaryPath, peerId string) error {
+	// write btfs peerId and current time to a file in current working directory
 	// then btfs add that file for test
 	dir, err := os.Getwd()
 	if err != nil {
 		return errors.New(fmt.Sprintf("get working directory failed: [%v]", err))
 	}
 
-	cmd := exec.Command(btfsBinaryPath, "id")
-	out, err := cmd.Output()
-	if err != nil {
-		return errors.New(fmt.Sprintf("btfs add test: btfs id failed: [%v], Out[%s]", err, string(out)))
-	}
-
+	out := []byte(peerId + "\n")
 	// add current time stamp to file content so every time adding-file hash is different
 	currentTime := time.Now().String()
 	out = append(out, currentTime...)
@@ -96,7 +96,7 @@ func add_functest(btfsBinaryPath string) error {
 		return errors.New(fmt.Sprintf("btfs add test: write file failed: [%v]", err))
 	}
 
-	cmd = exec.Command(btfsBinaryPath, "add", filename)
+	cmd := exec.Command(btfsBinaryPath, "add", filename)
 
 	go func() {
 		time.Sleep(timeoutSeconds * time.Second)
@@ -119,12 +119,30 @@ func add_functest(btfsBinaryPath string) error {
 	}
 
 	addfilehash := s[1]
-	cmd = exec.Command(btfsBinaryPath, "cat", addfilehash)
+	// btfs get the file to compare with original file content
+	cmd = exec.Command(btfsBinaryPath, "get", "-o", dir, addfilehash)
 	out, err = cmd.Output()
+	if err != nil {
+		return errors.New(fmt.Sprintf("btfs add test failed: get file error [%v]\n", err))
+	}
 
-	if string(out) != string(origin) {
-		return errors.New(fmt.Sprintf("btfs add test failed: cat different content, btfs add file:[%s], btfs cat file:[%s]",
-			string(origin), string(out)))
+	path := dir + "/" + addfilehash
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Errorf("btfs add test: read file failed: [%v]\n", err)
+		return errors.New(fmt.Sprintf("btfs add test: read file failed: [%v]", err))
+	}
+
+	if string(data) != string(origin) {
+		return errors.New(fmt.Sprintf("btfs add test failed: get different content, btfs add file:[%s], btfs get file:[%s]",
+			string(origin), string(data)))
+	}
+
+	// clean up
+	err = os.Remove(path)
+	if err != nil {
+		// if not deleted, no need to fail the whole function
+		log.Errorf("btfs add test: clean up file failed: [%v]\n", err)
 	}
 
 	return nil
