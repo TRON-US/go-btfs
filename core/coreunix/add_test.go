@@ -23,7 +23,7 @@ import (
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	pi "github.com/ipfs/go-ipfs-posinfo"
 	dag "github.com/ipfs/go-merkledag"
 )

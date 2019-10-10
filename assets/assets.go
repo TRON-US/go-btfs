@@ -14,7 +14,7 @@ import (
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	cid "github.com/ipfs/go-cid"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 
 	// this import keeps gx from thinking the dep isn't used
 	_ "github.com/ipfs/dir-index-html"

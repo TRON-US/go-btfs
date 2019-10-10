@@ -11,7 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/ipfs/go-ipfs-files"
+	"github.com/TRON-US/go-btfs-files"
 )
 
 const (

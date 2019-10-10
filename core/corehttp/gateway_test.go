@@ -22,7 +22,7 @@ import (
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"

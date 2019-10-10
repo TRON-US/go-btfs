@@ -9,6 +9,7 @@ require (
 	github.com/TRON-US/go-btfs-chunker v0.2.0
 	github.com/TRON-US/go-btfs-cmds v0.1.4
 	github.com/TRON-US/go-btfs-config v0.1.6
+	github.com/TRON-US/go-btfs-files v0.1.0
 	github.com/TRON-US/go-mfs v0.2.1
 	github.com/TRON-US/go-unixfs v0.4.1
 	github.com/TRON-US/interface-go-btfs-core v0.3.8
@@ -49,7 +50,6 @@ require (
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
-	github.com/ipfs/go-ipfs-files v0.0.3
 	github.com/ipfs/go-ipfs-posinfo v0.0.1
 	github.com/ipfs/go-ipfs-provider v0.2.1
 	github.com/ipfs/go-ipfs-routing v0.1.0

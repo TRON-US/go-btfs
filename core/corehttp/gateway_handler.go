@@ -17,7 +17,7 @@ import (
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	dag "github.com/ipfs/go-merkledag"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"

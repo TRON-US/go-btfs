@@ -19,7 +19,7 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	merkledag "github.com/ipfs/go-merkledag"

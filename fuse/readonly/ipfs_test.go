@@ -27,7 +27,7 @@ import (
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	u "github.com/ipfs/go-ipfs-util"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"

@@ -29,6 +29,8 @@ github.com/TRON-US/go-btfs-cmds v0.1.4 h1:4IOd5mg1uN5bGHD0AVQiYzowi3dmCla7vxLV49
 github.com/TRON-US/go-btfs-cmds v0.1.4/go.mod h1:6uNzACG1sRDKNSQY93gQhU5aLD6+mQ2uj3d+qVog7MA=
 github.com/TRON-US/go-btfs-config v0.1.6 h1:Oh4K+6emXFgqP5aGWhSlvG75m8LB19b9kxdBH6TQ43M=
 github.com/TRON-US/go-btfs-config v0.1.6/go.mod h1:GdZW7SmAY3rVqYwcbYkMmKo27IihzezwEQQMDTftlU0=
+github.com/TRON-US/go-btfs-files v0.1.0 h1:sysSuBkw4sc2yq3YN/0E5u3mwpX4ImhsqLOZ+AVECG0=
+github.com/TRON-US/go-btfs-files v0.1.0/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
 github.com/TRON-US/go-mfs v0.2.1 h1:8M4F8eNdfRRW3iA4UM5V/Mki0BS9cmzuOefcBerOsP8=
 github.com/TRON-US/go-mfs v0.2.1/go.mod h1:++0mxQcc1Vjb49Tu3+SvIKfvY3HrC5onH5CctBf4iqQ=
 github.com/TRON-US/go-unixfs v0.3.0 h1:mbmSHVGZbkV5NVRuQHZ/Cw8BMta74GVeOY3TE76TvDE=

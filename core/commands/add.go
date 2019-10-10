@@ -13,7 +13,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/options"
-	"github.com/ipfs/go-ipfs-files"
+	"github.com/TRON-US/go-btfs-files"
 	mh "github.com/multiformats/go-multihash"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )

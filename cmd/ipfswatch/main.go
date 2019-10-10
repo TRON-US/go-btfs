@@ -17,7 +17,7 @@ import (
 
 	config "github.com/TRON-US/go-btfs-config"
 	fsnotify "github.com/fsnotify/fsnotify"
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	process "github.com/jbenet/goprocess"
 	homedir "github.com/mitchellh/go-homedir"
 )
