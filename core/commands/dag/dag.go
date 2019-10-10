@@ -10,10 +10,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/coredag"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	files "github.com/TRON-US/go-btfs-files"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
-	files "github.com/TRON-US/go-btfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
 	ipfspath "github.com/ipfs/go-path"
 	mh "github.com/multiformats/go-multihash"

@@ -9,9 +9,9 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs-files"
 	"github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/TRON-US/go-btfs-files"
 )
 
 const (

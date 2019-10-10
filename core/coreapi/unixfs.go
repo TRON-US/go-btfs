@@ -8,6 +8,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
+	files "github.com/TRON-US/go-btfs-files"
 	mfs "github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	unixfile "github.com/TRON-US/go-unixfs/file"
@@ -19,7 +20,6 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	files "github.com/TRON-US/go-btfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	merkledag "github.com/ipfs/go-merkledag"
