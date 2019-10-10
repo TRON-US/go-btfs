@@ -47,11 +47,6 @@ const (
 	hostStorageInfoPrefix = "/host_storage/" // self or from network
 
 	defaultRepFactor = 3
-	// session status
-	initStatus     = "init"
-	uploadStatus   = "upload"
-	completeStatus = "complete"
-	errStatus      = "error"
 
 	// retry limit
 	RetryLimit = 3
@@ -131,7 +126,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		lf, _ := req.Options[leafHashOptionName].(bool)
 		if lf == false {
 			if len(req.Arguments) != 1 {
-				return fmt.Errorf("need one and only one root hash.")
+				return fmt.Errorf("need one and only one root hash")
 			}
 			// get leaf hashes
 			rootHash = req.Arguments[0]
@@ -162,6 +157,18 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			// TODO: Select best price from top candidates
 			price = int64(1)
 		}
+
+		// start new session
+		sm := storage.GlobalSession
+		ssID, err := storage.NewSessionID()
+		if err != nil {
+			return err
+		}
+		ss := sm.GetOrDefault(ssID)
+		ss.SetFileHash(rootHash)
+		ss.SetStatus(storage.InitStatus)
+		go controlSessionTimeout(ss)
+
 		// get hosts/peers
 		var peers []string
 		// init retry queue
@@ -226,15 +233,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
-		// start new session
-		sm := storage.GlobalSession
-		ssID, err := storage.NewSessionID()
-		if err != nil {
-			return err
-		}
-		ss := sm.GetOrDefault(ssID)
-		ss.SetFileHash(rootHash)
-		ss.SetStatus(initStatus)
+
 
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
@@ -253,6 +252,36 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	Type: UploadRes{},
 }
 
+
+func controlSessionTimeout(ss *storage.Session)  {
+	// error is special std flow, will not be counted in here
+	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow) - 1; {
+		select {
+		case sessionState := <-ss.TimeOutChan:
+			if sessionState.Succeed {
+				curStatus = sessionState.CurrentStep + 1
+			} else {
+				ss.SetStatus(storage.ErrStatus)
+			}
+		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
+			ss.SetStatus(storage.ErrStatus)
+			// sending each chunk channel with terminate signal if they are in progress
+			// otherwise no chunk channel would be there receiving
+			for _, chunkInfo := range ss.ChunkInfo {
+				go func(chunkInfo *storage.Chunk) {
+					if chunkInfo.GetState() != storage.StdChunkStateFlow[storage.CompleteState].State {
+						chunkInfo.RetryChan <- &storage.StepRetryChan{
+							Succeed:false,
+							SessionTimeOurErr:fmt.Errorf("session timeout"),
+						}
+					}
+				}(chunkInfo)
+			}
+			return
+		}
+	}
+}
+
 func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p int64, ssID string) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
@@ -265,7 +294,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 		go func(chunkHash string, chunkInfo *storage.Chunk) {
 			candidateHost, err := getValidHost(retryQueue)
 			if err != nil {
-				ss.SetStatus(errStatus)
+				sendSessionStatusChan(ss.TimeOutChan, storage.InitStatus, false, err)
 				return
 			}
 
@@ -277,11 +306,14 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 				select {
 				case chunkRes := <-chunkInfo.RetryChan:
 					if !chunkRes.Succeed {
+						// receiving session time out signal, directly return
+						if chunkRes.SessionTimeOurErr != nil {
+							return
+						}
 						// if client itself has some error, no matter how many times it tries,
 						// it will fail again, in this case, we don't need retry
 						if chunkRes.ClientErr != nil {
-							log.Error(chunkRes.ClientErr)
-							ss.SetStatus(errStatus)
+							sendSessionStatusChan(ss.TimeOutChan, storage.UploadStatus, false, chunkRes.ClientErr)
 							return
 						}
 						// if host error, retry
@@ -297,9 +329,10 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						// if success with current state, move on to next
 						log.Debug("succeed to pass state ", storage.StdChunkStateFlow[curState].State)
 						// upload status change happens when one of the chunks turning from init to upload
-						if curState == storage.InitState && ss.GetStatus() != initStatus {
-							ss.SetStatus(uploadStatus)
+						// only the first chunk changing state from init can change session status
+						if curState == storage.InitState && ss.CompareAndSwap(storage.InitStatus, storage.UploadStatus) {
 							// TODO: add another go routine to check if session upload state timeout
+							sendSessionStatusChan(ss.TimeOutChan, storage.UploadStatus, true, nil)
 						}
 						curState = chunkRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
@@ -316,6 +349,14 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 				}
 			}
 		}(chunkHash, chunkInfo)
+	}
+}
+
+func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error)  {
+	channel <- storage.StatusChan{
+		CurrentStep:status,
+		Succeed:succeed,
+		Err:err,
 	}
 }
 
@@ -433,7 +474,11 @@ var storageUploadProofCmd = &cmds.Command{
 
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
-			ss.SetStatus(completeStatus)
+			ss.TimeOutChan <- storage.StatusChan{
+				CurrentStep:storage.CompleteStatus,
+				Succeed:true,
+			}
+			ss.SetStatus(storage.CompleteStatus)
 		}
 		return nil
 	},
@@ -492,7 +537,7 @@ the chunk and replies back to client for the next challenge step.`,
 		// build session
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID)
-		ss.SetStatus(initStatus)
+		ss.SetStatus(storage.InitStatus)
 		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
 		if err != nil {
 			sm.Remove(ssID, "")
