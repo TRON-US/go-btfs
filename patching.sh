@@ -50,6 +50,20 @@ if ! patch -R -s -f --dry-run $patchdir/record.go < ./patches/go-ipns-v.0.0.1-re
     patch $patchdir/record.go < ./patches/go-ipns-v.0.0.1-record.go.patch;
 fi
 
+# patching $GOPATH/pkg/mod/github.com/ipfs/@v0.1.0
+patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0
+chmod -R 777 $patchdir
+if ! patch -R -s -f --dry-run $patchdir/unixfs.go < ./patches/interface-go-ipfs-core-v0.1.0-iface-unixfs.go.patch 1>/dev/null; then
+    patch $patchdir/unixfs.go < ./patches/interface-go-ipfs-core-v0.1.0-iface-unixfs.go.patch;
+fi
+
+# patching $GOPATH/pkg/mod/github.com/ipfs/@v0.1.0
+patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0
+chmod -R 777 $patchdir
+if ! patch -R -s -f --dry-run $patchdir/options/unixfs.go < ./patches/interface-go-ipfs-core-v0.1.0-options-unixfs.go.patch 1>/dev/null; then
+    patch $patchdir/options/unixfs.go < ./patches/interface-go-ipfs-core-v0.1.0-options-unixfs.go.patch;
+fi
+
 # patching test
 patchdir=$GOPATH/pkg/mod/github.com/ipfs/interface-go-ipfs-core@v0.1.0
 cp ./patches/test/interface-go-ipfs-core.patch $patchdir

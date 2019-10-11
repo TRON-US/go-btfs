@@ -2,38 +2,73 @@ package coreapi
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"github.com/TRON-US/go-btfs/ecies"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"io/ioutil"
 
 	"github.com/TRON-US/go-btfs/core"
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
-	blockservice "github.com/ipfs/go-blockservice"
-	cid "github.com/ipfs/go-cid"
-	cidutil "github.com/ipfs/go-cidutil"
+	"github.com/ipfs/go-blockservice"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cidutil"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
+	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
-	merkledag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
-	mfs "github.com/ipfs/go-mfs"
+	"github.com/ipfs/go-mfs"
 	ft "github.com/ipfs/go-unixfs"
 	unixfile "github.com/ipfs/go-unixfs/file"
 	uio "github.com/ipfs/go-unixfs/io"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/ipfs/interface-go-ipfs-core/options"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 type UnixfsAPI CoreAPI
 
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
-func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
+func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
 	settings, prefix, err := options.UnixfsAddOptions(opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if settings.Encrypt {
+		pubKey := settings.Pubkey
+		if pubKey == "" {
+			peerId := settings.PeerId
+			if peerId == "" {
+				peerId = api.identity.Pretty()
+			}
+			pubKey, err = peerId2pubkey(peerId)
+			if err != nil {
+				return nil, err
+			}
+		}
+		log.Infof("The file will be encrypted with pubkey: %s", settings.Pubkey)
+		switch f := node.(type) {
+		case files.File:
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
+			}
+
+			ciphertext, err := ecies.Encrypt(pubKey, bytes)
+			if err != nil {
+				return nil, err
+			}
+
+			node = files.NewBytesFile([]byte(ciphertext))
+		default:
+		}
 	}
 
 	cfg, err := api.repo.Config()
@@ -122,7 +157,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 		fileAdder.SetMfsRoot(mr)
 	}
 
-	nd, err := fileAdder.AddAllAndPin(files)
+	nd, err := fileAdder.AddAllAndPin(node)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +165,14 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	if err := api.provider.Provide(nd.Cid()); err != nil {
 		return nil, err
 	}
-
 	return path.IpfsPath(nd.Cid()), nil
 }
 
-func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) {
+func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.UnixfsGetOption) (files.Node, error) {
+	settings, err := options.UnixfsGetOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
@@ -142,7 +180,43 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) 
 		return nil, err
 	}
 
-	return unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+	node, err := unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+
+	if settings.Decrypt {
+		privKey := settings.PrivateKey
+		var bytes []byte
+		if privKey == "" {
+			bytes, err = api.privateKey.Bytes()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			bytes, err = base64.StdEncoding.DecodeString(privKey)
+			if err != nil {
+				bytes, err = hex.DecodeString(privKey)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		privKey = hex.EncodeToString(bytes[4:])
+		switch f := node.(type) {
+		case files.File:
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
+			}
+
+			s, err := ecies.Decrypt(privKey, bytes)
+			if err != nil {
+				return nil, err
+			}
+			node = files.NewBytesFile([]byte(s))
+		default:
+		}
+	}
+
+	return node, err
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
@@ -250,4 +324,21 @@ func (api *UnixfsAPI) lsFromLinks(ctx context.Context, ndlinks []*ipld.Link, set
 
 func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
+}
+
+func peerId2pubkey(peerId string) (string, error) {
+	id, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return "", err
+	}
+	publicKey, err := id.ExtractPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	bytes, err := publicKey.Bytes()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes[4:]), nil
 }
