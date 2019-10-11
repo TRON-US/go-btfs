@@ -15,6 +15,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
 	github.com/fatih/color v1.7.0 // indirect
+	github.com/fomichev/secp256k1 v0.0.0-20180413221153-00116ff8c62f
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ole/go-ole v1.2.4 // indirect
@@ -112,6 +113,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7
+	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
@@ -127,6 +129,7 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
+	golang.org/x/crypto v0.0.0-20190618222545-ea8f1a30c443
 	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
