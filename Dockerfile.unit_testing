@@ -4,6 +4,7 @@ MAINTAINER TRON-US <support@tron.network>
 # Use the regular Dockerfile to run a btfs daemon instead
 
 ENV SRC_DIR /go-btfs
+ENV TEST_NO_FUSE 1
 
 #set timeout value for unit tests
 ENV GOTFLAGS -timeout 3m
