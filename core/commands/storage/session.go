@@ -82,10 +82,10 @@ type Chunk struct {
 }
 
 type StepRetryChan struct {
-	CurrentStep int
-	Succeed     bool
-	ClientErr   error
-	HostErr     error
+	CurrentStep       int
+	Succeed           bool
+	ClientErr         error
+	HostErr           error
 	SessionTimeOurErr error
 }
 
@@ -98,7 +98,7 @@ func init() {
 		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[UploadState] = &FlowControl{
 		State:   "upload",
-		TimeOut: 5 * time.Second}
+		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[ChallengeState] = &FlowControl{
 		State:   "challenge",
 		TimeOut: 10 * time.Second}
@@ -117,7 +117,7 @@ func init() {
 	// init session status
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
-		TimeOut: 5 * time.Second}
+		TimeOut: time.Minute}
 	StdSessionStateFlow[UploadStatus] = &FlowControl{
 		State:   "upload",
 		TimeOut: 5 * time.Minute}
@@ -125,8 +125,8 @@ func init() {
 		State:   "complete",
 		TimeOut: 5 * time.Second}
 	StdSessionStateFlow[ErrStatus] = &FlowControl{
-		State:   "error",
-		}
+		State: "error",
+	}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *Session) {

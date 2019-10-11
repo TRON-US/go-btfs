@@ -234,7 +234,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
 
@@ -252,10 +251,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	Type: UploadRes{},
 }
 
-
-func controlSessionTimeout(ss *storage.Session)  {
+func controlSessionTimeout(ss *storage.Session) {
 	// error is special std flow, will not be counted in here
-	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow) - 1; {
+	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-1; {
 		select {
 		case sessionState := <-ss.TimeOutChan:
 			if sessionState.Succeed {
@@ -271,8 +269,8 @@ func controlSessionTimeout(ss *storage.Session)  {
 				go func(chunkInfo *storage.Chunk) {
 					if chunkInfo.GetState() != storage.StdChunkStateFlow[storage.CompleteState].State {
 						chunkInfo.RetryChan <- &storage.StepRetryChan{
-							Succeed:false,
-							SessionTimeOurErr:fmt.Errorf("session timeout"),
+							Succeed:           false,
+							SessionTimeOurErr: fmt.Errorf("session timeout"),
 						}
 					}
 				}(chunkInfo)
@@ -352,11 +350,11 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 	}
 }
 
-func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error)  {
+func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error) {
 	channel <- storage.StatusChan{
-		CurrentStep:status,
-		Succeed:succeed,
-		Err:err,
+		CurrentStep: status,
+		Succeed:     succeed,
+		Err:         err,
 	}
 }
 
@@ -475,8 +473,8 @@ var storageUploadProofCmd = &cmds.Command{
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
 			ss.TimeOutChan <- storage.StatusChan{
-				CurrentStep:storage.CompleteStatus,
-				Succeed:true,
+				CurrentStep: storage.CompleteStatus,
+				Succeed:     true,
 			}
 			ss.SetStatus(storage.CompleteStatus)
 		}
