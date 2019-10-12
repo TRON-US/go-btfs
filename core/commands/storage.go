@@ -1035,7 +1035,7 @@ Mode options include:
 		if err != nil {
 			return err
 		}
-		err = syncHosts(n, mode)
+		err = SyncHosts(n, mode)
 		return err
 	},
 }
@@ -1103,7 +1103,7 @@ By default it shows local host node information.`,
 	Type: StorageHostInfoRes{},
 }
 
-func syncHosts(node *core.IpfsNode, mode string) error {
+func SyncHosts(node *core.IpfsNode, mode string) error {
 	nodes, err := hub.QueryHub(node.Identity.Pretty(), mode)
 	if err != nil {
 		return err

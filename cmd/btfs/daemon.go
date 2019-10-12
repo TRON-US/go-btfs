@@ -462,6 +462,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	// Spin jobs in the background
 	spin.Analytics(node, version.CurrentVersionNumber, hValue, env)
+	spin.Hosts(node)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
