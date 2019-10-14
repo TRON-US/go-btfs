@@ -15,8 +15,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/e"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	files "github.com/TRON-US/go-btfs-files"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	files "github.com/ipfs/go-ipfs-files"
 	"github.com/whyrusleeping/tar-utils"
 	"gopkg.in/cheggaaa/pb.v1"
 )

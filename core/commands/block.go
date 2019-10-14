@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 
 	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
