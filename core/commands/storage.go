@@ -254,7 +254,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 func controlSessionTimeout(ss *storage.Session) {
 	// error is special std flow, will not be counted in here
 	// and complete status don't need to wait for signal coming
-	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow) - 2; {
+	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-2; {
 		select {
 		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {

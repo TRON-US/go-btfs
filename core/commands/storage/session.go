@@ -122,7 +122,7 @@ func init() {
 		State:   "upload",
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[CompleteStatus] = &FlowControl{
-		State:   "complete"}
+		State: "complete"}
 	StdSessionStateFlow[ErrStatus] = &FlowControl{
 		State: "error",
 	}
