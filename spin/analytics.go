@@ -8,10 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands"
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/ipfs/go-bitswap"
 	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
@@ -93,11 +91,11 @@ func durationToSeconds(duration time.Duration) uint64 {
 }
 
 //Analytics starts the process to collect data and starts the GoRoutine for constant collection
-func Analytics(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environment) {
-	if n == nil {
+func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
+	if node == nil {
 		return
 	}
-	configuration, err := n.Repo.Config()
+	configuration, err := node.Repo.Config()
 	if err != nil {
 		return
 	}
@@ -105,7 +103,7 @@ func Analytics(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environmen
 	statusServerDomain = configuration.StatusServerDomain
 
 	dc := new(dataCollection)
-	dc.node = n
+	dc.node = node
 
 	if configuration.Experimental.Analytics {
 		infoStats, err := cpu.Info()
@@ -116,34 +114,28 @@ func Analytics(n *core.IpfsNode, BTFSVersion, hValue string, env cmds.Environmen
 		}
 
 		dc.startTime = time.Now()
-		if n.Identity == "" {
+		if node.Identity == "" {
 			return
 		}
-		dc.NodeID = n.Identity.Pretty()
+		dc.NodeID = node.Identity.Pretty()
 		dc.HVal = hValue
 		dc.BTFSVersion = BTFSVersion
 		dc.OSType = runtime.GOOS
 		dc.ArchType = runtime.GOARCH
 	}
 
-	go dc.collectionAgent(env)
+	go dc.collectionAgent(node)
 }
 
-func (dc *dataCollection) update(env cmds.Environment) {
+func (dc *dataCollection) update(node *core.IpfsNode) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-
-	// get config info
-	node, err := cmdenv.GetNode(env)
-	if err != nil {
-		log.Warning(err.Error())
-		return
-	}
 	rds := node.Repo.Datastore()
 	b, err := rds.Get(commands.GetHostStorageKey(node.Identity.Pretty()))
 	if err != nil && err != ds.ErrNotFound {
 		dc.reportHealthAlert(fmt.Sprintf("cannot get selfKey: %s", err.Error()))
 	}
+
 	var ns info.NodeStorage
 	if err == nil {
 		err = json.Unmarshal(b, &ns)
@@ -192,8 +184,8 @@ func (dc *dataCollection) update(env cmds.Environment) {
 	dc.NumPeers = uint64(len(st.Peers))
 }
 
-func (dc *dataCollection) sendData(env cmds.Environment) {
-	dc.update(env)
+func (dc *dataCollection) sendData(node *core.IpfsNode) {
+	dc.update(node)
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
@@ -239,14 +231,14 @@ func (dc *dataCollection) sendData(env cmds.Environment) {
 	defer res.Body.Close()
 }
 
-func (dc *dataCollection) collectionAgent(env cmds.Environment) {
+func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	tick := time.NewTicker(heartBeat)
 
 	defer tick.Stop()
 
 	config, _ := dc.node.Repo.Config()
 	if config.Experimental.Analytics {
-		dc.sendData(env)
+		dc.sendData(node)
 	}
 	// make the configuration available in the for loop
 	for range tick.C {
@@ -254,7 +246,7 @@ func (dc *dataCollection) collectionAgent(env cmds.Environment) {
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection
 		if config.Experimental.Analytics {
-			dc.sendData(env)
+			dc.sendData(node)
 		}
 	}
 }

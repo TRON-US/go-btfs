@@ -21,7 +21,7 @@ func Hosts(node *core.IpfsNode) {
 
 	if configuration.Experimental.HostsSyncEnabled {
 		m := configuration.Experimental.HostsSyncMode
-		fmt.Printf("Hosts info will be synced at [%s] mode...", m)
+		fmt.Printf("Hosts info will be synced at [%s] mode", m)
 
 		go perodicSyncHosts(node, m)
 	}
@@ -30,7 +30,6 @@ func Hosts(node *core.IpfsNode) {
 func perodicSyncHosts(node *core.IpfsNode, mode string) {
 	tick := time.NewTicker(syncPeriod)
 	defer tick.Stop()
-	// make the configuration available in the for loop
 	for range tick.C {
 		err := commands.SyncHosts(node, mode)
 		if err != nil {

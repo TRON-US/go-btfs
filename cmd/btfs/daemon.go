@@ -461,7 +461,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		node.Repo.SetConfigKey("Experimental.Analytics", dc)
 	}
 	// Spin jobs in the background
-	spin.Analytics(node, version.CurrentVersionNumber, hValue, env)
+	spin.Analytics(node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node)
 
 	// Give the user some immediate feedback when they hit C-c
