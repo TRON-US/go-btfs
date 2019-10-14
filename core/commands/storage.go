@@ -255,11 +255,12 @@ func controlSessionTimeout(ss *storage.Session) {
 	// error is special std flow, will not be counted in here
 	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-1; {
 		select {
-		case sessionState := <-ss.TimeOutChan:
+		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {
 				curStatus = sessionState.CurrentStep + 1
 			} else {
 				ss.SetStatus(storage.ErrStatus)
+				return
 			}
 		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
 			ss.SetStatus(storage.ErrStatus)
@@ -292,7 +293,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 		go func(chunkHash string, chunkInfo *storage.Chunk) {
 			candidateHost, err := getValidHost(retryQueue)
 			if err != nil {
-				sendSessionStatusChan(ss.TimeOutChan, storage.InitStatus, false, err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
 
@@ -311,7 +312,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						// if client itself has some error, no matter how many times it tries,
 						// it will fail again, in this case, we don't need retry
 						if chunkRes.ClientErr != nil {
-							sendSessionStatusChan(ss.TimeOutChan, storage.UploadStatus, false, chunkRes.ClientErr)
+							sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, chunkRes.ClientErr)
 							return
 						}
 						// if host error, retry
@@ -330,7 +331,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						// only the first chunk changing state from init can change session status
 						if curState == storage.InitState && ss.CompareAndSwap(storage.InitStatus, storage.UploadStatus) {
 							// TODO: add another go routine to check if session upload state timeout
-							sendSessionStatusChan(ss.TimeOutChan, storage.UploadStatus, true, nil)
+							sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, true, nil)
 						}
 						curState = chunkRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
@@ -472,7 +473,7 @@ var storageUploadProofCmd = &cmds.Command{
 
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
-			ss.TimeOutChan <- storage.StatusChan{
+			ss.SessionStatusChan <- storage.StatusChan{
 				CurrentStep: storage.CompleteStatus,
 				Succeed:     true,
 			}

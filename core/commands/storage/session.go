@@ -56,7 +56,7 @@ type Session struct {
 	CompleteChunks int
 	RetryQueue     *RetryQueue
 
-	TimeOutChan chan StatusChan
+	SessionStatusChan chan StatusChan
 }
 
 type StatusChan struct {
@@ -191,7 +191,7 @@ func (ss *Session) new() {
 	ss.Time = time.Now()
 	ss.Status = "init"
 	ss.ChunkInfo = make(map[string]*Chunk)
-	ss.TimeOutChan = make(chan StatusChan)
+	ss.SessionStatusChan = make(chan StatusChan)
 }
 
 func (ss *Session) CompareAndSwap(desiredStatus int, targetStatus int) bool {
