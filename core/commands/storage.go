@@ -1102,43 +1102,8 @@ Mode options include:
 		if err != nil {
 			return err
 		}
-
-		nodes, err := hub.QueryHub(n.Identity.Pretty(), mode)
-		if err != nil {
-			return err
-		}
-
-		rds := n.Repo.Datastore()
-
-		// Dumb strategy right now: remove all existing and add the new ones
-		// TODO: Update by timestamp and only overwrite updated
-		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
-		if err != nil {
-			return err
-		}
-
-		for r := range qr.Next() {
-			if r.Error != nil {
-				return r.Error
-			}
-			err := rds.Delete(newKeyHelper(r.Entry.Key))
-			if err != nil {
-				return err
-			}
-		}
-
-		for i, ni := range nodes {
-			b, err := json.Marshal(ni)
-			if err != nil {
-				return err
-			}
-			err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		err = SyncHosts(n, mode)
+		return err
 	},
 }
 
@@ -1203,6 +1168,45 @@ By default it shows local host node information.`,
 		})
 	},
 	Type: StorageHostInfoRes{},
+}
+
+func SyncHosts(node *core.IpfsNode, mode string) error {
+	nodes, err := hub.QueryHub(node.Identity.Pretty(), mode)
+	if err != nil {
+		return err
+	}
+
+	rds := node.Repo.Datastore()
+
+	// Dumb strategy right now: remove all existing and add the new ones
+	// TODO: Update by timestamp and only overwrite updated
+	qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+	if err != nil {
+		return err
+	}
+
+	for r := range qr.Next() {
+		if r.Error != nil {
+			return r.Error
+		}
+		err := rds.Delete(newKeyHelper(r.Entry.Key))
+		if err != nil {
+			return err
+		}
+	}
+
+	for i, ni := range nodes {
+		b, err := json.Marshal(ni)
+		if err != nil {
+			return err
+		}
+		err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type StorageHostInfoRes struct {

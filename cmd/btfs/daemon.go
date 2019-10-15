@@ -16,7 +16,6 @@ import (
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
-	"github.com/TRON-US/go-btfs/analytics"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
@@ -29,6 +28,7 @@ import (
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
+	"github.com/TRON-US/go-btfs/spin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/hashicorp/go-multierror"
@@ -185,7 +185,7 @@ Headers.
 		cmds.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
 		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 		cmds.StringOption(hValuekwd, "The h value identifying the hosting bit torrent client"),
-		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
+		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics.").WithDefault(nil),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
@@ -456,10 +456,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
 	}
 
-	//Begin sending analytics to hosted server
-	collectData, _ := req.Options[enableDataCollection].(bool)
-	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
-	analytics.Initialize(node, version.CurrentVersionNumber, hValue, env)
+	// set Analytics flag if specified
+	if dc, _ := req.Options[enableDataCollection]; dc != nil {
+		node.Repo.SetConfigKey("Experimental.Analytics", dc)
+	}
+	// Spin jobs in the background
+	spin.Analytics(node, version.CurrentVersionNumber, hValue)
+	spin.Hosts(node)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
