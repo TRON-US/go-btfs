@@ -15,13 +15,13 @@ const (
 func Hosts(node *core.IpfsNode) {
 	configuration, err := node.Repo.Config()
 	if err != nil {
-		fmt.Printf("Failed to get configuration %s\n", err)
+		log.Errorf("Failed to get configuration %s", err)
 		return
 	}
 
 	if configuration.Experimental.HostsSyncEnabled {
 		m := configuration.Experimental.HostsSyncMode
-		fmt.Printf("Hosts info will be synced at [%s] mode", m)
+		fmt.Printf("Hosts info will be synced at [%s] mode\n", m)
 
 		go perodicSyncHosts(node, m)
 	}
@@ -33,7 +33,7 @@ func perodicSyncHosts(node *core.IpfsNode, mode string) {
 	for range tick.C {
 		err := commands.SyncHosts(node, mode)
 		if err != nil {
-			fmt.Println("Failed to sync hosts: ", err)
+			log.Errorf("Failed to sync hosts: %s", err)
 		}
 	}
 }

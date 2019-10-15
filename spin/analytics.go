@@ -60,7 +60,7 @@ type healthData struct {
 
 //Server URL for data collection
 var (
-	log                = logging.Logger("analytics")
+	log                = logging.Logger("spin")
 	statusServerDomain string
 )
 

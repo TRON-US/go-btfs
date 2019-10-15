@@ -8,7 +8,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/TRON-US/go-btfs-chunker v0.2.1
 	github.com/TRON-US/go-btfs-cmds v0.1.5
-	github.com/TRON-US/go-btfs-config v0.1.6
+	github.com/TRON-US/go-btfs-config v0.1.7
 	github.com/TRON-US/go-btfs-files v0.1.1
 	github.com/TRON-US/go-mfs v0.2.1
 	github.com/TRON-US/go-unixfs v0.4.2
