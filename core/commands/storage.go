@@ -234,7 +234,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
 
@@ -252,16 +251,18 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	Type: UploadRes{},
 }
 
-
-func controlSessionTimeout(ss *storage.Session)  {
+func controlSessionTimeout(ss *storage.Session) {
 	// error is special std flow, will not be counted in here
-	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow) - 1; {
+	// and complete status don't need to wait for signal coming
+	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-2; {
 		select {
-		case sessionState := <-ss.TimeOutChan:
+		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {
 				curStatus = sessionState.CurrentStep + 1
+				ss.SetStatus(curStatus)
 			} else {
 				ss.SetStatus(storage.ErrStatus)
+				return
 			}
 		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
 			ss.SetStatus(storage.ErrStatus)
@@ -271,8 +272,8 @@ func controlSessionTimeout(ss *storage.Session)  {
 				go func(chunkInfo *storage.Chunk) {
 					if chunkInfo.GetState() != storage.StdChunkStateFlow[storage.CompleteState].State {
 						chunkInfo.RetryChan <- &storage.StepRetryChan{
-							Succeed:false,
-							SessionTimeOurErr:fmt.Errorf("session timeout"),
+							Succeed:           false,
+							SessionTimeOurErr: fmt.Errorf("session timeout"),
 						}
 					}
 				}(chunkInfo)
@@ -294,7 +295,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 		go func(chunkHash string, chunkInfo *storage.Chunk) {
 			candidateHost, err := getValidHost(retryQueue)
 			if err != nil {
-				sendSessionStatusChan(ss.TimeOutChan, storage.InitStatus, false, err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
 
@@ -313,7 +314,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						// if client itself has some error, no matter how many times it tries,
 						// it will fail again, in this case, we don't need retry
 						if chunkRes.ClientErr != nil {
-							sendSessionStatusChan(ss.TimeOutChan, storage.UploadStatus, false, chunkRes.ClientErr)
+							sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, chunkRes.ClientErr)
 							return
 						}
 						// if host error, retry
@@ -331,8 +332,8 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						// upload status change happens when one of the chunks turning from init to upload
 						// only the first chunk changing state from init can change session status
 						if curState == storage.InitState && ss.CompareAndSwap(storage.InitStatus, storage.UploadStatus) {
-							// TODO: add another go routine to check if session upload state timeout
-							sendSessionStatusChan(ss.TimeOutChan, storage.UploadStatus, true, nil)
+							// notice monitor current init status finish and to start calculating upload timeout
+							sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 						}
 						curState = chunkRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
@@ -352,11 +353,11 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 	}
 }
 
-func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error)  {
+func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error) {
 	channel <- storage.StatusChan{
-		CurrentStep:status,
-		Succeed:succeed,
-		Err:err,
+		CurrentStep: status,
+		Succeed:     succeed,
+		Err:         err,
 	}
 }
 
@@ -474,11 +475,8 @@ var storageUploadProofCmd = &cmds.Command{
 
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
-			ss.TimeOutChan <- storage.StatusChan{
-				CurrentStep:storage.CompleteStatus,
-				Succeed:true,
-			}
-			ss.SetStatus(storage.CompleteStatus)
+			// only if all chunks upload success, send the signal to finish current status
+			sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, true, nil)
 		}
 		return nil
 	},
@@ -538,6 +536,7 @@ the chunk and replies back to client for the next challenge step.`,
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID)
 		ss.SetStatus(storage.InitStatus)
+		go controlSessionTimeout(ss)
 		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
 		if err != nil {
 			sm.Remove(ssID, "")
@@ -553,21 +552,27 @@ the chunk and replies back to client for the next challenge step.`,
 		// build connection with ledger
 		channelInfo, err := getChannelInfo(req.Context, channelID)
 		if err != nil {
+			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 			sm.Remove(ssID, "")
 			return err
 		}
 		log.Debug("Verified channel:", channelInfo)
 
+		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 		go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
 		return nil
 	},
 }
 
 func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
+	sm := storage.GlobalSession
+	ss := sm.GetOrDefault(ssID)
+
 	chunkInfo.SetState(storage.UploadState)
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -575,12 +580,14 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	file, err := api.Unixfs().Get(context.Background(), p)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -589,8 +596,8 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 	chunkInfo.SetState(storage.ChallengeState)
 	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
 	if err != nil {
-		// Why timed out??????
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -598,9 +605,13 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 }
 
 func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
+	sm := storage.GlobalSession
+	ss := sm.GetOrDefault(ssID)
+
 	r := ChallengeRes{}
 	if err := json.Unmarshal(resBytes, &r); err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 	}
 	// compute challenge on host
@@ -609,11 +620,13 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	hashToCid, err := cidlib.Parse(chunkHash)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 	if err := sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -625,17 +638,22 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
 
-	go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid, req)
+	go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid)
 }
 
-func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, req *cmds.Request) {
+func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID) {
+	sm := storage.GlobalSession
+	ss := sm.GetOrDefault(ssID)
+
 	payment := PaymentRes{}
 	if err := json.Unmarshal(resBytes, &payment); err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -643,6 +661,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	err := proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -652,6 +671,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
 	if err != nil {
 		log.Error("fail to verify and sign", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
@@ -663,16 +683,18 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	err = ledger.CloseChannel(context.Background(), signedchannelState)
 	if err != nil {
 		log.Error("fail to close channel", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
-
 	chunkInfo.SetState(storage.CompleteState)
 	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		return
 	}
+	sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, true, nil)
 }
 
 type ChallengeRes struct {
@@ -1080,43 +1102,8 @@ Mode options include:
 		if err != nil {
 			return err
 		}
-
-		nodes, err := hub.QueryHub(n.Identity.Pretty(), mode)
-		if err != nil {
-			return err
-		}
-
-		rds := n.Repo.Datastore()
-
-		// Dumb strategy right now: remove all existing and add the new ones
-		// TODO: Update by timestamp and only overwrite updated
-		qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
-		if err != nil {
-			return err
-		}
-
-		for r := range qr.Next() {
-			if r.Error != nil {
-				return r.Error
-			}
-			err := rds.Delete(newKeyHelper(r.Entry.Key))
-			if err != nil {
-				return err
-			}
-		}
-
-		for i, ni := range nodes {
-			b, err := json.Marshal(ni)
-			if err != nil {
-				return err
-			}
-			err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		err = SyncHosts(n, mode)
+		return err
 	},
 }
 
@@ -1181,6 +1168,45 @@ By default it shows local host node information.`,
 		})
 	},
 	Type: StorageHostInfoRes{},
+}
+
+func SyncHosts(node *core.IpfsNode, mode string) error {
+	nodes, err := hub.QueryHub(node.Identity.Pretty(), mode)
+	if err != nil {
+		return err
+	}
+
+	rds := node.Repo.Datastore()
+
+	// Dumb strategy right now: remove all existing and add the new ones
+	// TODO: Update by timestamp and only overwrite updated
+	qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+	if err != nil {
+		return err
+	}
+
+	for r := range qr.Next() {
+		if r.Error != nil {
+			return r.Error
+		}
+		err := rds.Delete(newKeyHelper(r.Entry.Key))
+		if err != nil {
+			return err
+		}
+	}
+
+	for i, ni := range nodes {
+		b, err := json.Marshal(ni)
+		if err != nil {
+			return err
+		}
+		err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type StorageHostInfoRes struct {

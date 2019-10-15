@@ -56,7 +56,7 @@ type Session struct {
 	CompleteChunks int
 	RetryQueue     *RetryQueue
 
-	TimeOutChan chan StatusChan
+	SessionStatusChan chan StatusChan
 }
 
 type StatusChan struct {
@@ -82,10 +82,10 @@ type Chunk struct {
 }
 
 type StepRetryChan struct {
-	CurrentStep int
-	Succeed     bool
-	ClientErr   error
-	HostErr     error
+	CurrentStep       int
+	Succeed           bool
+	ClientErr         error
+	HostErr           error
 	SessionTimeOurErr error
 }
 
@@ -98,7 +98,7 @@ func init() {
 		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[UploadState] = &FlowControl{
 		State:   "upload",
-		TimeOut: 5 * time.Second}
+		TimeOut: 10 * time.Second}
 	StdChunkStateFlow[ChallengeState] = &FlowControl{
 		State:   "challenge",
 		TimeOut: 10 * time.Second}
@@ -117,16 +117,15 @@ func init() {
 	// init session status
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
-		TimeOut: 5 * time.Second}
+		TimeOut: time.Minute}
 	StdSessionStateFlow[UploadStatus] = &FlowControl{
 		State:   "upload",
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[CompleteStatus] = &FlowControl{
-		State:   "complete",
-		TimeOut: 5 * time.Second}
+		State: "complete"}
 	StdSessionStateFlow[ErrStatus] = &FlowControl{
-		State:   "error",
-		}
+		State: "error",
+	}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *Session) {
@@ -191,7 +190,7 @@ func (ss *Session) new() {
 	ss.Time = time.Now()
 	ss.Status = "init"
 	ss.ChunkInfo = make(map[string]*Chunk)
-	ss.TimeOutChan = make(chan StatusChan)
+	ss.SessionStatusChan = make(chan StatusChan)
 }
 
 func (ss *Session) CompareAndSwap(desiredStatus int, targetStatus int) bool {
