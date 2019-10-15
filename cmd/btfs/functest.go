@@ -51,7 +51,7 @@ func get_functest(btfsBinaryPath string) error {
 			err := cmd.Process.Kill()
 			if err != nil {
 				if !strings.Contains(err.Error(), "process already finished") {
-					fmt.Printf("cannot kill process: [%v] \n", err)
+					log.Errorf("cannot kill process: [%v] \n", err)
 				}
 			}
 		}
@@ -112,7 +112,7 @@ func add_functest(btfsBinaryPath, peerId string) error {
 			err := cmd.Process.Kill()
 			if err != nil {
 				if !strings.Contains(err.Error(), "process already finished") {
-					fmt.Printf("cannot kill process: [%v] \n", err)
+					log.Errorf("cannot kill process: [%v] \n", err)
 				}
 			}
 		}
