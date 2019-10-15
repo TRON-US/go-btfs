@@ -259,6 +259,7 @@ func controlSessionTimeout(ss *storage.Session) {
 		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {
 				curStatus = sessionState.CurrentStep + 1
+				ss.SetStatus(curStatus)
 			} else {
 				ss.SetStatus(storage.ErrStatus)
 				return
@@ -474,9 +475,8 @@ var storageUploadProofCmd = &cmds.Command{
 
 		// check whether all chunk is complete
 		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
-			// only if all chunks upload success, send the signal to
+			// only if all chunks upload success, send the signal to finish current status
 			sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, true, nil)
-			ss.SetStatus(storage.CompleteStatus)
 		}
 		return nil
 	},
