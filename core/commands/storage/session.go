@@ -16,7 +16,8 @@ import (
 )
 
 var GlobalSession *SessionMap
-var StdChunkStateFlow [7]*ChunkFlowControl
+var StdChunkStateFlow [7]*FlowControl
+var StdSessionStateFlow [4]*FlowControl
 
 const (
 	// chunk state
@@ -27,9 +28,15 @@ const (
 	VerifyState    = 4
 	PaymentState   = 5
 	CompleteState  = 6
+
+	// session status
+	InitStatus     = 0
+	UploadStatus   = 1
+	CompleteStatus = 2
+	ErrStatus      = 3
 )
 
-type ChunkFlowControl struct {
+type FlowControl struct {
 	State   string
 	TimeOut time.Duration
 }
@@ -48,6 +55,14 @@ type Session struct {
 	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
 	CompleteChunks int
 	RetryQueue     *RetryQueue
+
+	SessionStatusChan chan StatusChan
+}
+
+type StatusChan struct {
+	CurrentStep int
+	Succeed     bool
+	Err         error
 }
 
 type Chunk struct {
@@ -67,36 +82,50 @@ type Chunk struct {
 }
 
 type StepRetryChan struct {
-	CurrentStep int
-	Succeed     bool
-	ClientErr   error
-	HostErr     error
+	CurrentStep       int
+	Succeed           bool
+	ClientErr         error
+	HostErr           error
+	SessionTimeOurErr error
 }
 
 func init() {
 	GlobalSession = &SessionMap{}
 	GlobalSession.Map = make(map[string]*Session)
-	StdChunkStateFlow[InitState] = &ChunkFlowControl{
+	// init chunk state
+	StdChunkStateFlow[InitState] = &FlowControl{
 		State:   "init",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[UploadState] = &ChunkFlowControl{
+	StdChunkStateFlow[UploadState] = &FlowControl{
 		State:   "upload",
-		TimeOut: 5 * time.Second}
-	StdChunkStateFlow[ChallengeState] = &ChunkFlowControl{
+		TimeOut: 10 * time.Second}
+	StdChunkStateFlow[ChallengeState] = &FlowControl{
 		State:   "challenge",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[SolveState] = &ChunkFlowControl{
+	StdChunkStateFlow[SolveState] = &FlowControl{
 		State:   "solve",
 		TimeOut: 30 * time.Second}
-	StdChunkStateFlow[VerifyState] = &ChunkFlowControl{
+	StdChunkStateFlow[VerifyState] = &FlowControl{
 		State:   "verify",
 		TimeOut: time.Second}
-	StdChunkStateFlow[PaymentState] = &ChunkFlowControl{
+	StdChunkStateFlow[PaymentState] = &FlowControl{
 		State:   "payment",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[CompleteState] = &ChunkFlowControl{
+	StdChunkStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
+	// init session status
+	StdSessionStateFlow[InitStatus] = &FlowControl{
+		State:   "init",
+		TimeOut: time.Minute}
+	StdSessionStateFlow[UploadStatus] = &FlowControl{
+		State:   "upload",
+		TimeOut: 5 * time.Minute}
+	StdSessionStateFlow[CompleteStatus] = &FlowControl{
+		State: "complete"}
+	StdSessionStateFlow[ErrStatus] = &FlowControl{
+		State: "error",
+	}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *Session) {
@@ -161,6 +190,21 @@ func (ss *Session) new() {
 	ss.Time = time.Now()
 	ss.Status = "init"
 	ss.ChunkInfo = make(map[string]*Chunk)
+	ss.SessionStatusChan = make(chan StatusChan)
+}
+
+func (ss *Session) CompareAndSwap(desiredStatus int, targetStatus int) bool {
+	ss.Lock()
+	defer ss.Unlock()
+
+	// if current status isn't expected status,
+	// can't setting new status
+	if StdSessionStateFlow[desiredStatus].State != ss.Status {
+		return false
+	} else {
+		ss.Status = StdSessionStateFlow[targetStatus].State
+		return true
+	}
 }
 
 func (ss *Session) SetRetryQueue(q *RetryQueue) {
@@ -205,11 +249,11 @@ func (ss *Session) GetFileHash() string {
 	return ss.FileHash
 }
 
-func (ss *Session) SetStatus(status string) {
+func (ss *Session) SetStatus(status int) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	ss.Status = status
+	ss.Status = StdSessionStateFlow[status].State
 }
 func (ss *Session) GetStatus() string {
 	ss.Lock()
