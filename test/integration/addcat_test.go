@@ -17,7 +17,7 @@ import (
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
 
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	logging "github.com/ipfs/go-log"
 	random "github.com/jbenet/go-random"
 	peer "github.com/libp2p/go-libp2p-core/peer"
