@@ -98,10 +98,10 @@ func NewChannelCommit(fromKey ic.PubKey, toKey ic.PubKey, amount int64) (*ledger
 		return nil, err
 	}
 	return &ledgerPb.ChannelCommit{
-		Payer:    &ledgerPb.PublicKey{Key: fromAddr},
-		Receiver: &ledgerPb.PublicKey{Key: toAddr},
-		Amount:   amount,
-		PayerId:  time.Now().UnixNano(),
+		Payer:     &ledgerPb.PublicKey{Key: fromAddr},
+		Recipient: &ledgerPb.PublicKey{Key: toAddr},
+		Amount:    amount,
+		PayerId:   time.Now().UnixNano(),
 	}, err
 }
 
@@ -134,20 +134,19 @@ func ImportAccount(ctx context.Context, pubKey ic.PubKey, ledgerClient ledgerPb.
 	return res.GetAccount(), nil
 }
 
-func CreateAccount(ctx context.Context, ledgerClient ledgerPb.ChannelsClient) (*ic.PrivKey, *ledgerPb.Account, error) {
-	privKey, pubKey, err := ic.GenerateKeyPair(ic.Secp256k1, 256)
-	if err != nil {
-		return nil, nil, err
-	}
+func ImportSignedAccount(ctx context.Context, privKey ic.PrivKey, pubKey ic.PubKey, ledgerClient ledgerPb.ChannelsClient) (*ledgerPb.SignedCreateAccountResult, error) {
 	pubKeyBytes, err := pubKey.Raw()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	res, err := ledgerClient.CreateAccount(ctx, &ledgerPb.PublicKey{Key: pubKeyBytes})
+	singedPubKey := &ledgerPb.PublicKey{Key: pubKeyBytes}
+	sigBytes, err := proto.Marshal(singedPubKey)
+	signature, err := privKey.Sign(sigBytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return &privKey, res.GetAccount(), nil
+	signedPubkey := &ledgerPb.SignedPublicKey{Key: singedPubKey, Signature: signature}
+	return ledgerClient.SignedCreateAccount(ctx, signedPubkey)
 }
 
 func CreateChannel(ctx context.Context, ledgerClient ledgerPb.ChannelsClient, channelCommit *ledgerPb.ChannelCommit, sig []byte) (*ledgerPb.ChannelID, error) {
