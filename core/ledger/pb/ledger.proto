@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ledger;
 
-// Interface exported by the exchange-exchange.
+// Interface exported by the server.
 
 
 service Channels {
@@ -21,15 +21,28 @@ service Channels {
 
     // Create an account and return
     rpc CreateAccount(PublicKey) returns (CreateAccountResult) {}
+
+    // Create an account, securely, and return
+    rpc SignedCreateAccount(SignedPublicKey) returns (SignedCreateAccountResult) {}
+
+    // Update an account pub key (BIP 44 compatible)
+    rpc UpdateAccountPubKey(SignedPublicKeyPair) returns (Null) {}
 }
+
+message Null { }
 
 message PublicKey {
     bytes key = 1;
 }
 
+message SignedPublicKey {
+    PublicKey key = 1;
+    bytes signature = 2;
+}
+
 message ChannelCommit {
     PublicKey payer = 1;
-    PublicKey receiver = 2;
+    PublicKey recipient = 2;
     int64 amount = 3;
     int64 payer_id = 4;
 }
@@ -41,6 +54,10 @@ message SignedChannelCommit {
 
 message CreateAccountResult {
     Account account = 1;
+}
+
+message SignedCreateAccountResult {
+    int64 balance = 1;
 }
 
 message Account {
@@ -81,4 +98,11 @@ message ChannelState {
 
 message ChannelClosed {
     SignedChannelState state = 1;
+}
+
+message SignedPublicKeyPair {
+    PublicKey old_key = 1;
+    PublicKey new_key = 2;
+    bytes old_signature = 3;
+    bytes new_signature = 4;
 }

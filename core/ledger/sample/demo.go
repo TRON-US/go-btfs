@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	PayerPrivKeyString    = "CAISIARweyYgg5rglWg3mYmOue0/ekWwl1TwT7nDIzb4MjUm"
+	PayerPrivKeyString    = "CAISIJFNZZd5ZSvi9OlJP/mz/vvUobvlrr2//QN4DzX/EShP"
 	ReceiverPrivKeyString = "CAISIDm/qF5f98Jh8FGBUcFUhQvJPU8uEah1SZrR1BrGekC0"
 )
 
@@ -31,7 +31,8 @@ func main() {
 		log.Panic(err)
 	}
 	payerPubKey := payerPrivKey.GetPublic()
-	fromAcc, err := ledger.ImportAccount(ctx, payerPubKey, ledgerClient)
+	//_, err = ledger.ImportAccount(ctx, payerPubKey, ledgerClient)
+	_, err = ledger.ImportSignedAccount(ctx, payerPrivKey, payerPubKey, ledgerClient)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -41,7 +42,8 @@ func main() {
 		log.Panic(err)
 	}
 	recvPubKey := recvPrivKey.GetPublic()
-	toAcc, err := ledger.ImportAccount(ctx, recvPubKey, ledgerClient)
+	//_, err = ledger.ImportAccount(ctx, recvPubKey, ledgerClient)
+	_, err = ledger.ImportSignedAccount(ctx, recvPrivKey, recvPubKey, ledgerClient)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -62,11 +64,11 @@ func main() {
 		log.Panic("fail to create channel", err)
 	}
 	// channel state: transfer money from -> to
-	fromAcc, err = ledger.NewAccount(payerPubKey, 0)
+	fromAcc, err := ledger.NewAccount(payerPubKey, 0)
 	if err != nil {
 		log.Panic(err)
 	}
-	toAcc, err = ledger.NewAccount(recvPubKey, amount)
+	toAcc, err := ledger.NewAccount(recvPubKey, amount)
 	if err != nil {
 		log.Panic(err)
 	}
