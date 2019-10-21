@@ -26,6 +26,7 @@ import (
 	"github.com/ipfs/go-datastore/query"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/tron-us/go-btfs-common/info"
 )
 
@@ -52,6 +53,9 @@ const (
 	RetryLimit = 3
 	FailLimit  = 3
 )
+
+// multiaddress prefix
+var multiAddressPrefix = "/" + ma.ProtocolWithCode(ma.P_IPFS).Name + "/"
 
 func GetHostStorageKey(pid string) ds.Key {
 	return newKeyHelper(hostStorageInfoPrefix, pid)
@@ -241,7 +245,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		for _, singleChunk := range chunkHashes {
 			ss.GetOrDefault(singleChunk)
 		}
-		go retryMonitor(context.Background(), ss, n, price, ssID)
+		go retryMonitor(context.Background(), api, ss, n, price, ssID)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -261,6 +265,7 @@ func controlSessionTimeout(ss *storage.Session) {
 				curStatus = sessionState.CurrentStep + 1
 				ss.SetStatus(curStatus)
 			} else {
+				log.Error(sessionState.Err)
 				ss.SetStatus(storage.ErrStatus)
 				return
 			}
@@ -283,7 +288,7 @@ func controlSessionTimeout(ss *storage.Session) {
 	}
 }
 
-func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p int64, ssID string) {
+func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Session, n *core.IpfsNode, p int64, ssID string) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -293,14 +298,14 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 	// loop over each chunk
 	for chunkHash, chunkInfo := range ss.ChunkInfo {
 		go func(chunkHash string, chunkInfo *storage.Chunk) {
-			candidateHost, err := getValidHost(retryQueue)
+			candidateHost, err := getValidHost(ctx, retryQueue, api, n)
 			if err != nil {
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
 
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, candidateHost, ss, n, p, chunkHash, ssID)
+			go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID)
 
 			// monitor each steps if error or time out happens, retry
 			for curState := 0; curState < len(storage.StdChunkStateFlow); {
@@ -324,7 +329,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, candidateHost, ss, n, p, chunkHash, ssID)
+							go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -345,7 +350,7 @@ func retryMonitor(ctx context.Context, ss *storage.Session, n *core.IpfsNode, p 
 						log.Errorf("Time Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, candidateHost, ss, n, p, chunkHash, ssID)
+						go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID)
 					}
 				}
 			}
@@ -370,13 +375,13 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 	}
 }
 
-func retryProcess(ctx context.Context, candidateHost *storage.HostNode, ss *storage.Session, n *core.IpfsNode, p int64, chunkHash string, ssID string) {
+func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.Session, n *core.IpfsNode, p int64, chunkHash string, ssID string) {
 	// record chunk info in session
 	chunk := ss.GetOrDefault(chunkHash)
 
 	// if candidate host passed in is not valid, fetch next valid one
 	if candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
-		otherValidHost, err := getValidHost(ss.RetryQueue)
+		otherValidHost, err := getValidHost(ctx, ss.RetryQueue, api, n)
 		// either retry queue is empty or something wrong with retry queue
 		if err != nil {
 			sendStepStateChan(chunk.RetryChan, storage.InitState, false, fmt.Errorf("no host available %v", err), nil)
@@ -420,7 +425,7 @@ func retryProcess(ctx context.Context, candidateHost *storage.HostNode, ss *stor
 }
 
 // find next available host
-func getValidHost(retryQueue *storage.RetryQueue) (*storage.HostNode, error) {
+func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI, n *core.IpfsNode) (*storage.HostNode, error) {
 	var candidateHost *storage.HostNode
 	for candidateHost == nil {
 		if retryQueue.Empty() {
@@ -438,10 +443,66 @@ func getValidHost(retryQueue *storage.RetryQueue) (*storage.HostNode, error) {
 				return nil, err
 			}
 		} else {
+			// find peer
+			pi, err := findPeer(ctx, n, nextHost.Identity)
+			if err != nil {
+				// cannot find peer, remove from queue permanently
+				log.Error(err)
+				continue
+			}
+			fmt.Println("start connect...")
+			if err := api.Swarm().Connect(ctx, *pi); err != nil {
+				log.Error("fail swarm connect first time")
+				// force connect again
+				err := api.Swarm().Connect(ctx, *pi)
+				// if failed again, apply retry fail policy
+				if err != nil {
+					log.Error("fail twice connection")
+					nextHost.IncrementFail()
+					err = retryQueue.Offer(nextHost)
+					if err != nil {
+						return nil, err
+					}
+					continue
+				}
+				fmt.Println("connect success with ", nextHost.Identity)
+			}
+			// if connect successfully, return
 			candidateHost = nextHost
+			fmt.Println("candidate host find", candidateHost)
 		}
 	}
 	return candidateHost, nil
+}
+
+func findPeer(ctx context.Context, n *core.IpfsNode, pid string) (*peer.AddrInfo, error) {
+	id, err := peer.IDB58Decode(pid)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	pinfo, err := n.Routing.FindPeer(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("find peer info: ", pinfo)
+	// return changeAddress(pinfo)
+	return &pinfo, nil
+}
+
+func changeAddress(pinfo *peer.AddrInfo) (*peer.AddrInfo, error) {
+	parts := ma.Split(pinfo.Addrs[0])
+	// change address to 0.0.0.0
+	newIP, err := ma.NewMultiaddr("/ip4/0.0.0.0")
+	if err != nil {
+		return nil, err
+	}
+	parts[0] = newIP
+	newMa := ma.Join(parts[0], parts[1])
+	fmt.Println(newMa)
+	pinfo.Addrs[0] = newMa
+	return pinfo, nil
 }
 
 var storageUploadProofCmd = &cmds.Command{
