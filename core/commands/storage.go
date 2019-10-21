@@ -303,7 +303,6 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
-
 			// build connection with host, init step, could be error or timeout
 			go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID)
 
@@ -314,16 +313,19 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 					if !chunkRes.Succeed {
 						// receiving session time out signal, directly return
 						if chunkRes.SessionTimeOurErr != nil {
+							log.Error(chunkRes.SessionTimeOurErr)
 							return
 						}
 						// if client itself has some error, no matter how many times it tries,
 						// it will fail again, in this case, we don't need retry
 						if chunkRes.ClientErr != nil {
+							log.Error(chunkRes.ClientErr)
 							sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, chunkRes.ClientErr)
 							return
 						}
 						// if host error, retry
 						if chunkRes.HostErr != nil {
+							log.Error(chunkRes.HostErr)
 							// increment current host's retry times
 							candidateHost.IncrementRetry()
 							// if reach retry limit, in retry process will select another host
@@ -396,7 +398,6 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 	// parse candidate host's IP and get connected
 	_, hostPid, err := ParsePeerParam(candidateHost.Identity)
 	if err != nil {
-		log.Error(err)
 		sendStepStateChan(chunk.RetryChan, storage.InitState, false, err, nil)
 		return
 	}
@@ -450,9 +451,12 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				log.Error(err)
 				continue
 			}
-			fmt.Println("start connect...")
 			if err := api.Swarm().Connect(ctx, *pi); err != nil {
 				log.Error("fail swarm connect first time")
+				// TODO: investigate on p2p remote call, change back to normal version
+				if err := changeAddress(pi); err != nil {
+					log.Error(err)
+				}
 				// force connect again
 				err := api.Swarm().Connect(ctx, *pi)
 				// if failed again, apply retry fail policy
@@ -465,11 +469,9 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 					}
 					continue
 				}
-				fmt.Println("connect success with ", nextHost.Identity)
 			}
 			// if connect successfully, return
 			candidateHost = nextHost
-			fmt.Println("candidate host find", candidateHost)
 		}
 	}
 	return candidateHost, nil
@@ -491,18 +493,18 @@ func findPeer(ctx context.Context, n *core.IpfsNode, pid string) (*peer.AddrInfo
 	return &pinfo, nil
 }
 
-func changeAddress(pinfo *peer.AddrInfo) (*peer.AddrInfo, error) {
+func changeAddress(pinfo *peer.AddrInfo) error {
 	parts := ma.Split(pinfo.Addrs[0])
 	// change address to 0.0.0.0
 	newIP, err := ma.NewMultiaddr("/ip4/0.0.0.0")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	parts[0] = newIP
 	newMa := ma.Join(parts[0], parts[1])
 	fmt.Println(newMa)
 	pinfo.Addrs[0] = newMa
-	return pinfo, nil
+	return nil
 }
 
 var storageUploadProofCmd = &cmds.Command{
