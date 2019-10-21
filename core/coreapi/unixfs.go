@@ -2,6 +2,7 @@ package coreapi
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"github.com/TRON-US/go-btfs/ecies"
@@ -12,22 +13,22 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
-	blockservice "github.com/ipfs/go-blockservice"
-	cid "github.com/ipfs/go-cid"
-	cidutil "github.com/ipfs/go-cidutil"
+	"github.com/ipfs/go-blockservice"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cidutil"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
+	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
-	merkledag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
-	mfs "github.com/ipfs/go-mfs"
+	"github.com/ipfs/go-mfs"
 	ft "github.com/ipfs/go-unixfs"
 	unixfile "github.com/ipfs/go-unixfs/file"
 	uio "github.com/ipfs/go-unixfs/io"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/ipfs/interface-go-ipfs-core/options"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 type UnixfsAPI CoreAPI
@@ -200,15 +201,10 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	}
 
 	node, err := unixfile.NewUnixfsFile(ctx, ses.dag, nd)
-
 	if settings.Decrypt {
-		privKey := settings.PrivateKey
-		if privKey == "" {
-			bytes, err := api.privateKey.Bytes()
-			if err != nil {
-				return nil, err
-			}
-			privKey = hex.EncodeToString(bytes[4:])
+		privKey, err := api.getPrivateKey(settings.PrivateKey)
+		if err != nil {
+			return nil, err
 		}
 		switch f := node.(type) {
 		case files.File:
@@ -227,6 +223,34 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	}
 
 	return node, err
+}
+
+func (api *UnixfsAPI) getPrivateKey(privKey string) (str string, err error) {
+	var bytes []byte
+	if privKey == "" {
+		bytes, err = api.privateKey.Bytes()
+		if err != nil {
+			return "", err
+		}
+	} else if isBase64PrivateKey(privKey) {
+		bytes, err = base64.StdEncoding.DecodeString(privKey)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		bytes, err = hex.DecodeString(privKey)
+		if err != nil {
+			return "", err
+		}
+	}
+	if len(bytes) == 36 {
+		bytes = bytes[4:]
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func isBase64PrivateKey(str string) bool {
+	return len(str) == 48
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
