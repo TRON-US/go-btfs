@@ -43,7 +43,7 @@ const (
 	hostCollateralPriceOptionName = "host-collateral-price"
 	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
-	testOnlyOptionName            = "test"
+	testOnlyOptionName            = "host-search-local"
 
 	hostStorePrefix       = "/hosts/"        // from btfs-hub
 	hostStorageInfoPrefix = "/host_storage/" // self or from network
@@ -110,7 +110,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
-		cmds.BoolOption(testOnlyOptionName, "t", "test env usually runs local which isn't normal").WithDefault(true),
+		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -268,6 +268,7 @@ func controlSessionTimeout(ss *storage.Session) {
 				curStatus = sessionState.CurrentStep + 1
 				ss.SetStatus(curStatus)
 			} else {
+				// TODO: ADD error info to status
 				log.Error(sessionState.Err)
 				ss.SetStatus(storage.ErrStatus)
 				return
@@ -451,32 +452,27 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 			// find peer
 			pi, err := findPeer(ctx, n, nextHost.Identity)
 			if err != nil {
-				// cannot find peer, remove from queue permanently
-				log.Error(err)
+				// it's normal to fail in finding peer,
+				// would give host another chance
+				nextHost.IncrementFail()
+				err = retryQueue.Offer(nextHost)
+				if err != nil {
+					return nil, err
+				}
 				continue
 			}
 			if err := api.Swarm().Connect(ctx, *pi); err != nil {
-				log.Error("fail swarm connect first time")
 				// force connect again
 				if err := api.Swarm().Connect(ctx, *pi); err != nil {
-					log.Error("fail swarm connect second time")
+					var errTest error
 					// in test mode, change the ip to 0.0.0.0
 					if test {
-						if err := changeAddress(pi); err != nil {
-							log.Error(err)
+						if errTest = changeAddress(pi); errTest == nil {
+							errTest = api.Swarm().Connect(ctx, *pi)
 						}
-						err := api.Swarm().Connect(ctx, *pi)
-						// if failed again, apply retry fail policy
-						if err != nil {
-							log.Error("fail third connection")
-							nextHost.IncrementFail()
-							err = retryQueue.Offer(nextHost)
-							if err != nil {
-								return nil, err
-							}
-							continue
-						}
-					} else {
+					}
+					// err can be from change address in test mode or connect again in test mode
+					if errTest != nil {
 						nextHost.IncrementFail()
 						err = retryQueue.Offer(nextHost)
 						if err != nil {
