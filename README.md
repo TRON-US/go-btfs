@@ -28,6 +28,7 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
     - [Pay attention](#pay-attention)
     - [Step](#step)
 - [Packages](#packages)
+- [Soter](#soter)
 - [License](#license)
 
 
@@ -309,6 +310,11 @@ make test
 
 If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
 
+### Soter
+
+You are welcome to use BTFS, but if you don’t want to set up your own nodes, you can use the Soter gateway directly to upload files, which are then stored on BTFS.
+
+[Soter Interface Document](https://btfssoter.readme.io/docs/soter-interface-documentation)
 
 ### License
 
