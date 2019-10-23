@@ -29,7 +29,7 @@ import (
 )
 
 // `btfs object new unixfs-dir`
-var emptyDir = "/btfs/QmdUmxr5nZmSiHxbPR5LKzEPPBxJR878Eoh7JSqmJLPjbx"
+var emptyDir = "/btfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 
 type mockNamesys map[string]path.Path
 

@@ -649,7 +649,7 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 		return
 	}
 	p := path.New(chunkHash)
-	file, err := api.Unixfs().Get(context.Background(), p)
+	file, err := api.Unixfs().Get(context.Background(), p, false)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)

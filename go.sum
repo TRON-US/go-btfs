@@ -26,6 +26,8 @@ github.com/TRON-US/go-btfs-chunker v0.2.0 h1:dp80UzRmUFzDDDt4nqo2STGVh5I4jDQJRYJ
 github.com/TRON-US/go-btfs-chunker v0.2.0/go.mod h1:6wFL7KgEumsn7R7IGFZZhOGIHxA/YkA4RdfR553M3Fk=
 github.com/TRON-US/go-btfs-chunker v0.2.1 h1:CD4lMIjfJMjMm8UitIc2NN5tR8LrPpQ8lEVtOiXwDYg=
 github.com/TRON-US/go-btfs-chunker v0.2.1/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
+github.com/TRON-US/go-btfs-chunker v0.2.2 h1:aiLDsiM3X2Yy2jVo3EQYYEVkw57SThOUPTs0Ja5yPeA=
+github.com/TRON-US/go-btfs-chunker v0.2.2/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
 github.com/TRON-US/go-btfs-cmds v0.1.5 h1:AbnAPBAFxe67MPChbwFPJbyKY1Vm3lXybGDNQ4NUTno=
 github.com/TRON-US/go-btfs-cmds v0.1.5/go.mod h1:rtki4vmPzq7qmjdzThJELFpSpxTiORoXreHlExdI6eg=
 github.com/TRON-US/go-btfs-config v0.1.7 h1:d5znAqVAslgnHNZZG6vs2fTZuzuq4WWJmO9PhYXBX5g=
@@ -40,8 +42,14 @@ github.com/TRON-US/go-unixfs v0.4.1 h1:Vo1qIr8HT5D2GlfXaLG1lMrHq4plUyl1udIkCdVuF
 github.com/TRON-US/go-unixfs v0.4.1/go.mod h1:h/I7boDSgPi4Kw6qD/VJKQA62/+Lt+Zvb4nMRO57R1c=
 github.com/TRON-US/go-unixfs v0.4.2 h1:kbG1edpyFp4FqRh2nUuK06LAMzLO8ziOyYW46jL0lOs=
 github.com/TRON-US/go-unixfs v0.4.2/go.mod h1:yY17inMS7iFmmLqz4bCCj6l9b3Mk9UHaVDFCoCF/+jk=
+github.com/TRON-US/go-unixfs v0.4.3-dev h1:RpPOIFdBMt/u+1Equ+NGbogsvcOF3ppcPfgRgGmhYtc=
+github.com/TRON-US/go-unixfs v0.4.3-dev/go.mod h1:KJOb8DrNKJH9cdufqZba8ljdt3/vyo0KwfWNtwTzZbQ=
+github.com/TRON-US/go-unixfs v0.4.4 h1:EzTr7aHrB/vlAr4onYb/ENdsFt0NYNUGAefVD93r28w=
+github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
 github.com/TRON-US/interface-go-btfs-core v0.3.9 h1:zLgjQ/jT53K35G39uAnRwbXU7F0cQxaquIJ8Rf1u40s=
 github.com/TRON-US/interface-go-btfs-core v0.3.9/go.mod h1:MayxoV6/Pav5aPq+8RAsMfcc9cH7yeypAN82RAF0aZY=
+github.com/TRON-US/interface-go-btfs-core v0.4.0 h1:O06NPfXqpNiq1mhEu6QE1b/vEt/tKE0GEb3GEGYnpfM=
+github.com/TRON-US/interface-go-btfs-core v0.4.0/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
 github.com/Workiva/go-datastructures v1.0.50/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
@@ -305,6 +313,7 @@ github.com/ipfs/go-ipfs-exchange-interface v0.0.1 h1:LJXIo9W7CAmugqI+uofioIpRb6r
 github.com/ipfs/go-ipfs-exchange-interface v0.0.1/go.mod h1:c8MwfHjtQjPoDyiy9cFquVtVHkO9b9Ob3FG91qJnWCM=
 github.com/ipfs/go-ipfs-exchange-offline v0.0.1 h1:P56jYKZF7lDDOLx5SotVh5KFxoY6C81I1NSHW1FxGew=
 github.com/ipfs/go-ipfs-exchange-offline v0.0.1/go.mod h1:WhHSFCVYX36H/anEKQboAzpUws3x7UeEGkzQc3iNkM0=
+github.com/ipfs/go-ipfs-files v0.0.1 h1:OroTsI58plHGX70HPLKy6LQhPR3HZJ5ip61fYlo6POM=
 github.com/ipfs/go-ipfs-files v0.0.1/go.mod h1:INEFm0LL2LWXBhNJ2PMIIb2w45hpXgPjNoE7yA8Y1d4=
 github.com/ipfs/go-ipfs-files v0.0.3 h1:ME+QnC3uOyla1ciRPezDW0ynQYK2ikOh9OCKAEg4uUA=
 github.com/ipfs/go-ipfs-files v0.0.3/go.mod h1:INEFm0LL2LWXBhNJ2PMIIb2w45hpXgPjNoE7yA8Y1d4=

@@ -1,7 +1,9 @@
 package coreapi
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -93,9 +95,6 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	fileAdder.NoCopy = settings.NoCopy
 	fileAdder.CidBuilder = prefix
 
-	if settings.TokenMetadata != "" {
-		fileAdder.TokenMetadata = settings.TokenMetadata
-	}
 	switch settings.Layout {
 	case options.BalancedLayout:
 		// Default
@@ -125,6 +124,12 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 		fileAdder.SetMfsRoot(mr)
 	}
 
+	// This block is intentionally placed here so that
+	// any execution case can append metadata
+	if settings.TokenMetadata != "" {
+		fileAdder.TokenMetadata = settings.TokenMetadata
+	}
+
 	nd, err := fileAdder.AddAllAndPin(files)
 	if err != nil {
 		return nil, err
@@ -137,12 +142,31 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	return path.IpfsPath(nd.Cid()), nil
 }
 
-func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) {
+func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (files.Node, error) {
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
 	if err != nil {
 		return nil, err
+	}
+
+	// Skip token metadata if the given 'metadata' is false. I.e.,
+	// check if the given 'p' represents a dummy root of a DAG with token metadata.
+	// If yes, get the root node of the user data that is the second child
+	// of the the dummy root. Then set this child node to 'nd'.
+	// Note that a new UnixFS type to indicate existence of metadata will be faster but
+	// a new type causes many changes.
+	if !metadata {
+		if _, ok := nd.(*dag.ProtoNode); ok {
+			newNode, err := skipMetadataIfExists(nd, api.core().Dag())
+			if err != nil {
+				return nil, err
+			}
+			if newNode == nil {
+				return nil, nil
+			}
+			nd = newNode
+		}
 	}
 
 	return unixfile.NewUnixfsFile(ctx, ses.dag, nd)
@@ -253,4 +277,30 @@ func (api *UnixfsAPI) lsFromLinks(ctx context.Context, ndlinks []*ipld.Link, set
 
 func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
+}
+
+func (api *UnixfsAPI) AppendMetadata(metaMap map[string]interface{}, opts ...options.UnixfsAddOption) error {
+	if metaMap == nil {
+		return nil
+	}
+
+	settings, _, err := options.UnixfsAddOptions(opts...)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(metaMap)
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.Buffer{}
+	if settings.TokenMetadata != "" {
+		buf.WriteString(settings.TokenMetadata)
+	}
+	buf.WriteString(string(b))
+
+	settings.TokenMetadata = buf.String()
+
+	return nil
 }

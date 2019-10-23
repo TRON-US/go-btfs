@@ -64,7 +64,7 @@ func (api *BlockAPI) Put(ctx context.Context, src io.Reader, opts ...caopts.Bloc
 	return &BlockStat{path: path.IpldPath(b.Cid()), size: len(data)}, nil
 }
 
-func (api *BlockAPI) Get(ctx context.Context, p path.Path) (io.Reader, error) {
+func (api *BlockAPI) Get(ctx context.Context, p path.Path, meta bool) (io.Reader, error) {
 	rp, err := api.core().ResolvePath(ctx, p)
 	if err != nil {
 		return nil, err

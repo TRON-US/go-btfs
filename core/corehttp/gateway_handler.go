@@ -172,7 +172,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath)
+	dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath, false)
 	if err != nil {
 		webError(w, "btfs cat "+escapedURLPath, err, http.StatusNotFound)
 		return
@@ -257,7 +257,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	idx, err := i.api.Unixfs().Get(r.Context(), ipath.Join(resolvedPath, "index.html"))
+	idx, err := i.api.Unixfs().Get(r.Context(), ipath.Join(resolvedPath, "index.html"), false)
 	switch err.(type) {
 	case nil:
 		dirwithoutslash := urlPath[len(urlPath)-1] != '/'

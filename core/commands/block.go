@@ -103,7 +103,7 @@ It outputs to stdout, and <key> is a base58 encoded multihash.
 			return err
 		}
 
-		r, err := api.Block().Get(req.Context, path.New(req.Arguments[0]))
+		r, err := api.Block().Get(req.Context, path.New(req.Arguments[0]), false)
 		if err != nil {
 			return err
 		}

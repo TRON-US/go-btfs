@@ -132,7 +132,7 @@ func RunThreeLeggedCat(data []byte, conf testutil.LatencyConfig) error {
 		return err
 	}
 
-	readerCatted, err := catterApi.Unixfs().Get(ctx, added)
+	readerCatted, err := catterApi.Unixfs().Get(ctx, added, false)
 	if err != nil {
 		return err
 	}
