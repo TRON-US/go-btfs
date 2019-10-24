@@ -150,26 +150,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (file
 		return nil, err
 	}
 
-	// Skip token metadata if the given 'metadata' is false. I.e.,
-	// check if the given 'p' represents a dummy root of a DAG with token metadata.
-	// If yes, get the root node of the user data that is the second child
-	// of the the dummy root. Then set this child node to 'nd'.
-	// Note that a new UnixFS type to indicate existence of metadata will be faster but
-	// a new type causes many changes.
-	if !metadata {
-		if _, ok := nd.(*dag.ProtoNode); ok {
-			newNode, err := skipMetadataIfExists(nd, api.core().Dag())
-			if err != nil {
-				return nil, err
-			}
-			if newNode == nil {
-				return nil, nil
-			}
-			nd = newNode
-		}
-	}
-
-	return unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+	return unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:

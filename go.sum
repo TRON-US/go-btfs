@@ -46,6 +46,8 @@ github.com/TRON-US/go-unixfs v0.4.3-dev h1:RpPOIFdBMt/u+1Equ+NGbogsvcOF3ppcPfgRg
 github.com/TRON-US/go-unixfs v0.4.3-dev/go.mod h1:KJOb8DrNKJH9cdufqZba8ljdt3/vyo0KwfWNtwTzZbQ=
 github.com/TRON-US/go-unixfs v0.4.4 h1:EzTr7aHrB/vlAr4onYb/ENdsFt0NYNUGAefVD93r28w=
 github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
+github.com/TRON-US/go-unixfs v0.4.5 h1:VUda4IfFy5iG+DRvNX2T7sH8HD0NmlroLy4/bMaedQU=
+github.com/TRON-US/go-unixfs v0.4.5/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
 github.com/TRON-US/interface-go-btfs-core v0.3.9 h1:zLgjQ/jT53K35G39uAnRwbXU7F0cQxaquIJ8Rf1u40s=
 github.com/TRON-US/interface-go-btfs-core v0.3.9/go.mod h1:MayxoV6/Pav5aPq+8RAsMfcc9cH7yeypAN82RAF0aZY=
 github.com/TRON-US/interface-go-btfs-core v0.4.0 h1:O06NPfXqpNiq1mhEu6QE1b/vEt/tKE0GEb3GEGYnpfM=
