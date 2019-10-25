@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/cenkalti/backoff"
 	"net/http"
 	"runtime"
 	"time"
@@ -75,6 +76,8 @@ const (
 
 	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
+
+	maxRetryTimes = 15
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -223,12 +226,18 @@ func (dc *dataCollection) sendData(node *core.IpfsNode) {
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
-		return
-	}
-	defer res.Body.Close()
+	dc.doSend(req)
+}
+
+func (dc *dataCollection) doSend(req *http.Request) {
+	backoff.Retry(func() error {
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
+			return err
+		}
+		return res.Body.Close()
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
 }
 
 func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {

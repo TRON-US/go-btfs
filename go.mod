@@ -16,6 +16,7 @@ require (
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
+	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
