@@ -198,7 +198,7 @@ func TestIpfsStressRead(t *testing.T) {
 				//hitting 8128 goroutine limit in go test -race mode
 				ctx, cancelFunc := context.WithCancel(context.Background())
 
-				read, err := api.Unixfs().Get(ctx, item)
+				read, err := api.Unixfs().Get(ctx, item, false)
 				if err != nil {
 					errs <- err
 				}

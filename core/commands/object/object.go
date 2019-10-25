@@ -251,7 +251,7 @@ Supported values are:
 			return err
 		}
 
-		nd, err := api.Object().Get(req.Context, path)
+		nd, err := api.Object().Get(req.Context, path, false)
 		if err != nil {
 			return err
 		}

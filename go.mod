@@ -6,13 +6,13 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
-	github.com/TRON-US/go-btfs-chunker v0.2.1
+	github.com/TRON-US/go-btfs-chunker v0.2.2
 	github.com/TRON-US/go-btfs-cmds v0.1.5
 	github.com/TRON-US/go-btfs-config v0.1.7
 	github.com/TRON-US/go-btfs-files v0.1.1
 	github.com/TRON-US/go-mfs v0.2.1
-	github.com/TRON-US/go-unixfs v0.4.2
-	github.com/TRON-US/interface-go-btfs-core v0.3.9
+	github.com/TRON-US/go-unixfs v0.4.5
+	github.com/TRON-US/interface-go-btfs-core v0.4.0
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d

@@ -122,6 +122,7 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		NoCopy:        adder.NoCopy,
 		CidBuilder:    adder.CidBuilder,
 		TokenMetadata: metaBytes,
+		ChunkSize:     chnk.ChunkSize(),
 	}
 
 	db, err := params.New(chnk)
@@ -132,6 +133,13 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 	if adder.Trickle {
 		nd, err = trickle.Layout(db)
 	} else {
+		if db.IsThereMetaData() && !db.IsMetaDagBuilt() {
+			err := balanced.BuildMetadataDag(db)
+			if err != nil {
+				return nil, err
+			}
+			db.SetMetaDagBuilt(true)
+		}
 		nd, err = balanced.Layout(db)
 	}
 	if err != nil {
