@@ -33,27 +33,9 @@ import (
 
 type UnixfsAPI CoreAPI
 
-func peerId2pubkey(peerId string) (string, error) {
-	id, err := peer.IDB58Decode(peerId)
-	if err != nil {
-		return "", err
-	}
-	publicKey, err := id.ExtractPublicKey()
-	if err != nil {
-		return "", err
-	}
-
-	bytes, err := publicKey.Bytes()
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes[4:]), nil
-}
-
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
-func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved,
-	error) {
+func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
 	settings, prefix, err := options.UnixfsAddOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -183,7 +165,6 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	if err := api.provider.Provide(nd.Cid()); err != nil {
 		return nil, err
 	}
-
 	return path.IpfsPath(nd.Cid()), nil
 }
 
@@ -192,7 +173,6 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	if err != nil {
 		return nil, err
 	}
-
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
@@ -201,11 +181,25 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	}
 
 	node, err := unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+
 	if settings.Decrypt {
-		privKey, err := api.getPrivateKey(settings.PrivateKey)
-		if err != nil {
-			return nil, err
+		privKey := settings.PrivateKey
+		var bytes []byte
+		if privKey == "" {
+			bytes, err = api.privateKey.Bytes()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			bytes, err = base64.StdEncoding.DecodeString(privKey)
+			if err != nil {
+				bytes, err = hex.DecodeString(privKey)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
+		privKey = hex.EncodeToString(bytes[4:])
 		switch f := node.(type) {
 		case files.File:
 			bytes, err := ioutil.ReadAll(f)
@@ -223,34 +217,6 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	}
 
 	return node, err
-}
-
-func (api *UnixfsAPI) getPrivateKey(privKey string) (str string, err error) {
-	var bytes []byte
-	if privKey == "" {
-		bytes, err = api.privateKey.Bytes()
-		if err != nil {
-			return "", err
-		}
-	} else if isBase64PrivateKey(privKey) {
-		bytes, err = base64.StdEncoding.DecodeString(privKey)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		bytes, err = hex.DecodeString(privKey)
-		if err != nil {
-			return "", err
-		}
-	}
-	if len(bytes) == 36 {
-		bytes = bytes[4:]
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
-func isBase64PrivateKey(str string) bool {
-	return len(str) == 48
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
@@ -358,4 +324,21 @@ func (api *UnixfsAPI) lsFromLinks(ctx context.Context, ndlinks []*ipld.Link, set
 
 func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
+}
+
+func peerId2pubkey(peerId string) (string, error) {
+	id, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return "", err
+	}
+	publicKey, err := id.ExtractPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	bytes, err := publicKey.Bytes()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes[4:]), nil
 }

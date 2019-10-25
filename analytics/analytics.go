@@ -4,27 +4,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/cenkalti/backoff"
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-
 	"github.com/shirou/gopsutil/cpu"
 )
 
 type programInfo struct {
 	node        *core.IpfsNode
 	startTime   time.Time //Time at which the Daemon was ready and analytics started
-	NodeID      string    `json:"node_id"`
-	HVal        string    `json:"h_val"`
-	CPUInfo     string    `json:"cpu_info"`
-	BTFSVersion string    `json:"btfs_version"`
-	OSType      string    `json:"os_type"`
-	ArchType    string    `json:"arch_type"`
+	NodeID      string `json:"node_id"`
+	HVal        string `json:"h_val"`
+	CPUInfo     string `json:"cpu_info"`
+	BTFSVersion string `json:"btfs_version"`
+	OSType      string `json:"os_type"`
+	ArchType    string `json:"arch_type"`
 }
 
 type dataCollection struct {
@@ -67,7 +68,7 @@ const (
 	kilobyte = 1024
 
 	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
-	heartBeat = 15 * time.Minute
+	heartBeat = 30 * time.Minute
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -159,25 +160,30 @@ func (dc *dataCollection) update() {
 }
 
 func (dc *dataCollection) sendData() {
+	backoff.Retry(dc.doSendData, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 15))
+}
+
+func (dc *dataCollection) doSendData() error {
+	fmt.Println(time.Now())
 	dc.update()
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
-		return
+		return err
 	}
 	if dc.node.PrivateKey == nil {
 		dc.reportHealthAlert("node's private key is null")
-		return
+		return err
 	}
 	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
-		return
+		return err
 	}
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
-		return
+		return err
 	}
 	dataBagInstance := new(dataBag)
 	dataBagInstance.PublicKey = publicKey
@@ -186,23 +192,32 @@ func (dc *dataCollection) sendData() {
 	dataBagMarshaled, err := json.Marshal(dataBagInstance)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal databag: %s", err.Error()))
-		return
+		return err
 	}
 
 	// btfs node reports to status server by making HTTP request
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeMetrics), bytes.NewReader(dataBagMarshaled))
+	fmt.Println("req", req)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to make new http request: %s", err.Error()))
-		return
+		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
+		fmt.Println(err)
 		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
-		return
+		return err
 	}
+	all, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(string(all))
 	defer res.Body.Close()
+	return nil
 }
 
 func (dc *dataCollection) collectionAgent() {

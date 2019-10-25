@@ -110,13 +110,11 @@ var CatCmd = &cmds.Command{
 					log.Warningf("cat postrun: received unexpected type %T", val)
 				}
 			}
-
 		},
 	},
 }
 
-func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64,
-	max int64, opts cmds.OptMap) ([]io.Reader, uint64, error) {
+func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, max int64, opts cmds.OptMap) ([]io.Reader, uint64, error) {
 	readers := make([]io.Reader, 0, len(paths))
 	length := uint64(0)
 	if max == 0 {
@@ -139,6 +137,7 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64,
 		if err != nil {
 			return nil, 0, err
 		}
+
 		var file files.File
 		switch f := f.(type) {
 		case files.File:

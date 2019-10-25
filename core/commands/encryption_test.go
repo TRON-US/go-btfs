@@ -26,7 +26,7 @@ func TestEncryption(t *testing.T) {
 	}
 	getOpts := []options.UnixfsGetOption{
 		options.Unixfs.Decrypt(true),
-		options.Unixfs.PrivateKey("1b69f9edb6f20ab64814cffdb7d76e7531f8e41664d943b849edabb78e3e5041"),
+		options.Unixfs.PrivateKey("CAISIBtp+e228gq2SBTP/bfXbnUx+OQWZNlDuEntq7eOPlBB"),
 	}
 
 	msg := "btt to da moon"

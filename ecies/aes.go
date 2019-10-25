@@ -8,7 +8,7 @@ import (
 )
 
 func aesCBCEnc(key []byte, plaintext []byte, iv []byte) (ciphertext []byte, err error) {
-	block, err := aes.NewCipher(key) //选择加密算法
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
