@@ -1,7 +1,6 @@
 package coreapi
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,20 +10,20 @@ import (
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
 	files "github.com/TRON-US/go-btfs-files"
-	mfs "github.com/TRON-US/go-mfs"
+	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	unixfile "github.com/TRON-US/go-unixfs/file"
 	uio "github.com/TRON-US/go-unixfs/io"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
-	path "github.com/TRON-US/interface-go-btfs-core/path"
-	blockservice "github.com/ipfs/go-blockservice"
-	cid "github.com/ipfs/go-cid"
-	cidutil "github.com/ipfs/go-cidutil"
+	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/ipfs/go-blockservice"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cidutil"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	ipld "github.com/ipfs/go-ipld-format"
+	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
-	merkledag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
 )
 
@@ -270,18 +269,28 @@ func (api *UnixfsAPI) AppendMetadata(metaMap map[string]interface{}, opts ...opt
 		return err
 	}
 
-	b, err := json.Marshal(metaMap)
-	if err != nil {
-		return err
-	}
-
-	buf := bytes.Buffer{}
+	var b []byte = nil
 	if settings.TokenMetadata != "" {
-		buf.WriteString(settings.TokenMetadata)
+		tmp := make(map[string]interface{})
+		err = json.Unmarshal([]byte(settings.TokenMetadata), &tmp)
+		if err != nil {
+			return err
+		}
+		for k, v := range metaMap {
+			tmp[k] = v
+		}
+		b, err = json.Marshal(tmp)
+		if err != nil {
+			return err
+		}
+	} else {
+		b, err = json.Marshal(metaMap)
+		if err != nil {
+			return err
+		}
 	}
-	buf.WriteString(string(b))
 
-	settings.TokenMetadata = buf.String()
+	settings.TokenMetadata = string(b)
 
 	return nil
 }

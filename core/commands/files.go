@@ -245,7 +245,7 @@ func statNode(nd ipld.Node, enc cidenc.Encoder) (*statOutput, error) {
 		switch d.Type() {
 		case ft.TDirectory, ft.THAMTShard:
 			ndtype = "directory"
-		case ft.TFile, ft.TMetadata, ft.TRaw:
+		case ft.TFile, ft.TMetadata, ft.TRaw, ft.TTokenMeta:
 			ndtype = "file"
 		default:
 			return nil, fmt.Errorf("unrecognized node type: %s", d.Type())

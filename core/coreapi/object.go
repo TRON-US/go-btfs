@@ -161,6 +161,42 @@ func (api *ObjectAPI) Data(ctx context.Context, path ipath.Path, unixfs bool, me
 	}
 }
 
+func (api *ObjectAPI) MetaDataMap(ctx context.Context, path ipath.Path) (map[string]interface{}, error) {
+	metaData, err := api.MetaData(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	jmap := make(map[string]interface{})
+	err = json.Unmarshal(metaData, &jmap)
+	if err != nil {
+		return nil, err
+	}
+
+	return jmap, nil
+}
+
+func (api *ObjectAPI) MetaData(ctx context.Context, path ipath.Path) ([]byte, error) {
+	nd, err := api.core().ResolveNode(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	_, ok := nd.(*dag.ProtoNode)
+	if !ok {
+		return nil, dag.ErrNotProtobuf
+	}
+
+	ds := api.core().Dag()
+
+	metaData, err := getMetaData(ctx, nd, ds)
+	if err != nil {
+		return nil, err
+	}
+
+	return metaData, nil
+}
+
 // Return user data, metadata in byte array, and error.
 // Note that this function assumes, if token metadata exists inside
 // the DAG topped by the given 'node', the 'node' has metadata root
@@ -192,75 +228,12 @@ func getDataForUserAndMeta(ctx context.Context, nd ipld.Node, ds ipld.DAGService
 	return n.Data(), nil, nil
 }
 
-func (api *ObjectAPI) MetaDataMap(ctx context.Context, path ipath.Path) (map[string]interface{}, error) {
-	mr, err := api.MetaData(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-
-	metaData, err := ioutil.ReadAll(mr)
-	if err != nil {
-		return nil, err
-	}
-
-	jmap := make(map[string]interface{})
-	err = json.Unmarshal(metaData, &jmap)
-	if err != nil {
-		return nil, err
-	}
-
-	return jmap, nil
-}
-
-func (api *ObjectAPI) MetaData(ctx context.Context, path ipath.Path) (io.Reader, error) {
-	nd, err := api.core().ResolveNode(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-
-	_, ok := nd.(*dag.ProtoNode)
-	if !ok {
-		return nil, dag.ErrNotProtobuf
-	}
-
-	ds := api.core().Dag()
-
-	metaData, err := getMetaData(ctx, nd, ds)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewReader(metaData), nil
-}
-
 // Return metadata under the given 'nd' node
 // if 'nd' has metadata root node aa its first child.
 func getMetaData(ctx context.Context, nd ipld.Node, ds ipld.DAGService) ([]byte, error) {
-	n := nd.(*dag.ProtoNode)
 
-	fsType, err := ft.GetFSType(n)
-	if err != nil {
-		return nil, err
-	}
-
-	if ft.TTokenMeta == fsType {
-		return n.Data(), nil
-	}
-
-	// Return metadata if first child is of type TTokenMeta.
-	var metadata []byte = nil
-	if nd.Links() != nil && len(nd.Links()) >= 2 {
-		children, err := ft.GetChildrenForDagWithMeta(ctx, nd, ds)
-		if err != nil {
-			return nil, err
-		}
-		if children == nil {
-			return nil, nil
-		}
-		return children[0].(*dag.ProtoNode).Data(), nil
-	}
-
-	return metadata, nil
+	_, metadata, err := getDataForUserAndMeta(ctx, nd, ds)
+	return metadata, err
 }
 
 func (api *ObjectAPI) Links(ctx context.Context, path ipath.Path) ([]*ipld.Link, error) {
