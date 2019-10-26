@@ -2,6 +2,7 @@ package objectcmd
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,17 +12,28 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cidutil/cidenc"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 type Node struct {
 	Links []Link
 	Data  string
+}
+
+type NodeWithMetaString struct {
+	N        Node
+	Metadata string
+}
+
+type NodeWithMetaMap struct {
+	N        Node
+	Metadata map[string]interface{}
 }
 
 type Link struct {
@@ -44,6 +56,7 @@ const (
 	pinOptionName          = "pin"
 	quietOptionName        = "quiet"
 	humanOptionName        = "human"
+	metaDisplayOptionName  = "meta"
 )
 
 var ObjectCmd = &cmds.Command{
@@ -86,15 +99,20 @@ is the raw data of the object.
 	Arguments: []cmds.Argument{
 		cmds.StringArg("key", true, false, "Key of the object to retrieve, in base58-encoded multihash format.").EnableStdin(),
 	},
+	Options: []cmds.Option{
+		cmds.BoolOption(metaDisplayOptionName, "m", "Display token metadata"),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
 
+		meta, _ := req.Options[metaDisplayOptionName].(bool)
+
 		path := path.New(req.Arguments[0])
 
-		data, err := api.Object().Data(req.Context, path)
+		data, _, err := api.Object().Data(req.Context, path, true, meta)
 		if err != nil {
 			return err
 		}
@@ -211,12 +229,15 @@ Supported values are:
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(encodingOptionName, "Encoding type of the data field, either \"text\" or \"base64\".").WithDefault("text"),
+		cmds.BoolOption(metaDisplayOptionName, "m", "Display token metadata"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
+
+		meta, _ := req.Options[metaDisplayOptionName].(bool)
 
 		enc, err := cmdenv.GetLowLevelCidEncoder(req)
 		if err != nil {
@@ -230,40 +251,21 @@ Supported values are:
 			return err
 		}
 
-		nd, err := api.Object().Get(req.Context, path)
+		nd, err := api.Object().Get(req.Context, path, false)
 		if err != nil {
 			return err
 		}
 
-		r, err := api.Object().Data(req.Context, path)
+		r, mr, err := api.Object().Data(req.Context, path, true, true)
 		if err != nil {
 			return err
 		}
 
-		data, err := ioutil.ReadAll(r)
-		if err != nil {
-			return err
+		if meta && mr != nil {
+			return getObjectWithMeta(res, r, mr, datafieldenc, nd, enc)
+		} else {
+			return getObject(res, r, datafieldenc, nd, enc)
 		}
-
-		out, err := encodeData(data, datafieldenc)
-		if err != nil {
-			return err
-		}
-
-		node := &Node{
-			Links: make([]Link, len(nd.Links())),
-			Data:  out,
-		}
-
-		for i, link := range nd.Links() {
-			node.Links[i] = Link{
-				Hash: enc.Encode(link.Cid),
-				Name: link.Name,
-				Size: link.Size,
-			}
-		}
-
-		return cmds.EmitOnce(res, node)
 	},
 	Type: Node{},
 	Encoders: cmds.EncoderMap{
@@ -557,4 +559,130 @@ func encodeData(data []byte, encoding string) (string, error) {
 	}
 
 	return "", ErrDataEncoding
+}
+
+func getObject(res cmds.ResponseEmitter, r io.Reader, dfenc string, nd ipld.Node, enc cidenc.Encoder) error {
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	out, err := encodeData(data, dfenc)
+	if err != nil {
+		return err
+	}
+
+	node := &Node{
+		Links: make([]Link, len(nd.Links())),
+		Data:  out,
+	}
+
+	for i, link := range nd.Links() {
+		node.Links[i] = Link{
+			Hash: enc.Encode(link.Cid),
+			Name: link.Name,
+			Size: link.Size,
+		}
+	}
+
+	return cmds.EmitOnce(res, node)
+}
+
+func returnMetaString(metaData []byte, out string, dfenc string, nd ipld.Node, enc cidenc.Encoder) (*NodeWithMetaString, error) {
+	mout, err := encodeData(metaData, dfenc)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &NodeWithMetaString{
+		N: Node{
+			make([]Link, len(nd.Links())),
+			out,
+		},
+		Metadata: mout,
+	}
+
+	for i, link := range nd.Links() {
+		node.N.Links[i] = Link{
+			Hash: enc.Encode(link.Cid),
+			Name: link.Name,
+			Size: link.Size,
+		}
+	}
+
+	return node, nil
+}
+
+func returnMetaMap(data []byte, metaData []byte, out string, dfenc string, nd ipld.Node, enc cidenc.Encoder) (*NodeWithMetaMap, error) {
+	var md interface{}
+
+	err := json.Unmarshal(metaData, &md)
+	if err != nil {
+		return nil, err
+	}
+
+	mm, ok := md.(map[string]interface{})
+	if !ok {
+		return nil, err
+	}
+
+	node := &NodeWithMetaMap{
+		N: Node{
+			make([]Link, len(nd.Links())),
+			out,
+		},
+		Metadata: mm,
+	}
+
+	for i, link := range nd.Links() {
+		node.N.Links[i] = Link{
+			Hash: enc.Encode(link.Cid),
+			Name: link.Name,
+			Size: link.Size,
+		}
+	}
+
+	return node, nil
+}
+
+func getObjectWithMeta(res cmds.ResponseEmitter, r io.Reader, mr io.Reader, dfenc string, nd ipld.Node, enc cidenc.Encoder) error {
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	metaData, err := ioutil.ReadAll(mr)
+	if err != nil {
+		return err
+	}
+
+	out, err := encodeData(data, dfenc)
+	if err != nil {
+		return err
+	}
+
+	// Return meta data string if the encoding is not text.
+	if dfenc != "text" {
+		node, err := returnMetaString(metaData, out, dfenc, nd, enc)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, node)
+	}
+
+	node, err := returnMetaMap(data, metaData, out, dfenc, nd, enc)
+	if err != nil {
+		// Return NodeWithString instead
+		node, err := returnMetaString(metaData, out, dfenc, nd, enc)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, node)
+	}
+
+	return cmds.EmitOnce(res, node)
 }

@@ -151,6 +151,12 @@ func CommandsROOption(cctx oldcmds.Context) ServeOption {
 	return commandsOption(cctx, corecommands.RootRO)
 }
 
+// CommandsRemoteOption constructs a ServerOption for hooking the public-facing,
+// remote commands into the HTTP server.
+func CommandsRemoteOption(cctx oldcmds.Context) ServeOption {
+	return commandsOption(cctx, corecommands.RootRemote)
+}
+
 // CheckVersionOption returns a ServeOption that checks whether the client btfs version matches. Does nothing when the user agent string does not contain `/go-ipfs/`
 func CheckVersionOption() ServeOption {
 	daemonVersion := version.ApiVersion

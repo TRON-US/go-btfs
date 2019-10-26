@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
+	files "github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/go-mfs"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
-	files "github.com/ipfs/go-ipfs-files"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-mfs"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 	routing "github.com/libp2p/go-libp2p-core/routing"
 	"github.com/multiformats/go-multibase"
 )
@@ -172,7 +172,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath)
+	dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath, false)
 	if err != nil {
 		webError(w, "btfs cat "+escapedURLPath, err, http.StatusNotFound)
 		return
@@ -257,7 +257,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	idx, err := i.api.Unixfs().Get(r.Context(), ipath.Join(resolvedPath, "index.html"))
+	idx, err := i.api.Unixfs().Get(r.Context(), ipath.Join(resolvedPath, "index.html"), false)
 	switch err.(type) {
 	case nil:
 		dirwithoutslash := urlPath[len(urlPath)-1] != '/'

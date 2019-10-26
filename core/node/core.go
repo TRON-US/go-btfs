@@ -8,6 +8,8 @@ import (
 	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-btfs/repo"
 
+	"github.com/TRON-US/go-mfs"
+	"github.com/TRON-US/go-unixfs"
 	"github.com/ipfs/go-bitswap"
 	"github.com/ipfs/go-bitswap/network"
 	"github.com/ipfs/go-blockservice"
@@ -18,8 +20,6 @@ import (
 	"github.com/ipfs/go-ipfs-exchange-offline"
 	"github.com/ipfs/go-ipld-format"
 	"github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-mfs"
-	"github.com/ipfs/go-unixfs"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/routing"
 	"go.uber.org/fx"

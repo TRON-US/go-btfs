@@ -8,13 +8,13 @@ import (
 
 	pin "github.com/TRON-US/go-btfs/pin"
 
+	ft "github.com/TRON-US/go-unixfs"
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsquery "github.com/ipfs/go-datastore/query"
 	ipns "github.com/ipfs/go-ipns"
 	pb "github.com/ipfs/go-ipns/pb"
 	path "github.com/ipfs/go-path"
-	ft "github.com/ipfs/go-unixfs"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"

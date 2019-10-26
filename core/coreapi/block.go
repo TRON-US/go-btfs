@@ -10,11 +10,11 @@ import (
 	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
 	pin "github.com/TRON-US/go-btfs/pin"
 
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	caopts "github.com/TRON-US/interface-go-btfs-core/options"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	caopts "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 type BlockAPI CoreAPI
@@ -64,7 +64,7 @@ func (api *BlockAPI) Put(ctx context.Context, src io.Reader, opts ...caopts.Bloc
 	return &BlockStat{path: path.IpldPath(b.Cid()), size: len(data)}, nil
 }
 
-func (api *BlockAPI) Get(ctx context.Context, p path.Path) (io.Reader, error) {
+func (api *BlockAPI) Get(ctx context.Context, p path.Path, meta bool) (io.Reader, error) {
 	rp, err := api.core().ResolvePath(ctx, p)
 	if err != nil {
 		return nil, err

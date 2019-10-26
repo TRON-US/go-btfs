@@ -11,10 +11,10 @@ import (
 	"syscall"
 
 	core "github.com/TRON-US/go-btfs/core"
+	ft "github.com/TRON-US/go-unixfs"
+	uio "github.com/TRON-US/go-unixfs/io"
 	mdag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"
-	ft "github.com/ipfs/go-unixfs"
-	uio "github.com/ipfs/go-unixfs/io"
 
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"

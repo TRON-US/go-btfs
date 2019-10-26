@@ -1,4 +1,4 @@
-package analytics
+package spin
 
 import (
 	"bytes"
@@ -9,9 +9,12 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands"
 	"github.com/ipfs/go-bitswap"
+	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
+	"github.com/tron-us/go-btfs-common/info"
 
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -28,6 +31,7 @@ type programInfo struct {
 }
 
 type dataCollection struct {
+	info.NodeStorage
 	programInfo
 	UpTime      uint64  `json:"up_time"`         //Seconds
 	StorageUsed uint64  `json:"storage_used"`    //Stored in Kilobytes
@@ -55,7 +59,10 @@ type healthData struct {
 }
 
 //Server URL for data collection
-var statusServerDomain string
+var (
+	log                = logging.Logger("spin")
+	statusServerDomain string
+)
 
 const (
 	routeMetrics = "/metrics"
@@ -83,13 +90,12 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
-//Initialize starts the process to collect data and starts the GoRoutine for constant collection
-func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
-	if n == nil {
+//Analytics starts the process to collect data and starts the GoRoutine for constant collection
+func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
+	if node == nil {
 		return
 	}
-	var log = logging.Logger("cmd/btfs")
-	configuration, err := n.Repo.Config()
+	configuration, err := node.Repo.Config()
 	if err != nil {
 		return
 	}
@@ -97,7 +103,7 @@ func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
 	statusServerDomain = configuration.StatusServerDomain
 
 	dc := new(dataCollection)
-	dc.node = n
+	dc.node = node
 
 	if configuration.Experimental.Analytics {
 		infoStats, err := cpu.Info()
@@ -108,22 +114,42 @@ func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
 		}
 
 		dc.startTime = time.Now()
-		if n.Identity == "" {
+		if node.Identity == "" {
 			return
 		}
-		dc.NodeID = n.Identity.Pretty()
+		dc.NodeID = node.Identity.Pretty()
 		dc.HVal = hValue
 		dc.BTFSVersion = BTFSVersion
 		dc.OSType = runtime.GOOS
 		dc.ArchType = runtime.GOARCH
 	}
 
-	go dc.collectionAgent()
+	go dc.collectionAgent(node)
 }
 
-func (dc *dataCollection) update() {
+func (dc *dataCollection) update(node *core.IpfsNode) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
+	rds := node.Repo.Datastore()
+	b, err := rds.Get(commands.GetHostStorageKey(node.Identity.Pretty()))
+	if err != nil && err != ds.ErrNotFound {
+		dc.reportHealthAlert(fmt.Sprintf("cannot get selfKey: %s", err.Error()))
+	}
+
+	var ns info.NodeStorage
+	if err == nil {
+		err = json.Unmarshal(b, &ns)
+		if err != nil {
+			log.Warning(err.Error())
+			dc.reportHealthAlert(fmt.Sprintf("cannot parse nodestorage config: %s", err.Error()))
+		} else {
+			dc.StoragePriceAsk = ns.StoragePriceAsk
+			dc.BandwidthPriceAsk = ns.BandwidthPriceAsk
+			dc.StorageTimeMin = ns.StorageTimeMin
+			dc.BandwidthLimit = ns.BandwidthLimit
+			dc.CollateralStake = ns.CollateralStake
+		}
+	}
 
 	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
 	cpus, e := cpu.Percent(0, false)
@@ -158,8 +184,8 @@ func (dc *dataCollection) update() {
 	dc.NumPeers = uint64(len(st.Peers))
 }
 
-func (dc *dataCollection) sendData() {
-	dc.update()
+func (dc *dataCollection) sendData(node *core.IpfsNode) {
+	dc.update(node)
 	dcMarshal, err := json.Marshal(dc)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
@@ -205,14 +231,14 @@ func (dc *dataCollection) sendData() {
 	defer res.Body.Close()
 }
 
-func (dc *dataCollection) collectionAgent() {
+func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	tick := time.NewTicker(heartBeat)
 
 	defer tick.Stop()
 
 	config, _ := dc.node.Repo.Config()
 	if config.Experimental.Analytics {
-		dc.sendData()
+		dc.sendData(node)
 	}
 	// make the configuration available in the for loop
 	for range tick.C {
@@ -220,15 +246,12 @@ func (dc *dataCollection) collectionAgent() {
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection
 		if config.Experimental.Analytics {
-			dc.sendData()
+			dc.sendData(node)
 		}
 	}
 }
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
-	// log is the command logger
-	var log = logging.Logger("cmd/btfs")
-
 	hd := new(healthData)
 	hd.NodeId = dc.NodeID
 	hd.BTFSVersion = dc.BTFSVersion

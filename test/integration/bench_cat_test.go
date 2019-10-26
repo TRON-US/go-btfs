@@ -13,7 +13,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/coreapi"
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
-	files "github.com/ipfs/go-ipfs-files"
+
+	files "github.com/TRON-US/go-btfs-files"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	testutil "github.com/libp2p/go-libp2p-testing/net"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
@@ -96,7 +97,7 @@ func benchCat(b *testing.B, data []byte, conf testutil.LatencyConfig) error {
 	}
 
 	b.StartTimer()
-	readerCatted, err := catterApi.Unixfs().Get(ctx, added)
+	readerCatted, err := catterApi.Unixfs().Get(ctx, added, false)
 	if err != nil {
 		return err
 	}

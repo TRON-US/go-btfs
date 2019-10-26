@@ -17,18 +17,18 @@ import (
 	repo "github.com/TRON-US/go-btfs/repo"
 
 	config "github.com/TRON-US/go-btfs-config"
+	files "github.com/TRON-US/go-btfs-files"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
+	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	datastore "github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
-	files "github.com/ipfs/go-ipfs-files"
 	path "github.com/ipfs/go-path"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
-	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 
-// `ipfs object new unixfs-dir`
+// `btfs object new unixfs-dir`
 var emptyDir = "/btfs/QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"
 
 type mockNamesys map[string]path.Path
