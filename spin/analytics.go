@@ -15,7 +15,7 @@ import (
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"github.com/tron-us/go-btfs-common/info"
-
+	"github.com/cenkalti/backoff"
 	"github.com/shirou/gopsutil/cpu"
 )
 
@@ -75,6 +75,8 @@ const (
 
 	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
+
+	maxRetryTimes = 15
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -222,13 +224,19 @@ func (dc *dataCollection) sendData(node *core.IpfsNode) {
 		return
 	}
 	req.Header.Add("Content-Type", "application/json")
+	dc.doSend(req)
+}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
-		return
-	}
-	defer res.Body.Close()
+func (dc *dataCollection) doSend(req *http.Request) {
+	backoff.Retry(func() error {
+		fmt.Println(time.Now())
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
+			return err
+		}
+		return res.Body.Close()
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
 }
 
 func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
