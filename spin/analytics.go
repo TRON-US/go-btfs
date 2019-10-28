@@ -10,13 +10,13 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands"
+	"github.com/cenkalti/backoff"
 	"github.com/ipfs/go-bitswap"
 	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-	"github.com/tron-us/go-btfs-common/info"
-	"github.com/cenkalti/backoff"
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/tron-us/go-btfs-common/info"
 )
 
 type programInfo struct {
