@@ -114,6 +114,13 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 			return nil, err
 		}
 	}
+	// Only append metadata if it's available
+	if md := chnk.MetaData(); md != nil {
+		metaBytes, err = adder.appendMetadataObject(metaBytes, md)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	params := ihelper.DagBuilderParams{
 		Dagserv:       adder.bufferedDS,
@@ -445,7 +452,8 @@ func (adder *Adder) addDir(path string, dir files.Directory, toplevel bool) erro
 	return it.Err()
 }
 
-// Convert token metadata in JSON string to byte array in JSON encoding.
+// convertMetadataToBytes converts token metadata in JSON string to
+// byte array in JSON encoding.
 func (adder *Adder) convertMetadataToBytes(checkString bool) ([]byte, error) {
 	s := adder.TokenMetadata
 	b := []byte(s)
@@ -461,6 +469,25 @@ func (adder *Adder) convertMetadataToBytes(checkString bool) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// appendMetadataObject appends a new unmarshalled object to the existing
+// bytes for metadata and returns the new encoding.
+func (adder *Adder) appendMetadataObject(metadata []byte, o interface{}) ([]byte, error) {
+	// Nothing to append, return original
+	if o == nil {
+		return metadata, nil
+	}
+	b, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+	// Nothing from existing, return new JSON
+	if len(metadata) == 0 {
+		return b, nil
+	}
+	// Now splice last } of existing and the { of the new JSON into a new ,
+	return append(append(metadata[:len(metadata)-1], ','), b[1:]...), nil
 }
 
 func (adder *Adder) maybePauseForGC() error {

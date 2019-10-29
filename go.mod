@@ -145,3 +145,5 @@ require (
 go 1.12
 
 replace github.com/golangci/golangci-lint => github.com/mhutchinson/golangci-lint v1.17.2-0.20190909151044-da0150b86be6
+
+replace github.com/TRON-US/go-btfs-chunker => ../go-btfs-chunker
