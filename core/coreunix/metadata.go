@@ -3,6 +3,7 @@ package coreunix
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	core "github.com/TRON-US/go-btfs/core"
 
@@ -63,6 +64,7 @@ func Metadata(n *core.IpfsNode, skey string) (*ft.Metadata, error) {
 	return ft.MetadataFromBytes(pbnd.Data())
 }
 
+// MetaDataMap takes a root node path and returns an unmarshalled metadata map in bytes
 func MetaDataMap(ctx context.Context, api coreiface.CoreAPI, path ipath.Path) (map[string]interface{}, error) {
 	metaData, err := MetaData(ctx, api, path)
 	if err != nil {
@@ -78,6 +80,7 @@ func MetaDataMap(ctx context.Context, api coreiface.CoreAPI, path ipath.Path) (m
 	return jmap, nil
 }
 
+// MetaData takes a root node path and returns the metadata in bytes
 func MetaData(ctx context.Context, api coreiface.CoreAPI, path ipath.Path) ([]byte, error) {
 	nd, err := api.ResolveNode(ctx, path)
 	if err != nil {
@@ -91,12 +94,21 @@ func MetaData(ctx context.Context, api coreiface.CoreAPI, path ipath.Path) ([]by
 
 	ds := api.Dag()
 
-	metaData, err := getMetaData(ctx, nd, ds)
+	mn, err := getMetaData(ctx, nd, ds)
 	if err != nil {
 		return nil, err
 	}
 
-	return metaData, nil
+	fsNode, err := ft.FSNodeFromBytes(mn)
+	if err != nil {
+		return nil, err
+	}
+
+	if fsNode.Type() != ft.TTokenMeta {
+		return nil, fmt.Errorf("invalid metadata fs node type: %d", fsNode.Type())
+	}
+
+	return fsNode.Data(), nil
 }
 
 // GetMetaData returns metadata under the given 'nd' node
@@ -106,7 +118,7 @@ func getMetaData(ctx context.Context, nd ipld.Node, ds ipld.DAGService) ([]byte,
 	return metadata, err
 }
 
-// GetDataForUserAndMeta returns user data, metadata in byte array, and error.
+// GetDataForUserAndMeta returns raw dag node user data, metadata in byte array, and error.
 // Note that this function assumes, if token metadata exists inside
 // the DAG topped by the given 'node', the 'node' has metadata root
 // as first child, user data root as second child.
