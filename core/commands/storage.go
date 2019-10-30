@@ -173,7 +173,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		retryQueue := storage.NewRetryQueue(int64(len(peers)))
 		// set price limit, the price is default when host doesn't provide price
 		price, found := req.Options[uploadPriceOptionName].(int64)
-		if found && price < 0 {
+		if found && price <= 0 {
 			return fmt.Errorf("cannot input a negative price")
 		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
