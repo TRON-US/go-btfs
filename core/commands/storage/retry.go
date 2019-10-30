@@ -16,6 +16,7 @@ type HostNode struct {
 
 	Identity   string
 	Score      int64
+	Price      int64
 	RetryTimes int
 	FailTimes  int
 }
