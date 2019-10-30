@@ -1,0 +1,10 @@
+version: '3'
+services:
+  btfs-build-binaries:
+    build:
+      context: .
+      dockerfile: Dockerfile.unit_testing
+    volumes:
+      - ../btfs-binary-releases:/btfs-binary-releases
+    command:
+      bash -c "chmod 777 package.sh && ./package.sh"
