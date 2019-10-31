@@ -149,6 +149,13 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (file
 		return nil, err
 	}
 
+	if metadata {
+		mnd, err := ft.GetMetaSubdagRoot(ctx, nd, ses.dag)
+		if err != nil {
+			return nil, err
+		}
+		return unixfile.NewUnixfsFile(ctx, ses.dag, mnd, metadata)
+	}
 	return unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
 }
 
