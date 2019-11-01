@@ -55,8 +55,7 @@ const (
 	FailLimit  = 3
 )
 
-// multiaddress prefix
-var multiAddressPrefix = "/" + ma.ProtocolWithCode(ma.P_IPFS).Name + "/"
+var HostPriceLowBoundary = int64(10)
 
 func GetHostStorageKey(pid string) ds.Key {
 	return newKeyHelper(hostStorageInfoPrefix, pid)
@@ -173,7 +172,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		retryQueue := storage.NewRetryQueue(int64(len(peers)))
 		// set price limit, the price is default when host doesn't provide price
 		price, found := req.Options[uploadPriceOptionName].(int64)
-		if found && price <= 0 {
+		if found && price < HostPriceLowBoundary {
 			return fmt.Errorf("cannot input a negative price")
 		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
@@ -215,7 +214,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					return err
 				}
 				// use host askingPrice instead if provided
-				if ni.StoragePriceAsk != 0 {
+				if int64(ni.StoragePriceAsk) != HostPriceLowBoundary {
 					price = int64(ni.StoragePriceAsk)
 				}
 				// add host to retry queue
