@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"path"
 
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
 )
 
 // These constants define the changes that can be applied to a DAG.

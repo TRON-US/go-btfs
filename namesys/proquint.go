@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	proquint "github.com/bren2010/proquint"
 	path "github.com/ipfs/go-path"
+	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 )
 
 type ProquintResolver struct{}

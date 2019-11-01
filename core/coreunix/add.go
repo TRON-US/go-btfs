@@ -2,7 +2,6 @@ package coreunix
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,21 +10,21 @@ import (
 
 	"github.com/TRON-US/go-btfs/pin"
 
-	chunker "github.com/TRON-US/go-btfs-chunker"
-	"github.com/TRON-US/go-btfs-files"
-	"github.com/TRON-US/go-mfs"
-	"github.com/TRON-US/go-unixfs"
-	"github.com/TRON-US/go-unixfs/importer/balanced"
-	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
-	"github.com/TRON-US/go-unixfs/importer/trickle"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/ipfs/go-cid"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
+	chunker "github.com/ipfs/go-ipfs-chunker"
+	"github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs-posinfo"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
+	"github.com/ipfs/go-mfs"
+	"github.com/ipfs/go-unixfs"
+	"github.com/ipfs/go-unixfs/importer/balanced"
+	ihelper "github.com/ipfs/go-unixfs/importer/helpers"
+	"github.com/ipfs/go-unixfs/importer/trickle"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 var log = logging.Logger("coreunix")
@@ -45,40 +44,38 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 	bufferedDS := ipld.NewBufferedDAG(ctx, ds)
 
 	return &Adder{
-		ctx:           ctx,
-		pinning:       p,
-		gcLocker:      bs,
-		dagService:    ds,
-		bufferedDS:    bufferedDS,
-		Progress:      false,
-		Pin:           true,
-		Trickle:       false,
-		Chunker:       "",
-		TokenMetadata: "",
+		ctx:        ctx,
+		pinning:    p,
+		gcLocker:   bs,
+		dagService: ds,
+		bufferedDS: bufferedDS,
+		Progress:   false,
+		Pin:        true,
+		Trickle:    false,
+		Chunker:    "",
 	}, nil
 }
 
 // Adder holds the switches passed to the `add` command.
 type Adder struct {
-	ctx           context.Context
-	pinning       pin.Pinner
-	gcLocker      bstore.GCLocker
-	dagService    ipld.DAGService
-	bufferedDS    *ipld.BufferedDAG
-	Out           chan<- interface{}
-	Progress      bool
-	Pin           bool
-	Trickle       bool
-	RawLeaves     bool
-	Silent        bool
-	NoCopy        bool
-	Chunker       string
-	mroot         *mfs.Root
-	unlocker      bstore.Unlocker
-	tempRoot      cid.Cid
-	CidBuilder    cid.Builder
-	liveNodes     uint64
-	TokenMetadata string
+	ctx        context.Context
+	pinning    pin.Pinner
+	gcLocker   bstore.GCLocker
+	dagService ipld.DAGService
+	bufferedDS *ipld.BufferedDAG
+	Out        chan<- interface{}
+	Progress   bool
+	Pin        bool
+	Trickle    bool
+	RawLeaves  bool
+	Silent     bool
+	NoCopy     bool
+	Chunker    string
+	mroot      *mfs.Root
+	unlocker   bstore.Unlocker
+	tempRoot   cid.Cid
+	CidBuilder cid.Builder
+	liveNodes  uint64
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -107,22 +104,12 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		return nil, err
 	}
 
-	var metaBytes []byte
-	if adder.TokenMetadata != "" {
-		metaBytes, err = adder.convertMetadataToBytes(true)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	params := ihelper.DagBuilderParams{
-		Dagserv:       adder.bufferedDS,
-		RawLeaves:     adder.RawLeaves,
-		Maxlinks:      ihelper.DefaultLinksPerBlock,
-		NoCopy:        adder.NoCopy,
-		CidBuilder:    adder.CidBuilder,
-		TokenMetadata: metaBytes,
-		ChunkSize:     chnk.ChunkSize(),
+		Dagserv:    adder.bufferedDS,
+		RawLeaves:  adder.RawLeaves,
+		Maxlinks:   ihelper.DefaultLinksPerBlock,
+		NoCopy:     adder.NoCopy,
+		CidBuilder: adder.CidBuilder,
 	}
 
 	db, err := params.New(chnk)
@@ -133,13 +120,6 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 	if adder.Trickle {
 		nd, err = trickle.Layout(db)
 	} else {
-		if db.IsThereMetaData() && !db.IsMetaDagBuilt() {
-			err := balanced.BuildMetadataDag(db)
-			if err != nil {
-				return nil, err
-			}
-			db.SetMetaDagBuilt(true)
-		}
 		nd, err = balanced.Layout(db)
 	}
 	if err != nil {
@@ -443,24 +423,6 @@ func (adder *Adder) addDir(path string, dir files.Directory, toplevel bool) erro
 	}
 
 	return it.Err()
-}
-
-// Convert token metadata in JSON string to byte array in JSON encoding.
-func (adder *Adder) convertMetadataToBytes(checkString bool) ([]byte, error) {
-	s := adder.TokenMetadata
-	b := []byte(s)
-	// Optionally check if the input data is in JSON string.
-	// If not, return zero and error.
-	if checkString {
-		var a interface{}
-		var err error
-		err = json.Unmarshal(b, &a)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b, nil
 }
 
 func (adder *Adder) maybePauseForGC() error {

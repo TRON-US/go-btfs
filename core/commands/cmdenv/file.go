@@ -3,7 +3,7 @@ package cmdenv
 import (
 	"fmt"
 
-	files "github.com/TRON-US/go-btfs-files"
+	files "github.com/ipfs/go-ipfs-files"
 )
 
 // GetFileArg returns the next file from the directory or an error

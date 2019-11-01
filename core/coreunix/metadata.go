@@ -2,9 +2,9 @@ package coreunix
 
 import (
 	core "github.com/TRON-US/go-btfs/core"
-	ft "github.com/TRON-US/go-unixfs"
 	cid "github.com/ipfs/go-cid"
 	dag "github.com/ipfs/go-merkledag"
+	ft "github.com/ipfs/go-unixfs"
 )
 
 func AddMetadataTo(n *core.IpfsNode, skey string, m *ft.Metadata) (string, error) {

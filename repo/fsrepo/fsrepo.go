@@ -16,12 +16,12 @@ import (
 	"github.com/TRON-US/go-btfs/repo/common"
 	mfsr "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 	dir "github.com/TRON-US/go-btfs/thirdparty/dir"
+	filestore "github.com/ipfs/go-filestore"
 
 	config "github.com/TRON-US/go-btfs-config"
 	serialize "github.com/TRON-US/go-btfs-config/serialize"
 	ds "github.com/ipfs/go-datastore"
 	measure "github.com/ipfs/go-ds-measure"
-	filestore "github.com/ipfs/go-filestore"
 	lockfile "github.com/ipfs/go-fs-lock"
 	util "github.com/ipfs/go-ipfs-util"
 	logging "github.com/ipfs/go-log"

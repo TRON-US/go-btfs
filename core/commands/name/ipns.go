@@ -11,10 +11,10 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
-	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	logging "github.com/ipfs/go-log"
 	path "github.com/ipfs/go-path"
+	options "github.com/ipfs/interface-go-ipfs-core/options"
+	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 )
 
 var log = logging.Logger("core/commands/btns")

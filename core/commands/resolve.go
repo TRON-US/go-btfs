@@ -12,11 +12,11 @@ import (
 	ns "github.com/TRON-US/go-btfs/namesys"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
-	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
-	path "github.com/TRON-US/interface-go-btfs-core/path"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	ipfspath "github.com/ipfs/go-path"
+	options "github.com/ipfs/interface-go-ipfs-core/options"
+	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
+	path "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 const (

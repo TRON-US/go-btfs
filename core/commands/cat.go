@@ -9,16 +9,15 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs-files"
-	"github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/ipfs/go-ipfs-files"
+	"github.com/ipfs/interface-go-ipfs-core"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 const (
-	progressBarMinSize       = 1024 * 1024 * 8 // show progress bar for outputs > 8MiB
-	offsetOptionName         = "offset"
-	lengthOptionName         = "length"
-	catMetaDisplayOptionName = "meta"
+	progressBarMinSize = 1024 * 1024 * 8 // show progress bar for outputs > 8MiB
+	offsetOptionName   = "offset"
+	lengthOptionName   = "length"
 )
 
 var CatCmd = &cmds.Command{
@@ -33,7 +32,6 @@ var CatCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.Int64Option(offsetOptionName, "o", "Byte offset to begin reading from."),
 		cmds.Int64Option(lengthOptionName, "l", "Maximum number of bytes to read."),
-		cmds.BoolOption(catMetaDisplayOptionName, "m", "Display token metadata"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
@@ -55,14 +53,12 @@ var CatCmd = &cmds.Command{
 			max = -1
 		}
 
-		meta, _ := req.Options[catMetaDisplayOptionName].(bool)
-
 		err = req.ParseBodyArgs()
 		if err != nil {
 			return err
 		}
 
-		readers, length, err := cat(req.Context, api, req.Arguments, int64(offset), int64(max), meta)
+		readers, length, err := cat(req.Context, api, req.Arguments, int64(offset), int64(max))
 		if err != nil {
 			return err
 		}
@@ -115,14 +111,14 @@ var CatCmd = &cmds.Command{
 	},
 }
 
-func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, max int64, meta bool) ([]io.Reader, uint64, error) {
+func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, max int64) ([]io.Reader, uint64, error) {
 	readers := make([]io.Reader, 0, len(paths))
 	length := uint64(0)
 	if max == 0 {
 		return nil, 0, nil
 	}
 	for _, p := range paths {
-		f, err := api.Unixfs().Get(ctx, path.New(p), meta)
+		f, err := api.Unixfs().Get(ctx, path.New(p))
 		if err != nil {
 			return nil, 0, err
 		}

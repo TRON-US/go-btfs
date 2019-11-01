@@ -1,6 +1,8 @@
-all:
-	@gmake $@
-.PHONY: all
+# General tools
 
-.DEFAULT:
-	@gmake $@
+SHELL=PATH='$(PATH)' /bin/sh
+
+# enable second expansion
+.SECONDEXPANSION:
+
+include Rules.mk

@@ -7,8 +7,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/interface-go-btfs-core/options"
-	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/ipfs/interface-go-ipfs-core/options"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 var ObjectPatchCmd = &cmds.Command{

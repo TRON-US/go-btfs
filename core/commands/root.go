@@ -3,11 +3,11 @@ package commands
 import (
 	"errors"
 
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
-	"github.com/TRON-US/go-btfs/core/commands/name"
+	name "github.com/TRON-US/go-btfs/core/commands/name"
 	ocmd "github.com/TRON-US/go-btfs/core/commands/object"
-	"github.com/TRON-US/go-btfs/core/commands/unixfs"
+	unixfs "github.com/TRON-US/go-btfs/core/commands/unixfs"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
@@ -37,9 +37,6 @@ BASIC COMMANDS
   get <ref>     Download BTFS objects
   ls <ref>      List links from an object
   refs <ref>    List hashes of links from an object
-
-BTFS COMMANDS
-  storage       Manage client and host storage features
 
 DATA STRUCTURE COMMANDS
   block         Interact with raw blocks in the datastore
@@ -152,7 +149,6 @@ var rootSubcommands = map[string]*cmds.Command{
 	"cid":       CidCmd,
 	"rm":        RmCmd,
 	//"update":    ExternalBinary(),
-	"storage": StorageCmd,
 }
 
 // RootRO is the readonly version of Root
@@ -200,17 +196,9 @@ var rootROSubcommands = map[string]*cmds.Command{
 	"resolve": ResolveCmd,
 }
 
-// RootRemote is the remote-facing version of Root
-var RootRemote = &cmds.Command{}
-
-var rootRemoteSubcommands = map[string]*cmds.Command{
-	"storage": StorageCmd,
-}
-
 func init() {
 	Root.ProcessHelp()
 	*RootRO = *Root
-	*RootRemote = *Root
 
 	// this was in the big map definition above before,
 	// but if we leave it there lgc.NewCommand will be executed
@@ -225,12 +213,9 @@ func init() {
 	*VersionROCmd = *VersionCmd
 	VersionROCmd.Subcommands = map[string]*cmds.Command{}
 	rootROSubcommands["version"] = VersionROCmd
-	// also sanitize remote version command
-	rootRemoteSubcommands["version"] = VersionROCmd
 
 	Root.Subcommands = rootSubcommands
 	RootRO.Subcommands = rootROSubcommands
-	RootRemote.Subcommands = rootRemoteSubcommands
 }
 
 type MessageOutput struct {

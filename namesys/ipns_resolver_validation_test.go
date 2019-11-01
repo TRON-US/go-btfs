@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	mockrouting "github.com/ipfs/go-ipfs-routing/mock"
@@ -13,6 +12,7 @@ import (
 	u "github.com/ipfs/go-ipfs-util"
 	ipns "github.com/ipfs/go-ipns"
 	path "github.com/ipfs/go-path"
+	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"

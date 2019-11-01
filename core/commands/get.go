@@ -15,8 +15,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/e"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	files "github.com/TRON-US/go-btfs-files"
-	"github.com/TRON-US/interface-go-btfs-core/path"
+	files "github.com/ipfs/go-ipfs-files"
+	"github.com/ipfs/interface-go-ipfs-core/path"
 	"github.com/whyrusleeping/tar-utils"
 	"gopkg.in/cheggaaa/pb.v1"
 )
@@ -28,7 +28,6 @@ const (
 	archiveOptionName          = "archive"
 	compressOptionName         = "compress"
 	compressionLevelOptionName = "compression-level"
-	getMetaDisplayOptionName   = "meta"
 )
 
 var GetCmd = &cmds.Command{
@@ -55,7 +54,6 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 		cmds.BoolOption(archiveOptionName, "a", "Output a TAR archive."),
 		cmds.BoolOption(compressOptionName, "C", "Compress the output with GZIP compression."),
 		cmds.IntOption(compressionLevelOptionName, "l", "The level of compression (1-9)."),
-		cmds.BoolOption(getMetaDisplayOptionName, "m", "Display token metadata"),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		_, err := getCompressOptions(req)
@@ -72,11 +70,9 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 			return err
 		}
 
-		meta, _ := req.Options[getMetaDisplayOptionName].(bool)
-
 		p := path.New(req.Arguments[0])
 
-		file, err := api.Unixfs().Get(req.Context, p, meta)
+		file, err := api.Unixfs().Get(req.Context, p)
 		if err != nil {
 			return err
 		}

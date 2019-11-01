@@ -34,7 +34,6 @@ func New(identity peer.ID, peerHost p2phost.Host, peerstore pstore.Peerstore) *P
 			Streams:     map[uint64]*Stream{},
 			ConnManager: peerHost.ConnManager(),
 			conns:       map[peer.ID]int{},
-			streams:     map[string]*Stream{},
 		},
 	}
 }

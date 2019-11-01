@@ -1,0 +1,20 @@
+--- interface-go-ipfs-core@v0.0.8/path/path.go	2019-06-10 11:16:59.000000000 -0700
++++ /tmp/interface-go-ipfs-core/path/path.go	2019-06-10 14:32:38.000000000 -0700
+@@ -122,7 +122,7 @@
+ // IpfsPath creates new /ipfs path from the provided CID
+ func IpfsPath(c cid.Cid) Resolved {
+ 	return &resolvedPath{
+-		path:      path{"/ipfs/" + c.String()},
++		path:      path{"/btfs/" + c.String()},
+ 		cid:       c,
+ 		root:      c,
+ 		remainder: "",
+@@ -178,7 +178,7 @@
+ 
+ func (p *path) Mutable() bool {
+ 	// TODO: MFS: check for /local
+-	return p.Namespace() == "ipns"
++	return p.Namespace() == "btns"
+ }
+ 
+ func (p *path) IsValid() error {

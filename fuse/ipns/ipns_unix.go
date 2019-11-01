@@ -15,15 +15,15 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	resolve "github.com/TRON-US/go-btfs/namesys/resolve"
 
-	ft "github.com/TRON-US/go-unixfs"
 	dag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"
+	ft "github.com/ipfs/go-unixfs"
 
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"
-	mfs "github.com/TRON-US/go-mfs"
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
+	mfs "github.com/ipfs/go-mfs"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )

@@ -11,9 +11,9 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs-files"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/ipfs/go-ipfs-files"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	"github.com/ipfs/interface-go-ipfs-core/options"
 	mh "github.com/multiformats/go-multihash"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
@@ -45,7 +45,6 @@ const (
 	hashOptionName        = "hash"
 	inlineOptionName      = "inline"
 	inlineLimitOptionName = "inline-limit"
-	tokenMetaOptionName   = "meta"
 )
 
 const adderOutChanSize = 8
@@ -84,9 +83,6 @@ hashes for the same file. The default is a fixed block size of
 Rabin fingerprint chunker for content defined chunking by specifying
 rabin-[min]-[avg]-[max] (where min/avg/max refer to the desired
 chunk sizes in bytes), e.g. 'rabin-262144-524288-1048576'.
-For replicated files intended for host storage, reed-solomon should be
-used with default settings. It is also supported to customize data and
-parity shards using reed-solomon-[#data]-[#parity]-[size].
 
 The following examples use very small byte sizes to demonstrate the
 properties of the different chunkers on a small file. You'll likely
@@ -124,7 +120,7 @@ You can now check what blocks have been created by:
 		cmds.BoolOption(trickleOptionName, "t", "Use trickle-dag format for dag generation."),
 		cmds.BoolOption(onlyHashOptionName, "n", "Only chunk and hash - do not write to disk."),
 		cmds.BoolOption(wrapOptionName, "w", "Wrap files with a directory object."),
-		cmds.StringOption(chunkerOptionName, "s", "Chunking algorithm, size-[bytes], rabin-[min]-[avg]-[max] or reed-solomon-[#data]-[#parity]-[size]").WithDefault("size-262144"),
+		cmds.StringOption(chunkerOptionName, "s", "Chunking algorithm, size-[bytes] or rabin-[min]-[avg]-[max]").WithDefault("size-262144"),
 		cmds.BoolOption(pinOptionName, "Pin this object when adding.").WithDefault(true),
 		cmds.BoolOption(rawLeavesOptionName, "Use raw blocks for leaf nodes. (experimental)"),
 		cmds.BoolOption(noCopyOptionName, "Add the file using filestore. Implies raw-leaves. (experimental)"),
@@ -133,7 +129,6 @@ You can now check what blocks have been created by:
 		cmds.StringOption(hashOptionName, "Hash function to use. Implies CIDv1 if not sha2-256. (experimental)").WithDefault("sha2-256"),
 		cmds.BoolOption(inlineOptionName, "Inline small blocks into CIDs. (experimental)"),
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
-		cmds.StringOption(tokenMetaOptionName, "m", "Token metadata in JSON string"),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -174,7 +169,6 @@ You can now check what blocks have been created by:
 		hashFunStr, _ := req.Options[hashOptionName].(string)
 		inline, _ := req.Options[inlineOptionName].(bool)
 		inlineLimit, _ := req.Options[inlineLimitOptionName].(int)
-		tokenMetadata, _ := req.Options[tokenMetaOptionName].(string)
 
 		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
 		if !ok {
@@ -208,8 +202,6 @@ You can now check what blocks have been created by:
 
 			options.Unixfs.Progress(progress),
 			options.Unixfs.Silent(silent),
-
-			options.Unixfs.TokenMetadata(tokenMetadata),
 		}
 
 		if cidVerSet {

@@ -220,18 +220,6 @@ func TestCommands(t *testing.T) {
 		"/cid/codecs",
 		"/cid/bases",
 		"/cid/hashes",
-		"/storage/upload/status",
-		"/storage",
-		"/storage/upload",
-		"/storage/upload/reqc",
-		"/storage/upload/respc",
-		"/storage/upload/proof",
-		"/storage/upload/init",
-		"/storage/announce",
-		"/storage/info",
-		"/storage/hosts",
-		"/storage/hosts/sync",
-		"/storage/hosts/info",
 	}
 
 	cmdSet := make(map[string]struct{})

@@ -9,6 +9,7 @@ import subprocess
 # start libs
 start_libs = (
         "go-ipfs-config",
+        "interface-go-ipfs-core",
         "go-path",
         "go-libp2p",
         "go-multiaddr"

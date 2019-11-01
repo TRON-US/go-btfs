@@ -16,8 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/coreapi"
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
-
-	files "github.com/TRON-US/go-btfs-files"
+	files "github.com/ipfs/go-ipfs-files"
 	logging "github.com/ipfs/go-log"
 	random "github.com/jbenet/go-random"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -153,7 +152,7 @@ func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
 		return err
 	}
 
-	readerCatted, err := catterApi.Unixfs().Get(ctx, added, false)
+	readerCatted, err := catterApi.Unixfs().Get(ctx, added)
 	if err != nil {
 		return err
 	}

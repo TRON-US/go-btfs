@@ -14,13 +14,13 @@ import (
 	"github.com/TRON-US/go-btfs/dagutils"
 	"github.com/TRON-US/go-btfs/pin"
 
-	ft "github.com/TRON-US/go-unixfs"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	caopts "github.com/TRON-US/interface-go-btfs-core/options"
-	ipath "github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
+	ft "github.com/ipfs/go-unixfs"
+	coreiface "github.com/ipfs/interface-go-ipfs-core"
+	caopts "github.com/ipfs/interface-go-ipfs-core/options"
+	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 const inputLimit = 2 << 20
@@ -128,112 +128,22 @@ func (api *ObjectAPI) Put(ctx context.Context, src io.Reader, opts ...caopts.Obj
 	return ipath.IpfsPath(dagnode.Cid()), nil
 }
 
-func (api *ObjectAPI) Get(ctx context.Context, path ipath.Path, meta bool) (ipld.Node, error) {
+func (api *ObjectAPI) Get(ctx context.Context, path ipath.Path) (ipld.Node, error) {
 	return api.core().ResolveNode(ctx, path)
 }
 
-func (api *ObjectAPI) Data(ctx context.Context, path ipath.Path, unixfs bool, meta bool) (io.Reader, io.Reader, error) {
+func (api *ObjectAPI) Data(ctx context.Context, path ipath.Path) (io.Reader, error) {
 	nd, err := api.core().ResolveNode(ctx, path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	pbnd, ok := nd.(*dag.ProtoNode)
 	if !ok {
-		return nil, nil, dag.ErrNotProtobuf
-	}
-
-	if unixfs {
-		ds := api.core().Dag()
-
-		pData, metaData, err := getDataForUserAndMeta(ctx, pbnd, ds)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if meta && metaData != nil {
-			return bytes.NewReader(pData), bytes.NewReader(metaData), nil
-		} else {
-			return bytes.NewReader(pData), nil, nil
-		}
-	} else {
-		return bytes.NewReader(pbnd.Data()), nil, nil
-	}
-}
-
-func (api *ObjectAPI) MetaDataMap(ctx context.Context, path ipath.Path) (map[string]interface{}, error) {
-	metaData, err := api.MetaData(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-
-	jmap := make(map[string]interface{})
-	err = json.Unmarshal(metaData, &jmap)
-	if err != nil {
-		return nil, err
-	}
-
-	return jmap, nil
-}
-
-func (api *ObjectAPI) MetaData(ctx context.Context, path ipath.Path) ([]byte, error) {
-	nd, err := api.core().ResolveNode(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-
-	_, ok := nd.(*dag.ProtoNode)
-	if !ok {
 		return nil, dag.ErrNotProtobuf
 	}
 
-	ds := api.core().Dag()
-
-	metaData, err := getMetaData(ctx, nd, ds)
-	if err != nil {
-		return nil, err
-	}
-
-	return metaData, nil
-}
-
-// Return user data, metadata in byte array, and error.
-// Note that this function assumes, if token metadata exists inside
-// the DAG topped by the given 'node', the 'node' has metadata root
-// as first child, user data root as second child.
-func getDataForUserAndMeta(ctx context.Context, nd ipld.Node, ds ipld.DAGService) ([]byte, []byte, error) {
-	n := nd.(*dag.ProtoNode)
-
-	fsType, err := ft.GetFSType(n)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if ft.TTokenMeta == fsType {
-		return nil, n.Data(), nil
-	}
-
-	// Return user data and metadata if first child is of type TTokenMeta.
-	if nd.Links() != nil && len(nd.Links()) >= 2 {
-		childen, err := ft.GetChildrenForDagWithMeta(ctx, nd, ds)
-		if err != nil {
-			return nil, nil, err
-		}
-		if childen == nil {
-			return nil, n.Data(), nil
-		}
-		return childen[1].(*dag.ProtoNode).Data(), childen[0].(*dag.ProtoNode).Data(), nil
-	}
-
-	return n.Data(), nil, nil
-}
-
-// Return metadata under the given 'nd' node
-// if 'nd' has metadata root node aa its first child.
-func getMetaData(ctx context.Context, nd ipld.Node, ds ipld.DAGService) ([]byte, error) {
-
-	_, metadata, err := getDataForUserAndMeta(ctx, nd, ds)
-	return metadata, err
+	return bytes.NewReader(pbnd.Data()), nil
 }
 
 func (api *ObjectAPI) Links(ctx context.Context, path ipath.Path) ([]*ipld.Link, error) {
