@@ -20,8 +20,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
-	files "github.com/ipfs/go-ipfs-files"
-
+	files "github.com/TRON-US/go-btfs-files"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -136,7 +135,6 @@ environment variable:
 		} else {
 			return error
 		}
-
 	},
 }
 

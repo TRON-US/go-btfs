@@ -6,14 +6,14 @@ import (
 	"io"
 	"os"
 
-	files "github.com/ipfs/go-ipfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 
 	util "github.com/TRON-US/go-btfs/blocks/blockstoreutil"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	mh "github.com/multiformats/go-multihash"
 )
 
@@ -103,7 +103,7 @@ It outputs to stdout, and <key> is a base58 encoded multihash.
 			return err
 		}
 
-		r, err := api.Block().Get(req.Context, path.New(req.Arguments[0]))
+		r, err := api.Block().Get(req.Context, path.New(req.Arguments[0]), false)
 		if err != nil {
 			return err
 		}

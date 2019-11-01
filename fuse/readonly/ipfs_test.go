@@ -23,14 +23,14 @@ import (
 	coremock "github.com/TRON-US/go-btfs/core/mock"
 
 	fstest "bazil.org/fuse/fs/fstestutil"
-	chunker "github.com/ipfs/go-ipfs-chunker"
-	files "github.com/ipfs/go-ipfs-files"
+	chunker "github.com/TRON-US/go-btfs-chunker"
+	files "github.com/TRON-US/go-btfs-files"
+	importer "github.com/TRON-US/go-unixfs/importer"
+	uio "github.com/TRON-US/go-unixfs/io"
+	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	u "github.com/ipfs/go-ipfs-util"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	importer "github.com/ipfs/go-unixfs/importer"
-	uio "github.com/ipfs/go-unixfs/io"
-	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 	ci "github.com/libp2p/go-libp2p-testing/ci"
 )
 
@@ -198,7 +198,7 @@ func TestIpfsStressRead(t *testing.T) {
 				//hitting 8128 goroutine limit in go test -race mode
 				ctx, cancelFunc := context.WithCancel(context.Background())
 
-				read, err := api.Unixfs().Get(ctx, item)
+				read, err := api.Unixfs().Get(ctx, item, false)
 				if err != nil {
 					errs <- err
 				}

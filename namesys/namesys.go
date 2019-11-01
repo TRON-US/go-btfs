@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
+	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	lru "github.com/hashicorp/golang-lru"
 	ds "github.com/ipfs/go-datastore"
 	path "github.com/ipfs/go-path"
-	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 	isd "github.com/jbenet/go-is-domain"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -80,12 +80,20 @@ func (ns *mpns) ResolveAsync(ctx context.Context, name string, options ...opts.R
 	return resolveAsync(ctx, ns, name, opts.ProcessOpts(options))
 }
 
+const ethTLD = ".eth"
+const linkTLD = ".link"
+
 // resolveOnce implements resolver.
 func (ns *mpns) resolveOnceAsync(ctx context.Context, name string, options opts.ResolveOpts) <-chan onceResult {
 	out := make(chan onceResult, 1)
 
 	if !strings.HasPrefix(name, ipnsPrefix) {
 		name = ipnsPrefix + name
+	}
+	if strings.HasSuffix(name, ethTLD) {
+		// This is an ENS name.  As we're resolving via an arbitrary DNS server
+		// that may not know about .eth we need to add our link domain suffix.
+		name = name + linkTLD
 	}
 	segments := strings.SplitN(name, "/", 4)
 	if len(segments) < 3 || segments[0] != "" {

@@ -9,8 +9,8 @@ import (
 	filestore "github.com/ipfs/go-filestore"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	files "github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/interface-go-ipfs-core/options"
+	files "github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 )
 
 var urlStoreCmd = &cmds.Command{

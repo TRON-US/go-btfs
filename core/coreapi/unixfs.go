@@ -2,28 +2,29 @@ package coreapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core"
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
-	blockservice "github.com/ipfs/go-blockservice"
-	cid "github.com/ipfs/go-cid"
-	cidutil "github.com/ipfs/go-cidutil"
+	files "github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/go-mfs"
+	ft "github.com/TRON-US/go-unixfs"
+	unixfile "github.com/TRON-US/go-unixfs/file"
+	uio "github.com/TRON-US/go-unixfs/io"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/ipfs/go-blockservice"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cidutil"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
-	files "github.com/ipfs/go-ipfs-files"
 	ipld "github.com/ipfs/go-ipld-format"
+	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
-	merkledag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
-	mfs "github.com/ipfs/go-mfs"
-	ft "github.com/ipfs/go-unixfs"
-	unixfile "github.com/ipfs/go-unixfs/file"
-	uio "github.com/ipfs/go-unixfs/io"
-	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 type UnixfsAPI CoreAPI
@@ -122,6 +123,12 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 		fileAdder.SetMfsRoot(mr)
 	}
 
+	// This block is intentionally placed here so that
+	// any execution case can append metadata
+	if settings.TokenMetadata != "" {
+		fileAdder.TokenMetadata = settings.TokenMetadata
+	}
+
 	nd, err := fileAdder.AddAllAndPin(files)
 	if err != nil {
 		return nil, err
@@ -134,7 +141,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	return path.IpfsPath(nd.Cid()), nil
 }
 
-func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) {
+func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (files.Node, error) {
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
@@ -142,7 +149,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path) (files.Node, error) 
 		return nil, err
 	}
 
-	return unixfile.NewUnixfsFile(ctx, ses.dag, nd)
+	return unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
@@ -250,4 +257,40 @@ func (api *UnixfsAPI) lsFromLinks(ctx context.Context, ndlinks []*ipld.Link, set
 
 func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
+}
+
+func (api *UnixfsAPI) AppendMetadata(metaMap map[string]interface{}, opts ...options.UnixfsAddOption) error {
+	if metaMap == nil {
+		return nil
+	}
+
+	settings, _, err := options.UnixfsAddOptions(opts...)
+	if err != nil {
+		return err
+	}
+
+	var b []byte = nil
+	if settings.TokenMetadata != "" {
+		tmp := make(map[string]interface{})
+		err = json.Unmarshal([]byte(settings.TokenMetadata), &tmp)
+		if err != nil {
+			return err
+		}
+		for k, v := range metaMap {
+			tmp[k] = v
+		}
+		b, err = json.Marshal(tmp)
+		if err != nil {
+			return err
+		}
+	} else {
+		b, err = json.Marshal(metaMap)
+		if err != nil {
+			return err
+		}
+	}
+
+	settings.TokenMetadata = string(b)
+
+	return nil
 }

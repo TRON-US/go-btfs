@@ -16,18 +16,19 @@ import (
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
-	"github.com/TRON-US/go-btfs/analytics"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
+	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
 	libp2p "github.com/TRON-US/go-btfs/core/node/libp2p"
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
+	"github.com/TRON-US/go-btfs/spin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/hashicorp/go-multierror"
@@ -184,7 +185,7 @@ Headers.
 		cmds.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
 		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
 		cmds.StringOption(hValuekwd, "The h value identifying the hosting bit torrent client"),
-		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
+		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics.").WithDefault(nil),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
@@ -432,6 +433,16 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}
 
+	// construct http remote api - if it is set in the config
+	var rapiErrc <-chan error
+	if len(cfg.Addresses.RemoteAPI) > 0 {
+		var err error
+		rapiErrc, err = serveHTTPRemoteApi(req, cctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	// initialize metrics collector
 	prometheus.MustRegister(&corehttp.IpfsNodeCollector{Node: node})
 
@@ -445,10 +456,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
 	}
 
-	//Begin sending analytics to hosted server
-	collectData, _ := req.Options[enableDataCollection].(bool)
-	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
-	analytics.Initialize(node, version.CurrentVersionNumber, hValue)
+	// set Analytics flag if specified
+	if dc, _ := req.Options[enableDataCollection]; dc != nil {
+		node.Repo.SetConfigKey("Experimental.Analytics", dc)
+	}
+	// Spin jobs in the background
+	spin.Analytics(node, version.CurrentVersionNumber, hValue)
+	spin.Hosts(node)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
@@ -460,7 +474,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// collect long-running errors and block for shutdown
 	// TODO(cryptix): our fuse currently doesnt follow this pattern for graceful shutdown
 	var errs error
-	for err := range merge(apiErrc, gwErrc, gcErrc) {
+	for err := range merge(apiErrc, gwErrc, rapiErrc, gcErrc) {
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
@@ -648,6 +662,72 @@ func serveHTTPGateway(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, e
 	node, err := cctx.ConstructNode()
 	if err != nil {
 		return nil, fmt.Errorf("serveHTTPGateway: ConstructNode() failed: %s", err)
+	}
+
+	errc := make(chan error)
+	var wg sync.WaitGroup
+	for _, lis := range listeners {
+		wg.Add(1)
+		go func(lis manet.Listener) {
+			defer wg.Done()
+			errc <- corehttp.Serve(node, manet.NetListener(lis), opts...)
+		}(lis)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errc)
+	}()
+
+	return errc, nil
+}
+
+// serveHTTPRemoteApi collects options, creates listener, prints status message and starts serving requests
+func serveHTTPRemoteApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error) {
+	cfg, err := cctx.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: GetConfig() failed: %s", err)
+	}
+
+	if !cfg.Experimental.Libp2pStreamMounting {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: libp2p stream mounting must be enabled")
+	}
+
+	rapiAddrs := cfg.Addresses.RemoteAPI
+	listeners := make([]manet.Listener, 0, len(rapiAddrs))
+	for _, addr := range rapiAddrs {
+		rapiMaddr, err := ma.NewMultiaddr(addr)
+		if err != nil {
+			return nil, fmt.Errorf("serveHTTPRemoteApi: invalid remote api address: %q (err: %s)", addr, err)
+		}
+
+		rapiLis, err := manet.Listen(rapiMaddr)
+		if err != nil {
+			return nil, fmt.Errorf("serveHTTPRemoteApi: manet.Listen(%s) failed: %s", rapiMaddr, err)
+		}
+		// we might have listened to /tcp/0 - lets see what we are listing on
+		rapiMaddr = rapiLis.Multiaddr()
+		fmt.Printf("Remote API server listening on %s\n", rapiMaddr)
+
+		listeners = append(listeners, rapiLis)
+	}
+
+	var opts = []corehttp.ServeOption{
+		corehttp.MetricsCollectionOption("remote_api"),
+		corehttp.VersionOption(),
+		corehttp.CheckVersionOption(),
+		corehttp.CommandsRemoteOption(*cctx),
+	}
+
+	node, err := cctx.ConstructNode()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: ConstructNode() failed: %s", err)
+	}
+
+	// set default listener to remote api endpoint
+	if _, err := node.P2P.ForwardRemote(node.Context(),
+		httpremote.P2PRemoteCallProto, listeners[0].Multiaddr(), false); err != nil {
+		return nil, fmt.Errorf("serveHTTPRemoteApi: ForwardRemote() failed: %s", err)
 	}
 
 	errc := make(chan error)

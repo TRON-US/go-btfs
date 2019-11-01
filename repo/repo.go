@@ -5,10 +5,10 @@ import (
 	"io"
 
 	keystore "github.com/TRON-US/go-btfs/keystore"
-	filestore "github.com/ipfs/go-filestore"
 
 	config "github.com/TRON-US/go-btfs-config"
 	ds "github.com/ipfs/go-datastore"
+	filestore "github.com/ipfs/go-filestore"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
