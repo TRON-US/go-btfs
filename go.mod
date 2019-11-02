@@ -11,7 +11,7 @@ require (
 	github.com/TRON-US/go-btfs-config v0.1.8
 	github.com/TRON-US/go-btfs-files v0.1.1
 	github.com/TRON-US/go-mfs v0.2.1
-	github.com/TRON-US/go-unixfs v0.4.5
+	github.com/TRON-US/go-unixfs v0.4.6
 	github.com/TRON-US/interface-go-btfs-core v0.4.0
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/blang/semver v3.5.1+incompatible
@@ -67,6 +67,7 @@ require (
 	github.com/ipfs/hang-fds v0.0.1
 	github.com/ipfs/iptb v1.4.0
 	github.com/ipfs/iptb-plugins v0.1.0
+	github.com/jbenet/go-fuse-version v0.0.0-20160322195114-6d4c97bcf253 // indirect
 	github.com/jbenet/go-is-domain v1.0.2
 	github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c
 	github.com/jbenet/go-random-files v0.0.0-20190219210431-31b3f20ebded

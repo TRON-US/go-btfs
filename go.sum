@@ -40,8 +40,8 @@ github.com/TRON-US/go-unixfs v0.3.0 h1:mbmSHVGZbkV5NVRuQHZ/Cw8BMta74GVeOY3TE76Tv
 github.com/TRON-US/go-unixfs v0.3.0/go.mod h1:t0JHRUZ0MbDhD1S5jNXByrkX1mfbftJ+0jE89+Bv044=
 github.com/TRON-US/go-unixfs v0.4.4 h1:EzTr7aHrB/vlAr4onYb/ENdsFt0NYNUGAefVD93r28w=
 github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
-github.com/TRON-US/go-unixfs v0.4.5 h1:VUda4IfFy5iG+DRvNX2T7sH8HD0NmlroLy4/bMaedQU=
-github.com/TRON-US/go-unixfs v0.4.5/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
+github.com/TRON-US/go-unixfs v0.4.6 h1:XpWXOdolCTZ4UOkLj3a73pJvHKAGqdR7cAH2x4+daow=
+github.com/TRON-US/go-unixfs v0.4.6/go.mod h1:+Llf5BXSKEaK4HHf1+/eehGwWsEUilNymR1N7a69Y9k=
 github.com/TRON-US/interface-go-btfs-core v0.4.0 h1:O06NPfXqpNiq1mhEu6QE1b/vEt/tKE0GEb3GEGYnpfM=
 github.com/TRON-US/interface-go-btfs-core v0.4.0/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
@@ -370,6 +370,8 @@ github.com/jackpal/go-nat-pmp v1.0.1/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+
 github.com/jbenet/go-cienv v0.0.0-20150120210510-1bb1476777ec/go.mod h1:rGaEvXB4uRSZMmzKNLoXvTu1sfx+1kv/DojUlPrSZGs=
 github.com/jbenet/go-cienv v0.1.0 h1:Vc/s0QbQtoxX8MwwSLWWh+xNNZvM3Lw7NsTcHrvvhMc=
 github.com/jbenet/go-cienv v0.1.0/go.mod h1:TqNnHUmJgXau0nCzC7kXWeotg3J9W34CUv5Djy1+FlA=
+github.com/jbenet/go-fuse-version v0.0.0-20160322195114-6d4c97bcf253 h1:+AUuGGAh/2X3wcomiZvjeTcx5OvGXsfdnIqk3KPM+HE=
+github.com/jbenet/go-fuse-version v0.0.0-20160322195114-6d4c97bcf253/go.mod h1:gWtF+3u3zVe5/+I44niTEcU/KmVo2oMyLh0WhxpBT28=
 github.com/jbenet/go-is-domain v1.0.2 h1:11r5MSptcNFZyBoqubBQnVMUKRWLuRjL1banaIk+iYo=
 github.com/jbenet/go-is-domain v1.0.2/go.mod h1:xbRLRb0S7FgzDBTJlguhDVwLYM/5yNtvktxj2Ttfy7Q=
 github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c h1:uUx61FiAa1GI6ZmVd2wf2vULeQZIKG66eybjNXKYCz4=
