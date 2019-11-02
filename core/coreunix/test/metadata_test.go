@@ -1,4 +1,4 @@
-package coreunix
+package test
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	core "github.com/TRON-US/go-btfs/core"
+	coreunix "github.com/TRON-US/go-btfs/core/coreunix"
 	ft "github.com/TRON-US/go-unixfs"
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
@@ -54,12 +55,12 @@ func TestMetadata(t *testing.T) {
 	// Such effort, many compromise
 	ipfsnode := &core.IpfsNode{DAG: ds}
 
-	mdk, err := AddMetadataTo(ipfsnode, c.String(), m)
+	mdk, err := coreunix.AddMetadataTo(ipfsnode, c.String(), m)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rec, err := Metadata(ipfsnode, mdk)
+	rec, err := coreunix.Metadata(ipfsnode, mdk)
 	if err != nil {
 		t.Fatal(err)
 	}
