@@ -457,6 +457,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				// it's normal to fail in finding peer,
 				// would give host another chance
 				nextHost.IncrementFail()
+				log.Error(err)
 				err = retryQueue.Offer(nextHost)
 				if err != nil {
 					return nil, err
@@ -475,6 +476,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 					}
 					// err can be from change address in test mode or connect again in test mode
 					if errTest != nil {
+						log.Error(errTest)
 						nextHost.IncrementFail()
 						err = retryQueue.Offer(nextHost)
 						if err != nil {
