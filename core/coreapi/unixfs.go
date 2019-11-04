@@ -218,9 +218,9 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 		return nil, err
 	}
 
-	node, err := unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
-
-	if settings.Decrypt {
+	var node files.Node
+	if !metadata && settings.Decrypt {
+		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, false)
 		switch f := node.(type) {
 		case files.File:
 			bytes, err := ioutil.ReadAll(f)
@@ -244,6 +244,8 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 			node = files.NewBytesFile([]byte(s))
 		default:
 		}
+	} else {
+		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
 	}
 
 	return node, err
@@ -389,7 +391,6 @@ func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) (*ecies.Ecie
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("bytes", string(bytes))
 		t := &ecies.EciesMetadata{}
 		json.Unmarshal(bytes, t)
 		return t, nil
