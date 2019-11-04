@@ -157,6 +157,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 			m["Iv"] = metadata.Iv
 			m["EphemPublicKey"] = metadata.EphemPublicKey
 			m["Mac"] = metadata.Mac
+			m["Mode"] = metadata.Mode
 			if err != nil {
 				return nil, err
 			}
