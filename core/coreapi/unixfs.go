@@ -2,8 +2,10 @@ package coreapi
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/TRON-US/go-btfs/ecies"
 	"io/ioutil"
@@ -203,7 +205,11 @@ func peerId2pubkey(peerId string) (string, error) {
 	return hex.EncodeToString(bytes[4:]), nil
 }
 
-func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (files.Node, error) {
+func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts ...options.UnixfsGetOption) (files.Node, error) {
+	settings, err := options.UnixfsGetOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
@@ -211,7 +217,57 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (file
 		return nil, err
 	}
 
-	return unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
+	node, err := unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
+
+	if settings.Decrypt {
+		switch f := node.(type) {
+		case files.File:
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
+			}
+			t, err := api.GetMetadata(ctx, p)
+			if err != nil {
+				return nil, err
+			}
+
+			privKey, err := api.getPrivateKey(settings.PrivateKey)
+			if err != nil {
+				return nil, err
+			}
+
+			s, err := ecies.Decrypt(privKey, string(bytes), t)
+			if err != nil {
+				return nil, err
+			}
+			node = files.NewBytesFile([]byte(s))
+		default:
+		}
+	}
+
+	return node, err
+}
+
+func (api *UnixfsAPI) getPrivateKey(input string) (string, error) {
+	privKey := input
+	var bytes []byte
+	var err error
+	if privKey == "" {
+		bytes, err = api.privateKey.Bytes()
+		if err != nil {
+			return "", err
+		}
+	} else {
+		bytes, err = base64.StdEncoding.DecodeString(privKey)
+		if err != nil {
+			bytes, err = hex.DecodeString(privKey)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	privKey = hex.EncodeToString(bytes[4:])
+	return privKey, nil
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:
@@ -319,6 +375,26 @@ func (api *UnixfsAPI) lsFromLinks(ctx context.Context, ndlinks []*ipld.Link, set
 
 func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
+}
+
+func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) (*ecies.EciesMetadata, error) {
+	f, err := api.core().Unixfs().Get(ctx, p, true)
+	if err != nil {
+		return nil, err
+	}
+	switch f.(type) {
+	case files.File:
+		bytes, err := ioutil.ReadAll(f.(files.File))
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("bytes", string(bytes))
+		t := &ecies.EciesMetadata{}
+		json.Unmarshal(bytes, t)
+		return t, nil
+	default:
+		return nil, errors.New("encryption not support dir/symlink")
+	}
 }
 
 func (api *UnixfsAPI) AppendMetadata(tokenMetadata string, metaMap map[string]interface{}) (string, error) {
