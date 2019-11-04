@@ -46,6 +46,9 @@ const (
 	inlineOptionName      = "inline"
 	inlineLimitOptionName = "inline-limit"
 	tokenMetaOptionName   = "meta"
+	encryptName           = "encrypt"
+	pubkeyName            = "public-key"
+	peerIdName            = "peer-id"
 )
 
 const adderOutChanSize = 8
@@ -134,6 +137,9 @@ You can now check what blocks have been created by:
 		cmds.BoolOption(inlineOptionName, "Inline small blocks into CIDs. (experimental)"),
 		cmds.IntOption(inlineLimitOptionName, "Maximum block size to inline. (experimental)").WithDefault(32),
 		cmds.StringOption(tokenMetaOptionName, "m", "Token metadata in JSON string"),
+		cmds.BoolOption(encryptName, "Encrypt the file."),
+		cmds.StringOption(pubkeyName, "The public key to encrypt the file."),
+		cmds.StringOption(peerIdName, "The peer id to encrypt the file."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -175,6 +181,9 @@ You can now check what blocks have been created by:
 		inline, _ := req.Options[inlineOptionName].(bool)
 		inlineLimit, _ := req.Options[inlineLimitOptionName].(int)
 		tokenMetadata, _ := req.Options[tokenMetaOptionName].(string)
+		encrypt, _ := req.Options[encryptName].(bool)
+		pubkey, _ := req.Options[pubkeyName].(string)
+		peerId, _ := req.Options[peerIdName].(string)
 
 		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
 		if !ok {
@@ -222,6 +231,12 @@ You can now check what blocks have been created by:
 
 		if trickle {
 			opts = append(opts, options.Unixfs.Layout(options.TrickleLayout))
+		}
+
+		if encrypt {
+			opts = append(opts, options.Unixfs.Encrypt(encrypt))
+			opts = append(opts, options.Unixfs.Pubkey(pubkey))
+			opts = append(opts, options.Unixfs.PeerId(peerId))
 		}
 
 		opts = append(opts, nil) // events option placeholder
@@ -292,14 +307,31 @@ You can now check what blocks have been created by:
 
 			// Could be slow.
 			go func() {
-				size, err := req.Files.Size()
-				if err != nil {
-					log.Warningf("error getting files size: %s", err)
-					// see comment above
-					return
+				op := res.Request().Options[encryptName]
+				encrypt := op != nil && op.(bool)
+				if encrypt {
+					it := req.Files.Entries()
+					var size int64 = 0
+					for it.Next() {
+						s, err := it.Node().Size()
+						if err != nil {
+							log.Warningf("error getting files size: %s", err)
+							// see comment above
+							return
+						}
+						blockCount := s/16 + 1
+						size += blockCount * 32
+						sizeChan <- size
+					}
+				} else {
+					size, err := req.Files.Size()
+					if err != nil {
+						log.Warningf("error getting files size: %s", err)
+						// see comment above
+						return
+					}
+					sizeChan <- size
 				}
-
-				sizeChan <- size
 			}()
 
 			progressBar := func(wait chan struct{}) {

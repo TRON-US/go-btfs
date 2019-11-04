@@ -2,8 +2,11 @@ package coreapi
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/TRON-US/go-btfs/ecies"
+	"io/ioutil"
 
 	"github.com/TRON-US/go-btfs/core"
 
@@ -25,13 +28,14 @@ import (
 	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 type UnixfsAPI CoreAPI
 
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
-func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
+func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
 	settings, prefix, err := options.UnixfsAddOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -123,13 +127,54 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 		fileAdder.SetMfsRoot(mr)
 	}
 
+	if settings.Encrypt {
+		pubKey := settings.Pubkey
+		if pubKey == "" {
+			peerId := settings.PeerId
+			if peerId == "" {
+				peerId = api.identity.Pretty()
+			}
+			pubKey, err = peerId2pubkey(peerId)
+			if err != nil {
+				return nil, err
+			}
+		}
+		log.Infof("The file will be encrypted with pubkey: %s", settings.Pubkey)
+		switch f := node.(type) {
+		case files.File:
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
+			}
+
+			ciphertext, metadata, err := ecies.Encrypt(pubKey, bytes)
+			if err != nil {
+				return nil, err
+			}
+			m := make(map[string]interface{})
+			m["Iv"] = metadata.Iv
+			m["EphemPublicKey"] = metadata.EphemPublicKey
+			m["Mac"] = metadata.Mac
+			if err != nil {
+				return nil, err
+			}
+
+			settings.TokenMetadata, err = api.AppendMetadata(settings.TokenMetadata, m)
+			if err != nil {
+				return nil, err
+			}
+			node = files.NewBytesFile([]byte(ciphertext))
+		default:
+		}
+	}
+
 	// This block is intentionally placed here so that
 	// any execution case can append metadata
 	if settings.TokenMetadata != "" {
 		fileAdder.TokenMetadata = settings.TokenMetadata
 	}
 
-	nd, err := fileAdder.AddAllAndPin(files)
+	nd, err := fileAdder.AddAllAndPin(node)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +184,23 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	}
 
 	return path.IpfsPath(nd.Cid()), nil
+}
+
+func peerId2pubkey(peerId string) (string, error) {
+	id, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return "", err
+	}
+	publicKey, err := id.ExtractPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	bytes, err := publicKey.Bytes()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes[4:]), nil
 }
 
 func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool) (files.Node, error) {
@@ -259,38 +321,33 @@ func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
 }
 
-func (api *UnixfsAPI) AppendMetadata(metaMap map[string]interface{}, opts ...options.UnixfsAddOption) error {
+func (api *UnixfsAPI) AppendMetadata(tokenMetadata string, metaMap map[string]interface{}) (string, error) {
 	if metaMap == nil {
-		return nil
-	}
-
-	settings, _, err := options.UnixfsAddOptions(opts...)
-	if err != nil {
-		return err
+		return "", nil
 	}
 
 	var b []byte = nil
-	if settings.TokenMetadata != "" {
+	var err error = nil
+	if tokenMetadata != "" {
 		tmp := make(map[string]interface{})
-		err = json.Unmarshal([]byte(settings.TokenMetadata), &tmp)
+		err = json.Unmarshal([]byte(tokenMetadata), &tmp)
 		if err != nil {
-			return err
+			return "", err
 		}
 		for k, v := range metaMap {
 			tmp[k] = v
 		}
 		b, err = json.Marshal(tmp)
 		if err != nil {
-			return err
+			return "", err
 		}
 	} else {
 		b, err = json.Marshal(metaMap)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	settings.TokenMetadata = string(b)
-
-	return nil
+	tokenMetadata = string(b)
+	return tokenMetadata, nil
 }
