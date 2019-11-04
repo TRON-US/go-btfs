@@ -251,6 +251,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 	return node, err
 }
 
+// compatible with base64, 32bits-hex and 36bits-hex
 func (api *UnixfsAPI) getPrivateKey(input string) (string, error) {
 	privKey := input
 	var bytes []byte
