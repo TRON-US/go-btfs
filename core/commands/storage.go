@@ -55,6 +55,7 @@ const (
 	FailLimit  = 3
 )
 
+// TODO: get/set the value from/in go-btfs-common
 var HostPriceLowBoundary = int64(10)
 
 func GetHostStorageKey(pid string) ds.Key {
@@ -173,7 +174,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		// set price limit, the price is default when host doesn't provide price
 		price, found := req.Options[uploadPriceOptionName].(int64)
 		if found && price < HostPriceLowBoundary {
-			return fmt.Errorf("cannot input a negative price")
+			return fmt.Errorf("price is smaller than minimum setting price")
 		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		if mode == "custom" {
