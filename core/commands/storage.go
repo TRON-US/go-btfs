@@ -55,8 +55,8 @@ const (
 	FailLimit  = 3
 )
 
-// multiaddress prefix
-var multiAddressPrefix = "/" + ma.ProtocolWithCode(ma.P_IPFS).Name + "/"
+// TODO: get/set the value from/in go-btfs-common
+var HostPriceLowBoundary = int64(10)
 
 func GetHostStorageKey(pid string) ds.Key {
 	return newKeyHelper(hostStorageInfoPrefix, pid)
@@ -155,14 +155,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			rootHash = ""
 			chunkHashes = req.Arguments
 		}
-		// set price limit
-		price, found := req.Options[uploadPriceOptionName].(int64)
-		if found && price < 0 {
-			return fmt.Errorf("cannot input a negative price")
-		} else if !found {
-			// TODO: Select best price from top candidates
-			price = int64(1)
-		}
 
 		// start new session
 		sm := storage.GlobalSession
@@ -179,6 +171,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		var peers []string
 		// init retry queue
 		retryQueue := storage.NewRetryQueue(int64(len(peers)))
+		// set price limit, the price is default when host doesn't provide price
+		price, found := req.Options[uploadPriceOptionName].(int64)
+		if found && price < HostPriceLowBoundary {
+			return fmt.Errorf("price is smaller than minimum setting price")
+		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		if mode == "custom" {
 			// get host list as user specified
@@ -192,6 +189,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 					Identity:   ip,
 					RetryTimes: 0,
 					FailTimes:  0,
+					Price:      price,
 				}
 				if err := retryQueue.Offer(host); err != nil {
 					return err
@@ -216,11 +214,16 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err != nil {
 					return err
 				}
+				// use host askingPrice instead if provided
+				if int64(ni.StoragePriceAsk) != HostPriceLowBoundary {
+					price = int64(ni.StoragePriceAsk)
+				}
 				// add host to retry queue
 				host := &storage.HostNode{
 					Identity:   ni.NodeID,
 					RetryTimes: 0,
 					FailTimes:  0,
+					Price:      price,
 				}
 				if err := retryQueue.Offer(host); err != nil {
 					return err
@@ -248,7 +251,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			ss.GetOrDefault(singleChunk)
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), api, ss, n, price, ssID, testFlag)
+		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -292,7 +295,7 @@ func controlSessionTimeout(ss *storage.Session) {
 	}
 }
 
-func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Session, n *core.IpfsNode, p int64, ssID string, test bool) {
+func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Session, n *core.IpfsNode, ssID string, test bool) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -308,7 +311,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 				return
 			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID, test)
+			go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
 
 			// monitor each steps if error or time out happens, retry
 			for curState := 0; curState < len(storage.StdChunkStateFlow); {
@@ -335,7 +338,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID, test)
+							go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -356,7 +359,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 						log.Errorf("Time Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, api, candidateHost, ss, n, p, chunkHash, ssID, test)
+						go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
 					}
 				}
 			}
@@ -382,7 +385,7 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 }
 
 func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.Session,
-	n *core.IpfsNode, p int64, chunkHash string, ssID string, test bool) {
+	n *core.IpfsNode, chunkHash string, ssID string, test bool) {
 	// record chunk info in session
 	chunk := ss.GetOrDefault(chunkHash)
 
@@ -412,16 +415,16 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		return
 	}
 	// establish connection with ledger
-	channelID, err := initChannel(ctx, selfPubKey, selfPrivKey, peerPubKey, p)
+	channelID, err := initChannel(ctx, selfPubKey, selfPrivKey, peerPubKey, candidateHost.Price)
 	if err != nil {
 		sendStepStateChan(chunk.RetryChan, storage.InitState, false, fmt.Errorf("fail to connect with ledger %v", err), nil)
 		return
 	}
 
-	chunk.UpdateChunk(n.Identity, hostPid, channelID, p)
+	chunk.UpdateChunk(n.Identity, hostPid, channelID, candidateHost.Price)
 	chunk.SetState(storage.InitState)
 
-	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(p, 10))
+	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(candidateHost.Price, 10))
 	// fail to connect with retry
 	if err != nil {
 		sendStepStateChan(chunk.RetryChan, storage.InitState, false, nil, err)
@@ -455,6 +458,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				// it's normal to fail in finding peer,
 				// would give host another chance
 				nextHost.IncrementFail()
+				log.Error(err)
 				err = retryQueue.Offer(nextHost)
 				if err != nil {
 					return nil, err
@@ -473,6 +477,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 					}
 					// err can be from change address in test mode or connect again in test mode
 					if errTest != nil {
+						log.Error(errTest)
 						nextHost.IncrementFail()
 						err = retryQueue.Offer(nextHost)
 						if err != nil {
