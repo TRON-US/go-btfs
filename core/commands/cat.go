@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 	"io"
 	"os"
 
@@ -34,6 +35,8 @@ var CatCmd = &cmds.Command{
 		cmds.Int64Option(offsetOptionName, "o", "Byte offset to begin reading from."),
 		cmds.Int64Option(lengthOptionName, "l", "Maximum number of bytes to read."),
 		cmds.BoolOption(catMetaDisplayOptionName, "m", "Display token metadata"),
+		cmds.BoolOption(decryptName, "Decrypt the file."),
+		cmds.StringOption(privateKeyName, "The private key to decrypt file."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
@@ -62,7 +65,7 @@ var CatCmd = &cmds.Command{
 			return err
 		}
 
-		readers, length, err := cat(req.Context, api, req.Arguments, int64(offset), int64(max), meta)
+		readers, length, err := cat(req.Context, api, req.Arguments, int64(offset), int64(max), meta, req.Options)
 		if err != nil {
 			return err
 		}
@@ -115,14 +118,26 @@ var CatCmd = &cmds.Command{
 	},
 }
 
-func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, max int64, meta bool) ([]io.Reader, uint64, error) {
+func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, max int64, meta bool, opts cmds.OptMap) ([]io.Reader, uint64, error) {
 	readers := make([]io.Reader, 0, len(paths))
 	length := uint64(0)
 	if max == 0 {
 		return nil, 0, nil
 	}
+
+	if opts[decryptName] == nil {
+		opts[decryptName] = false
+	}
+	if opts[privateKeyName] == nil {
+		opts[privateKeyName] = ""
+	}
+	getOptions := []options.UnixfsGetOption{
+		options.Unixfs.Decrypt(opts[decryptName].(bool)),
+		options.Unixfs.PrivateKey(opts[privateKeyName].(string)),
+	}
+
 	for _, p := range paths {
-		f, err := api.Unixfs().Get(ctx, path.New(p), meta)
+		f, err := api.Unixfs().Get(ctx, path.New(p), meta, getOptions...)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -147,7 +162,12 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, m
 			continue
 		}
 
-		count, err := file.Seek(offset, io.SeekStart)
+		var count int64
+		if opts[decryptName] != nil && opts[decryptName].(bool) {
+			count = 0
+		} else {
+			count, err = file.Seek(offset, io.SeekStart)
+		}
 		if err != nil {
 			return nil, 0, err
 		}

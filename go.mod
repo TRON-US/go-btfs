@@ -10,9 +10,10 @@ require (
 	github.com/TRON-US/go-btfs-cmds v0.1.5
 	github.com/TRON-US/go-btfs-config v0.1.8
 	github.com/TRON-US/go-btfs-files v0.1.1
+	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.1
 	github.com/TRON-US/go-unixfs v0.4.6
-	github.com/TRON-US/interface-go-btfs-core v0.4.0
+	github.com/TRON-US/interface-go-btfs-core v0.4.1
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
@@ -50,6 +51,7 @@ require (
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
+	github.com/ipfs/go-ipfs-files v0.0.3
 	github.com/ipfs/go-ipfs-posinfo v0.0.1
 	github.com/ipfs/go-ipfs-provider v0.2.1
 	github.com/ipfs/go-ipfs-routing v0.1.0
@@ -98,6 +100,7 @@ require (
 	github.com/libp2p/go-libp2p-tls v0.1.0
 	github.com/libp2p/go-libp2p-yamux v0.2.1
 	github.com/libp2p/go-maddr-filter v0.0.5
+	github.com/libp2p/go-testutil v0.1.0
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mholt/archiver v3.1.1+incompatible

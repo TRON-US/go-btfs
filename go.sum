@@ -34,6 +34,8 @@ github.com/TRON-US/go-btfs-config v0.1.8 h1:FrYhoesR/+dP4VR+VYgmu3QNenGT5v+mQph9
 github.com/TRON-US/go-btfs-config v0.1.8/go.mod h1:SdSLMMxOxqLYvMI0eJItYH7mWkG22EX5WaGyUwOq3fU=
 github.com/TRON-US/go-btfs-files v0.1.1 h1:GuDIiWDM66bfhfxJy8+dBL4Cfbcp3iBp7pgHpKKCw8k=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
+github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElAe7A0=
+github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-mfs v0.2.1 h1:8M4F8eNdfRRW3iA4UM5V/Mki0BS9cmzuOefcBerOsP8=
 github.com/TRON-US/go-mfs v0.2.1/go.mod h1:++0mxQcc1Vjb49Tu3+SvIKfvY3HrC5onH5CctBf4iqQ=
 github.com/TRON-US/go-unixfs v0.3.0 h1:mbmSHVGZbkV5NVRuQHZ/Cw8BMta74GVeOY3TE76TvDE=
@@ -42,8 +44,9 @@ github.com/TRON-US/go-unixfs v0.4.4 h1:EzTr7aHrB/vlAr4onYb/ENdsFt0NYNUGAefVD93r2
 github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
 github.com/TRON-US/go-unixfs v0.4.6 h1:XpWXOdolCTZ4UOkLj3a73pJvHKAGqdR7cAH2x4+daow=
 github.com/TRON-US/go-unixfs v0.4.6/go.mod h1:+Llf5BXSKEaK4HHf1+/eehGwWsEUilNymR1N7a69Y9k=
-github.com/TRON-US/interface-go-btfs-core v0.4.0 h1:O06NPfXqpNiq1mhEu6QE1b/vEt/tKE0GEb3GEGYnpfM=
 github.com/TRON-US/interface-go-btfs-core v0.4.0/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
+github.com/TRON-US/interface-go-btfs-core v0.4.1 h1:NR/nmREHANxl7GACzcFHoonCP0hpa3ItlXHhyxvd3IE=
+github.com/TRON-US/interface-go-btfs-core v0.4.1/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
 github.com/Workiva/go-datastructures v1.0.50/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
@@ -116,6 +119,8 @@ github.com/fatih/color v1.6.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5Kwzbycv
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fd/go-nat v1.0.0/go.mod h1:BTBu/CKvMmOMUPkKVef1pngt2WFH/lg7E6yQnulfp6E=
+github.com/fomichev/secp256k1 v0.0.0-20180413221153-00116ff8c62f h1:YbIfHI+s+tauzUAdNw+lF8a9o056PoIPaLGodgh5D7g=
+github.com/fomichev/secp256k1 v0.0.0-20180413221153-00116ff8c62f/go.mod h1:X4BmRxczPduAy11nSLYwnR11VuvnbG7ozOTDKLHhx70=
 github.com/frankban/quicktest v1.4.2 h1:eV8n2LQHuA97qKj0t6+7UrHRU0Smz9G+yh87F3Z+3Uk=
 github.com/frankban/quicktest v1.4.2/go.mod h1:36zfPVQyHxymz4cH7wlDmVwDrJuljRB60qkgn7rorfQ=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
@@ -586,6 +591,7 @@ github.com/libp2p/go-tcp-transport v0.0.4/go.mod h1:+E8HvC8ezEVOxIo3V5vCK9l1y/19
 github.com/libp2p/go-tcp-transport v0.1.0 h1:IGhowvEqyMFknOar4FWCKSWE0zL36UFKQtiRQD60/8o=
 github.com/libp2p/go-tcp-transport v0.1.0/go.mod h1:oJ8I5VXryj493DEJ7OsBieu8fcg2nHGctwtInJVpipc=
 github.com/libp2p/go-testutil v0.0.1/go.mod h1:iAcJc/DKJQanJ5ws2V+u5ywdL2n12X1WbbEG+Jjy69I=
+github.com/libp2p/go-testutil v0.1.0 h1:4QhjaWGO89udplblLVpgGDOQjzFlRavZOjuEnz2rLMc=
 github.com/libp2p/go-testutil v0.1.0/go.mod h1:81b2n5HypcVyrCg/MJx4Wgfp/VHojytjVe/gLzZ2Ehc=
 github.com/libp2p/go-ws-transport v0.0.1/go.mod h1:p3bKjDWHEgtuKKj+2OdPYs5dAPIjtpQGHF2tJfGz7Ww=
 github.com/libp2p/go-ws-transport v0.0.5/go.mod h1:Qbl4BxPfXXhhd/o0wcrgoaItHqA9tnZjoFZnxykuaXU=
@@ -774,6 +780,8 @@ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
+github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/syndtr/goleveldb v1.0.0 h1:fBdIW9lB4Iz0n9khmH8w27SJ3QEJ7+IgjPEwGSZiFdE=
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:T5PdfK/M1xyrHwynxMIVMWLS7f/qHwfslZphxtGnw7s=
@@ -863,6 +871,8 @@ golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5/go.mod h1:yigFU9vqHzYiE8U
 golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20190618222545-ea8f1a30c443 h1:IcSOAf4PyMp3U3XbIEj1/xJ2BjNN2jWv7JoyOsMxXUU=
 golang.org/x/crypto v0.0.0-20190618222545-ea8f1a30c443/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf h1:fnPsqIDRbCSgumaMCRpoIoF2s4qxv0xSSS0BVZUE/ss=
+golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvxsM5YxQ5yQlVC4a0KAMCusXpPoU=
