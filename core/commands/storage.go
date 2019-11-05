@@ -81,15 +81,28 @@ var storageUploadCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
 		ShortDescription: `
-To upload and store a file on specific hosts:
-    use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','
+By default, BTFS will select hosts based on overall score according to current client's environment.
+To upload a file, <file-hash> must refer to a reed-solomon encoded file.
 
-For example:
+To create a reed-solomon encoded file from a normal file:
 
-    btfs storage upload <filehash> -m=custom -s=<host_address1>,<host_address2>
-    btfs storage upload <leafhash1> <leafhash2> -l -m=custom -s=<host_address1>,<host_address2>
+    $ btfs add --chunker=reed-solomon <file>
+    added <file-hash> <file>
 
-If no hosts are given, BTFS will select nodes based on overall score according to current client's environment.
+Run command to upload:
+
+    $ btfs storage upload <file-hash>
+
+To customly upload and store a file on specific hosts:
+    Use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','.
+
+    # Upload a file to a set of hosts
+    # Total # of hosts must match # of shards in the first DAG level of root file hash
+    $ btfs storage upload <file-hash> -m=custom -s=<host_address1>,<host_address2>
+
+    # Upload specific chunks to a set of hosts
+    # Total # of hosts must match # of chunks given
+    $ btfs storage upload <chunk-hash1> <chunk-hash2> -l -m=custom -s=<host_address1>,<host_address2>
 
 Receive proofs as collateral evidence after selected nodes agree to store the file.`,
 	},
@@ -101,7 +114,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		"proof":  storageUploadProofCmd,
 	},
 	Arguments: []cmds.Argument{
-		// FIXME: change file hash to limit 1
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
