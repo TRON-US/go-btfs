@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/ecies"
+	ecies "github.com/TRON-US/go-eccrypto"
 	"io/ioutil"
 
 	"github.com/TRON-US/go-btfs/core"

@@ -10,6 +10,7 @@ require (
 	github.com/TRON-US/go-btfs-cmds v0.1.5
 	github.com/TRON-US/go-btfs-config v0.1.8
 	github.com/TRON-US/go-btfs-files v0.1.1
+	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.1
 	github.com/TRON-US/go-unixfs v0.4.6
 	github.com/TRON-US/interface-go-btfs-core v0.4.0
@@ -21,7 +22,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
 	github.com/fatih/color v1.7.0 // indirect
-	github.com/fomichev/secp256k1 v0.0.0-20180413221153-00116ff8c62f
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ole/go-ole v1.2.4 // indirect
@@ -135,7 +135,6 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
-	golang.org/x/crypto v0.0.0-20190618222545-ea8f1a30c443
 	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7 // indirect
 	google.golang.org/grpc v1.19.0
