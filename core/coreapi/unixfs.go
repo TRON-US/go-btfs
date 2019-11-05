@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	ecies "github.com/TRON-US/go-eccrypto"
 	"io/ioutil"
@@ -168,6 +167,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 			}
 			node = files.NewBytesFile([]byte(ciphertext))
 		default:
+			return nil, notSupport(f)
 		}
 	}
 
@@ -187,6 +187,10 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	}
 
 	return path.IpfsPath(nd.Cid()), nil
+}
+
+func notSupport(f interface{}) error {
+	return fmt.Errorf("not support: %v", f)
 }
 
 func peerId2pubkey(peerId string) (string, error) {
@@ -243,6 +247,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 			}
 			node = files.NewBytesFile([]byte(s))
 		default:
+			return nil, notSupport(f)
 		}
 	} else {
 		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
@@ -393,10 +398,13 @@ func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) (*ecies.Ecie
 			return nil, err
 		}
 		t := &ecies.EciesMetadata{}
-		json.Unmarshal(bytes, t)
+		err = json.Unmarshal(bytes, t)
+		if err != nil {
+			return nil, err
+		}
 		return t, nil
 	default:
-		return nil, errors.New("encryption not support dir/symlink")
+		return nil, notSupport(f)
 	}
 }
 
