@@ -31,13 +31,12 @@ func TestEncryption(t *testing.T) {
 
 	msg := "btt to da moon"
 	conf := testutil.LatencyConfig{NetworkLatency: 400 * time.Millisecond}
-	error := DirectAddCat([]byte(msg), conf, addOpts, getOpts)
-	if error != nil {
-		t.Fatal(error)
+	if err := directAddCat([]byte(msg), conf, addOpts, getOpts); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func DirectAddCat(data []byte, conf testutil.LatencyConfig, addOpts []options.UnixfsAddOption,
+func directAddCat(data []byte, conf testutil.LatencyConfig, addOpts []options.UnixfsAddOption,
 	getOpts []options.UnixfsGetOption) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
