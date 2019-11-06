@@ -227,16 +227,23 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, false)
 		switch f := node.(type) {
 		case files.File:
-			bytes, err := ioutil.ReadAll(f)
-			if err != nil {
-				return nil, err
-			}
-			t, err := api.GetMetadata(ctx, p)
+			privKey, err := api.getPrivateKey(settings.PrivateKey)
 			if err != nil {
 				return nil, err
 			}
 
-			privKey, err := api.getPrivateKey(settings.PrivateKey)
+			mbytes, err := api.GetMetadata(ctx, p)
+			if err != nil {
+				return nil, err
+			}
+
+			t := &ecies.EciesMetadata{}
+			err = json.Unmarshal(mbytes, t)
+			if err != nil {
+				return nil, err
+			}
+
+			bytes, err := ioutil.ReadAll(f)
 			if err != nil {
 				return nil, err
 			}
@@ -386,7 +393,7 @@ func (api *UnixfsAPI) core() *CoreAPI {
 	return (*CoreAPI)(api)
 }
 
-func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) (*ecies.EciesMetadata, error) {
+func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) ([]byte, error) {
 	f, err := api.core().Unixfs().Get(ctx, p, true)
 	if err != nil {
 		return nil, err
@@ -397,12 +404,7 @@ func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) (*ecies.Ecie
 		if err != nil {
 			return nil, err
 		}
-		t := &ecies.EciesMetadata{}
-		err = json.Unmarshal(bytes, t)
-		if err != nil {
-			return nil, err
-		}
-		return t, nil
+		return bytes, nil
 	default:
 		return nil, notSupport(f)
 	}
