@@ -126,6 +126,14 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// get config settings
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
 		// get node
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -144,7 +152,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		lf, _ := req.Options[leafHashOptionName].(bool)
 		if lf == false {
 			if len(req.Arguments) != 1 {
-				return fmt.Errorf("need one and only one root hash")
+				return fmt.Errorf("need one and only one root file hash")
 			}
 			// get leaf hashes
 			rootHash = req.Arguments[0]
@@ -196,6 +204,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return fmt.Errorf("custom mode needs input host lists")
 			}
 			peers = strings.Split(hosts, ",")
+			if len(peers) != len(chunkHashes) {
+				return fmt.Errorf("custom mode hosts length must match chunk hashes length")
+			}
 			for _, ip := range peers {
 				host := &storage.HostNode{
 					Identity:   ip,
@@ -240,19 +251,15 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err := retryQueue.Offer(host); err != nil {
 					return err
 				}
-				// FIXME: retryQueue's size should be more than chunkHash?
+				// Found enough hosts
 				if int(retryQueue.Size()) == len(chunkHashes) {
 					qr.Close()
 					break
 				}
 			}
-		}
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
+			if int(retryQueue.Size()) < len(chunkHashes) {
+				return fmt.Errorf("there are not enough locally stored hosts for chunk hashes length")
+			}
 		}
 
 		// retry queue need to be reused in proof cmd
