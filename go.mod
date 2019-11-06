@@ -13,7 +13,7 @@ require (
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.1
 	github.com/TRON-US/go-unixfs v0.4.6
-	github.com/TRON-US/interface-go-btfs-core v0.4.1
+	github.com/TRON-US/interface-go-btfs-core v0.4.2
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d

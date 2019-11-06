@@ -30,7 +30,8 @@ func Hosts(node *core.IpfsNode) {
 func perodicSyncHosts(node *core.IpfsNode, mode string) {
 	tick := time.NewTicker(syncPeriod)
 	defer tick.Stop()
-	for range tick.C {
+	// Force tick on immediate start
+	for ; true; <-tick.C {
 		err := commands.SyncHosts(node, mode)
 		if err != nil {
 			log.Errorf("Failed to sync hosts: %s", err)
