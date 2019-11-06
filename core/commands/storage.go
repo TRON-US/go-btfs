@@ -17,7 +17,9 @@ import (
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-unixfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
@@ -160,13 +162,35 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
-			rp, err := api.ResolvePath(req.Context, path.IpfsPath(hashToCid))
+			rootPath := path.IpfsPath(hashToCid)
+			// check to see if a replicated file using reed-solomon
+			mbytes, err := api.Unixfs().GetMetadata(req.Context, rootPath)
+			if err != nil {
+				return fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
+			}
+			var rsMeta chunker.RsMetaMap
+			err = json.Unmarshal(mbytes, &rsMeta)
+			if err != nil {
+				return fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
+			}
+			if rsMeta.NumData == 0 || rsMeta.NumParity == 0 || rsMeta.FileSize == 0 {
+				return fmt.Errorf("file must be reed-solomon encoded: metadata not valid")
+			}
+			// use unixfs layer helper to grab the raw leaves under the data root node
+			// higher level helpers resolve the enrtire DAG instead of resolving the root
+			// node as it is required here
+			rn, err := api.ResolveNode(req.Context, rootPath)
 			if err != nil {
 				return err
 			}
-			cids, err := api.Object().Links(req.Context, rp)
+			nodes, err := unixfs.GetChildrenForDagWithMeta(req.Context, rn, api.Dag())
 			if err != nil {
 				return err
+			}
+			// The second child is always data root node
+			cids := nodes[1].Links()
+			if len(cids) != int(rsMeta.NumData+rsMeta.NumParity) {
+				return fmt.Errorf("file must be reed-solomon encoded: encoding scheme mismatch")
 			}
 			for _, cid := range cids {
 				chunkHashes = append(chunkHashes, cid.Cid.String())
@@ -228,6 +252,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
+			// Add as many hosts as available
 			for r := range qr.Next() {
 				if r.Error != nil {
 					return r.Error
@@ -251,12 +276,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err := retryQueue.Offer(host); err != nil {
 					return err
 				}
-				// Found enough hosts
-				if int(retryQueue.Size()) == len(chunkHashes) {
-					qr.Close()
-					break
-				}
 			}
+			// we can re-use hosts, but for higher availability, we choose to have the
+			// greater than len(chunkHashes) assumption
 			if int(retryQueue.Size()) < len(chunkHashes) {
 				return fmt.Errorf("there are not enough locally stored hosts for chunk hashes length")
 			}
