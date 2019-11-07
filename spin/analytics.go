@@ -233,15 +233,10 @@ func (dc *dataCollection) sendData(node *core.IpfsNode) {
 
 func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	tick := time.NewTicker(heartBeat)
-
 	defer tick.Stop()
-
-	config, _ := dc.node.Repo.Config()
-	if config.Experimental.Analytics {
-		dc.sendData(node)
-	}
+	// Force tick on immediate start
 	// make the configuration available in the for loop
-	for range tick.C {
+	for ; true; <-tick.C {
 		config, _ := dc.node.Repo.Config()
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection

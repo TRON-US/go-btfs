@@ -17,7 +17,9 @@ import (
 	"github.com/TRON-US/go-btfs/core/ledger"
 	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
 
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-unixfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
@@ -81,15 +83,28 @@ var storageUploadCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
 		ShortDescription: `
-To upload and store a file on specific hosts:
-    use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','
+By default, BTFS will select hosts based on overall score according to current client's environment.
+To upload a file, <file-hash> must refer to a reed-solomon encoded file.
 
-For example:
+To create a reed-solomon encoded file from a normal file:
 
-    btfs storage upload <filehash> -m=custom -s=<host_address1>,<host_address2>
-    btfs storage upload <leafhash1> <leafhash2> -l -m=custom -s=<host_address1>,<host_address2>
+    $ btfs add --chunker=reed-solomon <file>
+    added <file-hash> <file>
 
-If no hosts are given, BTFS will select nodes based on overall score according to current client's environment.
+Run command to upload:
+
+    $ btfs storage upload <file-hash>
+
+To customly upload and store a file on specific hosts:
+    Use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','.
+
+    # Upload a file to a set of hosts
+    # Total # of hosts must match # of shards in the first DAG level of root file hash
+    $ btfs storage upload <file-hash> -m=custom -s=<host_address1>,<host_address2>
+
+    # Upload specific chunks to a set of hosts
+    # Total # of hosts must match # of chunks given
+    $ btfs storage upload <chunk-hash1> <chunk-hash2> -l -m=custom -s=<host_address1>,<host_address2>
 
 Receive proofs as collateral evidence after selected nodes agree to store the file.`,
 	},
@@ -101,7 +116,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		"proof":  storageUploadProofCmd,
 	},
 	Arguments: []cmds.Argument{
-		// FIXME: change file hash to limit 1
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
@@ -114,6 +128,14 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// get config settings
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
 		// get node
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -132,7 +154,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		lf, _ := req.Options[leafHashOptionName].(bool)
 		if lf == false {
 			if len(req.Arguments) != 1 {
-				return fmt.Errorf("need one and only one root hash")
+				return fmt.Errorf("need one and only one root file hash")
 			}
 			// get leaf hashes
 			rootHash = req.Arguments[0]
@@ -140,13 +162,34 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
-			rp, err := api.ResolvePath(req.Context, path.IpfsPath(hashToCid))
+			rootPath := path.IpfsPath(hashToCid)
+			// check to see if a replicated file using reed-solomon
+			mbytes, err := api.Unixfs().GetMetadata(req.Context, rootPath)
+			if err != nil {
+				return fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
+			}
+			var rsMeta chunker.RsMetaMap
+			err = json.Unmarshal(mbytes, &rsMeta)
+			if err != nil {
+				return fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
+			}
+			if rsMeta.NumData == 0 || rsMeta.NumParity == 0 || rsMeta.FileSize == 0 {
+				return fmt.Errorf("file must be reed-solomon encoded: metadata not valid")
+			}
+			// use unixfs layer helper to grab the raw leaves under the data root node
+			// higher level helpers resolve the enrtire DAG instead of resolving the root
+			// node as it is required here
+			rn, err := api.ResolveNode(req.Context, rootPath)
 			if err != nil {
 				return err
 			}
-			cids, err := api.Object().Links(req.Context, rp)
+			nodes, err := unixfs.GetChildrenForDagWithMeta(req.Context, rn, api.Dag())
 			if err != nil {
 				return err
+			}
+			cids := nodes.DataNode.Links()
+			if len(cids) != int(rsMeta.NumData+rsMeta.NumParity) {
+				return fmt.Errorf("file must be reed-solomon encoded: encoding scheme mismatch")
 			}
 			for _, cid := range cids {
 				chunkHashes = append(chunkHashes, cid.Cid.String())
@@ -184,6 +227,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return fmt.Errorf("custom mode needs input host lists")
 			}
 			peers = strings.Split(hosts, ",")
+			if len(peers) != len(chunkHashes) {
+				return fmt.Errorf("custom mode hosts length must match chunk hashes length")
+			}
 			for _, ip := range peers {
 				host := &storage.HostNode{
 					Identity:   ip,
@@ -205,6 +251,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
+			// Add as many hosts as available
 			for r := range qr.Next() {
 				if r.Error != nil {
 					return r.Error
@@ -228,19 +275,12 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err := retryQueue.Offer(host); err != nil {
 					return err
 				}
-				// FIXME: retryQueue's size should be more than chunkHash?
-				if int(retryQueue.Size()) == len(chunkHashes) {
-					qr.Close()
-					break
-				}
 			}
-		}
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
+			// we can re-use hosts, but for higher availability, we choose to have the
+			// greater than len(chunkHashes) assumption
+			if int(retryQueue.Size()) < len(chunkHashes) {
+				return fmt.Errorf("there are not enough locally stored hosts for chunk hashes length")
+			}
 		}
 
 		// retry queue need to be reused in proof cmd

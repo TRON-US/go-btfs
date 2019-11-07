@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	hubUrl = "https://query-btfs-dev.bt.co/hosts"
+	hubUrl = "https://query-dev.btfs.io/hosts"
 )
 
 type hostsQuery struct {
