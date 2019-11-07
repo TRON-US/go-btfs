@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	core "github.com/TRON-US/go-btfs/core"
@@ -34,6 +35,7 @@ type IdOutput struct {
 	Addresses       []string
 	AgentVersion    string
 	ProtocolVersion string
+	DaemonProcessID int
 }
 
 const (
@@ -190,5 +192,11 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 	}
 	info.ProtocolVersion = "btfs/0.1.0"
 	info.AgentVersion = identify.ClientVersion
+	if node.IsDaemon {
+		info.DaemonProcessID = os.Getpid()
+	} else {
+		info.DaemonProcessID = -1
+	}
+
 	return info, nil
 }
