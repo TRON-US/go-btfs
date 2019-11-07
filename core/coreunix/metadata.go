@@ -143,7 +143,7 @@ func GetDataForUserAndMeta(ctx context.Context, nd ipld.Node, ds ipld.DAGService
 		if childen == nil {
 			return nil, n.Data(), nil
 		}
-		return childen[1].(*dag.ProtoNode).Data(), childen[0].(*dag.ProtoNode).Data(), nil
+		return childen.DataNode.(*dag.ProtoNode).Data(), childen.MetaNode.(*dag.ProtoNode).Data(), nil
 	}
 
 	return n.Data(), nil, nil

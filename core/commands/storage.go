@@ -187,8 +187,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
-			// The second child is always data root node
-			cids := nodes[1].Links()
+			cids := nodes.DataNode.Links()
 			if len(cids) != int(rsMeta.NumData+rsMeta.NumParity) {
 				return fmt.Errorf("file must be reed-solomon encoded: encoding scheme mismatch")
 			}
