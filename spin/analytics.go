@@ -1,10 +1,13 @@
 package spin
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"github.com/gogo/protobuf/proto"
+	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/tron-us/go-btfs-common/protos/node"
+	"google.golang.org/grpc"
 	"runtime"
 	"time"
 
@@ -14,9 +17,9 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-	"github.com/tron-us/go-btfs-common/info"
-
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/tron-us/go-btfs-common/info"
+	pb "github.com/tron-us/go-btfs-common/protos/status"
 )
 
 type programInfo struct {
@@ -46,27 +49,14 @@ type dataCollection struct {
 	NumPeers    uint64  `json:"peers_connected"` //Number of peers
 }
 
-type dataBag struct {
-	PublicKey []byte `json:"public_key"`
-	Signature []byte `json:"signature"`
-	Payload   []byte `json:"payload"`
-}
-
-type healthData struct {
-	NodeId       string `json:"node_id"`
-	BTFSVersion  string `json:"btfs_version"`
-	FailurePoint string `json:"failure_point"`
-}
-
 //Server URL for data collection
 var (
 	log                = logging.Logger("spin")
 	statusServerDomain string
-)
-
-const (
-	routeMetrics = "/metrics"
-	routeHealth  = "/health"
+	callOpts           = []grpc.CallOption{
+		grpc_retry.WithBackoff(grpc_retry.BackoffLinear(100 * time.Millisecond)),
+		grpc_retry.WithMax(3),
+	}
 )
 
 // other constants
@@ -113,7 +103,7 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 			log.Warning(err.Error())
 		}
 
-		dc.startTime = time.Now()
+		dc.startTime = time.Now().UTC()
 		if node.Identity == "" {
 			return
 		}
@@ -184,9 +174,24 @@ func (dc *dataCollection) update(node *core.IpfsNode) {
 	dc.NumPeers = uint64(len(st.Peers))
 }
 
-func (dc *dataCollection) sendData(node *core.IpfsNode) {
-	dc.update(node)
-	dcMarshal, err := json.Marshal(dc)
+func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, error) {
+	config, err := dc.node.Repo.Config()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load config: %s", err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	conn, err := grpc.DialContext(ctx, config.StatusServerDomain, grpc.WithInsecure(),
+		grpc.WithBlock(), grpc.WithBackoffMaxDelay(15*time.Second))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
+	}
+	return conn, cancel, nil
+}
+
+func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
+	dc.update(btfsNode)
+	payload, err := dc.getPayload(btfsNode)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
 		return
@@ -195,40 +200,80 @@ func (dc *dataCollection) sendData(node *core.IpfsNode) {
 		dc.reportHealthAlert("node's private key is null")
 		return
 	}
-	signature, err := dc.node.PrivateKey.Sign(dcMarshal)
+
+	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
 		return
 	}
+
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
 		return
 	}
-	dataBagInstance := new(dataBag)
-	dataBagInstance.PublicKey = publicKey
-	dataBagInstance.Signature = signature
-	dataBagInstance.Payload = dcMarshal
-	dataBagMarshaled, err := json.Marshal(dataBagInstance)
-	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal databag: %s", err.Error()))
-		return
-	}
 
-	// btfs node reports to status server by making HTTP request
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeMetrics), bytes.NewReader(dataBagMarshaled))
-	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to make new http request: %s", err.Error()))
-		return
-	}
-	req.Header.Add("Content-Type", "application/json")
+	sm := new(pb.SignedMetrics)
+	sm.Payload = payload
+	sm.Signature = signature
+	sm.PublicKey = publicKey
 
-	res, err := http.DefaultClient.Do(req)
+	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to perform http.DefaultClient.Do(): %s", err.Error()))
 		return
 	}
-	defer res.Body.Close()
+	defer cancel()
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	client := pb.NewStatusClient(conn)
+	_, err = client.UpdateMetrics(ctx, sm, callOpts...)
+	if err != nil {
+		dc.reportHealthAlert(fmt.Sprintf("failed to send node metrics: %s", err.Error()))
+		return
+	}
+}
+
+func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
+	nd := new(node.Node)
+	now := time.Now().UTC()
+	nd.TimeCreated = &now
+	nd.NodeId = dc.NodeID
+	nd.BtfsVersion = dc.BTFSVersion
+	nd.ArchType = dc.ArchType
+	nd.BlocksDown = dc.BlocksDown
+	nd.BlocksUp = dc.BlocksUp
+	nd.CpuInfo = dc.CPUInfo
+	nd.CpuUsed = dc.CPUUsed
+	nd.Download = dc.Download
+	nd.MemoryUsed = dc.MemUsed
+	nd.OsType = dc.OSType
+	nd.PeersConnected = dc.NumPeers
+	nd.StorageUsed = dc.StorageUsed
+	nd.UpTime = dc.UpTime
+	nd.Upload = dc.Upload
+	nd.TotalUpload = dc.TotalUp
+	nd.TotalDownload = dc.TotalDown
+	//FIXME
+	//nd.BandwidthPriceDeal = dc.
+	//nd.NodeIp = btfsNode.
+	//nd.Reputation =
+	//nd.StoragePriceDeal = dc.
+	//nd.StorageVolumeCap = dc.
+
+	nd.Settings = &node.Node_Settings{
+		StoragePriceAsk:   dc.StoragePriceAsk,
+		BandwidthPriceAsk: dc.BandwidthPriceAsk,
+		StorageTimeMin:    dc.StorageTimeMin,
+		BandwidthLimit:    dc.BandwidthLimit,
+		CollateralStake:   dc.CollateralStake,
+	}
+	bytes, err := proto.Marshal(nd)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
 }
 
 func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
@@ -246,27 +291,24 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	}
 }
 
-func (dc *dataCollection) reportHealthAlert(failurePoint string) {
-	hd := new(healthData)
-	hd.NodeId = dc.NodeID
-	hd.BTFSVersion = dc.BTFSVersion
-	hd.FailurePoint = failurePoint
-	hdMarshaled, err := json.Marshal(hd)
+func (dc *dataCollection) reportHealthAlert(failurePoint string) error {
+	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
-		log.Warning(err.Error())
-		return
+		return err
 	}
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", statusServerDomain, routeHealth), bytes.NewReader(hdMarshaled))
-	if err != nil {
-		log.Warning(err.Error())
-		return
-	}
-	req.Header.Add("Content-Type", "application/json")
+	defer cancel()
+	defer conn.Close()
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Warning(err.Error())
-		return
-	}
-	defer res.Body.Close()
+	n := new(pb.NodeHealth)
+	n.BtfsVersion = dc.BTFSVersion
+	n.FailurePoint = failurePoint
+	n.NodeId = dc.NodeID
+	now := time.Now().UTC()
+	n.TimeCreated = &now
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	client := pb.NewStatusClient(conn)
+	_, err = client.CollectHealth(ctx, n, callOpts...)
+	return err
 }
