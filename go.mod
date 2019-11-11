@@ -17,6 +17,7 @@ require (
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
+	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
@@ -24,7 +25,7 @@ require (
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/gogo/protobuf v1.2.1
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.1
@@ -119,7 +120,7 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20190901111213-e4ec7b275ada
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/go-btfs-common v0.0.3
+	github.com/tron-us/go-btfs-common v0.0.10
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
@@ -133,7 +134,7 @@ require (
 	go.uber.org/zap v1.10.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
 	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd
-	google.golang.org/grpc v1.21.0
+	google.golang.org/grpc v1.24.0
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4
