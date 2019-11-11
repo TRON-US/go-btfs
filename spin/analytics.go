@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/tron-us/go-btfs-common/protos/node"
@@ -225,7 +226,7 @@ func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
 	defer cancel()
 	defer conn.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	client := pb.NewStatusClient(conn)
 	_, err = client.UpdateMetrics(ctx, sm, callOpts...)
@@ -255,13 +256,11 @@ func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
 	nd.Upload = dc.Upload
 	nd.TotalUpload = dc.TotalUp
 	nd.TotalDownload = dc.TotalDown
-	//FIXME
-	//nd.BandwidthPriceDeal = dc.
-	//nd.NodeIp = btfsNode.
-	//nd.Reputation =
-	//nd.StoragePriceDeal = dc.
-	//nd.StorageVolumeCap = dc.
-
+	if config, err := dc.node.Repo.Config(); err == nil {
+		if storageMax, err := humanize.ParseBytes(config.Datastore.StorageMax); err == nil {
+			nd.StorageVolumeCap = storageMax
+		}
+	}
 	nd.Settings = &node.Node_Settings{
 		StoragePriceAsk:   dc.StoragePriceAsk,
 		BandwidthPriceAsk: dc.BandwidthPriceAsk,
@@ -306,7 +305,7 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) error {
 	now := time.Now().UTC()
 	n.TimeCreated = &now
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	client := pb.NewStatusClient(conn)
 	_, err = client.CollectHealth(ctx, n, callOpts...)
