@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cenkalti/backoff"
 	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
-	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/tron-us/go-btfs-common/protos/node"
 	"google.golang.org/grpc"
 	"runtime"
@@ -54,10 +54,6 @@ type dataCollection struct {
 var (
 	log                = logging.Logger("spin")
 	statusServerDomain string
-	callOpts           = []grpc.CallOption{
-		grpc_retry.WithBackoff(grpc_retry.BackoffLinear(100 * time.Millisecond)),
-		grpc_retry.WithMax(3),
-	}
 )
 
 // other constants
@@ -66,6 +62,8 @@ const (
 
 	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
+
+	maxRetryTimes = 3
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -182,8 +180,7 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	conn, err := grpc.DialContext(ctx, config.StatusServerDomain, grpc.WithInsecure(),
-		grpc.WithBlock(), grpc.WithBackoffMaxDelay(15*time.Second))
+	conn, err := grpc.DialContext(ctx, config.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
 	}
@@ -191,27 +188,33 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 }
 
 func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
+	backoff.Retry(func() error {
+		return dc.doSendData(btfsNode)
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+}
+
+func (dc *dataCollection) doSendData(btfsNode *core.IpfsNode) error {
 	dc.update(btfsNode)
 	payload, err := dc.getPayload(btfsNode)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
-		return
+		return err
 	}
 	if dc.node.PrivateKey == nil {
 		dc.reportHealthAlert("node's private key is null")
-		return
+		return err
 	}
 
 	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
-		return
+		return err
 	}
 
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
 		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
-		return
+		return err
 	}
 
 	sm := new(pb.SignedMetrics)
@@ -221,7 +224,7 @@ func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
 
 	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
-		return
+		return err
 	}
 	defer cancel()
 	defer conn.Close()
@@ -229,11 +232,11 @@ func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	client := pb.NewStatusClient(conn)
-	_, err = client.UpdateMetrics(ctx, sm, callOpts...)
+	_, err = client.UpdateMetrics(ctx, sm)
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to send node metrics: %s", err.Error()))
-		return
+		return err
 	}
+	return nil
 }
 
 func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
@@ -290,7 +293,13 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	}
 }
 
-func (dc *dataCollection) reportHealthAlert(failurePoint string) error {
+func (dc *dataCollection) reportHealthAlert(failurePoint string) {
+	backoff.Retry(func() error {
+		return dc.doReportHealthAlert(failurePoint)
+	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+}
+
+func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
 	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
 		return err
@@ -308,6 +317,6 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	client := pb.NewStatusClient(conn)
-	_, err = client.CollectHealth(ctx, n, callOpts...)
+	_, err = client.CollectHealth(ctx, n)
 	return err
 }
