@@ -57,6 +57,10 @@ const (
 	heartBeat = 15 * time.Minute
 
 	maxRetryTimes = 3
+
+	dialTimeout = time.Minute
+
+	callTimeout = 5 * time.Second
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -153,7 +157,7 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 		return nil, nil, fmt.Errorf("failed to load config: %s", err.Error())
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 	conn, err := grpc.DialContext(ctx, config.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
@@ -203,7 +207,7 @@ func (dc *dataCollection) doSendData() error {
 	defer cancel()
 	defer conn.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
 	defer cancel()
 	client := pb.NewStatusClient(conn)
 	_, err = client.UpdateMetrics(ctx, sm)
@@ -291,7 +295,7 @@ func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
 	now := time.Now().UTC()
 	n.TimeCreated = &now
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
 	defer cancel()
 	client := pb.NewStatusClient(conn)
 	_, err = client.CollectHealth(ctx, n)
