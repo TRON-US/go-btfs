@@ -273,17 +273,45 @@ func (api *UnixfsAPI) getPrivateKey(input string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-	} else {
-		bytes, err = base64.StdEncoding.DecodeString(privKey)
+	} else if isPath(privKey) {
+		bytes, err = ioutil.ReadFile(privKey)
 		if err != nil {
-			bytes, err = hex.DecodeString(privKey)
-			if err != nil {
-				return "", err
-			}
+			return "", err
 		}
+		bytes, err = decodePrivateKey(string(bytes))
+		if err != nil {
+			return "", err
+		}
+	} else {
+		bytes, err = decodePrivateKey(privKey)
+		if err != nil {
+			return "", err
+		}
+	}
+	if len(bytes) < 32 {
+		return "", fmt.Errorf("invalid private key")
 	}
 	privKey = hex.EncodeToString(bytes[4:])
 	return privKey, nil
+}
+
+func isPath(path string) bool {
+	if path == "" {
+		return false
+	}
+	fc := path[0]
+	return fc == '.' || fc == '/' || fc == '~'
+}
+
+func decodePrivateKey(privKey string) ([]byte, error) {
+	bytes, err := base64.StdEncoding.DecodeString(privKey)
+	if err != nil {
+		bytes, err = hex.DecodeString(privKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return bytes, nil
 }
 
 // Ls returns the contents of an BTFS or BTNS object(s) at path p, with the format:

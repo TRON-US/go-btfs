@@ -118,6 +118,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20190901111213-e4ec7b275ada
+	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tron-us/go-btfs-common v0.0.10
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
