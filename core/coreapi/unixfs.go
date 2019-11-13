@@ -299,8 +299,8 @@ func isPath(path string) bool {
 	if path == "" {
 		return false
 	}
-	fc := path[:1]
-	return fc == "." || fc == "/" || fc == "~"
+	fc := path[0]
+	return fc == '.' || fc == '/' || fc == '~'
 }
 
 func decodePrivateKey(privKey string) ([]byte, error) {

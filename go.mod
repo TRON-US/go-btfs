@@ -100,7 +100,6 @@ require (
 	github.com/libp2p/go-libp2p-yamux v0.2.1
 	github.com/libp2p/go-maddr-filter v0.0.5
 	github.com/libp2p/go-testutil v0.1.0
-	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mholt/archiver v3.1.1+incompatible
@@ -119,6 +118,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20190901111213-e4ec7b275ada
+	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tron-us/go-btfs-common v0.0.10
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
