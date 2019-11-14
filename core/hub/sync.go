@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/TRON-US/go-btfs/core"
+
 	"github.com/tron-us/go-btfs-common/info"
 )
 
@@ -15,10 +17,6 @@ const (
 	HubModeRep   = "rep"
 	HubModePrice = "price"
 	HubModeSpeed = "speed"
-)
-
-var (
-	hubUrl = "https://query-dev.btfs.io/hosts"
 )
 
 type hostsQuery struct {
@@ -37,8 +35,15 @@ func CheckValidMode(mode string) error {
 
 // QueryHub queries the BTFS-Hub to retrieve the latest list of hosts info
 // according to a certain mode.
-func QueryHub(nodeID, mode string) ([]*info.Node, error) {
-	params := "?id=" + nodeID
+func QueryHub(node *core.IpfsNode, mode string) ([]*info.Node, error) {
+	config, err := node.Repo.Config()
+	if err != nil {
+		return nil, err
+	}
+
+	hubUrl := config.Services.HubDomain
+
+	params := "?id=" + node.Identity.Pretty()
 	switch mode {
 	case HubModeScore:
 		// Already the default on hub api
