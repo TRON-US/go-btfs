@@ -31,6 +31,7 @@ import (
 	"github.com/TRON-US/go-btfs/spin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
@@ -305,6 +306,15 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	cfg, err := cctx.GetConfig()
 	if err != nil {
 		return err
+	}
+
+	migrated := config.MigrateConfig(cfg)
+	if migrated {
+		// Flush changes if migrated
+		err = repo.SetConfig(cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	offline, _ := req.Options[offlineKwd].(bool)
