@@ -453,7 +453,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// BTFS functional test
 	if runStartupTest {
-		functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
+		functest(cfg.Services.StatusServerDomain, cfg.Identity.PeerID, hValue)
 	}
 
 	// set Analytics flag if specified
