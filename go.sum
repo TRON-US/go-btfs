@@ -29,8 +29,8 @@ github.com/TRON-US/go-btfs-chunker v0.2.3 h1:ky/HsQY8UU+Mas3qXptwO9x3Pd2HWDDm+yc
 github.com/TRON-US/go-btfs-chunker v0.2.3/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
 github.com/TRON-US/go-btfs-cmds v0.1.5 h1:AbnAPBAFxe67MPChbwFPJbyKY1Vm3lXybGDNQ4NUTno=
 github.com/TRON-US/go-btfs-cmds v0.1.5/go.mod h1:rtki4vmPzq7qmjdzThJELFpSpxTiORoXreHlExdI6eg=
-github.com/TRON-US/go-btfs-config v0.1.9 h1:xJbPSljAfL0cgU0ydW8ZReo23/CIayFG6oPGBTTk3Tk=
-github.com/TRON-US/go-btfs-config v0.1.9/go.mod h1:SdSLMMxOxqLYvMI0eJItYH7mWkG22EX5WaGyUwOq3fU=
+github.com/TRON-US/go-btfs-config v0.2.0 h1:+l70QQTjyHoP4t4djHPNDWmosjxSF88nTDbp1AHmmRQ=
+github.com/TRON-US/go-btfs-config v0.2.0/go.mod h1:SdSLMMxOxqLYvMI0eJItYH7mWkG22EX5WaGyUwOq3fU=
 github.com/TRON-US/go-btfs-files v0.1.1 h1:GuDIiWDM66bfhfxJy8+dBL4Cfbcp3iBp7pgHpKKCw8k=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
 github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElAe7A0=
