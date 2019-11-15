@@ -93,7 +93,7 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 		return
 	}
 
-	statusServerDomain = configuration.StatusServerDomain
+	statusServerDomain = configuration.Services.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = node
@@ -184,7 +184,7 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := grpc.DialContext(ctx, config.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
+	conn, err := grpc.DialContext(ctx, config.Services.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
 	}

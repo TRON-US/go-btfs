@@ -1288,7 +1288,7 @@ By default it shows local host node information.`,
 }
 
 func SyncHosts(node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHub(node.Identity.Pretty(), mode)
+	nodes, err := hub.QueryHub(node, mode)
 	if err != nil {
 		return err
 	}

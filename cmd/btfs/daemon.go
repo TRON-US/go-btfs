@@ -31,6 +31,7 @@ import (
 	"github.com/TRON-US/go-btfs/spin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
@@ -307,6 +308,15 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		return err
 	}
 
+	migrated := config.MigrateConfig(cfg)
+	if migrated {
+		// Flush changes if migrated
+		err = repo.SetConfig(cfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	offline, _ := req.Options[offlineKwd].(bool)
 	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
@@ -453,7 +463,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// BTFS functional test
 	if runStartupTest {
-		functest(cfg.StatusServerDomain, cfg.Identity.PeerID, hValue)
+		functest(cfg.Services.StatusServerDomain, cfg.Identity.PeerID, hValue)
 	}
 
 	// set Analytics flag if specified
