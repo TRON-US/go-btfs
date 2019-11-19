@@ -1,4 +1,4 @@
-# Assets loaded in with IPFS
+# Assets loaded in with BTFS
 
 ## Generating docs
 
