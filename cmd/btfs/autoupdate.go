@@ -18,7 +18,7 @@ import (
 	"time"
 
 	btfs_version "github.com/TRON-US/go-btfs"
-	"github.com/ipfs/go-ipfs-api"
+	"github.com/TRON-US/go-btfs-api"
 	"github.com/mholt/archiver"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"

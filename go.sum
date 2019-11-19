@@ -22,6 +22,8 @@ github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 h1:UUppSQnhf4Yc6
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/Stebalien/go-bitfield v0.0.1 h1:X3kbSSPUaJK60wV2hjOPZwmpljr6VGCqdq4cBLhbQBo=
 github.com/Stebalien/go-bitfield v0.0.1/go.mod h1:GNjFpasyUVkHMsfEOk8EFLJ9syQ6SI+XWrX9Wf2XH0s=
+github.com/TRON-US/go-btfs-api v0.0.2-0.20191119230945-fd0f83012294 h1:npZ5HqwrEbyaALpD9uDxYheqdQLN6t/LjlQ/+lc7QsM=
+github.com/TRON-US/go-btfs-api v0.0.2-0.20191119230945-fd0f83012294/go.mod h1:2EE6TWkQGy0UJ2L9+zpjdkkcNhfJNbkTdMarJcj06So=
 github.com/TRON-US/go-btfs-chunker v0.2.0 h1:dp80UzRmUFzDDDt4nqo2STGVh5I4jDQJRYJYtRGulSo=
 github.com/TRON-US/go-btfs-chunker v0.2.0/go.mod h1:6wFL7KgEumsn7R7IGFZZhOGIHxA/YkA4RdfR553M3Fk=
 github.com/TRON-US/go-btfs-chunker v0.2.2/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
@@ -307,8 +309,8 @@ github.com/ipfs/go-filestore v0.0.2 h1:pcYwpjtXXwirtbjBXKVJM9CTa9F7/8v1EkfnDaHTO
 github.com/ipfs/go-filestore v0.0.2/go.mod h1:KnZ41qJsCt2OX2mxZS0xsK3Psr0/oB93HMMssLujjVc=
 github.com/ipfs/go-fs-lock v0.0.1 h1:XHX8uW4jQBYWHj59XXcjg7BHlHxV9ZOYs6Y43yb7/l0=
 github.com/ipfs/go-fs-lock v0.0.1/go.mod h1:DNBekbboPKcxs1aukPSaOtFA3QfSdi5C855v0i9XJ8Y=
-github.com/ipfs/go-ipfs-api v0.0.1 h1:4wx4mSgeq5FwMN8LDF7WLwPDKEd+YKjgySrpOJQ2r8o=
-github.com/ipfs/go-ipfs-api v0.0.1/go.mod h1:0FhXgCzrLu7qNmdxZvgYqD9jFzJxzz1NAVt3OQ0WOIc=
+github.com/ipfs/go-ipfs-api v0.0.2 h1:Yg+c8oAMVrN1m0OUGfrWBF+rhfqb7uJ123gU2g1giec=
+github.com/ipfs/go-ipfs-api v0.0.2/go.mod h1:0FhXgCzrLu7qNmdxZvgYqD9jFzJxzz1NAVt3OQ0WOIc=
 github.com/ipfs/go-ipfs-blockstore v0.0.1 h1:O9n3PbmTYZoNhkgkEyrXTznbmktIXif62xLX+8dPHzc=
 github.com/ipfs/go-ipfs-blockstore v0.0.1/go.mod h1:d3WClOmRQKFnJ0Jz/jj/zmksX0ma1gROTlovZKBmN08=
 github.com/ipfs/go-ipfs-blocksutil v0.0.1 h1:Eh/H4pc1hsvhzsQoMEP3Bke/aW5P5rVM1IWFJMcGIPQ=

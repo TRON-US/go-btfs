@@ -6,6 +6,7 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
+	github.com/TRON-US/go-btfs-api v0.0.2-0.20191119230945-fd0f83012294
 	github.com/TRON-US/go-btfs-chunker v0.2.3
 	github.com/TRON-US/go-btfs-cmds v0.1.5
 	github.com/TRON-US/go-btfs-config v0.2.0
@@ -45,7 +46,6 @@ require (
 	github.com/ipfs/go-ds-measure v0.0.1
 	github.com/ipfs/go-filestore v0.0.2
 	github.com/ipfs/go-fs-lock v0.0.1
-	github.com/ipfs/go-ipfs-api v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6 // indirect
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
