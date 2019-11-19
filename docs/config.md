@@ -1,6 +1,6 @@
-# The go-ipfs config file
+# The go-btfs config file
 
-The go-ipfs config file is a JSON document located at `$IPFS_PATH/config`. It
+The go-btfs config file is a JSON document located at `$BTFS_PATH/config`. It
 is read once at node instantiation, either for an offline command, or when
 starting the daemon. Commands that execute on a running daemon do not read the
 config file at runtime.
@@ -8,9 +8,9 @@ config file at runtime.
 #### Profiles
 
 Configuration profiles allow to tweak configuration quickly. Profiles can be
-applied with `--profile` flag to `ipfs init` or with the `ipfs config profile
+applied with `--profile` flag to `btfs init` or with the `btfs config profile
 apply` command. When a profile is applied a backup of the configuration file
-will be created in `$IPFS_PATH`.
+will be created in `$BTFS_PATH`.
 
 Available profiles:
 
@@ -26,7 +26,7 @@ Available profiles:
 
 - `test`
 
-  Reduces external interference, useful for running ipfs in test environments.
+  Reduces external interference, useful for running btfs in test environments.
   Note that with these settings node won't be able to talk to the rest of the
   network without manual bootstrap.
 
@@ -41,8 +41,8 @@ Available profiles:
 - `badgerds`
 
   Replaces default datastore configuration with experimental badger datastore.
-  If you apply this profile after `ipfs init`, you will need to convert your
-  datastore to the new configuration. You can do this using [ipfs-ds-convert](https://github.com/ipfs/ipfs-ds-convert)
+  If you apply this profile after `btfs init`, you will need to convert your
+  datastore to the new configuration. You can do this using [btfs-ds-convert]
 
   WARNING: badger datastore is experimental. Make sure to backup your data
   frequently.
@@ -128,14 +128,13 @@ Default: `null`
 Bootstrap is an array of multiaddrs of trusted nodes to connect to in order to
 initiate a connection to the network.
 
-Default: The ipfs.io bootstrap nodes
 
 ## `Datastore`
 Contains information related to the construction and operation of the on-disk
 storage system.
 
 - `StorageMax`
-A soft upper limit for the size of the ipfs repository's datastore. With `StorageGCWatermark`,
+A soft upper limit for the size of the btfs repository's datastore. With `StorageGCWatermark`,
 is used to calculate whether to trigger a gc run (only if `--enable-gc` flag is set).
 
 Default: `10GB`
@@ -169,9 +168,8 @@ As of writing, [7 hash functions](https://github.com/ipfs/go-ipfs-blockstore/blo
 Default: `0`
 
 - `Spec`
-Spec defines the structure of the ipfs datastore. It is a composable structure, where each datastore is represented by a json object. Datastores can wrap other datastores to provide extra functionality (eg metrics, logging, or caching).
+Spec defines the structure of the btfs datastore. It is a composable structure, where each datastore is represented by a json object. Datastores can wrap other datastores to provide extra functionality (eg metrics, logging, or caching).
 
-This can be changed manually, however, if you make any changes that require a different on-disk structure, you will need to run the [ipfs-ds-convert tool](https://github.com/ipfs/ipfs-ds-convert) to migrate data into the new structures.
 
 For more information on possible values for this configuration option, see docs/datastores.md
 
@@ -206,7 +204,7 @@ Default:
 ```
 
 ## `Discovery`
-Contains options for configuring ipfs node discovery mechanisms.
+Contains options for configuring btfs node discovery mechanisms.
 
 - `MDNS`
 Options for multicast dns peer discovery.
@@ -287,7 +285,7 @@ Default: `[]`
 
 - `PeerID`
 The unique PKI identity label for this configs peer. Set on init and never read,
-its merely here for convenience. Ipfs will always generate the peerID from its
+its merely here for convenience. BTFS will always generate the peerID from its
 keypair at runtime.
 
 - `PrivKey`
@@ -313,11 +311,11 @@ Default: `128`
 ## `Mounts`
 FUSE mount point configuration options.
 
-- `IPFS`
-Mountpoint for `/ipfs/`.
+- `BTFS`
+Mountpoint for `/btfs/`.
 
-- `IPNS`
-Mountpoint for `/ipns/`.
+- `BTNS`
+Mountpoint for `/BTNS/`.
 
 - `FuseAllowOther`
 Sets the FUSE allow other option on the mountpoint.
@@ -350,7 +348,7 @@ See [this issue](https://github.com/ipfs/go-ipfs/issues/1226#issuecomment-120494
 information.
 
 - `DisableBandwidthMetrics`
-A boolean value that when set to true, will cause ipfs to not keep track of
+A boolean value that when set to true, will cause btfs to not keep track of
 bandwidth metrics. Disabling bandwidth metrics can lead to a slight performance
 improvement, as well as a reduction in memory usage.
 
