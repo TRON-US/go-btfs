@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/hub"
 	"github.com/tron-us/go-btfs-common/info"
 
 	"github.com/ipfs/go-datastore/query"
@@ -20,7 +21,12 @@ const (
 
 // GetHostsFromDatastore retrieves `num` hosts from the datastore, if not enough hosts are
 // available, return an error instead of partial return.
+// When num=0 it means unlimited.
 func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string, num int) ([]*info.Node, error) {
+	// check mode: all = display everything
+	if mode == hub.HubModeAll {
+		mode = ""
+	}
 	// get host list from storage
 	rds := node.Repo.Datastore()
 	qr, err := rds.Query(query.Query{
@@ -45,7 +51,7 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 	}
 	// we can re-use hosts, but for higher availability, we choose to have the
 	// greater than `num assumption
-	if len(hosts) < num {
+	if num > 0 && len(hosts) < num {
 		return nil, fmt.Errorf("there are not enough locally stored hosts")
 	}
 	return hosts, nil

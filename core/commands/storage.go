@@ -1088,31 +1088,9 @@ Mode options include:
 			return err
 		}
 
-		rds := n.Repo.Datastore()
-
-		// All = display everything
-		if mode == hub.HubModeAll {
-			mode = ""
-		}
-		qr, err := rds.Query(query.Query{
-			Prefix: storage.HostStorePrefix + mode,
-			Orders: []query.Order{query.OrderByKey{}},
-		})
+		nodes, err := storage.GetHostsFromDatastore(req.Context, n, mode, 0)
 		if err != nil {
 			return err
-		}
-
-		var nodes []*info.Node
-		for r := range qr.Next() {
-			if r.Error != nil {
-				return r.Error
-			}
-			var ni info.Node
-			err := json.Unmarshal(r.Entry.Value, &ni)
-			if err != nil {
-				return err
-			}
-			nodes = append(nodes, &ni)
 		}
 
 		return cmds.EmitOnce(res, &HostInfoRes{nodes})
