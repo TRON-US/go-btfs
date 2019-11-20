@@ -190,7 +190,7 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 			info.Addresses = append(info.Addresses, s)
 		}
 	}
-	info.ProtocolVersion = "btfs/0.1.0"
+	info.ProtocolVersion = "btfs/1.0.0"
 	info.AgentVersion = identify.ClientVersion
 	if node.IsDaemon {
 		info.DaemonProcessID = os.Getpid()

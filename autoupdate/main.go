@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-ipfs-api"
+	"github.com/TRON-US/go-btfs-api"
 	"github.com/natefinch/lumberjack"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"

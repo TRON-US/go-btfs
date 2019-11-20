@@ -3,6 +3,7 @@ package corehttp
 import (
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs-api"
 	"net"
 	"net/http"
 	"os"
@@ -35,7 +36,7 @@ cli arguments:
 `
 
 // APIPath is the path at which the API is mounted.
-const APIPath = "/api/v0"
+const APIPath = "/api/" + shell.API_VERSION
 
 var defaultLocalhostOrigins = []string{
 	"http://127.0.0.1:<port>",
