@@ -18,9 +18,7 @@ import (
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
-	chunker "github.com/TRON-US/go-btfs-chunker"
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-unixfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
@@ -48,7 +46,6 @@ const (
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
 	testOnlyOptionName            = "host-search-local"
 
-	hostStorePrefix       = "/hosts/"        // from btfs-hub
 	hostStorageInfoPrefix = "/host_storage/" // self or from network
 
 	defaultRepFactor = 3
@@ -124,7 +121,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GB of storage in BTT."),
 		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
-		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault("score"),
+		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault(storage.HostModeDefault),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
 	},
@@ -160,41 +157,17 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 			// get leaf hashes
 			rootHash = req.Arguments[0]
+			// convert to cid
 			hashToCid, err := cidlib.Parse(rootHash)
 			if err != nil {
 				return err
 			}
-			rootPath := path.IpfsPath(hashToCid)
-			// check to see if a replicated file using reed-solomon
-			mbytes, err := api.Unixfs().GetMetadata(req.Context, rootPath)
-			if err != nil {
-				return fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
-			}
-			var rsMeta chunker.RsMetaMap
-			err = json.Unmarshal(mbytes, &rsMeta)
-			if err != nil {
-				return fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
-			}
-			if rsMeta.NumData == 0 || rsMeta.NumParity == 0 || rsMeta.FileSize == 0 {
-				return fmt.Errorf("file must be reed-solomon encoded: metadata not valid")
-			}
-			// use unixfs layer helper to grab the raw leaves under the data root node
-			// higher level helpers resolve the enrtire DAG instead of resolving the root
-			// node as it is required here
-			rn, err := api.ResolveNode(req.Context, rootPath)
+			hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, hashToCid)
 			if err != nil {
 				return err
 			}
-			nodes, err := unixfs.GetChildrenForDagWithMeta(req.Context, rn, api.Dag())
-			if err != nil {
-				return err
-			}
-			cids := nodes.DataNode.Links()
-			if len(cids) != int(rsMeta.NumData+rsMeta.NumParity) {
-				return fmt.Errorf("file must be reed-solomon encoded: encoding scheme mismatch")
-			}
-			for _, cid := range cids {
-				chunkHashes = append(chunkHashes, cid.Cid.String())
+			for _, h := range hashes {
+				chunkHashes = append(chunkHashes, h.String())
 			}
 		} else {
 			rootHash = ""
@@ -247,25 +220,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		} else {
-			// get host list from storage
-			rds := n.Repo.Datastore()
-			qr, err := rds.Query(query.Query{
-				Prefix: hostStorePrefix + mode,
-				Orders: []query.Order{query.OrderByKey{}},
-			})
+			hosts, err := storage.GetHostsFromDatastore(req.Context, n, mode, len(chunkHashes))
 			if err != nil {
 				return err
 			}
-			// Add as many hosts as available
-			for r := range qr.Next() {
-				if r.Error != nil {
-					return r.Error
-				}
-				var ni info.Node
-				err := json.Unmarshal(r.Entry.Value, &ni)
-				if err != nil {
-					return err
-				}
+			for _, ni := range hosts {
 				// use host askingPrice instead if provided
 				if int64(ni.StoragePriceAsk) != HostPriceLowBoundary {
 					price = int64(ni.StoragePriceAsk)
@@ -280,11 +239,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				if err := retryQueue.Offer(host); err != nil {
 					return err
 				}
-			}
-			// we can re-use hosts, but for higher availability, we choose to have the
-			// greater than len(chunkHashes) assumption
-			if int(retryQueue.Size()) < len(chunkHashes) {
-				return fmt.Errorf("there are not enough locally stored hosts for chunk hashes length")
 			}
 		}
 
@@ -1141,7 +1095,7 @@ Mode options include:
 			mode = ""
 		}
 		qr, err := rds.Query(query.Query{
-			Prefix: hostStorePrefix + mode,
+			Prefix: storage.HostStorePrefix + mode,
 			Orders: []query.Order{query.OrderByKey{}},
 		})
 		if err != nil {
@@ -1285,7 +1239,7 @@ func SyncHosts(node *core.IpfsNode, mode string) error {
 
 	// Dumb strategy right now: remove all existing and add the new ones
 	// TODO: Update by timestamp and only overwrite updated
-	qr, err := rds.Query(query.Query{Prefix: hostStorePrefix + mode})
+	qr, err := rds.Query(query.Query{Prefix: storage.HostStorePrefix + mode})
 	if err != nil {
 		return err
 	}
@@ -1305,7 +1259,7 @@ func SyncHosts(node *core.IpfsNode, mode string) error {
 		if err != nil {
 			return err
 		}
-		err = rds.Put(newKeyHelper(hostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
+		err = rds.Put(newKeyHelper(storage.HostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
 		if err != nil {
 			return err
 		}
