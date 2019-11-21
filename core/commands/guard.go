@@ -64,7 +64,7 @@ to the guard service.`,
 	Options: []cmds.Option{
 		cmds.StringOption(guardUrlOptionName, "u", "Guard service url including protocol and port. Default: reads from BTFS config."),
 		cmds.Int64Option(guardQuestionCountPerShardOptionName, "q", "Number of challenge questions per shard to generate").WithDefault(cconfig.ConstMinQuestionsCountPerChallenge),
-		cmds.StringOption(guardHostsOptionName, "sh", "List of hosts for each shard, ordered sequentially. Default: reads from BTFS datastore."),
+		cmds.StringOption(guardHostsOptionName, "sh", "List of hosts for each shard, ordered sequentially and separated by ','. Default: reads from BTFS datastore."),
 	},
 	RunTimeout: 30 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
