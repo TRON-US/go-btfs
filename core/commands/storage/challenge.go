@@ -28,45 +28,49 @@ type StorageChallenge struct {
 	sync.Mutex
 
 	// Selections and generations for challenge
-	ID    string  // Challenge ID (randomly generated on creation)
-	CID   cid.Cid // Chunk hash in multihash format (selected chunk on each challenge request)
-	Nonce string  // Random nonce for each challenge request (uuidv4)
-	Hash  string  // Generated SHA-256 hash (chunk bytes + nonce bytes) for proof-of-file-existence
+	ID     string  // Challenge ID (randomly generated on creation)
+	SID    cid.Cid // Shard hash in multihash format (selected shard on each challenge request)
+	CIndex int     // Chunk index within each shard (selected index on each challenge request)
+	CID    cid.Cid // Chunk hash in multihash format (selected chunk on each challenge request)
+	Nonce  string  // Random nonce for each challenge request (uuidv4)
+	Hash   string  // Generated SHA-256 hash (chunk bytes + nonce bytes) for proof-of-file-existence
 }
 
-// NewStorageChallenge creates a challenge object with new ID, resolves the cid path
+// newStorageChallengeHelper creates a challenge object with new ID, resolves the cid path
 // and initializes underlying CIDs to be ready for challenge generation.
-// Used by storage client.
-func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	fileHash cid.Cid) (*StorageChallenge, error) {
-	chid, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
+// When used by storage client: challengeID is "", will be randomly genenerated
+// When used by storage host: challengeID is a valid uuid v4
+func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
+	if challengeID == "" {
+		chid, err := uuid.NewRandom()
+		if err != nil {
+			return nil, err
+		}
+		challengeID = chid.String()
 	}
 	sc := &StorageChallenge{
 		Ctx:      ctx,
 		Node:     node,
 		API:      api,
 		seenCIDs: map[string]bool{},
-		ID:       chid.String(),
+		ID:       challengeID,
+		SID:      shardHash,
 	}
-	if err := sc.getAllCIDsRecursive(fileHash); err != nil {
+	if err := sc.getAllCIDsRecursive(shardHash); err != nil {
 		return nil, err
 	}
 	return sc, nil
 }
 
-// NewStorageChallengeResponse creates (rebuilds) a plain challenge object with only initializing
-// the basic components.
-// Used by storage host.
+func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	shardHash cid.Cid) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, shardHash, "")
+}
+
 func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	challengeID string) *StorageChallenge {
-	return &StorageChallenge{
-		Ctx:  ctx,
-		Node: node,
-		API:  api,
-		ID:   challengeID,
-	}
+	shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, shardHash, challengeID)
 }
 
 // getAllCIDsRecursive traverses the full DAG to find all cids and
@@ -112,6 +116,7 @@ func (sc *StorageChallenge) GenChallenge() error {
 		return err
 	}
 	sc.CID = sc.allCIDs[n.Int64()]
+	sc.CIndex = int(n.Int64())
 
 	// Fetch the raw data
 	r, _, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(sc.CID), true, false)
@@ -138,18 +143,25 @@ func (sc *StorageChallenge) GenChallenge() error {
 	return nil
 }
 
-// SolveChallenge solves the given challenge block hash + nonce's request
+// SolveChallenge solves the given challenge chunk index + nonce's request
 // and records the solved/responding value in Hash field.
-func (sc *StorageChallenge) SolveChallenge(chHash cid.Cid, chNonce string) error {
+func (sc *StorageChallenge) SolveChallenge(chIndex int, chNonce string) error {
 	sc.Lock()
 	defer sc.Unlock()
 
+	// Get the cid for the chunk
+	if chIndex < 0 || chIndex >= len(sc.allCIDs) {
+		return fmt.Errorf("chunk index is out of range")
+	}
+
 	// Fetch the raw data
+	chHash := sc.allCIDs[chIndex]
 	r, _, err := sc.API.Object().Data(sc.Ctx, path.IpfsPath(chHash), true, false)
 	if err != nil {
 		return err
 	}
 	sc.CID = chHash
+	sc.CIndex = chIndex
 
 	// Decode nonce
 	nonce, err := uuid.Parse(chNonce)

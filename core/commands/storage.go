@@ -725,23 +725,32 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID)
 
+	// get challenge object from params
 	r := ChallengeRes{}
 	if err := json.Unmarshal(resBytes, &r); err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
+		return
 	}
-	// compute challenge on host
-	chunkInfo.SetState(storage.SolveState)
-	sc := storage.NewStorageChallengeResponse(req.Context, n, api, r.ID)
-	hashToCid, err := cidlib.Parse(chunkHash)
+	// find chunk hash cid
+	chunkCid, err := cidlib.Parse(chunkHash)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
-	if err := sc.SolveChallenge(hashToCid, r.Nonce); err != nil {
+	// compute challenge on host
+	chunkInfo.SetState(storage.SolveState)
+	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, chunkCid, r.ID)
+	if err != nil {
+		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+		storage.GlobalSession.Remove(ssID, chunkHash)
+		return
+	}
+	if err := sc.SolveChallenge(r.ChunkIndex, r.Nonce); err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
@@ -752,7 +761,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 
 	// RemoteCall(user, CHID, CHR) to get signedPayment
 	chunkInfo.SetState(storage.VerifyState)
-	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, r.Hash, chunkHash)
+	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, sc.Hash, chunkHash)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
@@ -815,9 +824,9 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 }
 
 type ChallengeRes struct {
-	ID    string
-	Hash  string
-	Nonce string
+	ID         string
+	ChunkIndex int
+	Nonce      string
 }
 
 var storageUploadRequestChallengeCmd = &cmds.Command{
@@ -886,9 +895,9 @@ the contents and nonce together to produce a final challenge response.`,
 		sendStepStateChan(chunkInfo.RetryChan, storage.ChallengeState, true, nil, nil)
 
 		out := &ChallengeRes{
-			ID:    sch.ID,
-			Hash:  sch.Hash,
-			Nonce: sch.Nonce,
+			ID:         sch.ID,
+			ChunkIndex: sch.CIndex,
+			Nonce:      sch.Nonce,
 		}
 		return cmds.EmitOnce(res, out)
 	},
