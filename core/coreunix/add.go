@@ -121,6 +121,22 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 			return nil, err
 		}
 	}
+	// Add SuperMeta if metaBytes is not nil
+	chunkSize := chnk.ChunkSize()
+	if chunkSize == 0 {
+		chunkSize = uint64(ihelper.DefaultLinksPerBlock)
+	}
+	if metaBytes != nil {
+		superMeta := &ihelper.SuperMeta{
+			ChunkSize:     chnk.ChunkSize(),
+			MaxLinks:      uint64(ihelper.DefaultLinksPerBlock),
+			TrickleFormat: adder.Trickle,
+		}
+		metaBytes, err = adder.appendMetadataObject(metaBytes, superMeta)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	params := ihelper.DagBuilderParams{
 		Dagserv:       adder.bufferedDS,
@@ -129,7 +145,7 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		NoCopy:        adder.NoCopy,
 		CidBuilder:    adder.CidBuilder,
 		TokenMetadata: metaBytes,
-		ChunkSize:     chnk.ChunkSize(),
+		ChunkSize:     chunkSize,
 	}
 
 	db, err := params.New(chnk)

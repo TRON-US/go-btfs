@@ -80,7 +80,7 @@ func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface
 		t.Fatal(err)
 	}
 	// Extract and check metadata
-	b, err := coreunix.MetaData(ctx, api, path.IpfsPath(addedHash))
+	b, err := coreunix.GetMetaData(ctx, api, path.IpfsPath(addedHash))
 	if err != nil {
 		t.Fatal(err)
 	}
