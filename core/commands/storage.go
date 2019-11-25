@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/escrow"
 	"strconv"
 	"strings"
 	"time"
@@ -352,8 +353,14 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 				return
 			}
 			// TODO: init contract with each server and send over to host
+			contract := escrow.NewContract(chunkHash, n.Identity.Pretty(), candidateHost.Identity, candidateHost.Price)
+			contractBytes, err := proto.Marshal(contract)
+			if err != nil {
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
+			go retryProcess(ctx, api, candidateHost, ss, n, contractBytes, chunkHash, ssID, test)
 
 			// monitor each steps if error or time out happens, retry
 			for curState := 0; curState < len(storage.StdChunkStateFlow); {
@@ -380,7 +387,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
+							go retryProcess(ctx, api, candidateHost, ss, n, contractBytes, chunkHash, ssID, test)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -401,7 +408,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 						log.Errorf("Time Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
+						go retryProcess(ctx, api, candidateHost, ss, n, contractBytes, chunkHash, ssID, test)
 					}
 				}
 			}
@@ -427,7 +434,7 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 }
 
 func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.Session,
-	n *core.IpfsNode, chunkHash string, ssID string, test bool) {
+	n *core.IpfsNode, contract []byte, chunkHash string, ssID string, test bool) {
 	// record chunk info in session
 	chunk := ss.GetOrDefault(chunkHash)
 
@@ -645,6 +652,7 @@ the chunk and replies back to client for the next challenge step.`,
 		cmds.StringArg("channel-id", true, false, "Open channel id for payment."),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client."),
+		cmds.StringArg("contract", true, false, "client init contract")
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -701,7 +709,7 @@ the chunk and replies back to client for the next challenge step.`,
 
 		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 		// TODO: review contract and send back to client
-		go reviewContractAndSign()
+		go reviewContractAndSign(chunkInfo, chunkHash, ssID, n, pid, req, env)
 		//go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
 		return nil
 	},
