@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	ecies "github.com/TRON-US/go-eccrypto"
-	"github.com/TRON-US/go-unixfs/importer/helpers"
 	"io/ioutil"
 	"reflect"
 
@@ -16,9 +14,11 @@ import (
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
 	files "github.com/TRON-US/go-btfs-files"
+	ecies "github.com/TRON-US/go-eccrypto"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	unixfile "github.com/TRON-US/go-unixfs/file"
+	"github.com/TRON-US/go-unixfs/importer/helpers"
 	uio "github.com/TRON-US/go-unixfs/io"
 	ftutil "github.com/TRON-US/go-unixfs/util"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"

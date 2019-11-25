@@ -138,6 +138,8 @@ func (adder *Adder) addNodeToMfs(node ipld.Node, path string) (ipath.Resolved, e
 	if err != nil {
 		return nil, err
 	}
+	// From core/coreunix/add.go
+	// TODO: check with the same execution path in add.go for `btfs add` command.
 	dir := gopath.Dir(path)
 	if dir != "." {
 		opts := mfs.MkdirOpts{
@@ -168,44 +170,23 @@ func (modifier *MetaModifier) addMeta(nd ipld.Node) (ipld.Node, error) {
 
 	// Build Metadata DAG modifier for balanced format
 	// TODO: trickle format
-	ctx, closer := context.WithCancel(context.Background())
-	defer closer()
-
 	var metadataNotExist bool
-	children, err := ft.GetChildrenForDagWithMeta(ctx, nd, modifier.dagService)
+	var mnode ipld.Node
+	dr := []byte(modifier.TokenMetadata)
+	children, err := ft.GetChildrenForDagWithMeta(modifier.ctx, nd, modifier.dagService)
 	if err != nil {
 		return nil, err
 	} else {
-		if children == nil {
+		if children == nil || children.MetaNode == nil {
 			metadataNotExist = true
+		} else {
+			mnode = children.MetaNode
 		}
 	}
-	var mnode ipld.Node
-	if !metadataNotExist {
-		mnode = children.MetaNode
-	}
-
-	var chunkSize int64 = chunker.DefaultBlockSize
-	maxlinks := ihelper.DefaultLinksPerBlock
-
-	dagmod, err := mod.NewDagModifierBalanced(ctx, mnode, modifier.dagService, chunker.MetaSplitterGen((chunkSize)), maxlinks, metadataNotExist)
+	mdagmod, err := modifier.buildMetaDagModifier(nd, mnode, metadataNotExist, dr)
 	if err != nil {
 		return nil, err
 	}
-
-	params := ihelper.DagBuilderParams{
-		Dagserv:    modifier.dagService,
-		CidBuilder: modifier.CidBuilder,
-		ChunkSize:  uint64(chunkSize),
-		Maxlinks:   maxlinks,
-	}
-	dr := []byte(modifier.TokenMetadata)
-	db, err := params.New(chunker.NewMetaSplitter(bytes.NewReader(dr), uint64(chunkSize)))
-	if err != nil {
-		return nil, err
-	}
-
-	mdagmod := mod.NewMetaDagModifierBalanced(dagmod, db)
 
 	// Add the given TokenMetadata to the metadata sub-DAG and return
 	// a new root of the BTFS file DAG.
@@ -275,60 +256,19 @@ func (modifier *MetaModifier) removeMeta(nd ipld.Node) (ipld.Node, error) {
 
 	// Build Metadata DAG modifier for balanced format
 	// TODO: trickle format
-	ctx, closer := context.WithCancel(context.Background())
-	defer closer()
-
-	children, err := ft.GetChildrenForDagWithMeta(ctx, nd, modifier.dagService)
+	children, err := ft.GetChildrenForDagWithMeta(modifier.ctx, nd, modifier.dagService)
 	if err != nil {
 		return nil, err
 	} else {
-		if children == nil {
+		if children == nil || children.MetaNode == nil {
 			return nil, errors.New("no metadata exists for the given node")
 		}
 	}
-	mnode := children.MetaNode
-
-	// Retrieve SuperMeta info to build meta Dag modifier.
-	// Note that SuperMeta may or may not exist.
-	// TODO: unit test to check the cases..
-	b, err := GetMetaDataFromDagRoot(ctx, nd, modifier.dagService)
-	if err != nil {
-		return nil, err
-	}
-	var superMeta ihelper.SuperMeta
-	err = json.Unmarshal(b, &superMeta)
-	if err != nil {
-		return nil, err
-	}
-
-	chunkSize := int64(superMeta.ChunkSize)
-	if chunkSize == 0 {
-		chunkSize = chunker.DefaultBlockSize
-	}
-	maxLinks := int(superMeta.MaxLinks)
-	if maxLinks == 0 {
-		maxLinks = ihelper.DefaultLinksPerBlock
-	}
-
-	dagmod, err := mod.NewDagModifierBalanced(ctx, mnode, modifier.dagService, chunker.MetaSplitterGen((chunkSize)), maxLinks, false)
-	if err != nil {
-		return nil, err
-	}
-
-	params := ihelper.DagBuilderParams{
-		Dagserv:    modifier.dagService,
-		CidBuilder: modifier.CidBuilder,
-		ChunkSize:  uint64(chunkSize),
-		Maxlinks:   maxLinks,
-	}
 	dr := []byte(modifier.TokenMetadata)
-	// TODO: verify the input key list string.
-	db, err := params.New(chunker.NewMetaSplitter(bytes.NewReader(nil), uint64(chunkSize)))
+	mdagmod, err := modifier.buildMetaDagModifier(nd, children.MetaNode, false, dr)
 	if err != nil {
 		return nil, err
 	}
-
-	mdagmod := mod.NewMetaDagModifierBalanced(dagmod, db)
 
 	// Add the given TokenMetadata to the metadata sub-DAG and return
 	// a new root of the BTFS file DAG.
@@ -338,6 +278,67 @@ func (modifier *MetaModifier) removeMeta(nd ipld.Node) (ipld.Node, error) {
 	}
 
 	return newRoot, nil
+}
+
+func (modifier *MetaModifier) buildMetaDagModifier(nd ipld.Node, mnode ipld.Node, noMeta bool, dr []byte) (*mod.MetaDagModifier, error) {
+	// Retrieve SuperMeta.
+	var b []byte = nil
+	var err error
+	if !noMeta {
+		b, err = GetMetaDataFromDagRoot(modifier.ctx, nd, modifier.dagService)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var sm ihelper.SuperMeta
+	err = GetOrDefaultSuperMeta(b, &sm)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build a new Dag modifier.
+	dagmod, err := mod.NewDagModifierBalanced(modifier.ctx, mnode, modifier.dagService, chunker.MetaSplitterGen(int64(sm.ChunkSize)), int(sm.MaxLinks), noMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a Dag builder helper
+	params := ihelper.DagBuilderParams{
+		Dagserv:    modifier.dagService,
+		CidBuilder: modifier.CidBuilder,
+		ChunkSize:  sm.ChunkSize,
+		Maxlinks:   int(sm.MaxLinks),
+	}
+
+	db, err := params.New(chunker.NewMetaSplitter(bytes.NewReader(dr), sm.ChunkSize))
+	if err != nil {
+		return nil, err
+	}
+
+	// Finally create a Meta Dag Modifier
+	mdagmod := mod.NewMetaDagModifierBalanced(dagmod, db)
+
+	return mdagmod, nil
+}
+
+func GetOrDefaultSuperMeta(b []byte, superMeta *ihelper.SuperMeta) error {
+	if b != nil {
+		err := json.Unmarshal(b, superMeta)
+		if err != nil {
+			return err
+		}
+	}
+
+	if b == nil || superMeta.ChunkSize == 0 {
+		superMeta.ChunkSize = uint64(chunker.DefaultBlockSize)
+	}
+
+	if b == nil || superMeta.MaxLinks == 0 {
+		superMeta.MaxLinks = uint64(ihelper.DefaultLinksPerBlock)
+	}
+
+	return nil
 }
 
 func AddMetadataTo(n *core.IpfsNode, skey string, m *ft.Metadata) (string, error) {

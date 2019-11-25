@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/interface-go-btfs-core/options"
@@ -80,6 +81,8 @@ Then this command returns a new file-hash for the file.`,
 		h := ""
 		if p != nil {
 			h = enc.Encode(p.Cid())
+		} else {
+			return errors.New("got nil path")
 		}
 
 		err = res.Emit(&MetaResult{
@@ -141,6 +144,8 @@ Then this command returns a new file-hash for the file.`,
 		h := ""
 		if p != nil {
 			h = enc.Encode(p.Cid())
+		} else {
+			return errors.New("got nil path")
 		}
 
 		err = res.Emit(&MetaResult{
