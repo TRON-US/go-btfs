@@ -6,18 +6,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	ecies "github.com/TRON-US/go-eccrypto"
 	"io/ioutil"
+	"reflect"
 
 	"github.com/TRON-US/go-btfs/core"
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
 	files "github.com/TRON-US/go-btfs-files"
+	ecies "github.com/TRON-US/go-eccrypto"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	unixfile "github.com/TRON-US/go-unixfs/file"
+	"github.com/TRON-US/go-unixfs/importer/helpers"
 	uio "github.com/TRON-US/go-unixfs/io"
+	ftutil "github.com/TRON-US/go-unixfs/util"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
@@ -161,7 +164,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 				return nil, err
 			}
 
-			settings.TokenMetadata, err = api.AppendMetadata(settings.TokenMetadata, m)
+			settings.TokenMetadata, err = api.appendMetaMap(settings.TokenMetadata, m)
 			if err != nil {
 				return nil, err
 			}
@@ -258,6 +261,35 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 		}
 	} else {
 		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
+		if metadata {
+			f, ok := node.(files.File)
+			if !ok {
+				return nil, notSupport(f)
+			}
+			inb, err := ftutil.ReadMetadataBytes(ctx, nd, api.dag)
+			if err != nil {
+				return nil, err
+			}
+
+			m := make(map[string]interface{})
+			err = json.Unmarshal(inb, &m)
+			if err != nil {
+				return nil, err
+			}
+
+			// Delete SuperMeta entries from the map.
+			var superMeta helpers.SuperMeta
+			typ := reflect.TypeOf(superMeta)
+			for i := 0; i < typ.NumField(); i++ {
+				delete(m, typ.Field(i).Name)
+			}
+
+			outb, err := json.Marshal(m)
+			if err != nil {
+				return nil, err
+			}
+			node = files.NewBytesFile(outb)
+		}
 	}
 
 	return node, err
@@ -339,6 +371,94 @@ func (api *UnixfsAPI) Ls(ctx context.Context, p path.Path, opts ...options.Unixf
 	}
 
 	return uses.lsFromLinksAsync(ctx, dir, settings)
+}
+
+func (api *UnixfsAPI) AddMetadata(ctx context.Context, p path.Path, m string, opts ...options.UnixfsAddMetaOption) (path.Resolved, error) {
+	settings, err := options.UnixfsAddMetaOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	addblockstore := api.blockstore
+	exch := api.exchange
+	pinning := api.pinning
+
+	bserv := blockservice.New(addblockstore, exch) // hash security 001
+	dserv := dag.NewDAGService(bserv)
+
+	metaModifier, err := coreunix.NewMetaModifier(ctx, pinning, addblockstore, dserv)
+	if err != nil {
+		return nil, err
+	}
+
+	if m != "" {
+		metaModifier.TokenMetadata = m
+	}
+
+	metaModifier.Pin = settings.Pin
+
+	ses := api.core().getSession(ctx)
+
+	nd, err := ses.ResolveNode(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	newNode, rp, err := metaModifier.AddMetaAndPin(nd)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := api.provider.Provide(newNode.Cid()); err != nil {
+		return nil, err
+	}
+
+	// Return a new /btfs resolved path from the CID.
+	return rp, nil
+}
+
+func (api *UnixfsAPI) RemoveMetadata(ctx context.Context, p path.Path, m string, opts ...options.UnixfsRemoveMetaOption) (path.Resolved, error) {
+	settings, err := options.UnixfsRemoveMetaOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	addblockstore := api.blockstore
+	exch := api.exchange
+	pinning := api.pinning
+
+	bserv := blockservice.New(addblockstore, exch) // hash security 001
+	dserv := dag.NewDAGService(bserv)
+
+	metaModifier, err := coreunix.NewMetaModifier(ctx, pinning, addblockstore, dserv)
+	if err != nil {
+		return nil, err
+	}
+
+	if m != "" {
+		metaModifier.TokenMetadata = m
+	}
+
+	metaModifier.Pin = settings.Pin
+
+	ses := api.core().getSession(ctx)
+
+	nd, err := ses.ResolveNode(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	newNode, rp, err := metaModifier.RemoveMetaAndPin(nd)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := api.provider.Provide(newNode.Cid()); err != nil {
+		return nil, err
+	}
+
+	// Return a new /btfs resolved path from the CID.
+	return rp, nil
 }
 
 func (api *UnixfsAPI) processLink(ctx context.Context, linkres ft.LinkResult, settings *options.UnixfsLsSettings) coreiface.DirEntry {
@@ -438,7 +558,7 @@ func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) ([]byte, err
 	}
 }
 
-func (api *UnixfsAPI) AppendMetadata(tokenMetadata string, metaMap map[string]interface{}) (string, error) {
+func (api *UnixfsAPI) appendMetaMap(tokenMetadata string, metaMap map[string]interface{}) (string, error) {
 	if metaMap == nil {
 		return "", nil
 	}

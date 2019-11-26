@@ -163,14 +163,17 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, m
 		}
 
 		var count int64
+		var seekNotAllowed bool
 		if opts[decryptName] != nil && opts[decryptName].(bool) {
-			count = 0
-		} else {
+			seekNotAllowed = true
+		}
+		if !seekNotAllowed && !meta {
 			count, err = file.Seek(offset, io.SeekStart)
+			if err != nil {
+				return nil, 0, err
+			}
 		}
-		if err != nil {
-			return nil, 0, err
-		}
+
 		offset = 0
 
 		fsize, err = file.Size()
