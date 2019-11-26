@@ -13,8 +13,6 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
-    - [Pay attention](#pay-attention)
-    - [Step](#step)
 - [Packages](#packages)
 - [Soter](#soter)
 - [License](#license)
