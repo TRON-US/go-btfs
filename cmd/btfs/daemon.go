@@ -446,8 +446,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 
 	//Begin sending analytics to hosted server
-	collectData, _ := req.Options[enableDataCollection].(bool)
-	node.Repo.SetConfigKey("Experimental.Analytics", collectData)
+	// set Analytics flag if specified
+	if dc, ok := req.Options[enableDataCollection]; ok == true {
+		node.Repo.SetConfigKey("Experimental.Analytics", dc)
+	}
 	analytics.Initialize(node, version.CurrentVersionNumber, hValue)
 
 	// Give the user some immediate feedback when they hit C-c
