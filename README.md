@@ -1,7 +1,5 @@
 # go-btfs
 
-
-
 ## What is BTFS?
 
 BitTorrent File System (BTFS) is a protocol forked from 
@@ -12,17 +10,7 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
 
 - [Install](#install)
   - [System Requirements](#system-requirements)
-  - [Build from Source](#build-from-source)
-    - [Install Go](#step1-install-go)
-    - [Access To Private Repo](#step2-access-to-private-repo)
-    - [Download Source Code](#step3-download-source-code)
-    - [Build And Join BTFS Private Net](#step4-build-and-join-btfs-private-net)
-        - [Install script](#using-one-step-script)
-        - [Instruction](#step-by-step-instruction)
-    - [Run BTFS At The Backend](#step5-run-btfs-at-the-backend)
 - [Usage](#usage)
-- [Started by binary file](#started-by-binary-file)
-  - [Automatically generate](#automatically-generate)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
     - [Pay attention](#pay-attention)
@@ -34,6 +22,8 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
 
 ## Install
 
+The download and install instructions for BTFS are over at: https://docs.btfs.io/docs/install-btfs-1. 
+
 ### System Requirements
 
 BTFS can run on most Linux, macOS, and Windows systems. We recommend 
@@ -42,87 +32,11 @@ only one CPU core), but it should run fine with as little as 1 GB of
 RAM. On systems with less memory, it may not be completely stable.
 Only support compiling from source for mac and unix-based system.
 
+### Install Pre-Built Packages
 
-### Build from Source
+We host pre-built binaries at https://github.com/TRON-US/btfs-binary-releases. 
 
-#### Step0 Install GCC
-GCC is required to build btfs from source code. Approaches to install GCC may vary from operating system to operating system.
-To install GCC on Debian and Ubuntu system, please run the following commands:
-```bash
-sudo apt-get update
-sudo apt-get install build-essential manpages-dev
-```
-To verify that GCC has been successfully installed on your machine, please run this command:
-```bash
-gcc --version
-```
-
-#### Step1 Install Go
-
-The build process for btfs requires Go 1.13 or higher. If you don't 
-have it: [Download Go 1.13+](https://golang.org/dl/). Or use the 
-following command:
-```
-cd /tmp
-GO_PACKAGE=go1.13.linux-amd64.tar.gz
-wget https://golang.org/dl/$GO_PACKAGE
-sudo tar -xvf $GO_PACKAGE
-sudo mv go /usr/local
-sudo rm $GO_PACKAGE
-go version
-```
-
-You'll need to add Go's bin directories to your `$PATH` environment 
-variable e.g., by adding these lines to your `/etc/profile` (for a 
-system-wide installation) or `$HOME/.profile`:
-
-```
-export GOPATH=${HOME}/go
-export PATH=$PATH:/usr/local/go/bin
-export PATH=$PATH:$GOPATH/bin
-export GO111MODULE=on
-```
-
-(If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
-
-
-#### Step2 Download Source Code
-
-```
-$ git clone https://github.com/TRON-US/go-btfs.git
-$ cd go-btfs
-```
-
-
-#### Step3 Build And Join BTFS Private Net
-
-Your can choose to using on-step script to compile and build or just follow step by step.
-
-##### Using One-step Script
-
-`bash install_btfs.sh`
-
-
-##### Step-by-step Instruction
-
-###### 1. Compile and build:
-
-```
-$ go clean -modcache
-$ make install
-go version go1.13 linux/amd64
-bin/check_go_version 1.13
-go install -ldflags="-X "github.com/btfs/go-btfs".CurrentCommit=<git hash>" ./cmd/btfs
-```
-If you are building on FreeBSD instead of `make install` use `gmake install`.
-
-Show if btfs exec file has been created:
-```
-$which btfs
-/home/ubuntu/go/bin/btfs
-```
-
-###### 2. Init a btfs node:
+#### Initialize a BTFS Daemon
 
 ```
 $ btfs init
@@ -134,43 +48,12 @@ to get started, enter:
         btfs cat /btfs/QmPbWqakofrBdDSm4mLUS5RE5QiPQi8JbnK73LgWwQNdbi/readme
 ```
 
-###### 3. Auto Update Setting
+#### Start the Daemon
 
-Create a config.yaml file in the same path of your btfs binary path. The config.yaml file has the following context:
+Start the BTFS Daemon
 ```
-version: 0.0.4    # btfs version, order by version.go
-md5: 034cf64b76f8bf5f506ce6aca9fa81c4    #btfs binary md5
-autoupdateFlg: true     # is auto update
-sleepTimeSeconds: 20        # how often to auto update (second）.
+$ btfs daemon
 ```
-
-###### 4. Configuration
-
-Enable Cross-Origin Resource Sharing:
-```
-$ btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"*\"]"
-$ btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST", "OPTIONS"]'
-$ btfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials "[\"true\"]"
-```
-Enable gateway, api port:
-```
-$ btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
-$ btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
-```
-
-
-#### Step4 Run BTFS At The Backend
-
-```
-you need to make sure there is no btfs node already running, using `ps -ef |grep "btfs daemon"` to check if there is btfs node running and then kill the node process if it is, then running the following command:
-$ sudo nohup btfs daemon </dev/null >/dev/null 2>&1 &
-```
-Check if your node is connect to BTFS private net:
-```
-$ btfs swarm peers
-/ip4/3.18.120.107/tcp/4001/btfs/QmcmRdAHQYTtpbs9Ud5rNx6WzHmU9WcYCrBneCSyKhMr7H
-```
-
 
 ## Usage
 
@@ -231,51 +114,7 @@ SUBCOMMANDS
     export BTFS_PATH=/path/to/btfsrepo
 ```
 
-## Started by binary file
-
-Please refer to the documentation for the btfs-binary-releases project.
-
-[btfs-binary-releases](https://github.com/TRON-US/btfs-binary-releases/blob/master/README.md)
-
-### Automatically generate
-
-#### Pay attention
-
-* This section is limited to maintenance personnel of btfs-binary-release.
-* Make sure go-btfs and btfs-binary-release are in the same directory.
-
-#### Step
-
-1. Download go-btfs and btfs-binary-release repo.
-
-```shell
-git clone https://github.com/TRON-US/go-btfs.git
-git clone https://github.com/TRON-US/btfs-binary-releases.git
-```
-
-2. Create a branch to upload in btfs-binary-release.
-
-```shell
-cd btfs-binary-releases
-git checkout -b uploader
-```
-
-3. Execute automatic packaging script.
-
-```shell
-cd ../go-btfs
-bash package.sh
-```
-
-Now you will generate all supported versions of the binary package. Push it to the remote to generate the pull request, we will review your pr and merge it into the master.
-
 ## Getting Started
-
-To start using BTFS, you must first initialize BTFS's config files on your
-system, this is done with `btfs init`. See `btfs init --help` for information on
-the optional arguments it takes. After initialization is complete, you can use
-`btfs mount`, `btfs add` and any of the other commands to explore!
-
 
 ### Some things to try
 
@@ -300,26 +139,16 @@ Some places to get you started on the codebase:
   - PubSub: [PubSub](https://github.com/libp2p/go-libp2p-pubsub)
 
 
-### Testing
-
-```
-make test
-```
-
 ### Development Dependencies
 
 If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
 
 ### Soter
 
-You are welcome to use BTFS, but if you don’t want to set up your own nodes, you can use the Soter gateway directly to upload files, which are then stored on BTFS.
+BTFS Soter is a charging service gateway based on the TRON Network and BTFS cluster. Users can access the BTFS network via the Soter gateway.
 
 [Soter Interface Document](https://btfssoter.readme.io/docs/soter-interface-documentation)
 
 ### License
 
 [MIT](./LICENSE)
-
-
-## TODO
-#### Troubleshooting
