@@ -7,7 +7,7 @@ require (
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/TRON-US/go-btfs-cmds v0.1.2
-	github.com/TRON-US/go-btfs-config v0.1.6
+	github.com/TRON-US/go-btfs-config v0.2.1
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cenkalti/backoff v2.1.1+incompatible
