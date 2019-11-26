@@ -86,7 +86,7 @@ type StepRetryChan struct {
 	Succeed           bool
 	ClientErr         error
 	HostErr           error
-	SessionTimeOurErr error
+	SessionTimeOutErr error
 }
 
 func init() {
