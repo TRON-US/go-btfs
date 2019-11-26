@@ -54,6 +54,7 @@ type Session struct {
 	Status         string
 	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
 	CompleteChunks int
+	CompleteContracts int
 	RetryQueue     *RetryQueue
 
 	SessionStatusChan chan StatusChan
@@ -70,6 +71,7 @@ type Chunk struct {
 
 	Challenge *StorageChallenge
 	ChannelID *ledgerPb.ChannelID
+	SignedContract []byte
 	Payer     peer.ID
 	Receiver  peer.ID
 	Price     int64
@@ -249,6 +251,25 @@ func (ss *Session) GetFileHash() string {
 	return ss.FileHash
 }
 
+func (ss *Session) IncrementContract(chunkHash string, contracts []byte) error {
+	ss.Lock()
+	defer ss.Unlock()
+
+	chunk := ss.ChunkInfo[chunkHash]
+	if chunk == nil {
+		return fmt.Errorf("chunk not exists")
+	}
+	chunk.SetSignedContract(contracts)
+	return nil
+}
+
+func (ss *Session) GetCompleteContractNum() int {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.CompleteContracts
+}
+
 func (ss *Session) SetStatus(status int) {
 	ss.Lock()
 	defer ss.Unlock()
@@ -313,6 +334,13 @@ func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledger
 	c.Receiver = recvPid
 	c.Price = price
 	c.Time = time.Now()
+}
+
+func (c *Chunk) SetSignedContract(contract []byte) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.SignedContract = contract
 }
 
 // used on client to record a new challenge
