@@ -467,7 +467,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 
 	// set Analytics flag if specified
-	if dc, _ := req.Options[enableDataCollection]; dc != nil {
+	if dc, ok := req.Options[enableDataCollection]; ok == true {
 		node.Repo.SetConfigKey("Experimental.Analytics", dc)
 	}
 	// Spin jobs in the background
