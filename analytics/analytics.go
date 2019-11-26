@@ -2,22 +2,24 @@ package analytics
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-	"github.com/cenkalti/backoff"
-	"github.com/dustin/go-humanize"
-	"github.com/gogo/protobuf/proto"
-	"github.com/tron-us/go-btfs-common/protos/node"
-	pb "github.com/tron-us/go-btfs-common/protos/status"
-	"google.golang.org/grpc"
 	"runtime"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/tron-us/go-btfs-common/protos/node"
+	pb "github.com/tron-us/go-btfs-common/protos/status"
+
+	"github.com/cenkalti/backoff"
+	"github.com/dustin/go-humanize"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-
 	"github.com/shirou/gopsutil/cpu"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type programInfo struct {
@@ -158,7 +160,8 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := grpc.DialContext(ctx, config.Services.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
+	c := credentials.NewTLS(&tls.Config{})
+	conn, err := grpc.DialContext(ctx, config.Services.StatusServerDomain, grpc.WithTransportCredentials(c))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
 	}
