@@ -79,8 +79,8 @@ func NewContractRequest(configuration *config.Config, chunkInfo map[string]*stor
 		Signature: buyerChanSig,
 	}
 	return &escrowpb.EscrowContractRequest{
-		Contract: signedContracts,
-		BuyerChannel:signedChanCommit,
+		Contract:     signedContracts,
+		BuyerChannel: signedChanCommit,
 	}, nil
 }
 

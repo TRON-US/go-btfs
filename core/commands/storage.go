@@ -111,12 +111,12 @@ To customly upload and store a file on specific hosts:
 Receive proofs as collateral evidence after selected nodes agree to store the file.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":       storageUploadInitCmd,
-		"reqc":       storageUploadRequestChallengeCmd,
-		"respc":      storageUploadResponseChallengeCmd,
+		"init":         storageUploadInitCmd,
+		"reqc":         storageUploadRequestChallengeCmd,
+		"respc":        storageUploadResponseChallengeCmd,
 		"recvcontract": storageUploadRecvContractCmd,
-		"status":     storageUploadStatusCmd,
-		"proof":      storageUploadProofCmd,
+		"status":       storageUploadStatusCmd,
+		"proof":        storageUploadProofCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),

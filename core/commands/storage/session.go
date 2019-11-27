@@ -49,13 +49,13 @@ type SessionMap struct {
 type Session struct {
 	sync.Mutex
 
-	Time           time.Time
-	FileHash       string
-	Status         string
-	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
-	CompleteChunks int
+	Time              time.Time
+	FileHash          string
+	Status            string
+	ChunkInfo         map[string]*Chunk // mapping chunkHash with Chunk info
+	CompleteChunks    int
 	CompleteContracts int
-	RetryQueue     *RetryQueue
+	RetryQueue        *RetryQueue
 
 	SessionStatusChan chan StatusChan
 }
@@ -69,16 +69,16 @@ type StatusChan struct {
 type Chunk struct {
 	sync.Mutex
 
-	Challenge *StorageChallenge
-	ChannelID *ledgerPb.ChannelID
+	Challenge      *StorageChallenge
+	ChannelID      *ledgerPb.ChannelID
 	SignedContract []byte
-	Payer     peer.ID
-	Receiver  peer.ID
-	Price     int64
-	State     int
-	Proof     string
-	Time      time.Time
-	Err       error
+	Payer          peer.ID
+	Receiver       peer.ID
+	Price          int64
+	State          int
+	Proof          string
+	Time           time.Time
+	Err            error
 
 	RetryChan chan *StepRetryChan
 }
