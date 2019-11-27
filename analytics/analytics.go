@@ -2,15 +2,14 @@ package analytics
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
+	cutils "github.com/tron-us/go-btfs-common/utils"
 
 	"github.com/cenkalti/backoff"
 	"github.com/dustin/go-humanize"
@@ -20,7 +19,6 @@ import (
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"github.com/shirou/gopsutil/cpu"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 type programInfo struct {
@@ -158,32 +156,9 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 		return nil, nil, fmt.Errorf("failed to load config: %s", err.Error())
 	}
 
-	var opts []grpc.DialOption
-	// TODO: This is a temporary measure to validate grpc-compatible host:port url
-	// without using the go-btfs-common/utils - it should be replaced soon with a common
-	// connection and calling utility.
-	ssd := config.Services.StatusServerDomain
-	if strings.HasPrefix(ssd, "https://") {
-		ssd = ssd[len("https://"):]
-		if !strings.Contains(ssd, ":") {
-			ssd += ":443"
-		}
-		c := credentials.NewTLS(&tls.Config{})
-		opts = append(opts, grpc.WithTransportCredentials(c))
-	} else if strings.HasPrefix(ssd, "http://") {
-		ssd = ssd[len("http://"):]
-		if !strings.Contains(ssd, ":") {
-			ssd += ":80"
-		}
-		opts = append(opts, grpc.WithInsecure())
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := grpc.DialContext(ctx, ssd, opts...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
-	}
-	return conn, cancel, nil
+	conn, err := cutils.NewGRPCConn(ctx, config.Services.StatusServerDomain)
+	return conn, cancel, err
 }
 
 func (dc *dataCollection) sendData() {
