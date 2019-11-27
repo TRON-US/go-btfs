@@ -3,21 +3,22 @@ package analytics
 import (
 	"context"
 	"fmt"
-	"github.com/cenkalti/backoff"
-	"github.com/dustin/go-humanize"
-	"github.com/gogo/protobuf/proto"
-	"github.com/tron-us/go-btfs-common/protos/node"
-	pb "github.com/tron-us/go-btfs-common/protos/status"
-	"google.golang.org/grpc"
 	"runtime"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/tron-us/go-btfs-common/protos/node"
+	pb "github.com/tron-us/go-btfs-common/protos/status"
+	cutils "github.com/tron-us/go-btfs-common/utils"
+
+	"github.com/cenkalti/backoff"
+	"github.com/dustin/go-humanize"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-
 	"github.com/shirou/gopsutil/cpu"
+	"google.golang.org/grpc"
 )
 
 type programInfo struct {
@@ -46,17 +47,15 @@ type dataCollection struct {
 	NumPeers    uint64  `json:"peers_connected"` //Number of peers
 }
 
-//Server URL for data collection
-var statusServerDomain string
-
 // other constants
 const (
 	kilobyte = 1024
 
-	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
+	// HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
 
-	maxRetryTimes = 3
+	// Expotentially delayed retries will be capped at this total time
+	maxRetryTotal = 10 * time.Minute
 
 	dialTimeout = time.Minute
 
@@ -76,18 +75,18 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
+var log = logging.Logger("analytics/analytics")
+
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
 	if n == nil {
 		return
 	}
-	var log = logging.Logger("cmd/btfs")
+
 	configuration, err := n.Repo.Config()
 	if err != nil {
 		return
 	}
-
-	statusServerDomain = configuration.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = n
@@ -158,48 +157,56 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := grpc.DialContext(ctx, config.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
-	}
-	return conn, cancel, nil
+	conn, err := cutils.NewGRPCConn(ctx, config.Services.StatusServerDomain)
+	return conn, cancel, err
 }
 
 func (dc *dataCollection) sendData() {
+	sm, err := dc.doPrepData()
+	if err != nil {
+		log.Error("failed to prepare data for status server: ", err)
+		dc.reportHealthAlert(err.Error())
+		return
+	}
+
+	// Retry for connections
 	retry(func() error {
-		return dc.doSendData()
+		err := dc.doSendData(sm)
+		if err != nil {
+			log.Error("failed to send data to status server: ", err)
+		}
+		return err
 	})
 }
 
-func (dc *dataCollection) doSendData() error {
+func (dc *dataCollection) doPrepData() (*pb.SignedMetrics, error) {
 	dc.update()
 	payload, err := dc.getPayload()
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
 	}
 	if dc.node.PrivateKey == nil {
-		dc.reportHealthAlert("node's private key is null")
-		return err
+		return nil, fmt.Errorf("node's private key is null")
 	}
 
 	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to sign raw data with node private key: %s", err.Error())
 	}
 
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to marshal node public key: %s", err.Error())
 	}
 
 	sm := new(pb.SignedMetrics)
 	sm.Payload = payload
 	sm.Signature = signature
 	sm.PublicKey = publicKey
+	return sm, nil
+}
 
+func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
 	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
 		return err
@@ -220,7 +227,7 @@ func (dc *dataCollection) doSendData() error {
 func (dc *dataCollection) getPayload() ([]byte, error) {
 	nd := new(node.Node)
 	now := time.Now().UTC()
-	nd.TimeCreated = &now
+	nd.TimeCreated = now
 	nd.NodeId = dc.NodeID
 	nd.BtfsVersion = dc.BTFSVersion
 	nd.ArchType = dc.ArchType
@@ -242,7 +249,6 @@ func (dc *dataCollection) getPayload() ([]byte, error) {
 			nd.StorageVolumeCap = storageMax
 		}
 	}
-	nd.Settings = &node.Node_Settings{}
 	bytes, err := proto.Marshal(nd)
 	if err != nil {
 		return nil, err
@@ -271,7 +277,9 @@ func (dc *dataCollection) collectionAgent() {
 }
 
 func retry(f func() error) {
-	backoff.Retry(f, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxRetryTotal
+	backoff.Retry(f, bo)
 }
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
@@ -293,7 +301,7 @@ func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
 	n.FailurePoint = failurePoint
 	n.NodeId = dc.NodeID
 	now := time.Now().UTC()
-	n.TimeCreated = &now
+	n.TimeCreated = now
 
 	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
 	defer cancel()
