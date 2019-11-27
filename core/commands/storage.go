@@ -13,9 +13,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/hub"
-	"github.com/TRON-US/go-btfs/core/ledger"
-	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
+	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
+	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -26,9 +27,9 @@ import (
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/info"
 )
 
@@ -109,11 +110,12 @@ To customly upload and store a file on specific hosts:
 Receive proofs as collateral evidence after selected nodes agree to store the file.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":   storageUploadInitCmd,
-		"reqc":   storageUploadRequestChallengeCmd,
-		"respc":  storageUploadResponseChallengeCmd,
-		"status": storageUploadStatusCmd,
-		"proof":  storageUploadProofCmd,
+		"init":         storageUploadInitCmd,
+		"reqc":         storageUploadRequestChallengeCmd,
+		"respc":        storageUploadResponseChallengeCmd,
+		"recvcontract": storageUploadRecvContractCmd,
+		"status":       storageUploadStatusCmd,
+		"proof":        storageUploadProofCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
@@ -198,10 +200,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			rootHash = ""
 			chunkHashes = req.Arguments
 		}
-
 		// start new session
 		sm := storage.GlobalSession
 		ssID, err := storage.NewSessionID()
+		// start new session
 		if err != nil {
 			return err
 		}
@@ -218,6 +220,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		price, found := req.Options[uploadPriceOptionName].(int64)
 		if found && price < HostPriceLowBoundary {
 			return fmt.Errorf("price is smaller than minimum setting price")
+		}
+		if !found {
+			price = 10
 		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		if mode == "custom" {
@@ -325,7 +330,7 @@ func controlSessionTimeout(ss *storage.Session) {
 					if chunkInfo.GetState() != storage.StdChunkStateFlow[storage.CompleteState].State {
 						chunkInfo.RetryChan <- &storage.StepRetryChan{
 							Succeed:           false,
-							SessionTimeOurErr: fmt.Errorf("session timeout"),
+							SessionTimeOutErr: fmt.Errorf("session timeout"),
 						}
 					}
 				}(chunkInfo)
@@ -350,17 +355,29 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
+			cfg, err := n.Repo.Config()
+			if err != nil {
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
+			contract := escrow.NewContract(cfg, chunkHash, n.Identity.Pretty(), candidateHost.Identity, candidateHost.Price)
+			halfSignedContract, err := escrow.SignContractAndMarshal(contract, nil, n.PrivateKey, true)
+			if err != nil {
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
+			go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
 
 			// monitor each steps if error or time out happens, retry
+			// TODO: Change steps
 			for curState := 0; curState < len(storage.StdChunkStateFlow); {
 				select {
 				case chunkRes := <-chunkInfo.RetryChan:
 					if !chunkRes.Succeed {
 						// receiving session time out signal, directly return
-						if chunkRes.SessionTimeOurErr != nil {
-							log.Error(chunkRes.SessionTimeOurErr)
+						if chunkRes.SessionTimeOutErr != nil {
+							log.Error(chunkRes.SessionTimeOutErr)
 							return
 						}
 						// if client itself has some error, no matter how many times it tries,
@@ -378,7 +395,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
+							go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -399,7 +416,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 						log.Errorf("Time Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, api, candidateHost, ss, n, chunkHash, ssID, test)
+						go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
 					}
 				}
 			}
@@ -425,7 +442,7 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 }
 
 func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.Session,
-	n *core.IpfsNode, chunkHash string, ssID string, test bool) {
+	n *core.IpfsNode, halfSignedContract []byte, chunkHash string, ssID string, test bool) {
 	// record chunk info in session
 	chunk := ss.GetOrDefault(chunkHash)
 
@@ -439,9 +456,6 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		}
 		candidateHost = otherValidHost
 	}
-	// get node's key pair
-	selfPrivKey := n.PrivateKey
-	selfPubKey := selfPrivKey.GetPublic()
 
 	// parse candidate host's IP and get connected
 	_, hostPid, err := ParsePeerParam(candidateHost.Identity)
@@ -449,22 +463,14 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		sendStepStateChan(chunk.RetryChan, storage.InitState, false, err, nil)
 		return
 	}
-	peerPubKey, err := hostPid.ExtractPublicKey()
-	if err != nil {
-		sendStepStateChan(chunk.RetryChan, storage.InitState, false, err, nil)
-		return
-	}
-	// establish connection with ledger
-	channelID, err := initChannel(ctx, selfPubKey, selfPrivKey, peerPubKey, candidateHost.Price)
-	if err != nil {
-		sendStepStateChan(chunk.RetryChan, storage.InitState, false, fmt.Errorf("fail to connect with ledger %v", err), nil)
-		return
-	}
 
-	chunk.UpdateChunk(n.Identity, hostPid, channelID, candidateHost.Price)
+	chunk.UpdateChunk(n.Identity, hostPid, candidateHost.Price)
 	chunk.SetState(storage.InitState)
-
-	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID, strconv.FormatInt(channelID.Id, 10), chunkHash, strconv.FormatInt(candidateHost.Price, 10))
+	// send over contract
+	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID,
+		chunkHash,
+		strconv.FormatInt(candidateHost.Price, 10),
+		halfSignedContract)
 	// fail to connect with retry
 	if err != nil {
 		sendStepStateChan(chunk.RetryChan, storage.InitState, false, nil, err)
@@ -561,6 +567,62 @@ func changeAddress(pinfo *peer.AddrInfo) error {
 	return nil
 }
 
+// for client to receive all the half signed contracts
+var storageUploadRecvContractCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "For renter client to receive half signed contracts.",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("contract", true, false, "Signed Contract."),
+		cmds.StringArg("session-id", true, false, "session ID which render used to store all chunksInfo"),
+		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// receive contracts
+		signedContract := []byte(req.Arguments[0])
+		ssID := req.Arguments[1]
+		ss, err := storage.GlobalSession.GetSession(ssID)
+		if err != nil {
+			return err
+		}
+		chunkHash := req.Arguments[2]
+		err = ss.IncrementContract(chunkHash, signedContract)
+		if err != nil {
+			return err
+		}
+		// TODO: Modify client err return status
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return nil
+		}
+		var contractRequest *escrowPb.EscrowContractRequest
+
+		if ss.GetCompleteContractNum() == len(ss.ChunkInfo) {
+			contracts, price, err := storage.PrepareContractFromChunk(ss.ChunkInfo)
+			if err != nil {
+				return err
+			}
+			contractRequest, err = escrow.NewContractRequest(cfg, contracts, price)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			err = escrow.SubmitContractToEscrow(cfg, contractRequest)
+			if err != nil {
+				return err
+			}
+			// TODO: pay in full
+			go payFullToEscrow()
+		}
+		return nil
+	},
+}
+
+// TODO: pay in full to escrow service
+func payFullToEscrow() {
+
+}
+
 var storageUploadProofCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "For client to receive collateral proof.",
@@ -618,9 +680,9 @@ the chunk and replies back to client for the next challenge step.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
-		cmds.StringArg("channel-id", true, false, "Open channel id for payment."),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client."),
+		cmds.StringArg("contract", true, false, "client init contract"),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -634,12 +696,12 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 
 		ssID := req.Arguments[0]
-		channelID := req.Arguments[1]
-		chunkHash := req.Arguments[2]
-		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
+		chunkHash := req.Arguments[1]
+		price, err := strconv.ParseInt(req.Arguments[2], 10, 64)
 		if err != nil {
 			return err
 		}
+		halfSignedCont := req.Arguments[3]
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -654,31 +716,60 @@ the chunk and replies back to client for the next challenge step.`,
 		ss := sm.GetOrDefault(ssID)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
-		chidInt64, err := strconv.ParseInt(channelID, 10, 64)
-		if err != nil {
-			sm.Remove(ssID, "")
-			return err
-		}
-		chID := &ledgerPb.ChannelID{
-			Id: chidInt64,
-		}
 		chunkInfo := ss.GetOrDefault(chunkHash)
-		chunkInfo.UpdateChunk(pid, n.Identity, chID, price)
+		chunkInfo.UpdateChunk(pid, n.Identity, price)
 		chunkInfo.SetState(storage.InitState)
 
-		// build connection with ledger
-		channelInfo, err := getChannelInfo(req.Context, channelID)
-		if err != nil {
-			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
-			sm.Remove(ssID, "")
-			return err
-		}
-		log.Debug("Verified channel:", channelInfo)
-
 		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
-		go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
+		// review contract and send back to client
+		go reviewContractAndSign(chunkInfo, chunkHash, ssID, n, pid, req, env, []byte(halfSignedCont))
+		//go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
 		return nil
 	},
+}
+
+func reviewContractAndSign(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode,
+	pid peer.ID, req *cmds.Request, env cmds.Environment, payerSig []byte) {
+	// TODO: Check if renter is paid, if so, download file
+	go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
+	// review contract
+	halfSignedContract, err := escrow.UnmarshalEscrowContract(payerSig)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	contract := halfSignedContract.GetContract()
+	// get render's public key
+	payerPubKey, err := pid.ExtractPublicKey()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	ok, err := crypto.Verify(payerPubKey, contract, halfSignedContract.GetBuyerSignature())
+	if !ok {
+		log.Error("Can't verify contract")
+		return
+	}
+	// Sign on the contract
+	signedContract, err := escrow.SignContractAndMarshal(contract, halfSignedContract, n.PrivateKey, false)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	_, err = p2pCall(n, pid, "/storage/upload/recvcontract", signedContract, ssID, chunkHash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+}
+
+// call escrow service to check if payment is received or not
+func periodicallyCheckPaymentFromClient() {
+	var isReceivedWithTimeOut bool
+	// TODO: isReceivedWithTimeOut := escrow.pay()
+	if !isReceivedWithTimeOut {
+		//TODO: delete file
+	}
 }
 
 func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
@@ -761,15 +852,14 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 
 	// RemoteCall(user, CHID, CHR) to get signedPayment
 	chunkInfo.SetState(storage.VerifyState)
-	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, sc.Hash, chunkHash)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-
-	go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid)
+	//signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, sc.Hash, chunkHash)
+	//if err != nil {
+	//	log.Error(err)
+	//	sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+	//	storage.GlobalSession.Remove(ssID, chunkHash)
+	//	return
+	//}
+	//go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid)
 }
 
 func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID) {
@@ -792,27 +882,6 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 		return
 	}
 
-	// verify and sign
-	chunkInfo.SetState(storage.PaymentState)
-	signedchannelState, err := verifyAndSign(pid, n, &halfSignedChannelState)
-	if err != nil {
-		log.Error("fail to verify and sign", err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-
-	// Close channel
-	channelstate := signedchannelState.GetChannel()
-	log.Debug("channel state before closing: %v", channelstate)
-	// timeout mechanism with context cancel, can't reuse req.context here
-	err = ledger.CloseChannel(context.Background(), signedchannelState)
-	if err != nil {
-		log.Error("fail to close channel", err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
 	chunkInfo.SetState(storage.CompleteState)
 	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
 	if err != nil {
@@ -829,6 +898,7 @@ type ChallengeRes struct {
 	Nonce      string
 }
 
+// TODO: refactor the code for guard to use
 var storageUploadRequestChallengeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Request for a client challenge from storage host.",
@@ -904,6 +974,7 @@ the contents and nonce together to produce a final challenge response.`,
 	Type: ChallengeRes{},
 }
 
+//  TODO: refactor the code for guard to use
 var storageUploadResponseChallengeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Respond to client challenge from storage host.",
@@ -960,44 +1031,42 @@ signature back to the host to complete payment.`,
 		sendStepStateChan(chunkInfo.RetryChan, storage.VerifyState, true, nil, nil)
 
 		// prepare payment
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-			return err
-		}
-		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
-		if !ok {
-			err := fmt.Errorf("fail to get peer ID from request")
-			sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-			return err
-		}
+		//n, err := cmdenv.GetNode(env)
+		//if err != nil {
+		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
+		//	return err
+		//}
+		//pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
+		//if !ok {
+		//	err := fmt.Errorf("fail to get peer ID from request")
+		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
+		//	return err
+		//}
 
-		channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
-		if err != nil {
-			sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-			return err
-		}
-
-		signedPayment, err := signChannelState(n.PrivateKey, channelState)
-		if err != nil {
-			sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-			return err
-		}
-
-		signedBytes, err := proto.Marshal(signedPayment)
-		if err != nil {
-			sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-			return err
-		}
+		//channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
+		//if err != nil {
+		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
+		//	return err
+		//}
+		//
+		//signedPayment, err := signChannelState(n.PrivateKey, channelState)
+		//if err != nil {
+		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
+		//	return err
+		//}
+		//
+		//signedBytes, err := proto.Marshal(signedPayment)
+		//if err != nil {
+		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
+		//	return err
+		//}
 
 		// from client's perspective, prepared payment finished
 		// but the actual payment does not.
 		// only the complete state timeOut or receiving error means
 		// host having trouble with either agreeing on payment or closing channel
 		sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, true, nil, nil)
-		r := &PaymentRes{
-			SignedPayment: signedBytes,
-		}
+		r := &PaymentRes{}
 		return cmds.EmitOnce(res, r)
 	},
 	Type: PaymentRes{},
@@ -1007,102 +1076,12 @@ type PaymentRes struct {
 	SignedPayment []byte
 }
 
-func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...string) ([]byte, error) {
+func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...interface{}) ([]byte, error) {
 	remoteCall := &remote.P2PRemoteCall{
 		Node: n,
 		ID:   pid,
 	}
 	return remoteCall.CallGet(api, arg)
-}
-
-func getChannelInfo(ctx context.Context, chanID string) (*ledgerPb.ChannelInfo, error) {
-	clientConn, err := ledger.LedgerConnection()
-	defer ledger.CloseConnection(clientConn)
-	if err != nil {
-		return nil, err
-	}
-	ledgerClient := ledger.NewClient(clientConn)
-	cidInt64, err := strconv.ParseInt(chanID, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	channelID := ledgerPb.ChannelID{Id: cidInt64}
-	return ledgerClient.GetChannelInfo(ctx, &channelID)
-}
-
-func verifyAndSign(pid peer.ID, n *core.IpfsNode, signedChannelState *ledgerPb.SignedChannelState) (*ledgerPb.SignedChannelState, error) {
-	pk, err := pid.ExtractPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	channelState := signedChannelState.GetChannel()
-	ok, err := ledger.Verify(pk, channelState, signedChannelState.GetFromSignature())
-	if err != nil || !ok {
-		return nil, fmt.Errorf("fail to verify channel state, %v", err)
-	}
-
-	selfPrivKey := n.PrivateKey
-	sig, err := ledger.Sign(selfPrivKey, channelState)
-	if err != nil {
-		return nil, err
-	}
-	signedChannelState.ToSignature = sig
-	return signedChannelState, nil
-}
-
-func prepareChannelState(n *core.IpfsNode, pid peer.ID, price int64, channelID *ledgerPb.ChannelID) (*ledgerPb.ChannelState, error) {
-	fromAccount, err := ledger.NewAccount(n.PrivateKey.GetPublic(), 0)
-	if err != nil {
-		return nil, err
-	}
-	toPubKey, err := pid.ExtractPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	toAccount, err := ledger.NewAccount(toPubKey, price)
-	if err != nil {
-		return nil, err
-	}
-	// create channel state wait for both side to agree on
-	return ledger.NewChannelState(channelID, 0, fromAccount, toAccount), nil
-}
-
-func signChannelState(privKey ic.PrivKey, channelState *ledgerPb.ChannelState) (*ledgerPb.SignedChannelState, error) {
-	sig, err := ledger.Sign(privKey, channelState)
-	if err != nil {
-		return nil, err
-	}
-	return ledger.NewSignedChannelState(channelState, sig, nil), nil
-}
-
-func initChannel(ctx context.Context, payerPubKey ic.PubKey, payerPrivKey ic.PrivKey, recvPubKey ic.PubKey, amount int64) (*ledgerPb.ChannelID, error) {
-	// build connection with ledger
-	clientConn, err := ledger.LedgerConnection()
-	defer ledger.CloseConnection(clientConn)
-	if err != nil {
-		return nil, err
-	}
-	// new ledger client
-	ledgerClient := ledger.NewClient(clientConn)
-	// create account
-	_, err = ledger.ImportAccount(ctx, payerPubKey, ledgerClient)
-	if err != nil {
-		return nil, err
-	}
-	_, err = ledger.ImportAccount(ctx, recvPubKey, ledgerClient)
-	if err != nil {
-		return nil, err
-	}
-	// prepare channel commit and sign
-	cc, err := ledger.NewChannelCommit(payerPubKey, recvPubKey, amount)
-	if err != nil {
-		return nil, err
-	}
-	sig, err := ledger.Sign(payerPrivKey, cc)
-	if err != nil {
-		return nil, err
-	}
-	return ledger.CreateChannel(ctx, ledgerClient, cc, sig)
 }
 
 var storageHostsCmd = &cmds.Command{

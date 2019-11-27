@@ -27,7 +27,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.0.0
@@ -120,7 +119,7 @@ require (
 	github.com/shirou/gopsutil v0.0.0-20190901111213-e4ec7b275ada
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/go-btfs-common v0.0.10
+	github.com/tron-us/go-btfs-common v0.1.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc

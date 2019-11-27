@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -26,16 +27,22 @@ type ErrorMessage struct {
 
 const P2PRemoteCallProto = "/rapi"
 
-func (r *P2PRemoteCall) CallGet(api string, args []string) ([]byte, error) {
+func (r *P2PRemoteCall) CallGet(api string, args []interface{}) ([]byte, error) {
 	var sb strings.Builder
-	for i, str := range args {
+	for i, arg := range args {
 		if i == 0 {
 			sb.WriteString("?")
 		} else {
 			sb.WriteString("&")
 		}
 		sb.WriteString("arg=")
-		sb.WriteString(str)
+		switch arg.(type) {
+		case []byte:
+			s := url.QueryEscape(string(arg.([]byte)))
+			sb.WriteString(s)
+		case string:
+			sb.WriteString(arg.(string))
+		}
 	}
 	tr := &http.Transport{}
 	tr.RegisterProtocol("libp2p",

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
+	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/google/uuid"
@@ -49,12 +49,13 @@ type SessionMap struct {
 type Session struct {
 	sync.Mutex
 
-	Time           time.Time
-	FileHash       string
-	Status         string
-	ChunkInfo      map[string]*Chunk // mapping chunkHash with Chunk info
-	CompleteChunks int
-	RetryQueue     *RetryQueue
+	Time              time.Time
+	FileHash          string
+	Status            string
+	ChunkInfo         map[string]*Chunk // mapping chunkHash with Chunk info
+	CompleteChunks    int
+	CompleteContracts int
+	RetryQueue        *RetryQueue
 
 	SessionStatusChan chan StatusChan
 }
@@ -68,15 +69,16 @@ type StatusChan struct {
 type Chunk struct {
 	sync.Mutex
 
-	Challenge *StorageChallenge
-	ChannelID *ledgerPb.ChannelID
-	Payer     peer.ID
-	Receiver  peer.ID
-	Price     int64
-	State     int
-	Proof     string
-	Time      time.Time
-	Err       error
+	Challenge      *StorageChallenge
+	ChannelID      *ledgerPb.ChannelID
+	SignedContract []byte
+	Payer          peer.ID
+	Receiver       peer.ID
+	Price          int64
+	State          int
+	Proof          string
+	Time           time.Time
+	Err            error
 
 	RetryChan chan *StepRetryChan
 }
@@ -86,7 +88,7 @@ type StepRetryChan struct {
 	Succeed           bool
 	ClientErr         error
 	HostErr           error
-	SessionTimeOurErr error
+	SessionTimeOutErr error
 }
 
 func init() {
@@ -176,11 +178,11 @@ func (sm *SessionMap) Remove(ssID string, chunkHash string) {
 }
 
 func NewSessionID() (string, error) {
-	seid, err := uuid.NewRandom()
+	ssid, err := uuid.NewRandom()
 	if err != nil {
 		return "", err
 	}
-	return seid.String(), nil
+	return ssid.String(), nil
 }
 
 func (ss *Session) new() {
@@ -249,6 +251,26 @@ func (ss *Session) GetFileHash() string {
 	return ss.FileHash
 }
 
+func (ss *Session) IncrementContract(chunkHash string, contracts []byte) error {
+	ss.Lock()
+	defer ss.Unlock()
+
+	chunk := ss.ChunkInfo[chunkHash]
+	if chunk == nil {
+		return fmt.Errorf("chunk does not exists")
+	}
+	chunk.SetSignedContract(contracts)
+	ss.CompleteContracts++
+	return nil
+}
+
+func (ss *Session) GetCompleteContractNum() int {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.CompleteContracts
+}
+
 func (ss *Session) SetStatus(status int) {
 	ss.Lock()
 	defer ss.Unlock()
@@ -304,15 +326,21 @@ func (ss *Session) GetOrDefault(hash string) *Chunk {
 	return ss.ChunkInfo[hash]
 }
 
-func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
+func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, price int64) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.ChannelID = channelID
 	c.Payer = payerPid
 	c.Receiver = recvPid
 	c.Price = price
 	c.Time = time.Now()
+}
+
+func (c *Chunk) SetSignedContract(contract []byte) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.SignedContract = contract
 }
 
 // used on client to record a new challenge
