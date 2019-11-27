@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -48,9 +49,6 @@ type dataCollection struct {
 	NumPeers    uint64  `json:"peers_connected"` //Number of peers
 }
 
-//Server URL for data collection
-var statusServerDomain string
-
 // other constants
 const (
 	kilobyte = 1024
@@ -79,18 +77,18 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
+var log = logging.Logger("analytics/analytics")
+
 //Initialize starts the process to collect data and starts the GoRoutine for constant collection
 func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
 	if n == nil {
 		return
 	}
-	var log = logging.Logger("cmd/btfs")
+
 	configuration, err := n.Repo.Config()
 	if err != nil {
 		return
 	}
-
-	statusServerDomain = configuration.Services.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = n
@@ -160,9 +158,28 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 		return nil, nil, fmt.Errorf("failed to load config: %s", err.Error())
 	}
 
+	var opts []grpc.DialOption
+	// TODO: This is a temporary measure to validate grpc-compatible host:port url
+	// without using the go-btfs-common/utils - it should be replaced soon with a common
+	// connection and calling utility.
+	ssd := config.Services.StatusServerDomain
+	if strings.HasPrefix(ssd, "https://") {
+		ssd = ssd[len("https://"):]
+		if !strings.Contains(ssd, ":") {
+			ssd += ":443"
+		}
+		c := credentials.NewTLS(&tls.Config{})
+		opts = append(opts, grpc.WithTransportCredentials(c))
+	} else if strings.HasPrefix(ssd, "http://") {
+		ssd = ssd[len("http://"):]
+		if !strings.Contains(ssd, ":") {
+			ssd += ":80"
+		}
+		opts = append(opts, grpc.WithInsecure())
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	c := credentials.NewTLS(&tls.Config{})
-	conn, err := grpc.DialContext(ctx, config.Services.StatusServerDomain, grpc.WithTransportCredentials(c))
+	conn, err := grpc.DialContext(ctx, ssd, opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
 	}
@@ -171,7 +188,11 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 
 func (dc *dataCollection) sendData() {
 	retry(func() error {
-		return dc.doSendData()
+		err := dc.doSendData()
+		if err != nil {
+			log.Error("failed to send data to status server: ", err)
+		}
+		return err
 	})
 }
 
