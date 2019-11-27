@@ -257,7 +257,7 @@ func (ss *Session) IncrementContract(chunkHash string, contracts []byte) error {
 
 	chunk := ss.ChunkInfo[chunkHash]
 	if chunk == nil {
-		return fmt.Errorf("chunk not exists")
+		return fmt.Errorf("chunk does not exists")
 	}
 	chunk.SetSignedContract(contracts)
 	ss.CompleteContracts++

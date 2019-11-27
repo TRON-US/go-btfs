@@ -6,23 +6,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TRON-US/go-btfs/core/commands/storage"
-
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	"github.com/tron-us/go-btfs-common/protos/ledger"
+	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	"google.golang.org/grpc"
 )
 
 func NewContract(configuration *config.Config, id string, payerID string, recverID string, price int64) *escrowpb.EscrowContract {
 	payerAddr := []byte(payerID)
 	recverAddr := []byte(recverID)
-	// TODO: Make escrow GuardAddress configurable
-	//authAddress := configuration.Services.GuardPubKeys[0]
-	authAddress := "guardAddress"
+	authAddress := configuration.Services.GuardPubKeys[0]
 	return &escrowpb.EscrowContract{
 		ContractId:       id,
 		BuyerAddress:     payerAddr,
@@ -43,29 +39,17 @@ func NewSignedContract(contract *escrowpb.EscrowContract) *escrowpb.SignedEscrow
 	}
 }
 
-func NewContractRequest(configuration *config.Config, chunkInfo map[string]*storage.Chunk) (*escrowpb.EscrowContractRequest, error) {
-	var signedContracts []*escrowpb.SignedEscrowContract
-	var totalPrice int64
-	for _, chunk := range chunkInfo {
-		sc, err := UnmarshalEscrowContract(chunk.SignedContract)
-		if err != nil {
-			return nil, err
-		}
-		signedContracts = append(signedContracts, sc)
-		totalPrice += chunk.Price
-	}
+func NewContractRequest(configuration *config.Config, signedContracts []*escrowpb.SignedEscrowContract, totalPrice int64) (*escrowpb.EscrowContractRequest, error) {
 	// prepare channel commit
 	pid := configuration.Identity.PeerID
 	buyerPrivKey, err := configuration.Identity.DecodePrivateKey("")
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Make escrow Address configurable
-	//escrowAddress := configuration.Services.EscrowPubKeys[0]
-	escrowAddress := "escrowAddress"
-	chanCommit := &ledger.ChannelCommit{
-		Payer:     &ledger.PublicKey{Key: []byte(pid)},
-		Recipient: &ledger.PublicKey{Key: []byte(escrowAddress)},
+	escrowAddress := configuration.Services.EscrowPubKeys[0]
+	chanCommit := &ledgerpb.ChannelCommit{
+		Payer:     &ledgerpb.PublicKey{Key: []byte(pid)},
+		Recipient: &ledgerpb.PublicKey{Key: []byte(escrowAddress)},
 		Amount:    totalPrice, // total amount in the contract request
 		PayerId:   time.Now().UnixNano(),
 	}
@@ -74,7 +58,7 @@ func NewContractRequest(configuration *config.Config, chunkInfo map[string]*stor
 		return nil, err
 	}
 
-	signedChanCommit := &ledger.SignedChannelCommit{
+	signedChanCommit := &ledgerpb.SignedChannelCommit{
 		Channel:   chanCommit,
 		Signature: buyerChanSig,
 	}

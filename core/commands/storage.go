@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/escrow"
-
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +13,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/hub"
+	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
+	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -30,8 +31,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/info"
-	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
-	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 )
 
 const (
@@ -571,7 +570,7 @@ func changeAddress(pinfo *peer.AddrInfo) error {
 // for client to receive all the half signed contracts
 var storageUploadRecvContractCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "For client to receive collateral proof.",
+		Tagline: "For renter client to receive half signed contracts.",
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("contract", true, false, "Signed Contract."),
@@ -599,7 +598,11 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		var contractRequest *escrowPb.EscrowContractRequest
 
 		if ss.GetCompleteContractNum() == len(ss.ChunkInfo) {
-			contractRequest, err = escrow.NewContractRequest(cfg, ss.ChunkInfo)
+			contracts, price, err := storage.PrepareContractFromChunk(ss.ChunkInfo)
+			if err != nil {
+				return err
+			}
+			contractRequest, err = escrow.NewContractRequest(cfg, contracts, price)
 			if err != nil {
 				log.Error(err)
 				return err

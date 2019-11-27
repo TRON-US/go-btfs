@@ -268,14 +268,12 @@ func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
 			nd.StorageVolumeCap = storageMax
 		}
 	}
-	// TODO: Whoever use newly versioned library should fix this
-	//nd.Settings = &node.Node_Settings{
-	//	StoragePriceAsk:   dc.StoragePriceAsk,
-	//	BandwidthPriceAsk: dc.BandwidthPriceAsk,
-	//	StorageTimeMin:    dc.StorageTimeMin,
-	//	BandwidthLimit:    dc.BandwidthLimit,
-	//	CollateralStake:   dc.CollateralStake,
-	//}
+
+	nd.StoragePriceAsk = dc.StoragePriceAsk
+	nd.BandwidthPriceAsk = dc.BandwidthPriceAsk
+	nd.StorageTimeMin = dc.StorageTimeMin
+	nd.BandwidthLimit = dc.BandwidthLimit
+	nd.CollateralStake = dc.CollateralStake
 	bytes, err := proto.Marshal(nd)
 	if err != nil {
 		return nil, err
