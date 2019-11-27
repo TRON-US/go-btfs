@@ -252,7 +252,7 @@ func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
 func (dc *dataCollection) getPayload() ([]byte, error) {
 	nd := new(node.Node)
 	now := time.Now().UTC()
-	nd.TimeCreated = &now
+	nd.TimeCreated = now
 	nd.NodeId = dc.NodeID
 	nd.BtfsVersion = dc.BTFSVersion
 	nd.ArchType = dc.ArchType
@@ -274,7 +274,6 @@ func (dc *dataCollection) getPayload() ([]byte, error) {
 			nd.StorageVolumeCap = storageMax
 		}
 	}
-	nd.Settings = &node.Node_Settings{}
 	bytes, err := proto.Marshal(nd)
 	if err != nil {
 		return nil, err
@@ -327,7 +326,7 @@ func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
 	n.FailurePoint = failurePoint
 	n.NodeId = dc.NodeID
 	now := time.Now().UTC()
-	n.TimeCreated = &now
+	n.TimeCreated = now
 
 	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
 	defer cancel()
