@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGenContractsFromChunk (t *testing.T) {
+func TestGenContractsFromChunk(t *testing.T) {
 	contract1 := &escrow.SignedEscrowContract{}
 	contract1Bytes, err := proto.Marshal(contract1)
 	if err != nil {
@@ -18,8 +18,8 @@ func TestGenContractsFromChunk (t *testing.T) {
 		t.Fatal(err)
 	}
 	chunk := make(map[string]*Chunk)
-	chunk["1"] = &Chunk{Price:1, SignedContract:contract1Bytes}
-	chunk["2"] = &Chunk{Price:10, SignedContract:contract2Bytes}
+	chunk["1"] = &Chunk{Price: 1, SignedContract: contract1Bytes}
+	chunk["2"] = &Chunk{Price: 10, SignedContract: contract2Bytes}
 
 	_, totalPrice, err := PrepareContractFromChunk(chunk)
 	if totalPrice != 11 {
