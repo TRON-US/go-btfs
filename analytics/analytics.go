@@ -55,10 +55,11 @@ var statusServerDomain string
 const (
 	kilobyte = 1024
 
-	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
+	// HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
 
-	maxRetryTimes = 3
+	// Expotentially delayed retries will be capped at this total time
+	maxRetryTotal = 10 * time.Minute
 
 	dialTimeout = time.Minute
 
@@ -274,7 +275,9 @@ func (dc *dataCollection) collectionAgent() {
 }
 
 func retry(f func() error) {
-	backoff.Retry(f, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxRetryTotal
+	backoff.Retry(f, bo)
 }
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
