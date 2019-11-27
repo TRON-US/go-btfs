@@ -27,7 +27,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.0.0
