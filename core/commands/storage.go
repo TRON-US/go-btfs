@@ -849,15 +849,14 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 
 	// RemoteCall(user, CHID, CHR) to get signedPayment
 	chunkInfo.SetState(storage.VerifyState)
-	signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, sc.Hash, chunkHash)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-
-	go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid)
+	//signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, sc.Hash, chunkHash)
+	//if err != nil {
+	//	log.Error(err)
+	//	sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+	//	storage.GlobalSession.Remove(ssID, chunkHash)
+	//	return
+	//}
+	//go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid)
 }
 
 func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID) {
