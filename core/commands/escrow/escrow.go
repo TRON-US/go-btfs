@@ -24,7 +24,7 @@ func NewContract(configuration *config.Config, id string, payerID string, recver
 	//authAddress := configuration.Services.GuardPubKeys[0]
 	authAddress := "guardAddress"
 	return &escrowpb.EscrowContract{
-		ContractId:       []byte(id),
+		ContractId:       id,
 		BuyerAddress:     payerAddr,
 		SellerAddress:    recverAddr,
 		AuthAddress:      []byte(authAddress),
@@ -86,6 +86,7 @@ func NewContractRequest(configuration *config.Config, chunkInfo map[string]*stor
 
 func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.EscrowContractRequest) error {
 	var conn *grpc.ClientConn
+	// TODO: Make escrow IP hidden in config too, now for testing purpose leave it here
 	conn, err := grpc.Dial("52.15.101.94:50051", grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -110,12 +111,13 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 	return nil
 }
 
+// TODO: move this to go-btfs-common also, and delete it here
 func convertPubKey(pubStr string) (ic.PubKey, error) {
 	raw, err := base64.StdEncoding.DecodeString(pubStr)
 	if err != nil {
 		return nil, err
 	}
-	return ic.UnmarshalSecp256k1PublicKey(raw)
+	return crypto.ToPubKey(raw)
 }
 
 func SignContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
