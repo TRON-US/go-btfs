@@ -187,8 +187,16 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 }
 
 func (dc *dataCollection) sendData() {
+	sm, err := dc.doPrepData()
+	if err != nil {
+		log.Error("failed to prepare data for status server: ", err)
+		dc.reportHealthAlert(err.Error())
+		return
+	}
+
+	// Retry for connections
 	retry(func() error {
-		err := dc.doSendData()
+		err := dc.doSendData(sm)
 		if err != nil {
 			log.Error("failed to send data to status server: ", err)
 		}
@@ -196,35 +204,34 @@ func (dc *dataCollection) sendData() {
 	})
 }
 
-func (dc *dataCollection) doSendData() error {
+func (dc *dataCollection) doPrepData() (*pb.SignedMetrics, error) {
 	dc.update()
 	payload, err := dc.getPayload()
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
 	}
 	if dc.node.PrivateKey == nil {
-		dc.reportHealthAlert("node's private key is null")
-		return err
+		return nil, fmt.Errorf("node's private key is null")
 	}
 
 	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to sign raw data with node private key: %s", err.Error())
 	}
 
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to marshal node public key: %s", err.Error())
 	}
 
 	sm := new(pb.SignedMetrics)
 	sm.Payload = payload
 	sm.Signature = signature
 	sm.PublicKey = publicKey
+	return sm, nil
+}
 
+func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
 	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
 		return err
