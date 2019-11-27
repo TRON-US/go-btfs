@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -37,7 +38,8 @@ func (r *P2PRemoteCall) CallGet(api string, args []interface{}) ([]byte, error) 
 		sb.WriteString("arg=")
 		switch arg.(type) {
 		case []byte:
-			sb.Write(arg.([]byte))
+			s := url.QueryEscape(string(arg.([]byte)))
+			sb.WriteString(s)
 		case string:
 			sb.WriteString(arg.(string))
 		}

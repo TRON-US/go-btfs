@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	ledgerPb "github.com/TRON-US/go-btfs/core/ledger/pb"
+	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/google/uuid"
@@ -178,11 +178,11 @@ func (sm *SessionMap) Remove(ssID string, chunkHash string) {
 }
 
 func NewSessionID() (string, error) {
-	seid, err := uuid.NewRandom()
+	ssid, err := uuid.NewRandom()
 	if err != nil {
 		return "", err
 	}
-	return seid.String(), nil
+	return ssid.String(), nil
 }
 
 func (ss *Session) new() {
@@ -260,6 +260,7 @@ func (ss *Session) IncrementContract(chunkHash string, contracts []byte) error {
 		return fmt.Errorf("chunk not exists")
 	}
 	chunk.SetSignedContract(contracts)
+	ss.CompleteContracts++
 	return nil
 }
 
@@ -325,11 +326,10 @@ func (ss *Session) GetOrDefault(hash string) *Chunk {
 	return ss.ChunkInfo[hash]
 }
 
-func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, channelID *ledgerPb.ChannelID, price int64) {
+func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, price int64) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.ChannelID = channelID
 	c.Payer = payerPid
 	c.Receiver = recvPid
 	c.Price = price
