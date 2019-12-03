@@ -21,6 +21,7 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/tron-us/go-btfs-common/info"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
+	cutils "github.com/tron-us/go-btfs-common/utils"
 )
 
 type programInfo struct {
@@ -52,18 +53,18 @@ type dataCollection struct {
 
 //Server URL for data collection
 var (
-	log                = logging.Logger("spin")
-	statusServerDomain string
+	log = logging.Logger("spin")
 )
 
 // other constants
 const (
 	kilobyte = 1024
 
-	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
+	// HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
 
-	maxRetryTimes = 3
+	// Expotentially delayed retries will be capped at this total time
+	maxRetryTotal = 10 * time.Minute
 
 	dialTimeout = time.Minute
 
@@ -92,8 +93,6 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 	if err != nil {
 		return
 	}
-
-	statusServerDomain = configuration.Services.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = node
@@ -184,48 +183,56 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := grpc.DialContext(ctx, config.Services.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
-	}
-	return conn, cancel, nil
+	conn, err := cutils.NewGRPCConn(ctx, config.Services.StatusServerDomain)
+	return conn, cancel, err
 }
 
 func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
+	sm, err := dc.doPrepData(btfsNode)
+	if err != nil {
+		dc.reportHealthAlert(err.Error())
+		return
+	}
+
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		return dc.doSendData(btfsNode)
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+		err := dc.doSendData(sm)
+		if err != nil {
+			log.Error("failed to send data to status server: ", err)
+		}
+		return err
+	}, bo)
 }
 
-func (dc *dataCollection) doSendData(btfsNode *core.IpfsNode) error {
+func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, error) {
 	dc.update(btfsNode)
 	payload, err := dc.getPayload(btfsNode)
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal dataCollection object to a byte array: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
 	}
 	if dc.node.PrivateKey == nil {
-		dc.reportHealthAlert("node's private key is null")
-		return err
+		return nil, fmt.Errorf("node's private key is null")
 	}
 
 	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to sign raw data with node private key: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to sign raw data with node private key: %s", err.Error())
 	}
 
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to marshal node public key: %s", err.Error()))
-		return err
+		return nil, fmt.Errorf("failed to marshal node public key: %s", err.Error())
 	}
 
 	sm := new(pb.SignedMetrics)
 	sm.Payload = payload
 	sm.Signature = signature
 	sm.PublicKey = publicKey
+	return sm, nil
+}
 
+func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
 	conn, cancel, err := dc.getGrpcConn()
 	if err != nil {
 		return err
@@ -297,9 +304,15 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 }
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		return dc.doReportHealthAlert(failurePoint)
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+		err := dc.doReportHealthAlert(failurePoint)
+		if err != nil {
+			log.Error("failed to report health alert to status server: ", err)
+		}
+		return err
+	}, bo)
 }
 
 func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {

@@ -28,11 +28,11 @@ func (tc testcasecheckversion) body() string {
 
 func TestCheckVersionOption(t *testing.T) {
 	tcs := []testcasecheckversion{
-		{"/go-ipfs/0.1/", APIPath + "/test/", false, "", http.StatusBadRequest},
-		{"/go-ipfs/0.1/", APIPath + "/version", true, "check!", http.StatusOK},
+		{"/go-btfs/0.1/", APIPath + "/test/", false, "", http.StatusBadRequest},
+		{"/go-btfs/0.1/", APIPath + "/version", true, "check!", http.StatusOK},
 		{version.ApiVersion, APIPath + "/test", true, "check!", http.StatusOK},
-		{"Mozilla Firefox/no go-ipfs node", APIPath + "/test", true, "check!", http.StatusOK},
-		{"/go-ipfs/0.1/", "/webui", true, "check!", http.StatusOK},
+		{"Mozilla Firefox/no go-btfs node", APIPath + "/test", true, "check!", http.StatusOK},
+		{"/go-btfs/0.1/", "/webui", true, "check!", http.StatusOK},
 	}
 
 	for _, tc := range tcs {
