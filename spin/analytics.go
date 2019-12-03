@@ -52,8 +52,7 @@ type dataCollection struct {
 
 //Server URL for data collection
 var (
-	log                = logging.Logger("spin")
-	statusServerDomain string
+	log = logging.Logger("spin")
 )
 
 // other constants
@@ -93,8 +92,6 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 	if err != nil {
 		return
 	}
-
-	statusServerDomain = configuration.Services.StatusServerDomain
 
 	dc := new(dataCollection)
 	dc.node = node
@@ -196,7 +193,11 @@ func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		return dc.doSendData(btfsNode)
+		err := dc.doSendData(btfsNode)
+		if err != nil {
+			log.Error("failed to send data to status server: ", err)
+		}
+		return err
 	}, bo)
 }
 
@@ -303,7 +304,11 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		return dc.doReportHealthAlert(failurePoint)
+		err := dc.doReportHealthAlert(failurePoint)
+		if err != nil {
+			log.Error("failed to report health alert to status server: ", err)
+		}
+		return err
 	}, bo)
 }
 
