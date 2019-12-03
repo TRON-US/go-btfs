@@ -178,6 +178,9 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	// any execution case can append metadata
 	if settings.TokenMetadata != "" {
 		fileAdder.TokenMetadata = settings.TokenMetadata
+		if _, ok := node.(files.Directory); ok {
+			fileAdder.MetaForDirectory = true
+		}
 	}
 
 	nd, err := fileAdder.AddAllAndPin(node)
@@ -266,7 +269,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 			if !ok {
 				return nil, notSupport(f)
 			}
-			inb, err := ftutil.ReadMetadataBytes(ctx, nd, api.dag)
+			inb, err := ftutil.ReadMetadataBytes(ctx, nd, api.dag, metadata)
 			if err != nil {
 				return nil, err
 			}
