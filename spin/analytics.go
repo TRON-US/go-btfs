@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/tron-us/go-btfs-common/info"
 	"github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
@@ -124,7 +124,7 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	rds := node.Repo.Datastore()
-	b, err := rds.Get(commands.GetHostStorageKey(node.Identity.Pretty()))
+	b, err := rds.Get(storage.GetHostStorageKey(node.Identity.Pretty()))
 	if err != nil && err != ds.ErrNotFound {
 		res = append(res, fmt.Errorf("cannot get selfKey: %s", err.Error()))
 	}

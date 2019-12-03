@@ -9,6 +9,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/guard"
+	"github.com/TRON-US/go-btfs/core/hub"
 	cconfig "github.com/tron-us/go-btfs-common/config"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
@@ -99,7 +100,7 @@ to the guard service.`,
 		if hl, found := req.Options[guardHostsOptionName].(string); found {
 			hostIDs = strings.Split(hl, ",")
 		} else {
-			hosts, err := storage.GetHostsFromDatastore(req.Context, n, storage.HostModeAll, len(shardHashes))
+			hosts, err := storage.GetHostsFromDatastore(req.Context, n, hub.HubModeAll, len(shardHashes))
 			if err != nil {
 				return err
 			}

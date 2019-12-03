@@ -24,10 +24,8 @@ import (
 
 const testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"
 
-// HelpTestAddWithReedSolomomonMetadata is both a helper to testing this feature
-// and also a helper to add a reed solomon file for other features.
-// It returns a mock node, api, and added hash (cid).
-func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface.CoreAPI, cid.Cid) {
+// HelpTestMockRepo creates the bare minimum mock repo and returns node
+func HelpTestMockRepo(t *testing.T) *core.IpfsNode {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
@@ -40,6 +38,14 @@ func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface
 	if err != nil {
 		t.Fatal(err)
 	}
+	return node
+}
+
+// HelpTestAddWithReedSolomomonMetadata is both a helper to testing this feature
+// and also a helper to add a reed solomon file for other features.
+// It returns a mock node, api, and added hash (cid).
+func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface.CoreAPI, cid.Cid) {
+	node := HelpTestMockRepo(t)
 
 	out := make(chan interface{})
 	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)

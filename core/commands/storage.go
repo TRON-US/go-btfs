@@ -24,7 +24,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/query"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -46,8 +45,6 @@ const (
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
 	testOnlyOptionName            = "host-search-local"
 
-	hostStorageInfoPrefix = "/host_storage/" // self or from network
-
 	defaultRepFactor = 3
 
 	// retry limit
@@ -57,10 +54,6 @@ const (
 
 // TODO: get/set the value from/in go-btfs-common
 var HostPriceLowBoundary = int64(10)
-
-func GetHostStorageKey(pid string) ds.Key {
-	return newKeyHelper(hostStorageInfoPrefix, pid)
-}
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -1139,9 +1132,17 @@ Mode options include:
 		if err != nil {
 			return err
 		}
-		err = SyncHosts(n, mode)
-		return err
+
+		return SyncHosts(req.Context, n, mode)
 	},
+}
+
+func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
+	nodes, err := hub.QueryHub(node, mode)
+	if err != nil {
+		return err
+	}
+	return storage.SaveHostsIntoDatastore(ctx, node, mode, nodes)
 }
 
 var storageInfoCmd = &cmds.Command{
@@ -1185,7 +1186,7 @@ By default it shows local host node information.`,
 
 		rds := n.Repo.Datastore()
 
-		b, err := rds.Get(GetHostStorageKey(peerID))
+		b, err := rds.Get(storage.GetHostStorageKey(peerID))
 		if err != nil {
 			return err
 		}
@@ -1205,45 +1206,6 @@ By default it shows local host node information.`,
 		})
 	},
 	Type: StorageHostInfoRes{},
-}
-
-func SyncHosts(node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHub(node, mode)
-	if err != nil {
-		return err
-	}
-
-	rds := node.Repo.Datastore()
-
-	// Dumb strategy right now: remove all existing and add the new ones
-	// TODO: Update by timestamp and only overwrite updated
-	qr, err := rds.Query(query.Query{Prefix: storage.HostStorePrefix + mode})
-	if err != nil {
-		return err
-	}
-
-	for r := range qr.Next() {
-		if r.Error != nil {
-			return r.Error
-		}
-		err := rds.Delete(newKeyHelper(r.Entry.Key))
-		if err != nil {
-			return err
-		}
-	}
-
-	for i, ni := range nodes {
-		b, err := json.Marshal(ni)
-		if err != nil {
-			return err
-		}
-		err = rds.Put(newKeyHelper(storage.HostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 type StorageHostInfoRes struct {
@@ -1289,7 +1251,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 
 		rds := n.Repo.Datastore()
 
-		selfKey := GetHostStorageKey(n.Identity.Pretty())
+		selfKey := storage.GetHostStorageKey(n.Identity.Pretty())
 		b, err := rds.Get(selfKey)
 		// If key not found, create new
 		if err != nil && err != ds.ErrNotFound {
@@ -1391,8 +1353,4 @@ This command print upload and payment status by the time queried.`,
 		return res.Emit(status)
 	},
 	Type: StatusRes{},
-}
-
-func newKeyHelper(kss ...string) ds.Key {
-	return ds.NewKey(strings.Join(kss, ""))
 }
