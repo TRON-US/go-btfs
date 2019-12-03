@@ -21,6 +21,7 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/tron-us/go-btfs-common/info"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
+	cutils "github.com/tron-us/go-btfs-common/utils"
 )
 
 type programInfo struct {
@@ -182,11 +183,8 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := grpc.DialContext(ctx, config.Services.StatusServerDomain, grpc.WithInsecure(), grpc.WithDisableRetry())
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to status server: %s", err.Error())
-	}
-	return conn, cancel, nil
+	conn, err := cutils.NewGRPCConn(ctx, config.Services.StatusServerDomain)
+	return conn, cancel, err
 }
 
 func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
