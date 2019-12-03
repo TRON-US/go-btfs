@@ -2,7 +2,6 @@ package escrow
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/tron-us/go-btfs-common/crypto"
+	ccrypto "github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	"google.golang.org/grpc"
@@ -84,7 +84,7 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 	if response == nil {
 		return fmt.Errorf("escrow reponse is nil")
 	}
-	escrowPubkey, err := convertPubKey(configuration.Services.EscrowPubKeys[0])
+	escrowPubkey, err := ccrypto.ToPubKey(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return err
 	}
@@ -93,15 +93,6 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 		return fmt.Errorf("verify escrow failed %v", err)
 	}
 	return nil
-}
-
-// TODO: move this to go-btfs-common also, and delete it here
-func convertPubKey(pubStr string) (ic.PubKey, error) {
-	raw, err := base64.StdEncoding.DecodeString(pubStr)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.ToPubKey(raw)
 }
 
 func SignContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
