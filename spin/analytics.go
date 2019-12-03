@@ -60,10 +60,11 @@ var (
 const (
 	kilobyte = 1024
 
-	//HeartBeat is how often we send data to server, at the moment set to 15 Minutes
+	// HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
 
-	maxRetryTimes = 3
+	// Expotentially delayed retries will be capped at this total time
+	maxRetryTotal = 10 * time.Minute
 
 	dialTimeout = time.Minute
 
@@ -192,9 +193,11 @@ func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, e
 }
 
 func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
 		return dc.doSendData(btfsNode)
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+	}, bo)
 }
 
 func (dc *dataCollection) doSendData(btfsNode *core.IpfsNode) error {
@@ -297,9 +300,11 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 }
 
 func (dc *dataCollection) reportHealthAlert(failurePoint string) {
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
 		return dc.doReportHealthAlert(failurePoint)
-	}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), maxRetryTimes))
+	}, bo)
 }
 
 func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
