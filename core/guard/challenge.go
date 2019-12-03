@@ -24,7 +24,7 @@ func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api c
 	if err != nil {
 		return nil, err
 	}
-	sh := []byte(shardHash.String())
+	sh := shardHash.String()
 	for i := 0; i < numQuestions; i++ {
 		err := sc.GenChallenge()
 		if err != nil {
@@ -32,21 +32,20 @@ func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api c
 		}
 		q := &guardpb.ChallengeQuestion{
 			ShardHash:    sh,
-			HostAddress:  []byte(hostID),
+			HostPid:      hostID,
 			ChunkIndex:   int32(sc.CIndex),
-			RandomNonce:  []byte(sc.Nonce),
-			ExpectAnswer: []byte(sc.Hash),
+			Nonce:        sc.Nonce,
+			ExpectAnswer: sc.Hash,
 		}
 		shardQuestions = append(shardQuestions, q)
 	}
-	now := time.Now()
 	sq := &guardpb.ShardChallengeQuestions{
-		FileHash:        []byte(fileHash.String()),
-		ShardHash:       sh,
-		PreparerAddress: []byte(node.Identity.Pretty()),
-		QuestionCount:   int32(numQuestions),
-		Questions:       shardQuestions,
-		PrepareTime:     &now,
+		FileHash:      fileHash.String(),
+		ShardHash:     sh,
+		PreparerPid:   node.Identity.Pretty(),
+		QuestionCount: int32(numQuestions),
+		Questions:     shardQuestions,
+		PrepareTime:   time.Now(),
 	}
 	sig, err := ccrypto.Sign(node.PrivateKey, sq)
 	if err != nil {
@@ -60,7 +59,7 @@ func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api c
 func SendChallengeQuestions(ctx context.Context, cfg *config.Config, fileHash cid.Cid,
 	questions []*guardpb.ShardChallengeQuestions) error {
 	fileQuestions := &guardpb.FileChallengeQuestions{
-		FileHash:       []byte(fileHash.String()),
+		FileHash:       fileHash.String(),
 		ShardQuestions: questions,
 	}
 	return sendChallengeQuestions(ctx, cfg, fileQuestions)
