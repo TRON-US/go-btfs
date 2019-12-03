@@ -18,6 +18,7 @@ import (
 	"github.com/TRON-US/go-unixfs/importer/balanced"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
 	"github.com/TRON-US/go-unixfs/importer/trickle"
+	uio "github.com/TRON-US/go-unixfs/io"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/ipfs/go-cid"
@@ -45,40 +46,48 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 	bufferedDS := ipld.NewBufferedDAG(ctx, ds)
 
 	return &Adder{
-		ctx:           ctx,
-		pinning:       p,
-		gcLocker:      bs,
-		dagService:    ds,
-		bufferedDS:    bufferedDS,
-		Progress:      false,
-		Pin:           true,
-		Trickle:       false,
-		Chunker:       "",
-		TokenMetadata: "",
+		ctx:              ctx,
+		pinning:          p,
+		gcLocker:         bs,
+		dagService:       ds,
+		bufferedDS:       bufferedDS,
+		Progress:         false,
+		Pin:              true,
+		Trickle:          false,
+		MetaForDirectory: false,
+		MetaDagToAdd:     false,
+		MetadataDag:      nil,
+		db:               nil,
+		Chunker:          "",
+		TokenMetadata:    "",
 	}, nil
 }
 
 // Adder holds the switches passed to the `add` command.
 type Adder struct {
-	ctx           context.Context
-	pinning       pin.Pinner
-	gcLocker      bstore.GCLocker
-	dagService    ipld.DAGService
-	bufferedDS    *ipld.BufferedDAG
-	Out           chan<- interface{}
-	Progress      bool
-	Pin           bool
-	Trickle       bool
-	RawLeaves     bool
-	Silent        bool
-	NoCopy        bool
-	Chunker       string
-	mroot         *mfs.Root
-	unlocker      bstore.Unlocker
-	tempRoot      cid.Cid
-	CidBuilder    cid.Builder
-	liveNodes     uint64
-	TokenMetadata string
+	ctx              context.Context
+	pinning          pin.Pinner
+	gcLocker         bstore.GCLocker
+	dagService       ipld.DAGService
+	bufferedDS       *ipld.BufferedDAG
+	Out              chan<- interface{}
+	Progress         bool
+	Pin              bool
+	Trickle          bool
+	RawLeaves        bool
+	Silent           bool
+	NoCopy           bool
+	MetaForDirectory bool
+	MetaDagToAdd     bool
+	MetadataDag      ipld.Node
+	db               *ihelper.DagBuilderHelper
+	Chunker          string
+	mroot            *mfs.Root
+	unlocker         bstore.Unlocker
+	tempRoot         cid.Cid
+	CidBuilder       cid.Builder
+	liveNodes        uint64
+	TokenMetadata    string
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -156,12 +165,22 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 	if adder.Trickle {
 		nd, err = trickle.Layout(db)
 	} else {
-		if db.IsThereMetaData() && !db.IsMetaDagBuilt() {
-			err := balanced.BuildMetadataDag(db)
+		if adder.metaDagToBuild(db) {
+			metaDag, err := balanced.BuildMetadataDag(db)
 			if err != nil {
 				return nil, err
 			}
 			db.SetMetaDagBuilt(true)
+			if adder.MetaForDirectory {
+				adder.MetadataDag = metaDag
+				adder.db = db
+				adder.MetaDagToAdd = true
+				adder.TokenMetadata = ""
+				// The next code line sets nil to `db.metaDb`.
+				// The newly created metadada DAG `metaDag` will be
+				// attached to the directory root instead.
+				db.SetMetaDb(nil)
+			}
 		}
 		nd, err = balanced.Layout(db)
 	}
@@ -170,6 +189,22 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 	}
 
 	return nd, adder.bufferedDS.Commit()
+}
+
+func (adder *Adder) metaDagToBuild(db *ihelper.DagBuilderHelper) bool {
+	if !adder.MetaForDirectory {
+		return db.IsThereMetaData() && !db.IsMetaDagBuilt()
+	} else {
+		return adder.MetadataDag == nil
+	}
+}
+
+func (adder *Adder) metaDagToAddToDirectory() bool {
+	if !adder.MetaForDirectory {
+		return false
+	} else {
+		return adder.MetadataDag != nil && adder.MetaDagToAdd
+	}
 }
 
 // RootNode returns the mfs root node
@@ -272,7 +307,7 @@ func (adder *Adder) addNode(node ipld.Node, path string) error {
 		return err
 	}
 	dir := gopath.Dir(path)
-	if dir != "." {
+	if dir != "." { // No wrap case.
 		opts := mfs.MkdirOpts{
 			Mkparents:  true,
 			Flush:      false,
@@ -283,6 +318,17 @@ func (adder *Adder) addNode(node ipld.Node, path string) error {
 		}
 	}
 
+	// TODO: verify adder is single-threaded.
+	if adder.metaDagToAddToDirectory() {
+		// Add metadata DAG as the first child of the root.
+		// Use uio.SmallestString since directory node links are
+		// sorted lexicographically by their names when cid of the directory node is generated.
+		// This will make sure metadata DAG is always the first child.
+		if err := mfs.PutNode(mr, uio.SmallestString, adder.MetadataDag); err != nil {
+			return err
+		}
+		adder.MetaDagToAdd = false
+	}
 	if err := mfs.PutNode(mr, path, node); err != nil {
 		return err
 	}
@@ -441,7 +487,7 @@ func (adder *Adder) addFile(path string, file files.File) error {
 func (adder *Adder) addDir(path string, dir files.Directory, toplevel bool) error {
 	log.Infof("adding directory: %s", path)
 
-	if !(toplevel && path == "") {
+	if !(toplevel && path == "") { // !toplevel || path != ''
 		mr, err := adder.mfsRoot()
 		if err != nil {
 			return err

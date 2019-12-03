@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"io"
@@ -173,6 +174,49 @@ func addFileToBtfs(node *core.IpfsNode, data []byte, metadata string) (ipath.Pat
 	return ipath.IpfsPath(addedFileHash), nil
 }
 
+func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string) (ipath.Path, error) {
+	// Make sure given `file` is a directory
+	if _, ok := file.(files.Directory); !ok {
+		return nil, errors.New("expected directory node")
+	}
+
+	// Create out chan and adder
+	output := make(chan interface{})
+	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
+	if err != nil {
+		return nil, err
+	}
+	adder.Out = output
+	if metadata != "" {
+		adder.TokenMetadata = metadata
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	go func() {
+		defer close(output)
+		_, err := adder.AddAllAndPin(file)
+		if err != nil {
+			output <- err
+		}
+	}()
+
+	var addedFileHash cid.Cid
+	select {
+	case o := <-output:
+		err, ok := o.(error)
+		if ok {
+			return nil, err
+		}
+		addedFileHash = o.(*coreiface.AddEvent).Path.Cid()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	return ipath.IpfsPath(addedFileHash), nil
+}
+
 func addMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path, error) {
 	api, err := coreapi.NewCoreAPI(node)
 	if err != nil {
@@ -219,6 +263,39 @@ func addMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path,
 	return ipath.IpfsPath(modifiedFileHash), nil
 }
 
+// TestAddFileMetadata tests the functionality
+// to add a file with meta data items to BTFS network.
+func TestAddFileWithMetadata(t *testing.T) {
+	// Create repo.
+	r := &repo.Mock{
+		C: config.Config{
+			Identity: config.Identity{
+				PeerID: testPeerID, // required by offline node
+			},
+		},
+		D: syncds.MutexWrap(datastore.NewMapDatastore()),
+	}
+	// Build Ipfs node.
+	node, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a file to BTFS network.
+	expected := "{\"price\":11.2,\"number\":2368}"
+	path, err := addFileWithMetadata(node, []byte("existing file contents"), expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify modified file.
+	verifyMetadataItems(t, node, path, &MetaStruct{Price: 11.2, Number: 2368})
+	if path.String() != "/btfs/QmbvwwwmJoqgyV3AYwSvCKvGRPx5G3BiwmBjenoLu2xhsC" {
+		// note: the exact number will depend on the size and the sharding algo. used
+		t.Fatalf("expected %s, got %s", "/btfs/QmbvwwwmJoqgyV3AYwSvCKvGRPx5G3BiwmBjenoLu2xhsC", path.String())
+	}
+}
+
 func TestAppendMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -257,7 +334,9 @@ func TestAppendMetadata(t *testing.T) {
 	}
 }
 
-func TestAddMetadata(t *testing.T) {
+// TestAddMetadataToFileWithoutMeta tests the functionality
+// to add metadata items to an existing BTFS file without metadata.
+func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
 		C: config.Config{
@@ -475,4 +554,63 @@ func verifyMetadataItems(t *testing.T, node *core.IpfsNode, p ipath.Path, exp *M
 	if meta.NodeId != exp.NodeId {
 		t.Fatalf("expected %s, got %s", exp.NodeId, meta.NodeId)
 	}
+}
+
+// TestAddAddOneLevelDirecotryWithMetadata tests the functionality
+// to add a one level directory with meta data items to BTFS network.
+func TestAddOneLevelDirectoryWithMetadata(t *testing.T) {
+	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmTnJd8mo5zKU2cYryiEbupSYgxwTypVxwJucQ8B2Qc8J3")
+}
+
+// TestAddAddOneLevelDirecotryWithMetadata tests the functionality
+// to add a one level directory with meta data items to BTFS network.
+func TestAddTwoLevelDirectoryWithMetadata(t *testing.T) {
+	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmfUWYVuzQnSgdj2EyY9CcZxuwXBm4ekMAYenm9uKXzqtq")
+}
+func testAddDirectoryWithMetadata(t *testing.T, file files.Node, expectedFileHash string) {
+	// Create repo.
+	r := &repo.Mock{
+		C: config.Config{
+			Identity: config.Identity{
+				PeerID: testPeerID, // required by offline node
+			},
+		},
+		D: syncds.MutexWrap(datastore.NewMapDatastore()),
+	}
+	// Build Ipfs node.
+	node, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a file to BTFS network.
+	expected := "{\"price\":11.2,\"number\":2368}"
+	path, err := addDirectoryToBtfs(node, file, expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify modified file.
+	verifyMetadataItems(t, node, path, &MetaStruct{Price: 11.2, Number: 2368})
+	if path.String() != expectedFileHash {
+		// note: the exact number will depend on the size and the sharding algo. used
+		t.Fatalf("expected %s, got %s", expectedFileHash, path.String())
+	}
+}
+
+func oneLevelDirectory() files.Node {
+	return files.NewMapDirectory(map[string]files.Node{
+		"file1": files.NewBytesFile([]byte("contents for file one")),
+		"file2": files.NewBytesFile([]byte("hello, world")),
+	})
+}
+
+func twoLevelDirectory() files.Node {
+	return files.NewMapDirectory(map[string]files.Node{
+		"file1": files.NewBytesFile([]byte("contents for file one")),
+		"file2": files.NewBytesFile([]byte("hello, world")),
+		"dir1": files.NewMapDirectory(map[string]files.Node{
+			"file3": files.NewBytesFile([]byte("test data")),
+		}),
+	})
 }
