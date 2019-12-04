@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	config "github.com/TRON-US/go-btfs-config"
 	"strconv"
 	"strings"
 	"time"
@@ -540,7 +541,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		// TODO: Modify client err return status
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
-			return nil
+			return err
 		}
 		var contractRequest *escrowPb.EscrowContractRequest
 
@@ -554,20 +555,34 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				log.Error(err)
 				return err
 			}
-			err = escrow.SubmitContractToEscrow(cfg, contractRequest)
+			submitContractRes, err := escrow.SubmitContractToEscrow(cfg, contractRequest)
 			if err != nil {
 				return err
 			}
-			// TODO: pay in full
-			go payFullToEscrow()
+			go payFullToEscrow(submitContractRes, cfg)
 		}
 		return nil
 	},
 }
 
-// TODO: pay in full to escrow service
-func payFullToEscrow() {
-
+func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, config *config.Config) {
+	privKeyStr := config.Identity.PrivKey
+	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	payerPubKey := payerPrivKey.GetPublic()
+	payinRequest, err := escrow.NewPayinRequest(response, payerPubKey, payerPrivKey)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	err = escrow.PayInToEscrow(config, payinRequest)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 }
 
 var storageUploadProofCmd = &cmds.Command{
