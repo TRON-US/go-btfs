@@ -237,7 +237,7 @@ func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics
 
 func (dc *dataCollection) doSendData(config *config.Config, sm *pb.SignedMetrics) error {
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusClient) error {
+	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.UpdateMetrics(ctx, sm)
 		return err
 	})
@@ -319,7 +319,7 @@ func (dc *dataCollection) doReportHealthAlert(config *config.Config, failurePoin
 	n.TimeCreated = time.Now()
 
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusClient) error {
+	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.CollectHealth(ctx, n)
 		return err
 	})
