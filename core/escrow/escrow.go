@@ -92,8 +92,8 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 	return response, nil
 }
 
-func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error{
-	escrowPubkey, err := convertPubKey(configuration.Services.EscrowPubKeys[0])
+func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error {
+	escrowPubkey, err := crypto.ToPubKey(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return err
 	}
@@ -102,15 +102,6 @@ func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []
 		return fmt.Errorf("verify escrow failed %v", err)
 	}
 	return nil
-}
-
-// TODO: move this to go-btfs-common also, and delete it here
-func convertPubKey(pubStr string) (ic.PubKey, error) {
-	raw, err := base64.StdEncoding.DecodeString(pubStr)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.ToPubKey(raw)
 }
 
 func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic.PubKey, payerPrivKey ic.PrivKey) (*escrowpb.SignedPayinRquest, error) {
