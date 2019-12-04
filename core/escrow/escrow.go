@@ -2,7 +2,6 @@ package escrow
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -84,7 +83,7 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 	if response == nil {
 		return fmt.Errorf("escrow reponse is nil")
 	}
-	escrowPubkey, err := convertPubKey(configuration.Services.EscrowPubKeys[0])
+	escrowPubkey, err := crypto.ToPubKey(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return err
 	}
@@ -93,15 +92,6 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 		return fmt.Errorf("verify escrow failed %v", err)
 	}
 	return nil
-}
-
-// TODO: move this to go-btfs-common also, and delete it here
-func convertPubKey(pubStr string) (ic.PubKey, error) {
-	raw, err := base64.StdEncoding.DecodeString(pubStr)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.ToPubKey(raw)
 }
 
 func SignContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,

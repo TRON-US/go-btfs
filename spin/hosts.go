@@ -1,6 +1,7 @@
 package spin
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -32,7 +33,7 @@ func perodicSyncHosts(node *core.IpfsNode, mode string) {
 	defer tick.Stop()
 	// Force tick on immediate start
 	for ; true; <-tick.C {
-		err := commands.SyncHosts(node, mode)
+		err := commands.SyncHosts(context.Background(), node, mode)
 		if err != nil {
 			log.Errorf("Failed to sync hosts: %s", err)
 		}

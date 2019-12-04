@@ -4,24 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cenkalti/backoff"
-	"github.com/dustin/go-humanize"
-	"github.com/gogo/protobuf/proto"
-	"github.com/tron-us/go-btfs-common/protos/node"
-	"google.golang.org/grpc"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/tron-us/go-btfs-common/info"
+	"github.com/tron-us/go-btfs-common/protos/node"
+	pb "github.com/tron-us/go-btfs-common/protos/status"
+	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
+
+	"github.com/TRON-US/go-btfs-config"
+	"github.com/cenkalti/backoff"
+	"github.com/dustin/go-humanize"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
 	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"github.com/shirou/gopsutil/cpu"
-	"github.com/tron-us/go-btfs-common/info"
-	pb "github.com/tron-us/go-btfs-common/protos/status"
-	cutils "github.com/tron-us/go-btfs-common/utils"
 )
 
 type programInfo struct {
@@ -65,10 +67,6 @@ const (
 
 	// Expotentially delayed retries will be capped at this total time
 	maxRetryTotal = 10 * time.Minute
-
-	dialTimeout = time.Minute
-
-	callTimeout = 5 * time.Second
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -119,21 +117,23 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 	go dc.collectionAgent(node)
 }
 
-func (dc *dataCollection) update(node *core.IpfsNode) {
+// update gets the latest analytics and returns a list of errors for reporting if available
+func (dc *dataCollection) update(node *core.IpfsNode) []error {
+	var res []error
+
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	rds := node.Repo.Datastore()
-	b, err := rds.Get(commands.GetHostStorageKey(node.Identity.Pretty()))
+	b, err := rds.Get(storage.GetHostStorageKey(node.Identity.Pretty()))
 	if err != nil && err != ds.ErrNotFound {
-		dc.reportHealthAlert(fmt.Sprintf("cannot get selfKey: %s", err.Error()))
+		res = append(res, fmt.Errorf("cannot get selfKey: %s", err.Error()))
 	}
 
 	var ns info.NodeStorage
 	if err == nil {
 		err = json.Unmarshal(b, &ns)
 		if err != nil {
-			log.Warning(err.Error())
-			dc.reportHealthAlert(fmt.Sprintf("cannot parse nodestorage config: %s", err.Error()))
+			res = append(res, fmt.Errorf("cannot parse nodestorage config: %s", err.Error()))
 		} else {
 			dc.StoragePriceAsk = ns.StoragePriceAsk
 			dc.BandwidthPriceAsk = ns.BandwidthPriceAsk
@@ -144,110 +144,103 @@ func (dc *dataCollection) update(node *core.IpfsNode) {
 	}
 
 	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
-	cpus, e := cpu.Percent(0, false)
-	if e == nil {
+	if cpus, err := cpu.Percent(0, false); err != nil {
+		res = append(res, fmt.Errorf("failed to get uptime: %s", err.Error()))
+	} else {
 		dc.CPUUsed = cpus[0]
 	}
 	dc.MemUsed = m.HeapAlloc / kilobyte
-	storage, e := dc.node.Repo.GetStorageUsage()
-	if e == nil {
+	if storage, err := dc.node.Repo.GetStorageUsage(); err != nil {
+		res = append(res, fmt.Errorf("failed to get storage usage: %s", err.Error()))
+	} else {
 		dc.StorageUsed = storage / kilobyte
 	}
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
 	if !ok {
-		dc.reportHealthAlert("failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion")
-		return
+		res = append(res, fmt.Errorf("failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion"))
+		return res
 	}
 
 	st, err := bs.Stat()
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to perform bs.Stat() call: %s", err.Error()))
-		return
+		res = append(res, fmt.Errorf("failed to perform bs.Stat() call: %s", err.Error()))
+	} else {
+		dc.Upload = valOrZero(st.DataSent-dc.TotalUp) / kilobyte
+		dc.Download = valOrZero(st.DataReceived-dc.TotalDown) / kilobyte
+		dc.TotalUp = st.DataSent / kilobyte
+		dc.TotalDown = st.DataReceived / kilobyte
+		dc.BlocksUp = st.BlocksSent
+		dc.BlocksDown = st.BlocksReceived
+		dc.NumPeers = uint64(len(st.Peers))
 	}
 
-	dc.Upload = valOrZero(st.DataSent-dc.TotalUp) / kilobyte
-	dc.Download = valOrZero(st.DataReceived-dc.TotalDown) / kilobyte
-	dc.TotalUp = st.DataSent / kilobyte
-	dc.TotalDown = st.DataReceived / kilobyte
-	dc.BlocksUp = st.BlocksSent
-	dc.BlocksDown = st.BlocksReceived
-
-	dc.NumPeers = uint64(len(st.Peers))
+	return res
 }
 
-func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, error) {
-	config, err := dc.node.Repo.Config()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load config: %s", err.Error())
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := cutils.NewGRPCConn(ctx, config.Services.StatusServerDomain)
-	return conn, cancel, err
-}
-
-func (dc *dataCollection) sendData(btfsNode *core.IpfsNode) {
-	sm, err := dc.doPrepData(btfsNode)
-	if err != nil {
-		dc.reportHealthAlert(err.Error())
-		return
+func (dc *dataCollection) sendData(btfsNode *core.IpfsNode, config *config.Config) {
+	sm, errs, err := dc.doPrepData(btfsNode)
+	if errs != nil || err != nil {
+		var sb strings.Builder
+		errs := append(errs, err)
+		for _, err := range errs {
+			sb.WriteString(err.Error())
+			sb.WriteRune('\n')
+		}
+		dc.reportHealthAlert(config, sb.String())
+		// If complete prep failure we return
+		if err != nil {
+			return
+		}
 	}
 
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		err := dc.doSendData(sm)
+		err := dc.doSendData(config, sm)
 		if err != nil {
 			log.Error("failed to send data to status server: ", err)
+		} else {
+			log.Debug("sent analytics to status server")
 		}
 		return err
 	}, bo)
 }
 
-func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, error) {
-	dc.update(btfsNode)
+// doPrepData gathers the latest analytics and returns (signed object, list of reporting errors, failure)
+func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, []error, error) {
+	errs := dc.update(btfsNode)
 	payload, err := dc.getPayload(btfsNode)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
+		return nil, errs, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
 	}
 	if dc.node.PrivateKey == nil {
-		return nil, fmt.Errorf("node's private key is null")
+		return nil, errs, fmt.Errorf("node's private key is null")
 	}
 
 	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign raw data with node private key: %s", err.Error())
+		return nil, errs, fmt.Errorf("failed to sign raw data with node private key: %s", err.Error())
 	}
 
 	publicKey, err := ic.MarshalPublicKey(dc.node.PrivateKey.GetPublic())
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal node public key: %s", err.Error())
+		return nil, errs, fmt.Errorf("failed to marshal node public key: %s", err.Error())
 	}
 
 	sm := new(pb.SignedMetrics)
 	sm.Payload = payload
 	sm.Signature = signature
 	sm.PublicKey = publicKey
-	return sm, nil
+	return sm, errs, nil
 }
 
-func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
-	conn, cancel, err := dc.getGrpcConn()
-	if err != nil {
+func (dc *dataCollection) doSendData(config *config.Config, sm *pb.SignedMetrics) error {
+	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
+	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusClient) error {
+		_, err := client.UpdateMetrics(ctx, sm)
 		return err
-	}
-	defer cancel()
-	defer conn.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
-	defer cancel()
-	client := pb.NewStatusClient(conn)
-	_, err = client.UpdateMetrics(ctx, sm)
-	if err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
@@ -294,20 +287,23 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	// Force tick on immediate start
 	// make the configuration available in the for loop
 	for ; true; <-tick.C {
-		config, _ := dc.node.Repo.Config()
+		config, err := dc.node.Repo.Config()
+		if err != nil {
+			continue
+		}
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection
 		if config.Experimental.Analytics {
-			dc.sendData(node)
+			dc.sendData(node, config)
 		}
 	}
 }
 
-func (dc *dataCollection) reportHealthAlert(failurePoint string) {
+func (dc *dataCollection) reportHealthAlert(config *config.Config, failurePoint string) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		err := dc.doReportHealthAlert(failurePoint)
+		err := dc.doReportHealthAlert(config, failurePoint)
 		if err != nil {
 			log.Error("failed to report health alert to status server: ", err)
 		}
@@ -315,24 +311,16 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 	}, bo)
 }
 
-func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
-	conn, cancel, err := dc.getGrpcConn()
-	if err != nil {
-		return err
-	}
-	defer cancel()
-	defer conn.Close()
-
+func (dc *dataCollection) doReportHealthAlert(config *config.Config, failurePoint string) error {
 	n := new(pb.NodeHealth)
 	n.BtfsVersion = dc.BTFSVersion
 	n.FailurePoint = failurePoint
 	n.NodeId = dc.NodeID
-	now := time.Now().UTC()
-	n.TimeCreated = now
+	n.TimeCreated = time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
-	defer cancel()
-	client := pb.NewStatusClient(conn)
-	_, err = client.CollectHealth(ctx, n)
-	return err
+	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
+	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusClient) error {
+		_, err := client.CollectHealth(ctx, n)
+		return err
+	})
 }

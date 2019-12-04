@@ -11,7 +11,7 @@ import (
 )
 
 func TestGenAndSolveChallenge(t *testing.T) {
-	node, api, root := unixtest.HelpTestAddWithReedSolomonMetadata(t)
+	node, api, root, _ := unixtest.HelpTestAddWithReedSolomonMetadata(t)
 
 	// Resolve file root node
 	rn, err := api.ResolveNode(context.Background(), path.IpfsPath(root))

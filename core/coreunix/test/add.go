@@ -22,12 +22,15 @@ import (
 	syncds "github.com/ipfs/go-datastore/sync"
 )
 
-const testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"
+const (
+	testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"
 
-// HelpTestAddWithReedSolomomonMetadata is both a helper to testing this feature
-// and also a helper to add a reed solomon file for other features.
-// It returns a mock node, api, and added hash (cid).
-func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface.CoreAPI, cid.Cid) {
+	TestRsDataSize   = 10
+	TestRsParitySize = 20
+)
+
+// HelpTestMockRepo creates the bare minimum mock repo and returns node
+func HelpTestMockRepo(t *testing.T) *core.IpfsNode {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
@@ -40,6 +43,14 @@ func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface
 	if err != nil {
 		t.Fatal(err)
 	}
+	return node
+}
+
+// HelpTestAddWithReedSolomomonMetadata is both a helper to testing this feature
+// and also a helper to add a reed solomon file for other features.
+// It returns a mock node, api, and added hash (cid).
+func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface.CoreAPI, cid.Cid, []byte) {
+	node := HelpTestMockRepo(t)
 
 	out := make(chan interface{})
 	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
@@ -48,7 +59,7 @@ func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface
 	}
 	adder.Out = out
 	// Set to default reed solomon for metadata
-	dsize, psize, csize := 10, 20, 262144
+	dsize, psize, csize := TestRsDataSize, TestRsParitySize, 262144
 	adder.Chunker = fmt.Sprintf("reed-solomon-%d-%d-%d", dsize, psize, csize)
 
 	fb := []byte("testfileA")
@@ -99,5 +110,5 @@ func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface
 		t.Fatal("reed solomon metadata file size does not match")
 	}
 
-	return node, api, addedHash
+	return node, api, addedHash, fb
 }

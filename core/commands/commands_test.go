@@ -236,6 +236,9 @@ func TestCommands(t *testing.T) {
 		"/metadata",
 		"/metadata/add",
 		"/metadata/rm",
+		"/guard",
+		"/guard/test",
+		"/guard/test/send-challenges",
 	}
 
 	cmdSet := make(map[string]struct{})
