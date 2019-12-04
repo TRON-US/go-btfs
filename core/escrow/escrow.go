@@ -2,16 +2,16 @@ package escrow
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
-	"github.com/gogo/protobuf/proto"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+
+	"github.com/gogo/protobuf/proto"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"google.golang.org/grpc"
 )
 
