@@ -9,7 +9,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/tron-us/go-btfs-common/crypto"
-	ccrypto "github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	"google.golang.org/grpc"
@@ -84,7 +83,7 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 	if response == nil {
 		return fmt.Errorf("escrow reponse is nil")
 	}
-	escrowPubkey, err := ccrypto.ToPubKey(configuration.Services.EscrowPubKeys[0])
+	escrowPubkey, err := crypto.ToPubKey(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return err
 	}
