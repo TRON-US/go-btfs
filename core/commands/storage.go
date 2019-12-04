@@ -565,8 +565,8 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 }
 
-func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, config *config.Config) {
-	privKeyStr := config.Identity.PrivKey
+func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config) {
+	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
 		log.Error(err)
@@ -578,7 +578,7 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, config *conf
 		log.Error(err)
 		return
 	}
-	err = escrow.PayInToEscrow(config, payinRequest)
+	err = escrow.PayInToEscrow(configuration, payinRequest)
 	if err != nil {
 		log.Error(err)
 		return
