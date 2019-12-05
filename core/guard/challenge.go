@@ -20,7 +20,7 @@ func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api c
 	fileHash, shardHash cid.Cid, hostID string, numQuestions int) (*guardpb.ShardChallengeQuestions, error) {
 	var shardQuestions []*guardpb.ChallengeQuestion
 	// Generate questions
-	sc, err := storage.NewStorageChallenge(ctx, node, api, shardHash)
+	sc, err := storage.NewStorageChallenge(ctx, node, api, fileHash, shardHash)
 	if err != nil {
 		return nil, err
 	}

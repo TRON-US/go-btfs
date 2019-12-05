@@ -50,7 +50,7 @@ type Session struct {
 	sync.Mutex
 
 	Time              time.Time
-	FileHash          string
+	FileHash          cidlib.Cid
 	Status            string
 	ChunkInfo         map[string]*Chunk // mapping chunkHash with Chunk info
 	CompleteChunks    int
@@ -237,14 +237,14 @@ func (ss *Session) GetCompleteChunks() int {
 	return ss.CompleteChunks
 }
 
-func (ss *Session) SetFileHash(fileHash string) {
+func (ss *Session) SetFileHash(fileHash cidlib.Cid) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.FileHash = fileHash
 }
 
-func (ss *Session) GetFileHash() string {
+func (ss *Session) GetFileHash() cidlib.Cid {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -344,7 +344,8 @@ func (c *Chunk) SetSignedContract(contract []byte) {
 }
 
 // used on client to record a new challenge
-func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cid cidlib.Cid) (*StorageChallenge, error) {
+func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -352,7 +353,7 @@ func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreifac
 	var err error
 	// if the chunk hasn't been generated challenge before
 	if c.Challenge == nil {
-		sch, err = NewStorageChallenge(ctx, n, api, cid)
+		sch, err = NewStorageChallenge(ctx, n, api, rootCid, shardCid)
 		if err != nil {
 			return nil, err
 		}

@@ -29,12 +29,12 @@ func TestGenAndSolveChallenge(t *testing.T) {
 	for _, link := range nodes.DataNode.Links() {
 		sid := link.Cid
 		// simulate client challenge gen
-		sc, err := NewStorageChallenge(context.Background(), node, api, sid)
+		sc, err := NewStorageChallenge(context.Background(), node, api, root, sid)
 		if err != nil {
 			t.Fatal(err)
 		}
 		// simulate host challenge preparation
-		scr, err := NewStorageChallengeResponse(context.Background(), node, api, sid, sc.ID)
+		scr, err := NewStorageChallengeResponse(context.Background(), node, api, root, sid, sc.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
