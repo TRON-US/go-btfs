@@ -9,10 +9,10 @@ import (
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
-	"google.golang.org/grpc"
 )
 
 func NewContract(configuration *config.Config, id string, payerID string, recverID string, price int64) *escrowpb.EscrowContract {
@@ -68,28 +68,27 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 	}, nil
 }
 
-func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.EscrowContractRequest) (*escrowpb.SignedSubmitContractResult, error) {
-	var conn *grpc.ClientConn
-	// TODO: Make escrow IP hidden in config too, now for testing purpose leave it here
-	conn, err := grpc.Dial("52.15.101.94:50051", grpc.WithInsecure())
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	client := escrowpb.NewEscrowServiceClient(conn)
-	response, err := client.SubmitContracts(context.Background(), request)
-	if err != nil {
-		return nil, err
-	}
-	if response == nil {
-		return nil, fmt.Errorf("escrow reponse is nil")
-	}
-	// verify
-	err = verifyEscrowRes(configuration, response.Result, response.EscrowSignature)
-	if err != nil {
-		return nil, fmt.Errorf("verify escrow failed %v", err)
-	}
-	return response, nil
+func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.EscrowContractRequest) (
+	response *escrowpb.SignedSubmitContractResult, err error) {
+	//TODO
+	address := "52.15.101.94:50051"
+	//address := configuration.Services.EscrowDomain
+	err = grpc.EscrowClient(address).WithContext(context.Background(),
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			response, err = client.SubmitContracts(context.Background(), request)
+			if err != nil {
+				return err
+			}
+			if response == nil {
+				return fmt.Errorf("escrow reponse is nil")
+			}
+			// verify
+			err = verifyEscrowRes(configuration, response.Result, response.EscrowSignature)
+			if err != nil {
+				return fmt.Errorf("verify escrow failed %v", err)
+			}
+			return nil
+		})
 }
 
 func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error {
@@ -128,17 +127,17 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 }
 
 func PayInToEscrow(configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRquest) error {
-	conn, err := grpc.Dial("52.15.101.94:50051", grpc.WithInsecure())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	client := escrowpb.NewEscrowServiceClient(conn)
-	res, err := client.PayIn(context.Background(), signedPayinReq)
-	if err != nil {
-		return err
-	}
-	return verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+	//TODO
+	address := "52.15.101.94:50051"
+	//address := configuration.Services.EscrowDomain
+	return grpc.EscrowClient(address).WithContext(context.Background(),
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			res, err := client.PayIn(context.Background(), signedPayinReq)
+			if err != nil {
+				return err
+			}
+			return verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+		})
 }
 
 func SignContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
