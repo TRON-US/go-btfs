@@ -73,7 +73,7 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 	//TODO: for testing purpose
 	address := "52.15.101.94:50051"
 	//address := configuration.Services.EscrowDomain
-	err = grpc.EscrowClient(address).WithContext(context.Background(),
+	grpc.EscrowClient(address).WithContext(context.Background(),
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			response, err = client.SubmitContracts(context.Background(), request)
 			if err != nil {
@@ -89,6 +89,7 @@ func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.Escr
 			}
 			return nil
 		})
+	return
 }
 
 func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error {
