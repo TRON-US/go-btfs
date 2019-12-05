@@ -120,6 +120,9 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 		BuyerChannelState: chanState,
 	}
 	payinSig, err := crypto.Sign(payerPrivKey, payinReq)
+	if err != nil {
+		return nil, err
+	}
 	return &escrowpb.SignedPayinRquest{
 		Request:        payinReq,
 		BuyerSignature: payinSig,
