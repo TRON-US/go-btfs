@@ -105,7 +105,7 @@ to the guard service.`,
 				return err
 			}
 			for _, ni := range hosts {
-				hostIDs = append(hostIDs, ni.NodeID)
+				hostIDs = append(hostIDs, ni.NodeId)
 			}
 		}
 		if len(hostIDs) < len(shardHashes) {

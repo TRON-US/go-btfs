@@ -1,13 +1,13 @@
 package hub
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/TRON-US/go-btfs/core"
 
-	"github.com/tron-us/go-btfs-common/info"
+	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 )
 
 const (
@@ -18,11 +18,6 @@ const (
 	HubModePrice = "price"
 	HubModeSpeed = "speed"
 )
-
-type hostsQuery struct {
-	Hosts []*info.Node `json:"hosts"`
-	// Ignore other fields
-}
 
 // CheckValidMode checks if a given host selection/sync mode is valid or not.
 func CheckValidMode(mode string) error {
@@ -35,15 +30,7 @@ func CheckValidMode(mode string) error {
 
 // QueryHub queries the BTFS-Hub to retrieve the latest list of hosts info
 // according to a certain mode.
-func QueryHub(node *core.IpfsNode, mode string) ([]*info.Node, error) {
-	config, err := node.Repo.Config()
-	if err != nil {
-		return nil, err
-	}
-
-	hubUrl := config.Services.HubDomain
-
-	params := "?id=" + node.Identity.Pretty()
+func QueryHub(node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
 	switch mode {
 	case HubModeScore:
 		// Already the default on hub api
@@ -51,15 +38,24 @@ func QueryHub(node *core.IpfsNode, mode string) ([]*info.Node, error) {
 		return nil, fmt.Errorf(`Mode "%s" is not yet supported`, mode)
 	}
 
-	resp, err := http.Get(hubUrl + params)
+	config, err := node.Repo.Config()
+	if err != nil {
+		return nil, err
+	}
+	var resp *hubpb.HostsResp
+	err = grpc.HubQueryClient(config.Services.HubDomain).WithContext(context.Background(), func(ctx context.Context,
+		client hubpb.HubQueryServiceClient) error {
+		resp, err = client.GetHosts(ctx, &hubpb.HostsReq{
+			Id: node.Identity.Pretty(),
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query BTFS-Hub service: %v", err)
 	}
 
-	var hq hostsQuery
-	if err := json.NewDecoder(resp.Body).Decode(&hq); err != nil {
-		return nil, err
-	}
-
-	return hq.Hosts, nil
+	return resp.Hosts.Hosts, nil
 }

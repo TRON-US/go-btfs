@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"testing"
 
 	"github.com/TRON-US/go-btfs/core/hub"
-	"github.com/tron-us/go-btfs-common/info"
+	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
 	unixtest "github.com/TRON-US/go-btfs/core/coreunix/test"
 )
@@ -17,9 +19,9 @@ func TestHostsSaveGet(t *testing.T) {
 	// test all possible modes
 	for _, mode := range []string{hub.HubModeAll, hub.HubModeScore,
 		hub.HubModeGeo, hub.HubModeRep, hub.HubModePrice, hub.HubModeSpeed} {
-		var nodes []*info.Node
+		var nodes []*hubpb.Host
 		for i := 0; i < 100; i++ {
-			ni := &info.Node{NodeID: fmt.Sprintf("%s:node:%d", mode, i)}
+			ni := &hubpb.Host{NodeId: fmt.Sprintf("%s:node:%d", mode, i)}
 			nodes = append(nodes, ni)
 		}
 		err := SaveHostsIntoDatastore(context.Background(), node, mode, nodes)
@@ -31,7 +33,9 @@ func TestHostsSaveGet(t *testing.T) {
 			t.Fatal(err)
 		}
 		for i, sn := range stored {
-			if *sn != *nodes[i] {
+			bs1, _ := proto.Marshal(sn)
+			bs2, _ := proto.Marshal(nodes[i])
+			if hex.EncodeToString(bs1) != hex.EncodeToString(bs2) {
 				t.Fatal("stored nodes do not match saved nodes")
 			}
 		}

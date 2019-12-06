@@ -8,7 +8,8 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/hub"
-	"github.com/tron-us/go-btfs-common/info"
+
+	hubpq "github.com/tron-us/go-btfs-common/protos/hub"
 
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
@@ -24,7 +25,7 @@ const (
 // GetHostsFromDatastore retrieves `num` hosts from the datastore, if not enough hosts are
 // available, return an error instead of partial return.
 // When num=0 it means unlimited.
-func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string, num int) ([]*info.Node, error) {
+func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string, num int) ([]*hubpq.Host, error) {
 	// check mode: all = display everything
 	if mode == hub.HubModeAll {
 		mode = ""
@@ -39,17 +40,17 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 		return nil, err
 	}
 	// Add as many hosts as available
-	var hosts []*info.Node
+	var hosts []*hubpq.Host
 	for r := range qr.Next() {
 		if r.Error != nil {
 			return nil, r.Error
 		}
-		var ni info.Node
-		err := json.Unmarshal(r.Entry.Value, &ni)
+		var h hubpq.Host
+		err := json.Unmarshal(r.Entry.Value, &h)
 		if err != nil {
 			return nil, err
 		}
-		hosts = append(hosts, &ni)
+		hosts = append(hosts, &h)
 	}
 	// we can re-use hosts, but for higher availability, we choose to have the
 	// greater than `num assumption
@@ -69,7 +70,7 @@ func newKeyHelper(kss ...string) ds.Key {
 
 // SaveHostsIntoDatastore overwrites (removes all existing) hosts and saves the updated
 // hosts according to mode.
-func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode string, nodes []*info.Node) error {
+func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode string, nodes []*hubpq.Host) error {
 	rds := node.Repo.Datastore()
 
 	// Dumb strategy right now: remove all existing and add the new ones
@@ -94,7 +95,7 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 		if err != nil {
 			return err
 		}
-		err = rds.Put(newKeyHelper(HostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeID), b)
+		err = rds.Put(newKeyHelper(HostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeId), b)
 		if err != nil {
 			return err
 		}

@@ -9,26 +9,28 @@ import (
 	"strings"
 	"time"
 
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/hub"
-	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
-	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/tron-us/go-btfs-common/crypto"
+	"github.com/tron-us/go-btfs-common/info"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/tron-us/go-btfs-common/crypto"
-	"github.com/tron-us/go-btfs-common/info"
 )
 
 const (
@@ -225,7 +227,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 				// add host to retry queue
 				host := &storage.HostNode{
-					Identity:   ni.NodeID,
+					Identity:   ni.NodeId,
 					RetryTimes: 0,
 					FailTimes:  0,
 					Price:      price,
@@ -545,7 +547,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		var contractRequest *escrowPb.EscrowContractRequest
+		var contractRequest *escrowpb.EscrowContractRequest
 
 		if ss.GetCompleteContractNum() == len(ss.ChunkInfo) {
 			contracts, price, err := storage.PrepareContractFromChunk(ss.ChunkInfo)
@@ -567,7 +569,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 }
 
-func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config) {
+func payFullToEscrow(response *escrowpb.SignedSubmitContractResult, configuration *config.Config) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -843,7 +845,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
-	var halfSignedChannelState ledgerPb.SignedChannelState
+	var halfSignedChannelState ledgerpb.SignedChannelState
 	err := proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
 	if err != nil {
 		log.Error(err)
@@ -1115,7 +1117,7 @@ Mode options include:
 }
 
 type HostInfoRes struct {
-	Nodes []*info.Node
+	Nodes []*hubpb.Host
 }
 
 var storageHostsSyncCmd = &cmds.Command{
