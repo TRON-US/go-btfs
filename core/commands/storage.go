@@ -17,12 +17,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/hub"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
-	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -254,7 +252,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	Type: UploadRes{},
 }
 
-func controlSessionTimeout(ss *storage.Session) {
+func controlSessionTimeout(ss *storage.FileContracts) {
 	// error is special std flow, will not be counted in here
 	// and complete status don't need to wait for signal coming
 	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-2; {
@@ -273,8 +271,8 @@ func controlSessionTimeout(ss *storage.Session) {
 			ss.SetStatus(storage.ErrStatus)
 			// sending each chunk channel with terminate signal if they are in progress
 			// otherwise no chunk channel would be there receiving
-			for _, chunkInfo := range ss.ChunkInfo {
-				go func(chunkInfo *storage.Chunk) {
+			for _, chunkInfo := range ss.ShardInfo {
+				go func(chunkInfo *storage.Shards) {
 					if chunkInfo.GetState() != storage.StdChunkStateFlow[storage.CompleteState].State {
 						chunkInfo.RetryChan <- &storage.StepRetryChan{
 							Succeed:           false,
@@ -288,7 +286,7 @@ func controlSessionTimeout(ss *storage.Session) {
 	}
 }
 
-func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Session, n *core.IpfsNode, ssID string, test bool) {
+func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode, ssID string, test bool) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -296,8 +294,8 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.Sessio
 	}
 
 	// loop over each chunk
-	for chunkHash, chunkInfo := range ss.ChunkInfo {
-		go func(chunkHash string, chunkInfo *storage.Chunk) {
+	for chunkHash, chunkInfo := range ss.ShardInfo {
+		go func(chunkHash string, chunkInfo *storage.Shards) {
 			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
 			if err != nil {
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
@@ -389,7 +387,7 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 	}
 }
 
-func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.Session,
+func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.FileContracts,
 	n *core.IpfsNode, halfSignedContract []byte, chunkHash string, ssID string, test bool) {
 	// record chunk info in session
 	chunk := ss.GetOrDefault(chunkHash)
@@ -525,7 +523,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("contract", true, false, "Signed Contract."),
 		cmds.StringArg("session-id", true, false, "session ID which render used to store all chunksInfo"),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
+		cmds.StringArg("chunk-hash", true, false, "Shards the storage node should fetch."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
@@ -547,8 +545,8 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		}
 		var contractRequest *escrowPb.EscrowContractRequest
 
-		if ss.GetCompleteContractNum() == len(ss.ChunkInfo) {
-			contracts, price, err := storage.PrepareContractFromChunk(ss.ChunkInfo)
+		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
+			contracts, price, err := storage.PrepareContractFromChunk(ss.ShardInfo)
 			if err != nil {
 				return err
 			}
@@ -585,6 +583,7 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuratio
 		log.Error(err)
 		return
 	}
+
 }
 
 var storageUploadProofCmd = &cmds.Command{
@@ -594,7 +593,7 @@ var storageUploadProofCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("proof", true, false, "Collateral Proof."),
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
+		cmds.StringArg("chunk-hash", true, false, "Shards the storage node should fetch."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssID := req.Arguments[1]
@@ -617,7 +616,7 @@ var storageUploadProofCmd = &cmds.Command{
 		sendStepStateChan(chunkInfo.RetryChan, storage.CompleteState, true, nil, nil)
 
 		// check whether all chunk is complete
-		if ss.GetCompleteChunks() == len(ss.ChunkInfo) {
+		if ss.GetCompleteChunks() == len(ss.ShardInfo) {
 			// only if all chunks upload success, send the signal to finish current status
 			sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, true, nil)
 		}
@@ -693,12 +692,11 @@ the chunk and replies back to client for the next challenge step.`,
 		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 		// review contract and send back to client
 		go reviewContractAndSign(chunkInfo, chunkHash, ssID, n, pid, req, env, []byte(halfSignedCont))
-		//go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
 		return nil
 	},
 }
 
-func reviewContractAndSign(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode,
+func reviewContractAndSign(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode,
 	pid peer.ID, req *cmds.Request, env cmds.Environment, payerSig []byte) {
 	// TODO: Check if renter is paid, if so, download file
 	go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
@@ -731,6 +729,7 @@ func reviewContractAndSign(chunkInfo *storage.Chunk, chunkHash string, ssID stri
 		log.Error(err)
 		return
 	}
+	go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
 }
 
 // call escrow service to check if payment is received or not
@@ -742,7 +741,7 @@ func periodicallyCheckPaymentFromClient() {
 	}
 }
 
-func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
+func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID)
 
@@ -772,17 +771,9 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 
 	// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
 	chunkInfo.SetState(storage.ChallengeState)
-	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-	go solveChallenge(chunkInfo, chunkHash, ssID, reqcBody, n, pid, api, req)
 }
 
-func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
+func solveChallenge(chunkInfo *storage.Shards, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID)
 
@@ -822,44 +813,6 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 
 	// RemoteCall(user, CHID, CHR) to get signedPayment
 	chunkInfo.SetState(storage.VerifyState)
-	//signedPaymentBody, err := p2pCall(n, pid, "/storage/upload/respc", ssID, sc.Hash, chunkHash)
-	//if err != nil {
-	//	log.Error(err)
-	//	sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-	//	storage.GlobalSession.Remove(ssID, chunkHash)
-	//	return
-	//}
-	//go completePayment(chunkInfo, chunkHash, ssID, signedPaymentBody, n, pid)
-}
-
-func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID) {
-	sm := storage.GlobalSession
-	ss := sm.GetOrDefault(ssID)
-
-	payment := PaymentRes{}
-	if err := json.Unmarshal(resBytes, &payment); err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-	var halfSignedChannelState ledgerPb.SignedChannelState
-	err := proto.Unmarshal(payment.SignedPayment, &halfSignedChannelState)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-
-	chunkInfo.SetState(storage.CompleteState)
-	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		return
-	}
-	sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, true, nil)
 }
 
 type ChallengeRes struct {
@@ -879,7 +832,7 @@ the contents and nonce together to produce a final challenge response.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
+		cmds.StringArg("chunk-hash", true, false, "Shards the storage node should fetch."),
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -954,9 +907,9 @@ challenge's response. If response is valid, client returns signed payment
 signature back to the host to complete payment.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "Chunk the storage node should fetch."),
+		cmds.StringArg("session-id", true, false, "Shards the storage node should fetch."),
 		cmds.StringArg("challenge-hash", true, false, "Challenge response back to uploader."),
-		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
+		cmds.StringArg("chunk-hash", true, false, "Shards the storage node should fetch."),
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -999,37 +952,6 @@ signature back to the host to complete payment.`,
 			return err
 		}
 		sendStepStateChan(chunkInfo.RetryChan, storage.VerifyState, true, nil, nil)
-
-		// prepare payment
-		//n, err := cmdenv.GetNode(env)
-		//if err != nil {
-		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-		//	return err
-		//}
-		//pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
-		//if !ok {
-		//	err := fmt.Errorf("fail to get peer ID from request")
-		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-		//	return err
-		//}
-
-		//channelState, err := prepareChannelState(n, pid, chunkInfo.Price, chunkInfo.ChannelID)
-		//if err != nil {
-		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-		//	return err
-		//}
-		//
-		//signedPayment, err := signChannelState(n.PrivateKey, channelState)
-		//if err != nil {
-		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-		//	return err
-		//}
-		//
-		//signedBytes, err := proto.Marshal(signedPayment)
-		//if err != nil {
-		//	sendStepStateChan(chunkInfo.RetryChan, storage.PaymentState, false, err, nil)
-		//	return err
-		//}
 
 		// from client's perspective, prepared payment finished
 		// but the actual payment does not.
@@ -1365,7 +1287,7 @@ This command print upload and payment status by the time queried.`,
 		status.FileHash = ss.GetFileHash().String()
 		chunks := make(map[string]*ChunkStatus)
 		status.Chunks = chunks
-		for hash, info := range ss.ChunkInfo {
+		for hash, info := range ss.ShardInfo {
 			c := &ChunkStatus{
 				Price:  info.GetPrice(),
 				Host:   info.Receiver.String(),

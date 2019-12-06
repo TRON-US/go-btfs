@@ -5,7 +5,7 @@ import (
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 )
 
-func PrepareContractFromChunk(chunkInfo map[string]*Chunk) ([]*escrowpb.SignedEscrowContract, int64, error) {
+func PrepareContractFromChunk(chunkInfo map[string]*Shards) ([]*escrowpb.SignedEscrowContract, int64, error) {
 	var signedContracts []*escrowpb.SignedEscrowContract
 	var totalPrice int64
 	for _, chunk := range chunkInfo {
