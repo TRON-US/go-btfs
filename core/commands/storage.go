@@ -141,7 +141,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		// check file hash
 		var (
 			chunkHashes []string
-			rootHash    string
+			rootHash    cidlib.Cid
 		)
 		lf, _ := req.Options[leafHashOptionName].(bool)
 		if lf == false {
@@ -149,13 +149,13 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return fmt.Errorf("need one and only one root file hash")
 			}
 			// get leaf hashes
-			rootHash = req.Arguments[0]
+			hashStr := req.Arguments[0]
 			// convert to cid
-			hashToCid, err := cidlib.Parse(rootHash)
+			rootHash, err = cidlib.Parse(hashStr)
 			if err != nil {
 				return err
 			}
-			hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, hashToCid)
+			hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 			if err != nil {
 				return err
 			}
@@ -163,7 +163,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				chunkHashes = append(chunkHashes, h.String())
 			}
 		} else {
-			rootHash = ""
+			rootHash = cidlib.Undef
 			chunkHashes = req.Arguments
 		}
 		// start new session
@@ -414,7 +414,9 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 	chunk.UpdateChunk(n.Identity, hostPid, candidateHost.Price)
 	chunk.SetState(storage.InitState)
 	// send over contract
-	_, err = p2pCall(n, hostPid, "/storage/upload/init", ssID,
+	_, err = p2pCall(n, hostPid, "/storage/upload/init",
+		ssID,
+		ss.GetFileHash().String(),
 		chunkHash,
 		strconv.FormatInt(candidateHost.Price, 10),
 		halfSignedContract)
@@ -627,9 +629,10 @@ the chunk and replies back to client for the next challenge step.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("file-hash", true, false, "Root file storage node should fetch (the DAG)."),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client."),
-		cmds.StringArg("contract", true, false, "client init contract"),
+		cmds.StringArg("contract", true, false, "Client's initial contract data."),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -643,12 +646,16 @@ the chunk and replies back to client for the next challenge step.`,
 		}
 
 		ssID := req.Arguments[0]
-		chunkHash := req.Arguments[1]
-		price, err := strconv.ParseInt(req.Arguments[2], 10, 64)
+		fileHash, err := cidlib.Parse(req.Arguments[1])
 		if err != nil {
 			return err
 		}
-		halfSignedCont := req.Arguments[3]
+		chunkHash := req.Arguments[2]
+		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
+		if err != nil {
+			return err
+		}
+		halfSignedCont := req.Arguments[4]
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -661,6 +668,7 @@ the chunk and replies back to client for the next challenge step.`,
 		// build session
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID)
+		ss.SetFileHash(fileHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
 		chunkInfo := ss.GetOrDefault(chunkHash)
@@ -781,7 +789,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	}
 	// compute challenge on host
 	chunkInfo.SetState(storage.SolveState)
-	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, chunkCid, r.ID)
+	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.GetFileHash(), chunkCid, r.ID)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
@@ -903,7 +911,7 @@ the contents and nonce together to produce a final challenge response.`,
 
 		// when multi-process talking to multiple hosts, different cids can only generate one storage challenge,
 		// and stored the latest one in session map
-		sch, err := chunkInfo.SetChallenge(req.Context, n, api, cid)
+		sch, err := chunkInfo.SetChallenge(req.Context, n, api, ss.FileHash, cid)
 		if err != nil {
 			sendStepStateChan(chunkInfo.RetryChan, storage.ChallengeState, false, err, nil)
 			return err
@@ -1339,7 +1347,7 @@ This command print upload and payment status by the time queried.`,
 
 		// get chunks info from session
 		status.Status = ss.GetStatus()
-		status.FileHash = ss.GetFileHash()
+		status.FileHash = ss.GetFileHash().String()
 		chunks := make(map[string]*ChunkStatus)
 		status.Chunks = chunks
 		for hash, info := range ss.ChunkInfo {

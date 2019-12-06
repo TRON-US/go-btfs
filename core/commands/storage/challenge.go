@@ -29,7 +29,8 @@ type StorageChallenge struct {
 
 	// Selections and generations for challenge
 	ID     string  // Challenge ID (randomly generated on creation)
-	SID    cid.Cid // Shard hash in multihash format (selected shard on each challenge request)
+	RID    cid.Cid // Root hash in multihash format (initial file root)
+	SID    cid.Cid // Shard hash in multihash format (selected shard on each host)
 	CIndex int     // Chunk index within each shard (selected index on each challenge request)
 	CID    cid.Cid // Chunk hash in multihash format (selected chunk on each challenge request)
 	Nonce  string  // Random nonce for each challenge request (uuidv4)
@@ -41,7 +42,7 @@ type StorageChallenge struct {
 // When used by storage client: challengeID is "", will be randomly genenerated
 // When used by storage host: challengeID is a valid uuid v4
 func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
+	rootHash, shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
 	if challengeID == "" {
 		chid, err := uuid.NewRandom()
 		if err != nil {
@@ -55,26 +56,31 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 		API:      api,
 		seenCIDs: map[string]bool{},
 		ID:       challengeID,
+		RID:      rootHash,
 		SID:      shardHash,
 	}
-	if err := sc.getAllCIDsRecursive(shardHash); err != nil {
+	if err := sc.getAllCIDsRecursive(rootHash); err != nil {
 		return nil, err
 	}
 	return sc, nil
 }
 
 func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	shardHash cid.Cid) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, shardHash, "")
+	rootHash, shardHash cid.Cid) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "")
 }
 
 func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, shardHash, challengeID)
+	rootHash, shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID)
 }
 
 // getAllCIDsRecursive traverses the full DAG to find all cids and
 // stores them in allCIDs for quick challenge regeneration/retry.
+// This function skips the other shard hashes at the same level as
+// the selected shard hash, since all other shard hash sub-DAGs belong
+// to other hosts, however, everything else is shared for (meta) info
+// retrieval and DAG traversal.
 func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
 	ncs := string(blockHash.Bytes()) // shorter/faster key
 	// Already seen
@@ -93,6 +99,12 @@ func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
 	links, err := sc.API.Object().Links(sc.Ctx, rp)
 	if err != nil {
 		return err
+	}
+	// Check if we are at the shard hash level
+	for _, l := range links {
+		if l.Cid == sc.SID {
+			return sc.getAllCIDsRecursive(l.Cid)
+		}
 	}
 	for _, l := range links {
 		if err := sc.getAllCIDsRecursive(l.Cid); err != nil {
