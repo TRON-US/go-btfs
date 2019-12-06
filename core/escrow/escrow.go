@@ -70,10 +70,7 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 
 func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.EscrowContractRequest) (
 	response *escrowpb.SignedSubmitContractResult, err error) {
-	//TODO: for testing purpose
-	address := "52.15.101.94:50051"
-	//address := configuration.Services.EscrowDomain
-	grpc.EscrowClient(address).WithContext(context.Background(),
+	grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			response, err = client.SubmitContracts(context.Background(), request)
 			if err != nil {
@@ -131,10 +128,7 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 }
 
 func PayInToEscrow(configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRquest) error {
-	//TODO: for testing purpose
-	address := "52.15.101.94:50051"
-	//address := configuration.Services.EscrowDomain
-	return grpc.EscrowClient(address).WithContext(context.Background(),
+	return grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			res, err := client.PayIn(context.Background(), signedPayinReq)
 			if err != nil {
