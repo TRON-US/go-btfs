@@ -64,10 +64,11 @@ Storage services include client upload operations, host storage operations,
 host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"upload":   storageUploadCmd,
-		"hosts":    storageHostsCmd,
-		"info":     storageInfoCmd,
-		"announce": storageAnnounceCmd,
+		"upload":    storageUploadCmd,
+		"hosts":     storageHostsCmd,
+		"info":      storageInfoCmd,
+		"announce":  storageAnnounceCmd,
+		"challenge": storageChallengeCmd,
 	},
 }
 
@@ -415,7 +416,7 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 	chunk.UpdateChunk(n.Identity, hostPid, candidateHost.Price)
 	chunk.SetState(storage.InitState)
 	// send over contract
-	_, err = p2pCall(n, hostPid, "/storage/upload/init",
+	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
 		ssID,
 		ss.GetFileHash().String(),
 		chunkHash,
@@ -726,7 +727,7 @@ func reviewContractAndSign(chunkInfo *storage.Chunk, chunkHash string, ssID stri
 		log.Error(err)
 		return
 	}
-	_, err = p2pCall(n, pid, "/storage/upload/recvcontract", signedContract, ssID, chunkHash)
+	_, err = remote.P2PCall(nil, n, pid, "/storage/upload/recvcontract", signedContract, ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
 		return
@@ -772,7 +773,7 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 
 	// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
 	chunkInfo.SetState(storage.ChallengeState)
-	reqcBody, err := p2pCall(n, pid, "/storage/upload/reqc", ssID, chunkHash)
+	reqcBody, err := remote.P2PCall(nil, n, pid, "/storage/upload/reqc", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
@@ -853,7 +854,7 @@ func completePayment(chunkInfo *storage.Chunk, chunkHash string, ssID string, re
 	}
 
 	chunkInfo.SetState(storage.CompleteState)
-	_, err = p2pCall(n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
+	_, err = remote.P2PCall(nil, n, pid, "/storage/upload/proof", "proof", ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
@@ -1044,14 +1045,6 @@ signature back to the host to complete payment.`,
 
 type PaymentRes struct {
 	SignedPayment []byte
-}
-
-func p2pCall(n *core.IpfsNode, pid peer.ID, api string, arg ...interface{}) ([]byte, error) {
-	remoteCall := &remote.P2PRemoteCall{
-		Node: n,
-		ID:   pid,
-	}
-	return remoteCall.CallGet(api, arg)
 }
 
 var storageHostsCmd = &cmds.Command{
@@ -1376,4 +1369,131 @@ This command print upload and payment status by the time queried.`,
 		return res.Emit(status)
 	},
 	Type: StatusRes{},
+}
+
+var storageChallengeCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Interact with storage challenge requests and responses.",
+		ShortDescription: `
+These commands contain both client-side and host-side challenge functions.`,
+	},
+	Subcommands: map[string]*cmds.Command{
+		"request":  storageChallengeRequestCmd,
+		"response": storageChallengeResponseCmd,
+	},
+}
+
+var storageChallengeRequestCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Challenge storage hosts with Proof-of-Storage requests.",
+		ShortDescription: `
+This command challenges storage hosts on behalf of a client to see if hosts
+still store a piece of file (usually a shard) as agreed in storage contract.`,
+	},
+	Arguments: append([]cmds.Argument{
+		cmds.StringArg("peer-id", true, false, "Host Peer ID to send challenge requests."),
+	}, storageChallengeResponseCmd.Arguments...), // append pass-through arguments
+	RunTimeout: 5 * time.Second, // TODO: consider slow networks?
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		// Check if peer is reachable
+		pi, err := findPeer(req.Context, n, req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		// Pass arguments through to host response endpoint
+		resp, err := remote.P2PCallStrings(req.Context, n, pi.ID, "/storage/challenge/response",
+			req.Arguments[1:]...)
+		if err != nil {
+			return err
+		}
+
+		var scr StorageChallengeRes
+		err = json.Unmarshal(resp, &scr)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &scr)
+	},
+	Type: StorageChallengeRes{},
+}
+
+type StorageChallengeRes struct {
+	Answer string
+}
+
+var storageChallengeResponseCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Storage host responds to Proof-of-Storage requests.",
+		ShortDescription: `
+This command (on host) reads the challenge question and returns the answer to
+the challenge request back to the caller.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("contract-id", true, false, "Contract ID associated with the challenge requests."),
+		cmds.StringArg("file-hash", true, false, "File root multihash for the data stored at this host."),
+		cmds.StringArg("shard-hash", true, false, "Shard multihash for the data stored at this host."),
+		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
+		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
+	},
+	RunTimeout: 3 * time.Second, // TODO: consider large files?
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+
+		// TODO: Check if host store has this contract id
+		fileHash, err := cidlib.Parse(req.Arguments[1])
+		if err != nil {
+			return err
+		}
+		shardHash, err := cidlib.Parse(req.Arguments[2])
+		if err != nil {
+			return err
+		}
+		chunkIndex, err := strconv.Atoi(req.Arguments[3])
+		if err != nil {
+			return err
+		}
+		nonce := req.Arguments[4]
+		// Challenge ID is not relevant here because it's a sync operation
+		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "")
+		if err != nil {
+			return err
+		}
+		err = sc.SolveChallenge(chunkIndex, nonce)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
+	},
+	Type: StorageChallengeRes{},
 }
