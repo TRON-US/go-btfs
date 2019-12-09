@@ -74,14 +74,16 @@ type StatusChan struct {
 type Shards struct {
 	sync.Mutex
 
-	Challenge      *StorageChallenge
-	SignedContract []byte
-	Receiver       peer.ID
-	Price          int64
-	State          int
-	Proof          string
-	Time           time.Time
-	Err            error
+	ContractID 			string
+	Challenge            *StorageChallenge
+	SignedEscrowContract []byte
+	Receiver             peer.ID
+	Price                int64
+	State                int
+	Length               time.Duration
+	StartTime            time.Time
+
+	Err                  error
 
 	RetryChan chan *StepRetryChan
 }
@@ -351,7 +353,7 @@ func (ss *FileContracts) GetOrDefault(hash string) *Shards {
 	if ss.ShardInfo[hash] == nil {
 		c := &Shards{}
 		c.RetryChan = make(chan *StepRetryChan)
-		c.Time = time.Now()
+		c.StartTime = time.Now()
 		c.State = InitState
 		ss.ShardInfo[hash] = c
 		return c
@@ -365,14 +367,14 @@ func (c *Shards) UpdateChunk(payerPid peer.ID, recvPid peer.ID, price int64) {
 
 	c.Receiver = recvPid
 	c.Price = price
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 }
 
 func (c *Shards) SetSignedContract(contract []byte) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.SignedContract = contract
+	c.SignedEscrowContract = contract
 }
 
 // used on client to record a new challenge
@@ -397,7 +399,7 @@ func (c *Shards) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreifa
 	if err = sch.GenChallenge(); err != nil {
 		return nil, err
 	}
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 	return sch, nil
 }
 
@@ -407,7 +409,7 @@ func (c *Shards) UpdateChallenge(sch *StorageChallenge) {
 	defer c.Unlock()
 
 	c.Challenge = sch
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 }
 
 func (c *Shards) SetState(state int) {
@@ -415,7 +417,7 @@ func (c *Shards) SetState(state int) {
 	defer c.Unlock()
 
 	c.State = state
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 }
 
 func (c *Shards) GetState() string {
@@ -439,30 +441,16 @@ func (c *Shards) GetPrice() int64 {
 	return c.Price
 }
 
-func (c *Shards) SetProof(proof string) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.Proof = proof
-}
-
-func (c *Shards) GetProof() string {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.Proof
-}
-
 func (c *Shards) SetTime(time time.Time) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.Time = time
+	c.StartTime = time
 }
 
 func (c *Shards) GetTime() time.Time {
 	c.Lock()
 	defer c.Unlock()
 
-	return c.Time
+	return c.StartTime
 }

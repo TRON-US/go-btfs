@@ -9,7 +9,7 @@ func PrepareContractFromChunk(chunkInfo map[string]*Shards) ([]*escrowpb.SignedE
 	var signedContracts []*escrowpb.SignedEscrowContract
 	var totalPrice int64
 	for _, chunk := range chunkInfo {
-		sc, err := escrow.UnmarshalEscrowContract(chunk.SignedContract)
+		sc, err := escrow.UnmarshalEscrowContract(chunk.SignedEscrowContract)
 		if err != nil {
 			return nil, 0, err
 		}

@@ -172,7 +172,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
-		ss := sm.GetOrDefault(ssID)
+		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
@@ -359,7 +359,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 					}
 				case <-time.After(storage.StdChunkStateFlow[curState].TimeOut):
 					{
-						log.Errorf("Time Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
+						log.Errorf("StartTime Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
 						go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
@@ -578,11 +578,19 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuratio
 		log.Error(err)
 		return
 	}
-	err = escrow.PayInToEscrow(configuration, payinRequest)
+	payinRes, err := escrow.PayInToEscrow(configuration, payinRequest)
 	if err != nil {
 		log.Error(err)
 		return
 	}
+	// get escrow sig
+	sig := payinRes.EscrowSignature
+	// TODO: upload filemeta to guard
+	go UploadFileMetaToGuard()
+}
+
+// TODO: after upload persist data in leveldb
+func UploadFileMetaToGuard() {
 
 }
 
@@ -681,7 +689,7 @@ the chunk and replies back to client for the next challenge step.`,
 
 		// build session
 		sm := storage.GlobalSession
-		ss := sm.GetOrDefault(ssID)
+		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(fileHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
@@ -719,12 +727,12 @@ func reviewContractAndSign(chunkInfo *storage.Shards, chunkHash string, ssID str
 		return
 	}
 	// Sign on the contract
-	signedContract, err := escrow.SignContractAndMarshal(contract, halfSignedContract, n.PrivateKey, false)
+	signedEscrowContract, err := escrow.SignContractAndMarshal(contract, halfSignedContract, n.PrivateKey, false)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	_, err = p2pCall(n, pid, "/storage/upload/recvcontract", signedContract, ssID, chunkHash)
+	_, err = p2pCall(n, pid, "/storage/upload/recvcontract", signedEscrowContract, ssID, chunkHash)
 	if err != nil {
 		log.Error(err)
 		return
@@ -743,7 +751,7 @@ func periodicallyCheckPaymentFromClient() {
 
 func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
 	sm := storage.GlobalSession
-	ss := sm.GetOrDefault(ssID)
+	ss := sm.GetOrDefault(ssID, n.Identity)
 
 	chunkInfo.SetState(storage.UploadState)
 	api, err := cmdenv.GetApi(env, req)
@@ -773,47 +781,47 @@ func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID s
 	chunkInfo.SetState(storage.ChallengeState)
 }
 
-func solveChallenge(chunkInfo *storage.Shards, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
-	sm := storage.GlobalSession
-	ss := sm.GetOrDefault(ssID)
-
-	// get challenge object from params
-	r := ChallengeRes{}
-	if err := json.Unmarshal(resBytes, &r); err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-	// find chunk hash cid
-	chunkCid, err := cidlib.Parse(chunkHash)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-	// compute challenge on host
-	chunkInfo.SetState(storage.SolveState)
-	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.GetFileHash(), chunkCid, r.ID)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-	if err := sc.SolveChallenge(r.ChunkIndex, r.Nonce); err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
-		return
-	}
-	// update session to store challenge info there
-	chunkInfo.UpdateChallenge(sc)
-
-	// RemoteCall(user, CHID, CHR) to get signedPayment
-	chunkInfo.SetState(storage.VerifyState)
-}
+//func solveChallenge(chunkInfo *storage.Shards, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
+//	sm := storage.GlobalSession
+//	ss := sm.GetOrDefault(ssID)
+//
+//	// get challenge object from params
+//	r := ChallengeRes{}
+//	if err := json.Unmarshal(resBytes, &r); err != nil {
+//		log.Error(err)
+//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+//		storage.GlobalSession.Remove(ssID, chunkHash)
+//		return
+//	}
+//	// find chunk hash cid
+//	chunkCid, err := cidlib.Parse(chunkHash)
+//	if err != nil {
+//		log.Error(err)
+//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+//		storage.GlobalSession.Remove(ssID, chunkHash)
+//		return
+//	}
+//	// compute challenge on host
+//	chunkInfo.SetState(storage.SolveState)
+//	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.GetFileHash(), chunkCid, r.ID)
+//	if err != nil {
+//		log.Error(err)
+//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+//		storage.GlobalSession.Remove(ssID, chunkHash)
+//		return
+//	}
+//	if err := sc.SolveChallenge(r.ChunkIndex, r.Nonce); err != nil {
+//		log.Error(err)
+//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
+//		storage.GlobalSession.Remove(ssID, chunkHash)
+//		return
+//	}
+//	// update session to store challenge info there
+//	chunkInfo.UpdateChallenge(sc)
+//
+//	// RemoteCall(user, CHID, CHR) to get signedPayment
+//	chunkInfo.SetState(storage.VerifyState)
+//}
 
 type ChallengeRes struct {
 	ID         string
