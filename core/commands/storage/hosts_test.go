@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"testing"
 
-	"github.com/TRON-US/go-btfs/core/hub"
-	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
-
 	unixtest "github.com/TRON-US/go-btfs/core/coreunix/test"
+	"github.com/TRON-US/go-btfs/core/hub"
+
+	"github.com/gogo/protobuf/proto"
+	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 )
 
 func TestHostsSaveGet(t *testing.T) {
