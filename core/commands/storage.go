@@ -33,6 +33,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"go.uber.org/zap"
 )
 
 const (
@@ -846,18 +847,59 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 	}
 
 	downloadShardFromClient(shardInfo, ssID, n, req, env)
+	// check payment
+	cfg, err := cmdenv.GetConfig(env)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	signedContractID, err := escrow.SignContractID(escrowContract.ContractId, n.PrivateKey)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	paidIn := make(chan bool)
+	checkPaymentFromClient(req.Context, paidIn, signedContractID, cfg)
+
+	downloadShardFromClient(shardInfo, ssID, n, req, env)
 }
 
 // call escrow service to check if payment is received or not
-func periodicallyCheckPaymentFromClient() {
-	var isReceivedWithTimeOut bool
-	// TODO: isReceivedWithTimeOut := escrow.pay()
-	if !isReceivedWithTimeOut {
-		//TODO: delete file
-	}
+func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowPb.SignedContractID, configuration *config.Config) {
+	timeout := 3 * time.Second
+	newCtx, _ := context.WithTimeout(ctx, timeout)
+	ticker := time.NewTicker(300 * time.Millisecond)
+	paid := false
+	var err error
+
+	go func() {
+		for {
+			select {
+			case t := <-ticker.C:
+				log.Debug("Tick at", zap.Any("time", t.UTC()))
+				paid, err = escrow.IsPaidin(configuration, contractID)
+				if err != nil {
+					log.Error("call IsPaid failed", zap.Error(err))
+				}
+				if paid {
+					paidIn <- true
+				}
+			case <-newCtx.Done():
+				log.Debug("timeout, tick stopped at", zap.Any("UTC", time.Now().UTC()))
+				ticker.Stop()
+				paidIn <- paid
+				return
+			}
+		}
+	}()
 }
 
 func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
+	paid := <-paidIn
+	if !paid {
+		//TODO
+	}
+	// TODO close paidIn channel
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID, n.Identity)
 
