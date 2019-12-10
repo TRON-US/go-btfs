@@ -33,6 +33,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"go.uber.org/zap"
 )
 
 const (
@@ -610,6 +611,32 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		}
 		return nil
 	},
+}
+
+func payinMonitor(contractID *escrowPb.SignedContractID, configuration *config.Config) {
+        ticker := time.NewTicker(100 * time.Millisecond)
+        done := make(chan bool)
+
+        go func() {
+                for {
+                        select {
+                        case <-done:
+                                ticker.Stop()
+                                log.Debug("Tick stopped at", zap.Any("UTC", time.Now().UTC()))
+                                return
+                        case t := <-ticker.C:
+                                log.Debug("Tick at", zap.Any("time", t.UTC()))
+                                //
+                                paid, err := escrow.IsPaidin(configuration, contractID)
+                                if err != nil {
+                                        log.Error("call IsPaid failed", zap.Error(err))
+                                }
+                                if paid {
+                                        // TODO
+                                }
+                        }
+                }
+        }()
 }
 
 func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, guardContracts []*guardPb.Contract) {

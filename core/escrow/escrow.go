@@ -177,3 +177,24 @@ func UnmarshalEscrowContract(marshaledBody []byte) (*escrowpb.SignedEscrowContra
 	}
 	return signedContract, nil
 }
+
+func IsPaidin(configuration *config.Config, contractID *escrowpb.SignedContractID) (bool, error) {
+	var signedPayinRes *escrowpb.SignedPayinStatus
+	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			res, err := client.IsPaid(context.Background(), contractID)
+			if err != nil {
+				return err
+			}
+			err = verifyEscrowRes(configuration, res.Status, res.EscrowSignature)
+			if err != nil {
+				return err
+			}
+			signedPayinRes = res
+			return nil
+		})
+	if err != nil {
+		return false, err
+	}
+	return signedPayinRes.Status.Paid, nil
+}
