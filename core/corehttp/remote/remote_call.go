@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,7 +13,7 @@ type RemoteCall struct {
 	ID  string
 }
 
-func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
+func (r *RemoteCall) CallGet(ctx context.Context, api string, args []string) ([]byte, error) {
 	var arg string
 	for i, str := range args {
 		if i == 0 {
@@ -22,11 +23,15 @@ func (r *RemoteCall) CallGet(api string, args []string) ([]byte, error) {
 		}
 	}
 	curURL := r.URL + api + arg
-	resp, err := http.Get(curURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", curURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP GET fail: %v", err)
 	}
-	//defer resp.Body.Close()
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("fail to read response body: %s", err)

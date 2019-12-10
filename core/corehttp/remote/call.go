@@ -1,12 +1,14 @@
 package remote
 
 import (
+	"context"
+
 	"github.com/TRON-US/go-btfs-api"
 	logging "github.com/ipfs/go-log"
 )
 
 type Call interface {
-	CallGet(string, []string) ([]byte, error)
+	CallGet(context.Context, string, []string) ([]byte, error)
 	CallPost()
 }
 
