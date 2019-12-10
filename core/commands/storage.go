@@ -1212,8 +1212,6 @@ By default it shows local host node information.`,
 		rds := n.Repo.Datastore()
 
 		b, err := rds.Get(storage.GetHostStorageKey(peerID))
-		fmt.Println("b", b)
-		fmt.Println("err", err)
 		if err != nil {
 			return err
 		}
