@@ -54,6 +54,8 @@ const (
 	// retry limit
 	RetryLimit = 3
 	FailLimit  = 3
+
+	bttTotalSupply = 990_000_000_000
 )
 
 // TODO: get/set the value from/in go-btfs-common
@@ -1268,6 +1270,10 @@ This command updates host information and broadcasts to the BTFS network.`,
 		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
+
+		if sp > bttTotalSupply || cp > bttTotalSupply {
+			return fmt.Errorf("maximum price is %d", bttTotalSupply)
+		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
