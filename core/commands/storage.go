@@ -1212,33 +1212,21 @@ By default it shows local host node information.`,
 		rds := n.Repo.Datastore()
 
 		b, err := rds.Get(storage.GetHostStorageKey(peerID))
+		fmt.Println("b", b)
+		fmt.Println("err", err)
 		if err != nil {
 			return err
 		}
 
-		var ns info.NodeStorage
-		err = json.Unmarshal(b, &ns)
+		ns := new(hubpb.SettingsData)
+		err = proto.Unmarshal(b, ns)
 		if err != nil {
 			return err
 		}
 
-		return cmds.EmitOnce(res, &StorageHostInfoRes{
-			StoragePrice:    ns.StoragePriceAsk,
-			BandwidthPrice:  ns.BandwidthPriceAsk,
-			CollateralPrice: ns.CollateralStake,
-			BandwidthLimit:  ns.BandwidthLimit,
-			StorageTimeMin:  ns.StorageTimeMin,
-		})
+		return cmds.EmitOnce(res, ns)
 	},
-	Type: StorageHostInfoRes{},
-}
-
-type StorageHostInfoRes struct {
-	StoragePrice    uint64
-	BandwidthPrice  uint64
-	CollateralPrice uint64
-	BandwidthLimit  float64
-	StorageTimeMin  uint64
+	Type: hubpb.SettingsData{},
 }
 
 var storageAnnounceCmd = &cmds.Command{
