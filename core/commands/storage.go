@@ -1163,26 +1163,6 @@ Mode options include:
 	},
 }
 
-func GetSettings(ctx context.Context, node *core.IpfsNode) (*hubpb.SettingsResp, error) {
-	c, err := node.Repo.Config()
-	if err != nil {
-		return nil, err
-	}
-	var resp *hubpb.SettingsResp
-	err = grpc.HubQueryClient(c.Services.HubDomain).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
-		req := &hubpb.SettingsReq{Id: node.Identity.Pretty()}
-		resp, err = client.GetSettings(ctx, req)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
-}
-
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
 	nodes, err := hub.QueryHub(ctx, node, mode)
 	if err != nil {
