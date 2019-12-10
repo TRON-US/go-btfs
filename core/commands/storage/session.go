@@ -84,7 +84,7 @@ type Shards struct {
 	State                int
 	Length               time.Duration
 	StartTime            time.Time
-	Err error
+	Err                  error
 
 	RetryChan chan *StepRetryChan
 }
