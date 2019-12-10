@@ -1,8 +1,11 @@
 package guard
 
 import (
+	"context"
+	"fmt"
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -35,6 +38,36 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, c
 		PayoutSchedule:   0,
 		NumPayouts:       5,
 	}, nil
+}
+
+func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey, isPayer bool) ([]byte, error) {
+	sig, err := crypto.Sign(privKey, meta)
+	if err != nil {
+		return nil, err
+	}
+	if cont == nil {
+		cont = &guardPb.Contract{
+			ContractMeta:   *meta,
+			LastModifyTime: time.Now(),
+		}
+	} else {
+		cont.LastModifyTime = time.Now()
+	}
+	if isPayer {
+		cont.RenterSignature = sig
+	} else {
+		cont.HostSignature = sig
+	}
+	return proto.Marshal(cont)
+}
+
+func UnmarshalGuardContract(marshaledBody []byte) (*guardPb.Contract, error) {
+	signedContract := &guardPb.Contract{}
+	err := proto.Unmarshal(marshaledBody, signedContract)
+	if err != nil {
+		return nil, err
+	}
+	return signedContract, nil
 }
 
 func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error) {
