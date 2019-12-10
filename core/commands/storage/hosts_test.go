@@ -41,7 +41,7 @@ func TestHostsSaveGet(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if bytes.Compare(bs1, bs2) == 0 {
+			if bytes.Compare(bs1, bs2) != 0 {
 				t.Fatal("stored nodes do not match saved nodes")
 			}
 		}
