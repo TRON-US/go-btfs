@@ -1271,7 +1271,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
 
-		if sp > bttTotalSupply || cp > bttTotalSupply {
+		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
 		}
 
