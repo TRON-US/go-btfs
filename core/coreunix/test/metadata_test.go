@@ -196,7 +196,7 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, r
 		}
 	}
 	if rs {
-		dsize, psize, csize := 10, 20, 262144
+		dsize, psize, csize := TestRsDataSize, TestRsParitySize, 262144
 		adder.Chunker = fmt.Sprintf("reed-solomon-%d-%d-%d", dsize, psize, csize)
 	}
 
