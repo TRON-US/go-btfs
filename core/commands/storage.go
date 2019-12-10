@@ -856,6 +856,7 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		log.Error(err)
 		return
 	}
+
 	paidIn := make(chan bool)
 	checkPaymentFromClient(req.Context, paidIn, signedContractID, cfg)
 	paid := <-paidIn
