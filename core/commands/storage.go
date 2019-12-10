@@ -5,6 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/guard"
+	"github.com/gogo/protobuf/proto"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"strconv"
 	"strings"
 	"time"
@@ -294,8 +297,10 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	}
 
 	// loop over each chunk
+	shardIndex := 0
 	for chunkHash, chunkInfo := range ss.ShardInfo {
-		go func(chunkHash string, chunkInfo *storage.Shards) {
+		shardIndex++
+		go func(chunkHash string, chunkInfo *storage.Shards, shardIndex int) {
 			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
 			if err != nil {
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
@@ -306,14 +311,25 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
-			contract := escrow.NewContract(cfg, chunkHash, n.Identity.Pretty(), candidateHost.Identity, candidateHost.Price)
-			halfSignedContract, err := escrow.SignContractAndMarshal(contract, nil, n.PrivateKey, true)
+			// init escrow Contract
+			escrowContract := escrow.NewContract(cfg, chunkHash, n.Identity.Pretty(), candidateHost.Identity, candidateHost.Price)
+			halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
+			if err != nil {
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
+			guardContractMeta, err := guard.NewContract(ss, cfg, chunkHash, int32(shardIndex))
+			if err != nil {
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
+			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true)
 			if err != nil {
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
+			go retryProcess(ctx, api, candidateHost, ss, n, halfSignedEscrowContract, halfSignGuardContract, chunkHash, ssID, test)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
@@ -341,7 +357,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
+							go retryProcess(ctx, api, candidateHost, ss, n, halfSignedEscrowContract, halfSignGuardContract, chunkHash, ssID, test)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -362,11 +378,11 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						log.Errorf("StartTime Out on %s with state %s", chunkHash, storage.StdChunkStateFlow[curState])
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, api, candidateHost, ss, n, halfSignedContract, chunkHash, ssID, test)
+						go retryProcess(ctx, api, candidateHost, ss, n, halfSignedEscrowContract, halfSignGuardContract, chunkHash, ssID, test)
 					}
 				}
 			}
-		}(chunkHash, chunkInfo)
+		}(chunkHash, chunkInfo, shardIndex)
 	}
 }
 
@@ -388,7 +404,7 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 }
 
 func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.FileContracts,
-	n *core.IpfsNode, halfSignedContract []byte, chunkHash string, ssID string, test bool) {
+	n *core.IpfsNode, halfSignedEscrowContract []byte, halfSignedGuardContract []byte, chunkHash string, ssID string, test bool) {
 	// record chunk info in session
 	chunk := ss.GetOrDefault(chunkHash)
 
@@ -418,7 +434,8 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		ss.GetFileHash().String(),
 		chunkHash,
 		strconv.FormatInt(candidateHost.Price, 10),
-		halfSignedContract)
+		halfSignedEscrowContract,
+		halfSignedGuardContract)
 	// fail to connect with retry
 	if err != nil {
 		sendStepStateChan(chunk.RetryChan, storage.InitState, false, nil, err)
@@ -521,20 +538,28 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		Tagline: "For renter client to receive half signed contracts.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("contract", true, false, "Signed Contract."),
+		cmds.StringArg("escrow-contract", true, false, "Signed Escrow Contract."),
+		cmds.StringArg("guard-contract", true, false, "Signed Guard Contract."),
 		cmds.StringArg("session-id", true, false, "session ID which render used to store all chunksInfo"),
 		cmds.StringArg("chunk-hash", true, false, "Shards the storage node should fetch."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
 		signedContract := []byte(req.Arguments[0])
-		ssID := req.Arguments[1]
+		guardContractBytes := []byte(req.Arguments[1])
+		var guardContract *guardPb.Contract
+		err := proto.Unmarshal(guardContractBytes, guardContract)
+		if err != nil {
+			return err
+		}
+		ssID := req.Arguments[2]
 		ss, err := storage.GlobalSession.GetSession(ssID)
 		if err != nil {
 			return err
 		}
-		chunkHash := req.Arguments[2]
-		err = ss.IncrementContract(chunkHash, signedContract)
+		chunkHash := req.Arguments[3]
+
+		err = ss.IncrementContract(chunkHash, signedContract, guardContract)
 		if err != nil {
 			return err
 		}
@@ -544,7 +569,6 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			return err
 		}
 		var contractRequest *escrowPb.EscrowContractRequest
-
 		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
 			contracts, price, err := storage.PrepareContractFromChunk(ss.ShardInfo)
 			if err != nil {
@@ -559,13 +583,13 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			if err != nil {
 				return err
 			}
-			go payFullToEscrow(submitContractRes, cfg)
+			go payFullToEscrow(submitContractRes, cfg, ss.GetGuardContracts())
 		}
 		return nil
 	},
 }
 
-func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config) {
+func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, guardContracts []*guardPb.Contract) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -583,8 +607,13 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuratio
 		log.Error(err)
 		return
 	}
-	// get escrow sig
+	// get escrow sig, add them to guard
 	sig := payinRes.EscrowSignature
+	for _, guardContract := range guardContracts {
+		guardContract.EscrowSignature = sig
+		guardContract.EscrowSignedTime = time.Now()
+		guardContract.LastModifyTime = time.Now()
+	}
 	// TODO: upload filemeta to guard
 	go UploadFileMetaToGuard()
 }
@@ -599,17 +628,16 @@ var storageUploadProofCmd = &cmds.Command{
 		Tagline: "For client to receive collateral proof.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("proof", true, false, "Collateral Proof."),
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("chunk-hash", true, false, "Shards the storage node should fetch."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ssID := req.Arguments[1]
+		ssID := req.Arguments[0]
 		ss, err := storage.GlobalSession.GetSession(ssID)
 		if err != nil {
 			return err
 		}
-		chunkHash := req.Arguments[2]
+		chunkHash := req.Arguments[1]
 		// get info from session
 		// previous step should have information with channel id and price
 		chunkInfo, err := ss.GetChunk(chunkHash)
@@ -619,7 +647,6 @@ var storageUploadProofCmd = &cmds.Command{
 			}
 			return err
 		}
-		chunkInfo.SetProof(req.Arguments[0])
 		ss.UpdateCompleteChunkNum(1)
 		sendStepStateChan(chunkInfo.RetryChan, storage.CompleteState, true, nil, nil)
 
@@ -654,7 +681,8 @@ the chunk and replies back to client for the next challenge step.`,
 		cmds.StringArg("file-hash", true, false, "Root file storage node should fetch (the DAG)."),
 		cmds.StringArg("chunk-hash", true, false, "Chunk the storage node should fetch."),
 		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client."),
-		cmds.StringArg("contract", true, false, "Client's initial contract data."),
+		cmds.StringArg("escrow-contract", true, false, "Client's initial escrow contract data."),
+		cmds.StringArg("guard-contractMeta", true, false, "Client's initial guard contract meta."),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -677,7 +705,8 @@ the chunk and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		halfSignedCont := req.Arguments[4]
+		halfSignedEscrowContBytes := req.Arguments[4]
+		halfSignedGuardContBytes := req.Arguments[5]
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -699,44 +728,57 @@ the chunk and replies back to client for the next challenge step.`,
 
 		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 		// review contract and send back to client
-		go reviewContractAndSign(chunkInfo, chunkHash, ssID, n, pid, req, env, []byte(halfSignedCont))
+		halfSignedEscrowContract, err := escrow.UnmarshalEscrowContract([]byte(halfSignedEscrowContBytes))
+		if err != nil {
+			return err
+		}
+		halfSignedGuardContract, err := guard.UnmarshalGuardContract([]byte(halfSignedGuardContBytes))
+		if err != nil {
+			return err
+		}
+		escrowContract := halfSignedEscrowContract.GetContract()
+		guardContractMeta := halfSignedGuardContract.ContractMeta
+		// get render's public key
+		payerPubKey, err := pid.ExtractPublicKey()
+		if err != nil {
+			return err
+		}
+		ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
+		if !ok || err != nil {
+			return fmt.Errorf("can't verify escrow contract")
+		}
+		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, halfSignedGuardContract.GetRenterSignature())
+		if !ok || err != nil {
+			return fmt.Errorf("can't verify guard contract")
+		}
+		go SignContractAndCheckPayment(chunkInfo, chunkHash, ssID, n, pid, req, env, halfSignedEscrowContract, halfSignedGuardContract)
 		return nil
 	},
 }
 
-func reviewContractAndSign(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode,
-	pid peer.ID, req *cmds.Request, env cmds.Environment, payerSig []byte) {
+func SignContractAndCheckPayment(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode,
+	pid peer.ID, req *cmds.Request, env cmds.Environment, escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
 	// TODO: Check if renter is paid, if so, download file
-	go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
-	// review contract
-	halfSignedContract, err := escrow.UnmarshalEscrowContract(payerSig)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	contract := halfSignedContract.GetContract()
-	// get render's public key
-	payerPubKey, err := pid.ExtractPublicKey()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	ok, err := crypto.Verify(payerPubKey, contract, halfSignedContract.GetBuyerSignature())
-	if !ok {
-		log.Error("Can't verify contract")
-		return
-	}
+	//go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
+	escrowContract := escrowSignedContract.GetContract()
+	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
-	signedEscrowContract, err := escrow.SignContractAndMarshal(contract, halfSignedContract, n.PrivateKey, false)
+	marshaledSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	_, err = p2pCall(n, pid, "/storage/upload/recvcontract", signedEscrowContract, ssID, chunkHash)
+	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract, n.PrivateKey, false)
 	if err != nil {
 		log.Error(err)
 		return
 	}
+	_, err = p2pCall(n, pid, "/storage/upload/recvcontract", marshaledSignedEscrowContract, marshaledSignedGuardContract, ssID, chunkHash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	// TODO: download file from client
 	go downloadChunkFromClient(chunkInfo, chunkHash, ssID, n, pid, req, env)
 }
 

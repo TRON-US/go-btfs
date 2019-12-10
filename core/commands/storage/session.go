@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"sync"
 	"time"
 
@@ -54,6 +55,7 @@ type FileContracts struct {
 	sync.Mutex
 
 	Time              time.Time
+	GuardContracts   []*guardPb.Contract
 	Renter			peer.ID
 	FileHash          cidlib.Cid
 	Status            string
@@ -286,10 +288,11 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte) error {
+func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte, guardContract *guardPb.Contract) error {
 	ss.Lock()
 	defer ss.Unlock()
 
+	ss.GuardContracts = append(ss.GuardContracts, guardContract)
 	chunk := ss.ShardInfo[chunkHash]
 	if chunk == nil {
 		return fmt.Errorf("chunk does not exists")
@@ -297,6 +300,13 @@ func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte) e
 	chunk.SetSignedContract(contracts)
 	ss.CompleteContracts++
 	return nil
+}
+
+func (ss *FileContracts) GetGuardContracts() []*guardPb.Contract {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.GuardContracts
 }
 
 func (ss *FileContracts) GetCompleteContractNum() int {
