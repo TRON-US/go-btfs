@@ -17,5 +17,4 @@ func Settings(node *core.IpfsNode) {
 			commands.GetSettings(c.Services.HubDomain, node.Identity.Pretty(), node.Repo.Datastore())
 		}()
 	}
-	return
 }
