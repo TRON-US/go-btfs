@@ -14,7 +14,7 @@ func Settings(node *core.IpfsNode) {
 
 	if c.Experimental.StorageHostEnabled {
 		go func() {
-			commands.GetSettings(c.Services.HubDomain, node.Identity.Pretty(), node.Repo.Datastore())
+			commands.GetSettings(node.Context(), c.Services.HubDomain, node.Identity.Pretty(), node.Repo.Datastore())
 		}()
 	}
 

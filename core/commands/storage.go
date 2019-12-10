@@ -1207,13 +1207,16 @@ By default it shows local host node information.`,
 			peerID = n.Identity.Pretty()
 		}
 
-		data, err := GetSettings(cfg.Services.HubDomain, peerID, n.Repo.Datastore())
+		data, err := GetSettings(req.Context, cfg.Services.HubDomain, peerID, n.Repo.Datastore())
+		if err != nil {
+			return err
+		}
 		return cmds.EmitOnce(res, data)
 	},
 	Type: hubpb.SettingsData{},
 }
 
-func GetSettings(addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsData, error) {
+func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsData, error) {
 	// get from LevelDB
 	b, err := rds.Get(storage.GetHostStorageKey(peerId))
 	if err == nil {
@@ -1229,13 +1232,12 @@ func GetSettings(addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsD
 	var (
 		resp *hubpb.SettingsResp
 	)
-	err = grpc.HubQueryClient(addr).WithContext(context.Background(),
-		func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
-			req := new(hubpb.SettingsReq)
-			req.Id = peerId
-			resp, err = client.GetSettings(ctx, req)
-			return err
-		})
+	err = grpc.HubQueryClient(addr).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
+		req := new(hubpb.SettingsReq)
+		req.Id = peerId
+		resp, err = client.GetSettings(ctx, req)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1247,7 +1249,6 @@ func GetSettings(addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsD
 	}
 	err = rds.Put(storage.GetHostStorageKey(peerId), bytes)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
