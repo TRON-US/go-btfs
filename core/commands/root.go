@@ -206,7 +206,21 @@ var rootROSubcommands = map[string]*cmds.Command{
 var RootRemote = &cmds.Command{}
 
 var rootRemoteSubcommands = map[string]*cmds.Command{
-	"storage": StorageCmd,
+	"storage": &cmds.Command{
+		Subcommands: map[string]*cmds.Command{
+			"challenge": &cmds.Command{
+				Subcommands: map[string]*cmds.Command{
+					"response": storageChallengeResponseCmd,
+				},
+			},
+			"upload": &cmds.Command{
+				Subcommands: map[string]*cmds.Command{
+					"init":         storageUploadInitCmd,
+					"recvcontract": storageUploadRecvContractCmd,
+				},
+			},
+		},
+	},
 }
 
 func init() {
