@@ -24,6 +24,7 @@ import (
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
@@ -1191,14 +1192,14 @@ By default it shows local host node information.`,
 		}
 		return cmds.EmitOnce(res, data)
 	},
-	Type: hubpb.SettingsData{},
+	Type: nodepb.Node_Settings{},
 }
 
-func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsData, error) {
+func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*nodepb.Node_Settings, error) {
 	// get from LevelDB
 	b, err := rds.Get(storage.GetHostStorageKey(peerId))
 	if err == nil {
-		data := new(hubpb.SettingsData)
+		data := new(nodepb.Node_Settings)
 		err = proto.Unmarshal(b, data)
 		if err != nil {
 			return nil, err
@@ -1206,14 +1207,21 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 		return data, nil
 	}
 
+	if err != ds.ErrNotFound {
+		return nil, err
+	}
+
 	// get from remote
-	var (
-		resp *hubpb.SettingsResp
-	)
+	ns := new(nodepb.Node_Settings)
 	err = grpc.HubQueryClient(addr).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
 		req := new(hubpb.SettingsReq)
 		req.Id = peerId
-		resp, err = client.GetSettings(ctx, req)
+		resp, err := client.GetSettings(ctx, req)
+		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
+		ns.StoragePriceAsk = uint64(resp.SettingsData.StoragePriceAsk)
+		ns.BandwidthLimit = resp.SettingsData.BandwidthLimit
+		ns.BandwidthPriceAsk = uint64(resp.SettingsData.BandwidthPriceAsk)
+		ns.CollateralStake = uint64(resp.SettingsData.CollateralStake)
 		return err
 	})
 	if err != nil {
@@ -1221,7 +1229,7 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 	}
 
 	// save to rds
-	bytes, err := proto.Marshal(resp.SettingsData)
+	bytes, err := proto.Marshal(ns)
 	if err != nil {
 		return nil, err
 	}
@@ -1230,7 +1238,7 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 		return nil, err
 	}
 
-	return resp.SettingsData, nil
+	return ns, nil
 }
 
 var storageAnnounceCmd = &cmds.Command{
@@ -1240,11 +1248,11 @@ var storageAnnounceCmd = &cmds.Command{
 This command updates host information and broadcasts to the BTFS network.`,
 	},
 	Options: []cmds.Option{
-		cmds.FloatOption(hostStoragePriceOptionName, "s", "Max price per GB of storage in BTT."),
-		cmds.FloatOption(hostBandwidthPriceOptionName, "b", "Max price per MB of bandwidth in BTT."),
-		cmds.FloatOption(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GB in BTT."),
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GB of storage in BTT."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MB of bandwidth in BTT."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GB in BTT."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
-		cmds.FloatOption(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
+		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1255,11 +1263,11 @@ This command updates host information and broadcasts to the BTFS network.`,
 			return fmt.Errorf("storage host api not enabled")
 		}
 
-		sp, spFound := req.Options[hostStoragePriceOptionName].(float64)
-		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(float64)
-		cp, cpFound := req.Options[hostCollateralPriceOptionName].(float64)
+		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
+		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
+		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
-		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(float64)
+		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -1269,23 +1277,9 @@ This command updates host information and broadcasts to the BTFS network.`,
 		rds := n.Repo.Datastore()
 		peerId := n.Identity.Pretty()
 
-		ns := new(hubpb.SettingsData)
-		selfKey := storage.GetHostStorageKey(peerId)
-		b, err := rds.Get(selfKey)
-		if err == ds.ErrNotFound {
-			// If key not found, get from remote
-			if n, err := GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds); err != nil {
-				log.Error(err)
-			} else {
-				ns = n
-			}
-		} else if err != nil {
+		ns, err := GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds)
+		if err != nil {
 			return err
-		} else {
-			// restore from rds
-			if err = proto.Unmarshal(b, ns); err != nil {
-				return err
-			}
 		}
 
 		// Update fields if set
@@ -1310,7 +1304,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 			return err
 		}
 
-		err = rds.Put(selfKey, nb)
+		err = rds.Put(storage.GetHostStorageKey(peerId), nb)
 		if err != nil {
 			return err
 		}
