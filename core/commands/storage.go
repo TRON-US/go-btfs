@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	guard "github.com/TRON-US/go-btfs/core/guard"
 	"strconv"
 	"strings"
 	"time"
@@ -17,12 +18,14 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/hub"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -590,8 +593,18 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuratio
 }
 
 // TODO: after upload persist data in leveldb
-func UploadFileMetaToGuard() {
-
+func UploadFileMetaToGuard(status guardPb.FileStoreStatus, payerPriKey ic.PrivKey, configuration *config.Config) (err error) {
+	for _, ct := range status.Contracts {
+		if ct.RenterSignature, err = crypto.Sign(payerPriKey, &ct.ContractMeta); err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+	if status.RenterSignature, err = crypto.Sign(payerPriKey, &status.FileStoreMeta); err != nil {
+		log.Error(err)
+		return err
+	}
+	return guard.SubmitFileStatus(configuration, status)
 }
 
 var storageUploadProofCmd = &cmds.Command{

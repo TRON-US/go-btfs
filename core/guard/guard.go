@@ -1,6 +1,9 @@
 package guard
 
 import (
+	"context"
+	"fmt"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -67,7 +70,7 @@ func NewFileStoreStatus(session *storage.FileContracts, endTime time.Time, confi
 		CheckFrequency:   0,
 		GuardFee:         0,
 		EscrowFee:        0,
-		ShardCount: int32(len(session.ShardInfo)),
+		ShardCount:       int32(len(session.ShardInfo)),
 		MinimumShards:    10,
 		RecoverThreshold: 20,
 		EscrowPid:        escrowPid.Pretty(),
@@ -82,4 +85,18 @@ func pidFromString(key string) (peer.ID, error) {
 		return "", err
 	}
 	return peer.IDFromPublicKey(pubKey)
+}
+
+func SubmitFileStatus(configuration *config.Config, fileStatus guardPb.FileStoreStatus) error {
+	return grpc.GuardClient(configuration.Services.GuardDomain).WithContext(context.Background(), func(ctx context.Context,
+		c guardPb.GuardServiceClient) error {
+
+		fileStatusResponse, err := c.SubmitFileStoreMeta(context.Background(), &fileStatus)
+		if err != nil {
+			return err
+		} else if fileStatusResponse.Code != guardPb.ResponseCode_SUCCESS {
+			return fmt.Errorf("failed to execute submit file status to gurad %s", fileStatusResponse.Code.String())
+		}
+		return nil
+	})
 }
