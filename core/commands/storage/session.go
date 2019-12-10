@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"sync"
 	"time"
 
@@ -22,8 +23,8 @@ var StdSessionStateFlow [4]*FlowControl
 
 const (
 	FileContractsStorePrefix = "/file-contracts/"
-	ShardsStorePrefix = "/shards/"
-	
+	ShardsStorePrefix        = "/shards/"
+
 	// chunk state
 	InitState      = 0
 	UploadState    = 1
@@ -54,7 +55,8 @@ type FileContracts struct {
 	sync.Mutex
 
 	Time              time.Time
-	Renter			peer.ID
+	GuardContracts    []*guardPb.Contract
+	Renter            peer.ID
 	FileHash          cidlib.Cid
 	Status            string
 	ShardInfo         map[string]*Shards // mapping chunkHash with Shards info
@@ -74,7 +76,7 @@ type StatusChan struct {
 type Shards struct {
 	sync.Mutex
 
-	ContractID 			string
+	ContractID           string
 	Challenge            *StorageChallenge
 	SignedEscrowContract []byte
 	Receiver             peer.ID
@@ -83,7 +85,7 @@ type Shards struct {
 	Length               time.Duration
 	StartTime            time.Time
 
-	Err                  error
+	Err error
 
 	RetryChan chan *StepRetryChan
 }
@@ -200,7 +202,7 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
 	if err != nil {
 		return err
 	}
-	err = rds.Put(ds.NewKey(FileContractsStorePrefix + ssID), fileContractsBytes)
+	err = rds.Put(ds.NewKey(FileContractsStorePrefix+ssID), fileContractsBytes)
 	if err != nil {
 		return err
 	}
@@ -209,7 +211,7 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
 		if err != nil {
 			return err
 		}
-		err = rds.Put(ds.NewKey(ShardsStorePrefix + chunkHash), shardBytes)
+		err = rds.Put(ds.NewKey(ShardsStorePrefix+chunkHash), shardBytes)
 		if err != nil {
 			return err
 		}
@@ -286,10 +288,11 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte) error {
+func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte, guardContract *guardPb.Contract) error {
 	ss.Lock()
 	defer ss.Unlock()
 
+	ss.GuardContracts = append(ss.GuardContracts, guardContract)
 	chunk := ss.ShardInfo[chunkHash]
 	if chunk == nil {
 		return fmt.Errorf("chunk does not exists")
@@ -297,6 +300,13 @@ func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte) e
 	chunk.SetSignedContract(contracts)
 	ss.CompleteContracts++
 	return nil
+}
+
+func (ss *FileContracts) GetGuardContracts() []*guardPb.Contract {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.GuardContracts
 }
 
 func (ss *FileContracts) GetCompleteContractNum() int {
