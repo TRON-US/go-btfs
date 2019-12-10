@@ -450,7 +450,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 			}
 		} else {
 			// find peer
-			pi, err := findPeer(ctx, n, nextHost.Identity)
+			pi, err := remote.FindPeer(ctx, n, nextHost.Identity)
 			if err != nil {
 				// it's normal to fail in finding peer,
 				// would give host another chance
@@ -489,20 +489,6 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 		}
 	}
 	return candidateHost, nil
-}
-
-func findPeer(ctx context.Context, n *core.IpfsNode, pid string) (*peer.AddrInfo, error) {
-	id, err := peer.IDB58Decode(pid)
-	if err != nil {
-		return nil, err
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	pinfo, err := n.Routing.FindPeer(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return &pinfo, nil
 }
 
 func changeAddress(pinfo *peer.AddrInfo) error {
@@ -1409,7 +1395,7 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 		}
 
 		// Check if peer is reachable
-		pi, err := findPeer(req.Context, n, req.Arguments[0])
+		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
 		if err != nil {
 			return err
 		}
