@@ -174,9 +174,10 @@ func addFileToBtfs(node *core.IpfsNode, data []byte, metadata string) (ipath.Pat
 	return ipath.IpfsPath(addedFileHash), nil
 }
 
-func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string) (ipath.Path, error) {
+func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, rs bool) (ipath.Path, error) {
 	// Make sure given `file` is a directory
-	if _, ok := file.(files.Directory); !ok {
+	dir, ok := file.(files.Directory)
+	if !ok {
 		return nil, errors.New("expected directory node")
 	}
 
@@ -189,6 +190,14 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string) (
 	adder.Out = output
 	if metadata != "" {
 		adder.TokenMetadata = metadata
+		//
+		if _, ok := file.(files.Directory); ok {
+			adder.MetaForDirectory = true
+		}
+	}
+	if rs {
+		dsize, psize, csize := 10, 20, 262144
+		adder.Chunker = fmt.Sprintf("reed-solomon-%d-%d-%d", dsize, psize, csize)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -203,15 +212,21 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string) (
 	}()
 
 	var addedFileHash cid.Cid
-	select {
-	case o := <-output:
-		err, ok := o.(error)
-		if ok {
-			return nil, err
+	size, err := directorySize(dir)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < int(size); i++ {
+		select {
+		case o := <-output:
+			err, ok := o.(error)
+			if ok {
+				return nil, err
+			}
+			addedFileHash = o.(*coreiface.AddEvent).Path.Cid()
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		}
-		addedFileHash = o.(*coreiface.AddEvent).Path.Cid()
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
 
 	return ipath.IpfsPath(addedFileHash), nil
@@ -559,15 +574,24 @@ func verifyMetadataItems(t *testing.T, node *core.IpfsNode, p ipath.Path, exp *M
 // TestAddAddOneLevelDirecotryWithMetadata tests the functionality
 // to add a one level directory with meta data items to BTFS network.
 func TestAddOneLevelDirectoryWithMetadata(t *testing.T) {
-	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmTnJd8mo5zKU2cYryiEbupSYgxwTypVxwJucQ8B2Qc8J3")
+	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmPY3r4fC7z42Vk6b5raaDrp5XaEYn9Cox9r3mu14t6ACj", false)
+}
+
+func TestAddOneLevelDirectoryWithMetadataReedSolomon(t *testing.T) {
+	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmaYixqwMW3oZoxL926E8jW9EsedPEGdkkGMCBhu8KKGyR", true)
 }
 
 // TestAddAddOneLevelDirecotryWithMetadata tests the functionality
 // to add a one level directory with meta data items to BTFS network.
 func TestAddTwoLevelDirectoryWithMetadata(t *testing.T) {
-	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmfUWYVuzQnSgdj2EyY9CcZxuwXBm4ekMAYenm9uKXzqtq")
+	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmVvHUJsJNwinxUtLDBNysrccF5iYx2eYH5NbhvH4M8Rmv", false)
 }
-func testAddDirectoryWithMetadata(t *testing.T, file files.Node, expectedFileHash string) {
+
+func TestAddTwoLevelDirectoryWithMetadataReedSolomon(t *testing.T) {
+	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmPm1v2rUvBCaFBnLVbWEDe2ZjwhLWAj4io47i8wHXDfy7", true)
+}
+
+func testAddDirectoryWithMetadata(t *testing.T, file files.Node, expectedFileHash string, reedSolomon bool) {
 	// Create repo.
 	r := &repo.Mock{
 		C: config.Config{
@@ -585,7 +609,7 @@ func testAddDirectoryWithMetadata(t *testing.T, file files.Node, expectedFileHas
 
 	// Add a file to BTFS network.
 	expected := "{\"price\":11.2,\"number\":2368}"
-	path, err := addDirectoryToBtfs(node, file, expected)
+	path, err := addDirectoryToBtfs(node, file, expected, reedSolomon)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -613,4 +637,34 @@ func twoLevelDirectory() files.Node {
 			"file3": files.NewBytesFile([]byte("test data")),
 		}),
 	})
+}
+
+func directorySize(f files.Node) (int, error) {
+	// Error cases
+	if f == nil {
+		return 0, errors.New("nil argument encountered")
+	}
+	curr, ok := f.(files.Directory)
+	if !ok {
+		return 0, errors.New("unexpected node type")
+	}
+
+	// Normal/recursive case
+	size := 1
+	it := curr.Entries()
+
+	for it.Next() {
+		_, ok := it.Node().(files.Directory)
+		if ok {
+			subSize, err := directorySize(it.Node())
+			if err != nil {
+				return 0, err
+			}
+			size += subSize
+		} else {
+			size++
+		}
+
+	}
+	return size, nil
 }

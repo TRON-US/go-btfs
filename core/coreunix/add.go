@@ -123,13 +123,18 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 			return nil, err
 		}
 	}
-	// Only append metadata if it's available
-	if md := chnk.MetaData(); md != nil {
-		metaBytes, err = adder.appendMetadataObject(metaBytes, md)
-		if err != nil {
-			return nil, err
+	// This `if conditional statement` makes sure this block is
+	// executed only one time for directory addition use case.
+	if adder.MetadataDag == nil {
+		// Only append metadata if it's available
+		if md := chnk.MetaData(); md != nil {
+			metaBytes, err = adder.appendMetadataObject(metaBytes, md)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+
 	// Add SuperMeta if metaBytes is not nil
 	chunkSize := chnk.ChunkSize()
 	if chunkSize == 0 {
