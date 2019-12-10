@@ -10,12 +10,12 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/tron-us/go-btfs-common/info"
-	"github.com/tron-us/go-btfs-common/protos/node"
+
+	"github.com/TRON-US/go-btfs-config"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
-	"github.com/TRON-US/go-btfs-config"
 	"github.com/cenkalti/backoff"
 	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
@@ -38,7 +38,7 @@ type programInfo struct {
 }
 
 type dataCollection struct {
-	info.NodeStorage
+	nodepb.Node_Settings
 	programInfo
 	UpTime      uint64  `json:"up_time"`         //Seconds
 	StorageUsed uint64  `json:"storage_used"`    //Stored in Kilobytes
@@ -129,7 +129,7 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 		res = append(res, fmt.Errorf("cannot get selfKey: %s", err.Error()))
 	}
 
-	var ns info.NodeStorage
+	var ns nodepb.Node_Settings
 	if err == nil {
 		err = json.Unmarshal(b, &ns)
 		if err != nil {
@@ -244,7 +244,7 @@ func (dc *dataCollection) doSendData(config *config.Config, sm *pb.SignedMetrics
 }
 
 func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
-	nd := new(node.Node)
+	nd := new(nodepb.Node)
 	now := time.Now().UTC()
 	nd.TimeCreated = now
 	nd.NodeId = dc.NodeID

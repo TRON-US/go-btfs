@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"strconv"
 	"strings"
 	"time"
@@ -22,10 +21,11 @@ import (
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/tron-us/go-btfs-common/crypto"
-	"github.com/tron-us/go-btfs-common/info"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
@@ -1232,34 +1232,32 @@ By default it shows local host node information.`,
 
 		rds := n.Repo.Datastore()
 
+		var ns *hubpb.SettingsData
 		b, err := rds.Get(storage.GetHostStorageKey(peerID))
 		if err != nil {
-			return err
+			var resp *hubpb.SettingsResp
+			err := grpc.HubQueryClient(cfg.Services.HubDomain).WithContext(context.Background(),
+				func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
+					req := new(hubpb.SettingsReq)
+					req.Id = peerID
+					resp, err = client.GetSettings(ctx, req)
+					return err
+				})
+			if err != nil {
+				return err
+			}
+			ns = resp.SettingsData
+		} else {
+			err = json.Unmarshal(b, &ns)
 		}
 
-		var ns info.NodeStorage
-		err = json.Unmarshal(b, &ns)
 		if err != nil {
 			return err
 		}
 
-		return cmds.EmitOnce(res, &StorageHostInfoRes{
-			StoragePrice:    ns.StoragePriceAsk,
-			BandwidthPrice:  ns.BandwidthPriceAsk,
-			CollateralPrice: ns.CollateralStake,
-			BandwidthLimit:  ns.BandwidthLimit,
-			StorageTimeMin:  ns.StorageTimeMin,
-		})
+		return cmds.EmitOnce(res, ns)
 	},
-	Type: StorageHostInfoRes{},
-}
-
-type StorageHostInfoRes struct {
-	StoragePrice    uint64
-	BandwidthPrice  uint64
-	CollateralPrice uint64
-	BandwidthLimit  float64
-	StorageTimeMin  uint64
+	Type: hubpb.SettingsData{},
 }
 
 var storageAnnounceCmd = &cmds.Command{
@@ -1304,7 +1302,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 			return err
 		}
 
-		var ns info.NodeStorage
+		var ns nodepb.Node_Settings
 		if err == nil {
 			// TODO: Set default values if unset
 			err = json.Unmarshal(b, &ns)

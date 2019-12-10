@@ -32,6 +32,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+
 	"github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
@@ -473,7 +474,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// Spin jobs in the background
 	spin.Analytics(node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node)
-	spin.Settings(node)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
