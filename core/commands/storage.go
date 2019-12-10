@@ -25,6 +25,7 @@ import (
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
@@ -1189,13 +1190,9 @@ By default it shows local host node information.`,
 			if !cfg.Experimental.StorageClientEnabled {
 				return fmt.Errorf("storage client api not enabled")
 			}
-			// TODO: Implement syncing other peers' storage info
-			return fmt.Errorf("showing other peer's info not supported yet")
 		} else if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
-
-		var peerID string
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -1203,42 +1200,59 @@ By default it shows local host node information.`,
 		}
 
 		// Default to self
+		var peerID string
 		if len(req.Arguments) > 0 {
 			peerID = req.Arguments[0]
 		} else {
 			peerID = n.Identity.Pretty()
 		}
 
-		rds := n.Repo.Datastore()
-
-		b, err := rds.Get(storage.GetHostStorageKey(peerID))
+		data, err := GetSettings(req.Context, cfg.Services.HubDomain, peerID, n.Repo.Datastore())
 		if err != nil {
 			return err
 		}
-
-		var ns info.NodeStorage
-		err = json.Unmarshal(b, &ns)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &StorageHostInfoRes{
-			StoragePrice:    ns.StoragePriceAsk,
-			BandwidthPrice:  ns.BandwidthPriceAsk,
-			CollateralPrice: ns.CollateralStake,
-			BandwidthLimit:  ns.BandwidthLimit,
-			StorageTimeMin:  ns.StorageTimeMin,
-		})
+		return cmds.EmitOnce(res, data)
 	},
-	Type: StorageHostInfoRes{},
+	Type: hubpb.SettingsData{},
 }
 
-type StorageHostInfoRes struct {
-	StoragePrice    uint64
-	BandwidthPrice  uint64
-	CollateralPrice uint64
-	BandwidthLimit  float64
-	StorageTimeMin  uint64
+func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsData, error) {
+	// get from LevelDB
+	b, err := rds.Get(storage.GetHostStorageKey(peerId))
+	if err == nil {
+		data := new(hubpb.SettingsData)
+		err = proto.Unmarshal(b, data)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+	}
+
+	// get from remote
+	var (
+		resp *hubpb.SettingsResp
+	)
+	err = grpc.HubQueryClient(addr).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
+		req := new(hubpb.SettingsReq)
+		req.Id = peerId
+		resp, err = client.GetSettings(ctx, req)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// save to rds
+	bytes, err := proto.Marshal(resp.SettingsData)
+	if err != nil {
+		return nil, err
+	}
+	err = rds.Put(storage.GetHostStorageKey(peerId), bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.SettingsData, nil
 }
 
 var storageAnnounceCmd = &cmds.Command{
