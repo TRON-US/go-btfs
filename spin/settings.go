@@ -14,7 +14,11 @@ func Settings(node *core.IpfsNode) {
 
 	if c.Experimental.StorageHostEnabled {
 		go func() {
-			commands.GetSettings(node.Context(), c.Services.HubDomain, node.Identity.Pretty(), node.Repo.Datastore())
+			_, err := commands.GetSettings(node.Context(), c.Services.HubDomain, node.Identity.Pretty(),
+				node.Repo.Datastore())
+			if err != nil {
+				log.Error("error occured when getting settings, error: ", err.Error())
+			}
 		}()
 	}
 
