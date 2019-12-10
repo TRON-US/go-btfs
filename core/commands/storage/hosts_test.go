@@ -1,8 +1,8 @@
 package storage
 
 import (
+	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"testing"
@@ -33,9 +33,15 @@ func TestHostsSaveGet(t *testing.T) {
 			t.Fatal(err)
 		}
 		for i, sn := range stored {
-			bs1, _ := proto.Marshal(sn)
-			bs2, _ := proto.Marshal(nodes[i])
-			if hex.EncodeToString(bs1) != hex.EncodeToString(bs2) {
+			bs1, err := proto.Marshal(sn)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bs2, err := proto.Marshal(nodes[i])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if bytes.Compare(bs1, bs2) == 0 {
 				t.Fatal("stored nodes do not match saved nodes")
 			}
 		}

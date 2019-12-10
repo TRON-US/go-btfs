@@ -3,7 +3,6 @@ package hub
 import (
 	"context"
 	"fmt"
-
 	"github.com/TRON-US/go-btfs/core"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
@@ -30,7 +29,7 @@ func CheckValidMode(mode string) error {
 
 // QueryHub queries the BTFS-Hub to retrieve the latest list of hosts info
 // according to a certain mode.
-func QueryHub(node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
+func QueryHub(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
 	switch mode {
 	case HubModeScore:
 		// Already the default on hub api
@@ -43,7 +42,7 @@ func QueryHub(node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
 		return nil, err
 	}
 	var resp *hubpb.HostsResp
-	err = grpc.HubQueryClient(config.Services.HubDomain).WithContext(context.Background(), func(ctx context.Context,
+	err = grpc.HubQueryClient(config.Services.HubDomain).WithContext(ctx, func(ctx context.Context,
 		client hubpb.HubQueryServiceClient) error {
 		resp, err = client.GetHosts(ctx, &hubpb.HostsReq{
 			Id: node.Identity.Pretty(),

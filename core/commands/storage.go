@@ -1163,7 +1163,7 @@ Mode options include:
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHub(node, mode)
+	nodes, err := hub.QueryHub(ctx, node, mode)
 	if err != nil {
 		return err
 	}
