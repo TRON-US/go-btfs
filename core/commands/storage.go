@@ -5,31 +5,34 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/guard"
-	"github.com/gogo/protobuf/proto"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"strconv"
 	"strings"
 	"time"
 
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
-	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/tron-us/go-btfs-common/crypto"
+	"github.com/tron-us/go-btfs-common/info"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+
+	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/tron-us/go-btfs-common/crypto"
-	"github.com/tron-us/go-btfs-common/info"
 )
 
 const (
@@ -226,7 +229,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 				// add host to retry queue
 				host := &storage.HostNode{
-					Identity:   ni.NodeID,
+					Identity:   ni.NodeId,
 					RetryTimes: 0,
 					FailTimes:  0,
 					Price:      price,
@@ -568,6 +571,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+
 		var contractRequest *escrowPb.EscrowContractRequest
 		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
 			contracts, price, err := storage.PrepareContractFromChunk(ss.ShardInfo)
@@ -823,48 +827,6 @@ func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID s
 	chunkInfo.SetState(storage.ChallengeState)
 }
 
-//func solveChallenge(chunkInfo *storage.Shards, chunkHash string, ssID string, resBytes []byte, n *core.IpfsNode, pid peer.ID, api coreiface.CoreAPI, req *cmds.Request) {
-//	sm := storage.GlobalSession
-//	ss := sm.GetOrDefault(ssID)
-//
-//	// get challenge object from params
-//	r := ChallengeRes{}
-//	if err := json.Unmarshal(resBytes, &r); err != nil {
-//		log.Error(err)
-//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-//		storage.GlobalSession.Remove(ssID, chunkHash)
-//		return
-//	}
-//	// find chunk hash cid
-//	chunkCid, err := cidlib.Parse(chunkHash)
-//	if err != nil {
-//		log.Error(err)
-//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-//		storage.GlobalSession.Remove(ssID, chunkHash)
-//		return
-//	}
-//	// compute challenge on host
-//	chunkInfo.SetState(storage.SolveState)
-//	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.GetFileHash(), chunkCid, r.ID)
-//	if err != nil {
-//		log.Error(err)
-//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-//		storage.GlobalSession.Remove(ssID, chunkHash)
-//		return
-//	}
-//	if err := sc.SolveChallenge(r.ChunkIndex, r.Nonce); err != nil {
-//		log.Error(err)
-//		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
-//		storage.GlobalSession.Remove(ssID, chunkHash)
-//		return
-//	}
-//	// update session to store challenge info there
-//	chunkInfo.UpdateChallenge(sc)
-//
-//	// RemoteCall(user, CHID, CHR) to get signedPayment
-//	chunkInfo.SetState(storage.VerifyState)
-//}
-
 type ChallengeRes struct {
 	ID         string
 	ChunkIndex int
@@ -1087,7 +1049,7 @@ Mode options include:
 }
 
 type HostInfoRes struct {
-	Nodes []*info.Node
+	Nodes []*hubpb.Host
 }
 
 var storageHostsSyncCmd = &cmds.Command{
@@ -1133,7 +1095,7 @@ Mode options include:
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHub(node, mode)
+	nodes, err := hub.QueryHub(ctx, node, mode)
 	if err != nil {
 		return err
 	}
