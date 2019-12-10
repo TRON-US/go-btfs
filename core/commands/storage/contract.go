@@ -14,7 +14,7 @@ func PrepareContractFromChunk(chunkInfo map[string]*Shards) ([]*escrowpb.SignedE
 			return nil, 0, err
 		}
 		signedContracts = append(signedContracts, sc)
-		totalPrice += chunk.Price
+		totalPrice += chunk.TotalPay
 	}
 	return signedContracts, totalPrice, nil
 }

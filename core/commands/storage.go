@@ -49,6 +49,7 @@ const (
 	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
 	testOnlyOptionName            = "host-search-local"
+	storageLengthOptionName       = "storage-length"
 
 	defaultRepFactor = 3
 
@@ -123,6 +124,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault(storage.HostModeDefault),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
+		cmds.Int64Option(storageLengthOptionName, "len", "Store file for certain time range.").WithDefault(30),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -148,6 +150,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		var (
 			shardHashes []string
 			rootHash    cidlib.Cid
+			shardSize   uint64
 		)
 		lf, _ := req.Options[leafHashOptionName].(bool)
 		if lf == false {
@@ -162,6 +165,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return err
 			}
 			hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+			if err != nil || len(hashes) == 0 {
+				return fmt.Errorf("invalid hash: %s", err)
+			}
+			// get shard size
+			shardSize, err = getContractSizeFromCid(req.Context, hashes[0], api)
 			if err != nil {
 				return err
 			}
@@ -171,6 +179,14 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		} else {
 			rootHash = cidlib.Undef
 			shardHashes = req.Arguments
+			shardCid, err := cidlib.Parse(shardHashes[0])
+			if err != nil {
+				return err
+			}
+			shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
+			if err != nil {
+				return err
+			}
 		}
 		// start new session
 		sm := storage.GlobalSession
@@ -240,13 +256,14 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		}
+		storageLength := req.Options[storageLengthOptionName].(int)
 
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
 
 		// add chunks into session
 		for _, shardHash := range shardHashes {
-			ss.GetOrDefault(shardHash)
+			ss.GetOrDefault(shardHash, shardSize, int64(storageLength), price)
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
 		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag)
@@ -257,6 +274,15 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		return res.Emit(seRes)
 	},
 	Type: UploadRes{},
+}
+
+func getContractSizeFromCid(ctx context.Context, hash cidlib.Cid, api coreiface.CoreAPI) (uint64, error) {
+	leafPath := path.IpfsPath(hash)
+	ipldNode, err := api.ResolveNode(ctx, leafPath)
+	if err != nil {
+		return 0, err
+	}
+	return ipldNode.Size()
 }
 
 func controlSessionTimeout(ss *storage.FileContracts) {
@@ -410,7 +436,11 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.FileContracts,
 	n *core.IpfsNode, halfSignedEscrowContract []byte, halfSignedGuardContract []byte, shardHash string, ssID string, test bool) {
 	// record shard info in session
-	shard := ss.GetOrDefault(shardHash)
+	shard, err := ss.GetShard(shardHash)
+	if err != nil {
+		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
+		return
+	}
 
 	// if candidate host passed in is not valid, fetch next valid one
 	if candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
@@ -430,7 +460,7 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		return
 	}
 
-	shard.UpdateShard(n.Identity, hostPid, candidateHost.Price)
+	shard.UpdateShard(hostPid)
 	shard.SetState(storage.InitState)
 	// send over contract
 	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
@@ -631,7 +661,7 @@ var storageUploadProofCmd = &cmds.Command{
 		shardHash := req.Arguments[1]
 		// get info from session
 		// previous step should have information with channel id and price
-		shardInfo, err := ss.GetChunk(shardHash)
+		shardInfo, err := ss.GetShard(shardHash)
 		if err != nil {
 			if shardInfo != nil {
 				sendStepStateChan(shardInfo.RetryChan, storage.CompleteState, false, err, nil)
@@ -671,9 +701,10 @@ the chunk and replies back to client for the next challenge step.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("file-hash", true, false, "Root file storage node should fetch (the DAG)."),
 		cmds.StringArg("shard-hash", true, false, "Shard the storage node should fetch."),
-		cmds.StringArg("price", true, false, "Price per GB in BTT for storing this chunk offered by client."),
+		cmds.StringArg("price", true, false, "TotalPay per GB in BTT for storing this chunk offered by client."),
 		cmds.StringArg("escrow-contract", true, false, "Client's initial escrow contract data."),
 		cmds.StringArg("guard-contract-meta", true, false, "Client's initial guard contract meta."),
+		cmds.StringArg("storage-length", true, false, "Time Duration the host agree to store file.(daily based)"),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -685,6 +716,10 @@ the chunk and replies back to client for the next challenge step.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
 
 		ssID := req.Arguments[0]
 		fileHash, err := cidlib.Parse(req.Arguments[1])
@@ -692,6 +727,14 @@ the chunk and replies back to client for the next challenge step.`,
 			return err
 		}
 		shardHash := req.Arguments[2]
+		shardCid, err := cidlib.Parse(shardHash)
+		if err != nil {
+			return err
+		}
+		shardSize, err := getContractSizeFromCid(req.Context, shardCid, api)
+		if err != nil {
+			return err
+		}
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
@@ -706,15 +749,18 @@ the chunk and replies back to client for the next challenge step.`,
 		if !ok {
 			return fmt.Errorf("fail to get peer ID from request")
 		}
-
+		storeLen, err := strconv.Atoi(req.Arguments[6])
+		if err != nil {
+			return err
+		}
 		// build session
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(fileHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
-		shardInfo := ss.GetOrDefault(shardHash)
-		shardInfo.UpdateShard(pid, n.Identity, price)
+		shardInfo := ss.GetOrDefault(shardHash, shardSize, int64(storeLen), price)
+		shardInfo.UpdateShard(n.Identity)
 		shardInfo.SetState(storage.InitState)
 
 		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
@@ -842,7 +888,7 @@ the contents and nonce together to produce a final challenge response.`,
 		}
 		chunkHash := req.Arguments[1]
 		// previous step should have information with channel id and price
-		chunkInfo, err := ss.GetChunk(chunkHash)
+		chunkInfo, err := ss.GetShard(chunkHash)
 		if err != nil {
 			return err
 		}
@@ -922,7 +968,7 @@ signature back to the host to complete payment.`,
 		chunkHash := req.Arguments[2]
 		// get info from session
 		// previous step should have information with channel id and price
-		chunkInfo, err := ss.GetChunk(chunkHash)
+		chunkInfo, err := ss.GetShard(chunkHash)
 		if err != nil {
 			return err
 		}
@@ -1250,10 +1296,10 @@ This command updates host information and broadcasts to the BTFS network.`,
 type StatusRes struct {
 	Status   string
 	FileHash string
-	Chunks   map[string]*ChunkStatus
+	Shards   map[string]*ShardStatus
 }
 
-type ChunkStatus struct {
+type ShardStatus struct {
 	Price  int64
 	Host   string
 	Status string
@@ -1286,18 +1332,18 @@ This command print upload and payment status by the time queried.`,
 			return fmt.Errorf("storage client/host api not enabled")
 		}
 
-		// get chunks info from session
+		// get shards info from session
 		status.Status = ss.GetStatus()
 		status.FileHash = ss.GetFileHash().String()
-		chunks := make(map[string]*ChunkStatus)
-		status.Chunks = chunks
+		shards := make(map[string]*ShardStatus)
+		status.Shards = shards
 		for hash, info := range ss.ShardInfo {
-			c := &ChunkStatus{
-				Price:  info.GetPrice(),
+			c := &ShardStatus{
+				Price:  info.Price,
 				Host:   info.Receiver.String(),
 				Status: info.GetState(),
 			}
-			chunks[hash] = c
+			shards[hash] = c
 		}
 		return res.Emit(status)
 	},
@@ -1379,7 +1425,7 @@ the challenge request back to the caller.`,
 		cmds.StringArg("contract-id", true, false, "Contract ID associated with the challenge requests."),
 		cmds.StringArg("file-hash", true, false, "File root multihash for the data stored at this host."),
 		cmds.StringArg("shard-hash", true, false, "Shard multihash for the data stored at this host."),
-		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
+		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Shards available on this host include root + metadata + shard chunks."),
 		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
 	},
 	RunTimeout: 3 * time.Second, // TODO: consider large files?

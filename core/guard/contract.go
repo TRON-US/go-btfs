@@ -20,18 +20,19 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, c
 		return nil, err
 	}
 	return &guardPb.ContractMeta{
-		ContractId:       shard.ContractID,
-		RenterPid:        session.Renter.Pretty(),
-		HostPid:          shard.Receiver.Pretty(),
-		ShardHash:        chunkHash,
-		ShardIndex:       chunkIndex,
-		FileHash:         session.FileHash.KeyString(),
-		RentStart:        shard.StartTime,
-		RentEnd:          shard.StartTime.Add(shard.Length),
-		GuardPid:         guardPid.Pretty(),
-		EscrowPid:        escrowPid.Pretty(),
-		Price:            shard.Price,
-		Amount:           1000, // TODO: CHANGE and aLL other optional fields
+		ContractId:    shard.ContractID,
+		RenterPid:     session.Renter.Pretty(),
+		HostPid:       shard.Receiver.Pretty(),
+		ShardHash:     chunkHash,
+		ShardIndex:    chunkIndex,
+		ShardFileSize: int64(shard.Size),
+		FileHash:      session.FileHash.KeyString(),
+		RentStart:     shard.StartTime,
+		RentEnd:       shard.StartTime.Add(shard.Length),
+		GuardPid:      guardPid.Pretty(),
+		EscrowPid:     escrowPid.Pretty(),
+		Price:         shard.Price,
+		Amount:        shard.TotalPay, // TODO: CHANGE and aLL other optional fields
 	}, nil
 }
 

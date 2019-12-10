@@ -81,10 +81,12 @@ type Shards struct {
 	SignedEscrowContract []byte
 	Receiver             peer.ID
 	Price                int64
+	TotalPay             int64
 	State                int
+	Size                 uint64
 	Length               time.Duration
 	StartTime            time.Time
-	Err error
+	Err                  error
 
 	RetryChan chan *StepRetryChan
 }
@@ -175,7 +177,7 @@ func (sm *SessionMap) Remove(ssID string, chunkHash string) {
 
 	if ss := sm.Map[ssID]; ss != nil {
 		if chunkHash != "" {
-			ss.RemoveChunk(chunkHash)
+			ss.RemoveShard(chunkHash)
 		}
 		if len(ss.ShardInfo) == 0 {
 			delete(sm.Map, ssID)
@@ -328,15 +330,7 @@ func (ss *FileContracts) GetStatus() string {
 	return ss.Status
 }
 
-func (ss *FileContracts) PutChunk(hash string, chunk *Shards) {
-	ss.Lock()
-	defer ss.Unlock()
-
-	ss.ShardInfo[hash] = chunk
-	ss.Time = time.Now()
-}
-
-func (ss *FileContracts) GetChunk(hash string) (*Shards, error) {
+func (ss *FileContracts) GetShard(hash string) (*Shards, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -346,7 +340,7 @@ func (ss *FileContracts) GetChunk(hash string) (*Shards, error) {
 	return ss.ShardInfo[hash], nil
 }
 
-func (ss *FileContracts) RemoveChunk(hash string) {
+func (ss *FileContracts) RemoveShard(hash string) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -355,7 +349,7 @@ func (ss *FileContracts) RemoveChunk(hash string) {
 	}
 }
 
-func (ss *FileContracts) GetOrDefault(hash string) *Shards {
+func (ss *FileContracts) GetOrDefault(hash string, shardSize uint64, length int64, price int64) *Shards {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -364,6 +358,10 @@ func (ss *FileContracts) GetOrDefault(hash string) *Shards {
 		c.RetryChan = make(chan *StepRetryChan)
 		c.StartTime = time.Now()
 		c.State = InitState
+		c.Size = shardSize
+		c.Length = time.Duration(length*24) * time.Hour
+		c.Price = price
+		c.TotalPay = price * int64(shardSize) * length
 		ss.ShardInfo[hash] = c
 		return c
 	}
@@ -377,12 +375,18 @@ func (c *Shards) SetContractID(ssID string, chunkHash string) {
 	c.ContractID = ssID + chunkHash
 }
 
-func (c *Shards) UpdateShard(payerPid peer.ID, recvPid peer.ID, price int64) {
+func (c *Shards) GetContractID() string {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.ContractID
+}
+
+func (c *Shards) UpdateShard(recvPid peer.ID) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.Receiver = recvPid
-	c.Price = price
 	c.StartTime = time.Now()
 }
 
@@ -443,18 +447,11 @@ func (c *Shards) GetState() string {
 	return StdChunkStateFlow[c.State].State
 }
 
-func (c *Shards) SetPrice(price int64) {
+func (c *Shards) GetTotalAmount() int64 {
 	c.Lock()
 	defer c.Unlock()
 
-	c.Price = price
-}
-
-func (c *Shards) GetPrice() int64 {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.Price
+	return c.TotalPay
 }
 
 func (c *Shards) SetTime(time time.Time) {
