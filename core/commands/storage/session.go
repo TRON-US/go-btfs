@@ -84,7 +84,6 @@ type Shards struct {
 	State                int
 	Length               time.Duration
 	StartTime            time.Time
-
 	Err error
 
 	RetryChan chan *StepRetryChan
@@ -371,7 +370,14 @@ func (ss *FileContracts) GetOrDefault(hash string) *Shards {
 	return ss.ShardInfo[hash]
 }
 
-func (c *Shards) UpdateChunk(payerPid peer.ID, recvPid peer.ID, price int64) {
+func (c *Shards) SetContractID(ssID string, chunkHash string) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.ContractID = ssID + chunkHash
+}
+
+func (c *Shards) UpdateShard(payerPid peer.ID, recvPid peer.ID, price int64) {
 	c.Lock()
 	defer c.Unlock()
 

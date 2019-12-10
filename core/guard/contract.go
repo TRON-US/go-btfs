@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"fmt"
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"time"
@@ -30,10 +31,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, c
 		GuardPid:         guardPid.Pretty(),
 		EscrowPid:        escrowPid.Pretty(),
 		Price:            shard.Price,
-		Amount:           1000,
-		CollateralAmount: 0,
-		PayoutSchedule:   0,
-		NumPayouts:       5,
+		Amount:           1000, // TODO: CHANGE and aLL other optional fields
 	}, nil
 }
 
@@ -68,11 +66,19 @@ func UnmarshalGuardContract(marshaledBody []byte) (*guardPb.Contract, error) {
 }
 
 func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error) {
-	escrowPid, err := pidFromString(configuration.Services.EscrowPubKeys[0])
+	escrowPubKeys := configuration.Services.EscrowPubKeys
+	if len(escrowPubKeys) == 0 {
+		return "", "", fmt.Errorf("missing escrow public key in config")
+	}
+	guardPubKeys := configuration.Services.GuardPubKeys
+	if len(guardPubKeys) == 0 {
+		return "", "", fmt.Errorf("missing guard public key in config")
+	}
+	escrowPid, err := pidFromString(escrowPubKeys[0])
 	if err != nil {
 		return "", "", err
 	}
-	guardPid, err := pidFromString(configuration.Services.GuardPubKeys[0])
+	guardPid, err := pidFromString(guardPubKeys[0])
 	if err != nil {
 		return "", "", err
 	}
