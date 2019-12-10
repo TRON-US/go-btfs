@@ -1269,10 +1269,9 @@ This command updates host information and broadcasts to the BTFS network.`,
 		rds := n.Repo.Datastore()
 		peerId := n.Identity.Pretty()
 
+		ns := new(hubpb.SettingsData)
 		selfKey := storage.GetHostStorageKey(peerId)
 		b, err := rds.Get(selfKey)
-
-		ns := new(hubpb.SettingsData)
 		if err == ds.ErrNotFound {
 			// If key not found, get from remote
 			if n, err := GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds); err != nil {
