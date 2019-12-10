@@ -1229,12 +1229,10 @@ By default it shows local host node information.`,
 			ns = resp.SettingsData
 		} else {
 			err = json.Unmarshal(b, &ns)
+			if err != nil {
+				return err
+			}
 		}
-
-		if err != nil {
-			return err
-		}
-
 		return cmds.EmitOnce(res, ns)
 	},
 	Type: hubpb.SettingsData{},
