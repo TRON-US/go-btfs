@@ -68,11 +68,12 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 	}, nil
 }
 
-func SubmitContractToEscrow(configuration *config.Config, request *escrowpb.EscrowContractRequest) (
+func SubmitContractToEscrow(ctx context.Context, configuration *config.Config,
+	request *escrowpb.EscrowContractRequest) (
 	response *escrowpb.SignedSubmitContractResult, err error) {
-	grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
+	grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			response, err = client.SubmitContracts(context.Background(), request)
+			response, err = client.SubmitContracts(ctx, request)
 			if err != nil {
 				return err
 			}
@@ -127,11 +128,11 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 	}, nil
 }
 
-func PayInToEscrow(configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRquest) (*escrowpb.SignedPayinResult, error) {
+func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRquest) (*escrowpb.SignedPayinResult, error) {
 	var signedPayinRes *escrowpb.SignedPayinResult
-	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
+	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			res, err := client.PayIn(context.Background(), signedPayinReq)
+			res, err := client.PayIn(ctx, signedPayinReq)
 			if err != nil {
 				return err
 			}

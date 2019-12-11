@@ -57,7 +57,7 @@ const (
 	RetryLimit = 3
 	FailLimit  = 3
 
-	bttTotalSupply = 990_000_000_000
+	bttTotalSupply uint64 = 990_000_000_000
 )
 
 // TODO: get/set the value from/in go-btfs-common
@@ -603,17 +603,17 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				log.Error(err)
 				return err
 			}
-			submitContractRes, err := escrow.SubmitContractToEscrow(cfg, contractRequest)
+			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
 			if err != nil {
 				return err
 			}
-			go payFullToEscrow(submitContractRes, cfg, ss.GetGuardContracts())
+			go payFullToEscrow(context.Background(), submitContractRes, cfg, ss.GetGuardContracts())
 		}
 		return nil
 	},
 }
 
-func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, guardContracts []*guardPb.Contract) {
+func payFullToEscrow(ctx context.Context, response *escrowPb.SignedSubmitContractResult, configuration *config.Config, guardContracts []*guardPb.Contract) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -626,7 +626,7 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuratio
 		log.Error(err)
 		return
 	}
-	payinRes, err := escrow.PayInToEscrow(configuration, payinRequest)
+	payinRes, err := escrow.PayInToEscrow(ctx, configuration, payinRequest)
 	if err != nil {
 		log.Error(err)
 		return
