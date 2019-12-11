@@ -4,21 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
 
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 )
 
 var GlobalSession *SessionMap
-var StdChunkStateFlow [7]*FlowControl
+var StdStateFlow [7]*FlowControl
 var StdSessionStateFlow [4]*FlowControl
 
 const (
@@ -83,8 +84,9 @@ type Shards struct {
 	Price                int64
 	TotalPay             int64
 	State                int
-	Size                 uint64
-	Length               time.Duration
+	ShardSize            uint64
+	StorageLength        int64
+	ContractLength       time.Duration
 	StartTime            time.Time
 	Err                  error
 
@@ -103,25 +105,25 @@ func init() {
 	GlobalSession = &SessionMap{}
 	GlobalSession.Map = make(map[string]*FileContracts)
 	// init chunk state
-	StdChunkStateFlow[InitState] = &FlowControl{
+	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[UploadState] = &FlowControl{
+	StdStateFlow[UploadState] = &FlowControl{
 		State:   "upload",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[ChallengeState] = &FlowControl{
+	StdStateFlow[ChallengeState] = &FlowControl{
 		State:   "challenge",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[SolveState] = &FlowControl{
+	StdStateFlow[SolveState] = &FlowControl{
 		State:   "solve",
 		TimeOut: 30 * time.Second}
-	StdChunkStateFlow[VerifyState] = &FlowControl{
+	StdStateFlow[VerifyState] = &FlowControl{
 		State:   "verify",
 		TimeOut: time.Second}
-	StdChunkStateFlow[PaymentState] = &FlowControl{
+	StdStateFlow[PaymentState] = &FlowControl{
 		State:   "payment",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[CompleteState] = &FlowControl{
+	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
 	// init session status
@@ -259,14 +261,14 @@ func (ss *FileContracts) GetRetryQueue() *RetryQueue {
 	return ss.RetryQueue
 }
 
-func (ss *FileContracts) UpdateCompleteChunkNum(diff int) {
+func (ss *FileContracts) UpdateCompleteShardNum(diff int) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.CompleteChunks += diff
 }
 
-func (ss *FileContracts) GetCompleteChunks() int {
+func (ss *FileContracts) GetCompleteShards() int {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -358,21 +360,22 @@ func (ss *FileContracts) GetOrDefault(hash string, shardSize uint64, length int6
 		c.RetryChan = make(chan *StepRetryChan)
 		c.StartTime = time.Now()
 		c.State = InitState
-		c.Size = shardSize
-		c.Length = time.Duration(length*24) * time.Hour
+		c.ShardSize = shardSize
+		c.StorageLength = length
+		c.ContractLength = time.Duration(length*24) * time.Hour
 		c.Price = price
-		c.TotalPay = price * int64(shardSize) * length
+		c.TotalPay = price * int64(shardSize) * length / int64(units.GiB)
 		ss.ShardInfo[hash] = c
 		return c
 	}
 	return ss.ShardInfo[hash]
 }
 
-func (c *Shards) SetContractID(ssID string, chunkHash string) {
+func (c *Shards) SetContractID(ssID string, shardHash string) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.ContractID = ssID + chunkHash
+	c.ContractID = ssID + shardHash
 }
 
 func (c *Shards) GetContractID() string {
@@ -444,7 +447,7 @@ func (c *Shards) GetState() string {
 	c.Lock()
 	defer c.Unlock()
 
-	return StdChunkStateFlow[c.State].State
+	return StdStateFlow[c.State].State
 }
 
 func (c *Shards) GetTotalAmount() int64 {

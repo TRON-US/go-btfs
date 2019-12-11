@@ -21,7 +21,7 @@ func TestGenContractsFromChunk(t *testing.T) {
 	chunk["1"] = &Shards{TotalPay: 1, SignedEscrowContract: contract1Bytes}
 	chunk["2"] = &Shards{TotalPay: 10, SignedEscrowContract: contract2Bytes}
 
-	_, totalPrice, err := PrepareContractFromChunk(chunk)
+	_, totalPrice, err := PrepareContractFromShard(chunk)
 	if totalPrice != 11 {
 		t.Fatal("price doesn't match")
 	}
