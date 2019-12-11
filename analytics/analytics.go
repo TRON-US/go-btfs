@@ -109,10 +109,10 @@ func Initialize(n *core.IpfsNode, BTFSVersion, hValue string) {
 		dc.ArchType = runtime.GOARCH
 	}
 
-	go dc.collectionAgent()
+	go dc.collectionAgent(n.Context())
 }
 
-func (dc *dataCollection) update() {
+func (dc *dataCollection) update(ctx context.Context) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
@@ -129,13 +129,13 @@ func (dc *dataCollection) update() {
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
 	if !ok {
-		dc.reportHealthAlert("failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion")
+		dc.reportHealthAlert(ctx, "failed to perform dc.node.Exchange.(*bitswap.Bitswap) type assertion")
 		return
 	}
 
 	st, err := bs.Stat()
 	if err != nil {
-		dc.reportHealthAlert(fmt.Sprintf("failed to perform bs.Stat() call: %s", err.Error()))
+		dc.reportHealthAlert(ctx, fmt.Sprintf("failed to perform bs.Stat() call: %s", err.Error()))
 		return
 	}
 
@@ -149,17 +149,17 @@ func (dc *dataCollection) update() {
 	dc.NumPeers = uint64(len(st.Peers))
 }
 
-func (dc *dataCollection) sendData() {
-	sm, err := dc.doPrepData()
+func (dc *dataCollection) sendData(ctx context.Context) {
+	sm, err := dc.doPrepData(ctx)
 	if err != nil {
 		log.Error("failed to prepare data for status server: ", err)
-		dc.reportHealthAlert(err.Error())
+		dc.reportHealthAlert(ctx, err.Error())
 		return
 	}
 
 	// Retry for connections
 	retry(func() error {
-		err := dc.doSendData(sm)
+		err := dc.doSendData(ctx, sm)
 		if err != nil {
 			log.Error("failed to send data to status server: ", err)
 		}
@@ -167,8 +167,8 @@ func (dc *dataCollection) sendData() {
 	})
 }
 
-func (dc *dataCollection) doPrepData() (*pb.SignedMetrics, error) {
-	dc.update()
+func (dc *dataCollection) doPrepData(ctx context.Context) (*pb.SignedMetrics, error) {
+	dc.update(ctx)
 	payload, err := dc.getPayload()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
@@ -194,13 +194,13 @@ func (dc *dataCollection) doPrepData() (*pb.SignedMetrics, error) {
 	return sm, nil
 }
 
-func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
+func (dc *dataCollection) doSendData(ctx context.Context, sm *pb.SignedMetrics) error {
 	config, err := dc.node.Repo.Config()
 	if err != nil {
 		return err
 	}
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
+	return cb.WithContext(ctx, func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.UpdateMetrics(ctx, sm)
 		return err
 	})
@@ -239,14 +239,14 @@ func (dc *dataCollection) getPayload() ([]byte, error) {
 	return bytes, nil
 }
 
-func (dc *dataCollection) collectionAgent() {
+func (dc *dataCollection) collectionAgent(ctx context.Context) {
 	tick := time.NewTicker(heartBeat)
 
 	defer tick.Stop()
 
 	config, _ := dc.node.Repo.Config()
 	if config.Experimental.Analytics {
-		dc.sendData()
+		dc.sendData(ctx)
 	}
 	// make the configuration available in the for loop
 	for range tick.C {
@@ -254,7 +254,7 @@ func (dc *dataCollection) collectionAgent() {
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection
 		if config.Experimental.Analytics {
-			dc.sendData()
+			dc.sendData(ctx)
 		}
 	}
 }
@@ -265,13 +265,13 @@ func retry(f func() error) {
 	backoff.Retry(f, bo)
 }
 
-func (dc *dataCollection) reportHealthAlert(failurePoint string) {
+func (dc *dataCollection) reportHealthAlert(ctx context.Context, failurePoint string) {
 	retry(func() error {
-		return dc.doReportHealthAlert(failurePoint)
+		return dc.doReportHealthAlert(ctx, failurePoint)
 	})
 }
 
-func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
+func (dc *dataCollection) doReportHealthAlert(ctx context.Context, failurePoint string) error {
 	n := new(pb.NodeHealth)
 	n.BtfsVersion = dc.BTFSVersion
 	n.FailurePoint = failurePoint
@@ -284,7 +284,7 @@ func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
 		return err
 	}
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
+	return cb.WithContext(ctx, func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.CollectHealth(ctx, n)
 		return err
 	})
