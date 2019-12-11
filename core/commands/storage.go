@@ -22,10 +22,10 @@ import (
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/tron-us/go-btfs-common/crypto"
-	"github.com/tron-us/go-btfs-common/info"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
@@ -56,6 +56,8 @@ const (
 	// retry limit
 	RetryLimit = 3
 	FailLimit  = 3
+
+	bttTotalSupply = 990_000_000_000
 )
 
 // TODO: get/set the value from/in go-btfs-common
@@ -341,7 +343,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				return
 			}
 			// init escrow Contract
-			escrowContract := escrow.NewContract(cfg, shardHash, n.Identity.Pretty(), candidateHost.Identity, candidateHost.Price)
+			escrowContract := escrow.NewContract(cfg, shardHash, n.Identity.Pretty(), candidateHost.Identity, shardInfo.TotalPay)
 			halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
 			if err != nil {
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
@@ -1169,14 +1171,14 @@ By default it shows local host node information.`,
 		}
 		return cmds.EmitOnce(res, data)
 	},
-	Type: hubpb.SettingsData{},
+	Type: nodepb.Node_Settings{},
 }
 
-func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*hubpb.SettingsData, error) {
+func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*nodepb.Node_Settings, error) {
 	// get from LevelDB
 	b, err := rds.Get(storage.GetHostStorageKey(peerId))
 	if err == nil {
-		data := new(hubpb.SettingsData)
+		data := new(nodepb.Node_Settings)
 		err = proto.Unmarshal(b, data)
 		if err != nil {
 			return nil, err
@@ -1184,14 +1186,24 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 		return data, nil
 	}
 
+	if err != ds.ErrNotFound {
+		return nil, err
+	}
+
 	// get from remote
-	var (
-		resp *hubpb.SettingsResp
-	)
+	ns := new(nodepb.Node_Settings)
 	err = grpc.HubQueryClient(addr).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
 		req := new(hubpb.SettingsReq)
 		req.Id = peerId
-		resp, err = client.GetSettings(ctx, req)
+		resp, err := client.GetSettings(ctx, req)
+		if err != nil {
+			return err
+		}
+		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
+		ns.StoragePriceAsk = uint64(resp.SettingsData.StoragePriceAsk)
+		ns.BandwidthLimit = resp.SettingsData.BandwidthLimit
+		ns.BandwidthPriceAsk = uint64(resp.SettingsData.BandwidthPriceAsk)
+		ns.CollateralStake = uint64(resp.SettingsData.CollateralStake)
 		return err
 	})
 	if err != nil {
@@ -1199,7 +1211,7 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 	}
 
 	// save to rds
-	bytes, err := proto.Marshal(resp.SettingsData)
+	bytes, err := proto.Marshal(ns)
 	if err != nil {
 		return nil, err
 	}
@@ -1208,7 +1220,7 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 		return nil, err
 	}
 
-	return resp.SettingsData, nil
+	return ns, nil
 }
 
 var storageAnnounceCmd = &cmds.Command{
@@ -1239,27 +1251,21 @@ This command updates host information and broadcasts to the BTFS network.`,
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
 
+		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
+			return fmt.Errorf("maximum price is %d", bttTotalSupply)
+		}
+
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
 
 		rds := n.Repo.Datastore()
+		peerId := n.Identity.Pretty()
 
-		selfKey := storage.GetHostStorageKey(n.Identity.Pretty())
-		b, err := rds.Get(selfKey)
-		// If key not found, create new
-		if err != nil && err != ds.ErrNotFound {
+		ns, err := GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds)
+		if err != nil {
 			return err
-		}
-
-		var ns info.NodeStorage
-		if err == nil {
-			// TODO: Set default values if unset
-			err = json.Unmarshal(b, &ns)
-			if err != nil {
-				return err
-			}
 		}
 
 		// Update fields if set
@@ -1279,12 +1285,12 @@ This command updates host information and broadcasts to the BTFS network.`,
 			ns.StorageTimeMin = stm
 		}
 
-		nb, err := json.Marshal(ns)
+		nb, err := proto.Marshal(ns)
 		if err != nil {
 			return err
 		}
 
-		err = rds.Put(selfKey, nb)
+		err = rds.Put(storage.GetHostStorageKey(peerId), nb)
 		if err != nil {
 			return err
 		}

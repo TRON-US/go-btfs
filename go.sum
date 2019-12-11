@@ -37,6 +37,8 @@ github.com/TRON-US/go-btfs-config v0.2.1 h1:VEJojgve8JfsbPvKJ882KCn4JO6BthrJOkW6
 github.com/TRON-US/go-btfs-config v0.2.1/go.mod h1:SdSLMMxOxqLYvMI0eJItYH7mWkG22EX5WaGyUwOq3fU=
 github.com/TRON-US/go-btfs-files v0.1.1 h1:GuDIiWDM66bfhfxJy8+dBL4Cfbcp3iBp7pgHpKKCw8k=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
+github.com/TRON-US/go-btfs-files v0.1.2 h1:iXaPv9w5zND7rFbjRzX7kP7TEWr4G3Y1h4inslEtyxk=
+github.com/TRON-US/go-btfs-files v0.1.2/go.mod h1:WbnH7HFFolwxJyzuZlE2qWBJfCCVczzpRQwerYIZApM=
 github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElAe7A0=
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
@@ -46,6 +48,8 @@ github.com/TRON-US/go-unixfs v0.4.12 h1:8u8D6JQPngXKGHPgq98+TLPaSjCx/QtYipiuP/Mt
 github.com/TRON-US/go-unixfs v0.4.12/go.mod h1:0Jv/z5OvpB4JpjJcUFB9turYohcoqjF/tmczQX9eeJ4=
 github.com/TRON-US/go-unixfs v0.4.13 h1:Ck55atVfRY4IIHEKlRFI/z+Z3qcYCNG34QmLMQgECNU=
 github.com/TRON-US/go-unixfs v0.4.13/go.mod h1:m/qCevblRIFFCxTHlKtljACjCIYV6nOivzx+jh0nOQU=
+github.com/TRON-US/go-unixfs v0.4.14 h1:M+FeKP0LX1fKdbN+dWYAM1vK/1X8OB6kdijsZlumnXI=
+github.com/TRON-US/go-unixfs v0.4.14/go.mod h1:m/qCevblRIFFCxTHlKtljACjCIYV6nOivzx+jh0nOQU=
 github.com/TRON-US/interface-go-btfs-core v0.4.3 h1:Ld/6GhCElyaQsBPdIU0DkZWdWzXvscnhUTAxWLBcuJ8=
 github.com/TRON-US/interface-go-btfs-core v0.4.3/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
