@@ -55,7 +55,7 @@ const (
 	RetryLimit = 3
 	FailLimit  = 3
 
-	bttTotalSupply = 990_000_000_000
+	bttTotalSupply uint64 = 990_000_000_000
 )
 
 // TODO: get/set the value from/in go-btfs-common
