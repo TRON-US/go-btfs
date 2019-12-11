@@ -114,7 +114,7 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/go-btfs-common v0.1.1
+	github.com/tron-us/go-btfs-common v0.1.11
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
@@ -129,7 +129,6 @@ require (
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7 // indirect
-	google.golang.org/grpc v1.24.0
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4

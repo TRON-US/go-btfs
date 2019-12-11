@@ -785,8 +785,8 @@ github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
-github.com/tron-us/go-btfs-common v0.1.1 h1:tEi9Bj2fvI76mBfK497N851zpqhy67wIpe2B1LYMZvw=
-github.com/tron-us/go-btfs-common v0.1.1/go.mod h1:vvz4y9UC2KNJ8srb5xjUWHNNW18h1LDuWd5OR6UAf4s=
+github.com/tron-us/go-btfs-common v0.1.11 h1:nBTgSNYBMzdC3l8RKwt1DNgdtWSEj8nhgeEKBG9Su/A=
+github.com/tron-us/go-btfs-common v0.1.11/go.mod h1:vvz4y9UC2KNJ8srb5xjUWHNNW18h1LDuWd5OR6UAf4s=
 github.com/tron-us/go-common/v2 v2.0.4 h1:9NcfOawrRPGnkEuQ1v9k5WtaUzXC1haHBESamMzfwR4=
 github.com/tron-us/go-common/v2 v2.0.4/go.mod h1:JpoNstw8RF4aotepf5R7RjVR0klUjBB94kYZS23TGuA=
 github.com/tron-us/protobuf v1.3.4 h1:oqokl6jMAfe1fb/B6t1UMllbw/KtfdJcCn8plxPkHM8=
