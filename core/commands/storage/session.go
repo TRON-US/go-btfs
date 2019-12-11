@@ -364,7 +364,7 @@ func (ss *FileContracts) GetOrDefault(hash string, shardSize int64, length int64
 		c.StorageLength = length
 		c.ContractLength = time.Duration(length*24) * time.Hour
 		c.Price = price
-		c.TotalPay = int64(float64(price*shardSize*length) / float64(units.GiB))
+		c.TotalPay = int64(float64(shardSize) / float64(units.GiB) * float64(price) * float64(length))
 		ss.ShardInfo[hash] = c
 		return c
 	}
