@@ -250,7 +250,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			ss.GetOrDefault(singleChunk)
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag)
+		go retryMonitor(req.Context, api, ss, n, ssID, testFlag)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -549,17 +549,17 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				log.Error(err)
 				return err
 			}
-			submitContractRes, err := escrow.SubmitContractToEscrow(cfg, contractRequest)
+			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
 			if err != nil {
 				return err
 			}
-			go payFullToEscrow(submitContractRes, cfg)
+			go payFullToEscrow(req.Context, submitContractRes, cfg)
 		}
 		return nil
 	},
 }
 
-func payFullToEscrow(response *escrowpb.SignedSubmitContractResult, configuration *config.Config) {
+func payFullToEscrow(ctx context.Context, response *escrowpb.SignedSubmitContractResult, configuration *config.Config) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -572,7 +572,7 @@ func payFullToEscrow(response *escrowpb.SignedSubmitContractResult, configuratio
 		log.Error(err)
 		return
 	}
-	err = escrow.PayInToEscrow(configuration, payinRequest)
+	err = escrow.PayInToEscrow(ctx, configuration, payinRequest)
 	if err != nil {
 		log.Error(err)
 		return
@@ -747,7 +747,7 @@ func downloadChunkFromClient(chunkInfo *storage.Chunk, chunkHash string, ssID st
 		return
 	}
 	p := path.New(chunkHash)
-	file, err := api.Unixfs().Get(context.Background(), p, false)
+	file, err := api.Unixfs().Get(req.Context, p, false)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
@@ -796,7 +796,7 @@ func solveChallenge(chunkInfo *storage.Chunk, chunkHash string, ssID string, res
 	}
 	// compute challenge on host
 	chunkInfo.SetState(storage.SolveState)
-	sc, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.GetFileHash(), chunkCid, r.ID)
+	sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, ss.GetFileHash(), chunkCid, r.ID)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
