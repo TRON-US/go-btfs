@@ -1424,8 +1424,8 @@ the challenge request back to the caller.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("contract-id", true, false, "Contract ID associated with the challenge requests."),
 		cmds.StringArg("file-hash", true, false, "File root multihash for the data stored at this host."),
-		cmds.StringArg("chunk-hash", true, false, "Chunk multihash for the data stored at this host."),
-		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Shards available on this host include root + metadata + shard chunks."),
+		cmds.StringArg("shard-hash", true, false, "Shard multihash for the data stored at this host."),
+		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
 		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
 	},
 	RunTimeout: 3 * time.Second, // TODO: consider large files?
@@ -1453,7 +1453,7 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
-		chunkHash, err := cidlib.Parse(req.Arguments[2])
+		shardHash, err := cidlib.Parse(req.Arguments[2])
 		if err != nil {
 			return err
 		}
@@ -1463,7 +1463,7 @@ the challenge request back to the caller.`,
 		}
 		nonce := req.Arguments[4]
 		// Challenge ID is not relevant here because it's a sync operation
-		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, chunkHash, "")
+		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "")
 		if err != nil {
 			return err
 		}
