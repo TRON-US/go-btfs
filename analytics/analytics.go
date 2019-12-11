@@ -9,7 +9,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
-	cutils "github.com/tron-us/go-btfs-common/utils"
+	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/cenkalti/backoff"
 	"github.com/dustin/go-humanize"
@@ -18,7 +18,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"github.com/shirou/gopsutil/cpu"
-	"google.golang.org/grpc"
 )
 
 type programInfo struct {
@@ -150,17 +149,6 @@ func (dc *dataCollection) update() {
 	dc.NumPeers = uint64(len(st.Peers))
 }
 
-func (dc *dataCollection) getGrpcConn() (*grpc.ClientConn, context.CancelFunc, error) {
-	config, err := dc.node.Repo.Config()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load config: %s", err.Error())
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	conn, err := cutils.NewGRPCConn(ctx, config.Services.StatusServerDomain)
-	return conn, cancel, err
-}
-
 func (dc *dataCollection) sendData() {
 	sm, err := dc.doPrepData()
 	if err != nil {
@@ -207,21 +195,15 @@ func (dc *dataCollection) doPrepData() (*pb.SignedMetrics, error) {
 }
 
 func (dc *dataCollection) doSendData(sm *pb.SignedMetrics) error {
-	conn, cancel, err := dc.getGrpcConn()
+	config, err := dc.node.Repo.Config()
 	if err != nil {
 		return err
 	}
-	defer cancel()
-	defer conn.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
-	defer cancel()
-	client := pb.NewStatusClient(conn)
-	_, err = client.UpdateMetrics(ctx, sm)
-	if err != nil {
+	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
+	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
+		_, err := client.UpdateMetrics(ctx, sm)
 		return err
-	}
-	return nil
+	})
 }
 
 func (dc *dataCollection) getPayload() ([]byte, error) {
@@ -290,13 +272,6 @@ func (dc *dataCollection) reportHealthAlert(failurePoint string) {
 }
 
 func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
-	conn, cancel, err := dc.getGrpcConn()
-	if err != nil {
-		return err
-	}
-	defer cancel()
-	defer conn.Close()
-
 	n := new(pb.NodeHealth)
 	n.BtfsVersion = dc.BTFSVersion
 	n.FailurePoint = failurePoint
@@ -304,9 +279,13 @@ func (dc *dataCollection) doReportHealthAlert(failurePoint string) error {
 	now := time.Now().UTC()
 	n.TimeCreated = now
 
-	ctx, cancel := context.WithTimeout(context.Background(), callTimeout)
-	defer cancel()
-	client := pb.NewStatusClient(conn)
-	_, err = client.CollectHealth(ctx, n)
-	return err
+	config, err := dc.node.Repo.Config()
+	if err != nil {
+		return err
+	}
+	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
+	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
+		_, err := client.CollectHealth(ctx, n)
+		return err
+	})
 }

@@ -129,7 +129,6 @@ require (
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7 // indirect
-	google.golang.org/grpc v1.24.0
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4
