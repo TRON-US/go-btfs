@@ -28,7 +28,7 @@ import (
 
 type programInfo struct {
 	node        *core.IpfsNode
-	startTime   time.Time //Time at which the Daemon was ready and analytics started
+	startTime   time.Time //StartTime at which the Daemon was ready and analytics started
 	NodeID      string    `json:"node_id"`
 	HVal        string    `json:"h_val"`
 	CPUInfo     string    `json:"cpu_info"`

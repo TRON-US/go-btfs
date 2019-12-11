@@ -2,24 +2,30 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
+	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 )
 
 var GlobalSession *SessionMap
-var StdChunkStateFlow [7]*FlowControl
+var StdStateFlow [7]*FlowControl
 var StdSessionStateFlow [4]*FlowControl
 
 const (
+	FileContractsStorePrefix = "/file-contracts/"
+	ShardsStorePrefix        = "/shards/"
+
 	// chunk state
 	InitState      = 0
 	UploadState    = 1
@@ -43,16 +49,18 @@ type FlowControl struct {
 
 type SessionMap struct {
 	sync.Mutex
-	Map map[string]*Session
+	Map map[string]*FileContracts
 }
 
-type Session struct {
+type FileContracts struct {
 	sync.Mutex
 
 	Time              time.Time
+	GuardContracts    []*guardPb.Contract
+	Renter            peer.ID
 	FileHash          cidlib.Cid
 	Status            string
-	ChunkInfo         map[string]*Chunk // mapping chunkHash with Chunk info
+	ShardInfo         map[string]*Shards // mapping chunkHash with Shards info
 	CompleteChunks    int
 	CompleteContracts int
 	RetryQueue        *RetryQueue
@@ -66,19 +74,21 @@ type StatusChan struct {
 	Err         error
 }
 
-type Chunk struct {
+type Shards struct {
 	sync.Mutex
 
-	Challenge      *StorageChallenge
-	ChannelID      *ledgerPb.ChannelID
-	SignedContract []byte
-	Payer          peer.ID
-	Receiver       peer.ID
-	Price          int64
-	State          int
-	Proof          string
-	Time           time.Time
-	Err            error
+	ContractID           string
+	Challenge            *StorageChallenge
+	SignedEscrowContract []byte
+	Receiver             peer.ID
+	Price                int64
+	TotalPay             int64
+	State                int
+	ShardSize            int64
+	StorageLength        int64
+	ContractLength       time.Duration
+	StartTime            time.Time
+	Err                  error
 
 	RetryChan chan *StepRetryChan
 }
@@ -93,27 +103,27 @@ type StepRetryChan struct {
 
 func init() {
 	GlobalSession = &SessionMap{}
-	GlobalSession.Map = make(map[string]*Session)
+	GlobalSession.Map = make(map[string]*FileContracts)
 	// init chunk state
-	StdChunkStateFlow[InitState] = &FlowControl{
+	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[UploadState] = &FlowControl{
+	StdStateFlow[UploadState] = &FlowControl{
 		State:   "upload",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[ChallengeState] = &FlowControl{
+	StdStateFlow[ChallengeState] = &FlowControl{
 		State:   "challenge",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[SolveState] = &FlowControl{
+	StdStateFlow[SolveState] = &FlowControl{
 		State:   "solve",
 		TimeOut: 30 * time.Second}
-	StdChunkStateFlow[VerifyState] = &FlowControl{
+	StdStateFlow[VerifyState] = &FlowControl{
 		State:   "verify",
 		TimeOut: time.Second}
-	StdChunkStateFlow[PaymentState] = &FlowControl{
+	StdStateFlow[PaymentState] = &FlowControl{
 		State:   "payment",
 		TimeOut: 10 * time.Second}
-	StdChunkStateFlow[CompleteState] = &FlowControl{
+	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
 	// init session status
@@ -130,17 +140,17 @@ func init() {
 	}
 }
 
-func (sm *SessionMap) PutSession(ssID string, ss *Session) {
+func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if ss == nil {
-		ss = &Session{}
+		ss = &FileContracts{}
 	}
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(ssID string) (*Session, error) {
+func (sm *SessionMap) GetSession(ssID string) (*FileContracts, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
@@ -150,13 +160,13 @@ func (sm *SessionMap) GetSession(ssID string) (*Session, error) {
 	return sm.Map[ssID], nil
 }
 
-func (sm *SessionMap) GetOrDefault(ssID string) *Session {
+func (sm *SessionMap) GetOrDefault(ssID string, pid peer.ID) *FileContracts {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		ss := &Session{}
-		ss.new()
+		ss := &FileContracts{}
+		ss.new(pid)
 		sm.Map[ssID] = ss
 		return ss
 	}
@@ -169,9 +179,9 @@ func (sm *SessionMap) Remove(ssID string, chunkHash string) {
 
 	if ss := sm.Map[ssID]; ss != nil {
 		if chunkHash != "" {
-			ss.RemoveChunk(chunkHash)
+			ss.RemoveShard(chunkHash)
 		}
-		if len(ss.ChunkInfo) == 0 {
+		if len(ss.ShardInfo) == 0 {
 			delete(sm.Map, ssID)
 		}
 	}
@@ -185,17 +195,45 @@ func NewSessionID() (string, error) {
 	return ssid.String(), nil
 }
 
-func (ss *Session) new() {
+func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
+	rds := node.Repo.Datastore()
+	ss, err := GlobalSession.GetSession(ssID)
+	if err != nil {
+		return err
+	}
+	fileContractsBytes, err := json.Marshal(ss)
+	if err != nil {
+		return err
+	}
+	err = rds.Put(ds.NewKey(FileContractsStorePrefix+ssID), fileContractsBytes)
+	if err != nil {
+		return err
+	}
+	for chunkHash, chunkInfo := range ss.ShardInfo {
+		shardBytes, err := json.Marshal(chunkInfo)
+		if err != nil {
+			return err
+		}
+		err = rds.Put(ds.NewKey(ShardsStorePrefix+chunkHash), shardBytes)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ss *FileContracts) new(pid peer.ID) {
 	ss.Lock()
 	defer ss.Unlock()
 
+	ss.Renter = pid
 	ss.Time = time.Now()
 	ss.Status = "init"
-	ss.ChunkInfo = make(map[string]*Chunk)
+	ss.ShardInfo = make(map[string]*Shards)
 	ss.SessionStatusChan = make(chan StatusChan)
 }
 
-func (ss *Session) CompareAndSwap(desiredStatus int, targetStatus int) bool {
+func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) bool {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -209,53 +247,56 @@ func (ss *Session) CompareAndSwap(desiredStatus int, targetStatus int) bool {
 	}
 }
 
-func (ss *Session) SetRetryQueue(q *RetryQueue) {
+func (ss *FileContracts) SetRetryQueue(q *RetryQueue) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.RetryQueue = q
 }
 
-func (ss *Session) GetRetryQueue() *RetryQueue {
+func (ss *FileContracts) GetRetryQueue() *RetryQueue {
 	ss.Lock()
 	defer ss.Unlock()
 
 	return ss.RetryQueue
 }
 
-func (ss *Session) UpdateCompleteChunkNum(diff int) {
+func (ss *FileContracts) UpdateCompleteShardNum(diff int) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.CompleteChunks += diff
 }
 
-func (ss *Session) GetCompleteChunks() int {
+func (ss *FileContracts) GetCompleteShards() int {
 	ss.Lock()
 	defer ss.Unlock()
 
 	return ss.CompleteChunks
 }
 
-func (ss *Session) SetFileHash(fileHash cidlib.Cid) {
+func (ss *FileContracts) SetFileHash(fileHash cidlib.Cid) {
+
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.FileHash = fileHash
 }
 
-func (ss *Session) GetFileHash() cidlib.Cid {
+func (ss *FileContracts) GetFileHash() cidlib.Cid {
+
 	ss.Lock()
 	defer ss.Unlock()
 
 	return ss.FileHash
 }
 
-func (ss *Session) IncrementContract(chunkHash string, contracts []byte) error {
+func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte, guardContract *guardPb.Contract) error {
 	ss.Lock()
 	defer ss.Unlock()
 
-	chunk := ss.ChunkInfo[chunkHash]
+	ss.GuardContracts = append(ss.GuardContracts, guardContract)
+	chunk := ss.ShardInfo[chunkHash]
 	if chunk == nil {
 		return fmt.Errorf("chunk does not exists")
 	}
@@ -264,87 +305,103 @@ func (ss *Session) IncrementContract(chunkHash string, contracts []byte) error {
 	return nil
 }
 
-func (ss *Session) GetCompleteContractNum() int {
+func (ss *FileContracts) GetGuardContracts() []*guardPb.Contract {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.GuardContracts
+}
+
+func (ss *FileContracts) GetCompleteContractNum() int {
 	ss.Lock()
 	defer ss.Unlock()
 
 	return ss.CompleteContracts
 }
 
-func (ss *Session) SetStatus(status int) {
+func (ss *FileContracts) SetStatus(status int) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.Status = StdSessionStateFlow[status].State
 }
-func (ss *Session) GetStatus() string {
+func (ss *FileContracts) GetStatus() string {
 	ss.Lock()
 	defer ss.Unlock()
 
 	return ss.Status
 }
 
-func (ss *Session) PutChunk(hash string, chunk *Chunk) {
+func (ss *FileContracts) GetShard(hash string) (*Shards, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	ss.ChunkInfo[hash] = chunk
-	ss.Time = time.Now()
-}
-
-func (ss *Session) GetChunk(hash string) (*Chunk, error) {
-	ss.Lock()
-	defer ss.Unlock()
-
-	if ss.ChunkInfo[hash] == nil {
+	if ss.ShardInfo[hash] == nil {
 		return nil, fmt.Errorf("chunk hash doesn't exist ")
 	}
-	return ss.ChunkInfo[hash], nil
+	return ss.ShardInfo[hash], nil
 }
 
-func (ss *Session) RemoveChunk(hash string) {
+func (ss *FileContracts) RemoveShard(hash string) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ChunkInfo[hash] != nil {
-		delete(ss.ChunkInfo, hash)
+	if ss.ShardInfo[hash] != nil {
+		delete(ss.ShardInfo, hash)
 	}
 }
 
-func (ss *Session) GetOrDefault(hash string) *Chunk {
+func (ss *FileContracts) GetOrDefault(hash string, shardSize int64, length int64, price int64) *Shards {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ChunkInfo[hash] == nil {
-		c := &Chunk{}
+	if ss.ShardInfo[hash] == nil {
+		c := &Shards{}
 		c.RetryChan = make(chan *StepRetryChan)
-		c.Time = time.Now()
+		c.StartTime = time.Now()
 		c.State = InitState
-		ss.ChunkInfo[hash] = c
+		c.ShardSize = shardSize
+		c.StorageLength = length
+		c.ContractLength = time.Duration(length*24) * time.Hour
+		c.Price = price
+		c.TotalPay = int64(float64(shardSize) / float64(units.GiB) * float64(price) * float64(length))
+		ss.ShardInfo[hash] = c
 		return c
 	}
-	return ss.ChunkInfo[hash]
+	return ss.ShardInfo[hash]
 }
 
-func (c *Chunk) UpdateChunk(payerPid peer.ID, recvPid peer.ID, price int64) {
+func (c *Shards) SetContractID(ssID string, shardHash string) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.Payer = payerPid
+	c.ContractID = ssID + shardHash
+}
+
+func (c *Shards) GetContractID() string {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.ContractID
+}
+
+func (c *Shards) UpdateShard(recvPid peer.ID) {
+	c.Lock()
+	defer c.Unlock()
+
 	c.Receiver = recvPid
-	c.Price = price
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 }
 
-func (c *Chunk) SetSignedContract(contract []byte) {
+func (c *Shards) SetSignedContract(contract []byte) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.SignedContract = contract
+	c.SignedEscrowContract = contract
 }
 
 // used on client to record a new challenge
-func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+func (c *Shards) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
 	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
 	c.Lock()
 	defer c.Unlock()
@@ -365,72 +422,51 @@ func (c *Chunk) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreifac
 	if err = sch.GenChallenge(); err != nil {
 		return nil, err
 	}
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 	return sch, nil
 }
 
 // usually used on host, to record host challenge info
-func (c *Chunk) UpdateChallenge(sch *StorageChallenge) {
+func (c *Shards) UpdateChallenge(sch *StorageChallenge) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.Challenge = sch
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 }
 
-func (c *Chunk) SetState(state int) {
+func (c *Shards) SetState(state int) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.State = state
-	c.Time = time.Now()
+	c.StartTime = time.Now()
 }
 
-func (c *Chunk) GetState() string {
+func (c *Shards) GetState() string {
 	c.Lock()
 	defer c.Unlock()
 
-	return StdChunkStateFlow[c.State].State
+	return StdStateFlow[c.State].State
 }
 
-func (c *Chunk) SetPrice(price int64) {
+func (c *Shards) GetTotalAmount() int64 {
 	c.Lock()
 	defer c.Unlock()
 
-	c.Price = price
+	return c.TotalPay
 }
 
-func (c *Chunk) GetPrice() int64 {
+func (c *Shards) SetTime(time time.Time) {
 	c.Lock()
 	defer c.Unlock()
 
-	return c.Price
+	c.StartTime = time
 }
 
-func (c *Chunk) SetProof(proof string) {
+func (c *Shards) GetTime() time.Time {
 	c.Lock()
 	defer c.Unlock()
 
-	c.Proof = proof
-}
-
-func (c *Chunk) GetProof() string {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.Proof
-}
-
-func (c *Chunk) SetTime(time time.Time) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.Time = time
-}
-
-func (c *Chunk) GetTime() time.Time {
-	c.Lock()
-	defer c.Unlock()
-
-	return c.Time
+	return c.StartTime
 }

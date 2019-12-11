@@ -128,16 +128,25 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 	}, nil
 }
 
-func PayInToEscrow(ctx context.Context, configuration *config.Config,
-	signedPayinReq *escrowpb.SignedPayinRquest) error {
-	return grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
+func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRquest) (*escrowpb.SignedPayinResult, error) {
+	var signedPayinRes *escrowpb.SignedPayinResult
+	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			res, err := client.PayIn(ctx, signedPayinReq)
 			if err != nil {
 				return err
 			}
-			return verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			err = verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			if err != nil {
+				return err
+			}
+			signedPayinRes = res
+			return nil
 		})
+	if err != nil {
+		return nil, err
+	}
+	return signedPayinRes, nil
 }
 
 func SignContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
