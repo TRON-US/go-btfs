@@ -841,24 +841,25 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 	timeout := 3 * time.Second
 	newCtx, _ := context.WithTimeout(ctx, timeout)
 	ticker := time.NewTicker(300 * time.Millisecond)
+	paid := false
+	var err error
 
 	go func() {
 		for {
 			select {
 			case t := <-ticker.C:
 				log.Debug("Tick at", zap.Any("time", t.UTC()))
-				paid, err := escrow.IsPaidin(configuration, contractID)
+				paid, err = escrow.IsPaidin(configuration, contractID)
 				if err != nil {
 					log.Error("call IsPaid failed", zap.Error(err))
 				}
 				if paid {
 					paidIn <- true
 				}
-				return
 			case <-newCtx.Done():
 				log.Debug("timeout, tick stopped at", zap.Any("UTC", time.Now().UTC()))
 				ticker.Stop()
-				paidIn <- false
+				paidIn <- paid
 				return
 			}
 		}
@@ -870,6 +871,7 @@ func downloadChunkFromClient(paidIn chan bool, chunkInfo *storage.Shards, chunkH
 	if !paid {
 		//TODO
 	}
+	// TODO close paidIn channel
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID, n.Identity)
 
