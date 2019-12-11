@@ -15,6 +15,43 @@ import (
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 )
 
+func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
+	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
+	if err != nil {
+		return nil, err
+	}
+
+	fileStoreMeta := guardPb.FileStoreMeta{
+		RenterPid:        session.Renter.Pretty(),
+		FileHash:         session.FileHash.String(), //TODO need to check
+		FileSize:         10000,                     //TODO need to revise later
+		RentStart:        time.Time{},               //TODO need to revise later
+		RentEnd:          time.Time{},               //TODO need to revise later
+		CheckFrequency:   0,
+		GuardFee:         0,
+		EscrowFee:        0,
+		ShardCount:       int32(len(contracts)),
+		MinimumShards:    0,
+		RecoverThreshold: 0,
+		EscrowPid:        escrowPid.Pretty(),
+		GuardPid:         guardPid.Pretty(),
+	}
+
+	return &guardPb.FileStoreStatus{
+		FileStoreMeta:     fileStoreMeta,
+		State:             0,
+		Contracts:         contracts,
+		RenterSignature:   nil,
+		GuardReceiveTime:  time.Time{},
+		ChangeLog:         nil,
+		CurrentTime:       time.Now(),
+		GuardSignature:    nil,
+		RentalState:       0,
+		PreparerPid:       "",
+		PreparerSignature: nil,
+	}, nil
+}
+
 func NewContract(session *storage.FileContracts, configuration *config.Config, chunkHash string, chunkIndex int32) (*guardPb.ContractMeta, error) {
 	shard := session.ShardInfo[chunkHash]
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
@@ -33,7 +70,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, c
 		GuardPid:         guardPid.Pretty(),
 		EscrowPid:        escrowPid.Pretty(),
 		Price:            shard.Price,
-		Amount:           1000,
+		Amount:           1000, //TODO need to revise
 		CollateralAmount: 0,
 		PayoutSchedule:   0,
 		NumPayouts:       5,

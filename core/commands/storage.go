@@ -314,6 +314,9 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
+
+			//TODO need to calculate the amount, duration, payout times blahblah here....
+
 			// init escrow Contract
 			escrowContract := escrow.NewContract(cfg, chunkHash, n.Identity.Pretty(), candidateHost.Identity, candidateHost.Price)
 			halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
@@ -587,13 +590,14 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			if err != nil {
 				return err
 			}
-			go payFullToEscrow(submitContractRes, cfg, ss.GetGuardContracts())
+			go payFullToEscrowAndSubmitToGuard(submitContractRes, cfg, ss)
+
 		}
 		return nil
 	},
 }
 
-func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, guardContracts []*guardPb.Contract) {
+func payFullToEscrowAndSubmitToGuard(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, ss *storage.FileContracts) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -611,30 +615,41 @@ func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuratio
 		log.Error(err)
 		return
 	}
+	//TODO talk with Jin for doing signature for every contract
 	// get escrow sig, add them to guard
 	sig := payinRes.EscrowSignature
-	for _, guardContract := range guardContracts {
+	for _, guardContract := range ss.GetGuardContracts() {
 		guardContract.EscrowSignature = sig
-		guardContract.EscrowSignedTime = time.Now()
+		guardContract.EscrowSignedTime = payinRes.Result.EscrowSignedTime
 		guardContract.LastModifyTime = time.Now()
 	}
 	// TODO: upload filemeta to guard
-	go UploadFileMetaToGuard()
+	go UploadFileMetaToGuard(ss, ss.GetGuardContracts(), response, payerPrivKey, configuration)
 }
 
 // TODO: after upload persist data in leveldb
-func UploadFileMetaToGuard(status guardPb.FileStoreStatus, payerPriKey ic.PrivKey, configuration *config.Config) (err error) {
-	for _, ct := range status.Contracts {
-		if ct.RenterSignature, err = crypto.Sign(payerPriKey, &ct.ContractMeta); err != nil {
-			log.Error(err)
-			return err
-		}
-	}
-	if status.RenterSignature, err = crypto.Sign(payerPriKey, &status.FileStoreMeta); err != nil {
+func UploadFileMetaToGuard(ss *storage.FileContracts, contracts []*guardPb.Contract,
+	escrowResults *escrowPb.SignedSubmitContractResult, payerPriKey ic.PrivKey, configuration *config.Config) {
+	fileStatus, err := guard.NewFileStatus(ss, contracts, configuration)
+	if err != nil {
 		log.Error(err)
-		return err
+		return
 	}
-	return guard.SubmitFileStatus(configuration, status)
+	//TODO below code supposedly will copy the escrow signature from every contract to the guard contract
+	//for _,ct:=range contracts{
+	//	for _,result:=range escrowResults.r{
+	//
+	//	}
+	//}
+
+	if fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta); err != nil {
+		log.Error(err)
+		return
+	}
+	err = guard.SubmitFileStatus(configuration, *fileStatus)
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 var storageUploadProofCmd = &cmds.Command{
