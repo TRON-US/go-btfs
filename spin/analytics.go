@@ -263,6 +263,7 @@ func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
 	nd.Upload = dc.Upload
 	nd.TotalUpload = dc.TotalUp
 	nd.TotalDownload = dc.TotalDown
+	nd.HVal = dc.HVal
 	if config, err := dc.node.Repo.Config(); err == nil {
 		if storageMax, err := humanize.ParseBytes(config.Datastore.StorageMax); err == nil {
 			nd.StorageVolumeCap = storageMax
