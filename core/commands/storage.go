@@ -1219,6 +1219,9 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 		req := new(hubpb.SettingsReq)
 		req.Id = peerId
 		resp, err := client.GetSettings(ctx, req)
+		if err != nil {
+			return err
+		}
 		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
 		ns.StoragePriceAsk = uint64(resp.SettingsData.StoragePriceAsk)
 		ns.BandwidthLimit = resp.SettingsData.BandwidthLimit
