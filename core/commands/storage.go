@@ -613,32 +613,6 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 }
 
-func payinMonitor(contractID *escrowPb.SignedContractID, configuration *config.Config) {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	done := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				ticker.Stop()
-				log.Debug("Tick stopped at", zap.Any("UTC", time.Now().UTC()))
-				return
-			case t := <-ticker.C:
-				log.Debug("Tick at", zap.Any("time", t.UTC()))
-				//
-				paid, err := escrow.IsPaidin(configuration, contractID)
-				if err != nil {
-					log.Error("call IsPaid failed", zap.Error(err))
-				}
-				if paid {
-					// TODO
-				}
-			}
-		}
-	}()
-}
-
 func payFullToEscrow(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, guardContracts []*guardPb.Contract) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
@@ -844,20 +818,58 @@ func SignContractAndCheckPayment(shardInfo *storage.Shards, shardHash string, ss
 		log.Error(err)
 		return
 	}
+	// check payment
+	cfg, err := cmdenv.GetConfig(env)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	signedContractID, err := escrow.SignContractID(escrowContract.ContractId, n.PrivateKey)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	paidIn := make(chan bool)
+	checkPaymentFromClient(req.Context, paidIn, signedContractID, cfg)
+
 	// TODO: download file from client
-	go downloadChunkFromClient(shardInfo, shardHash, ssID, n, pid, req, env)
+	go downloadChunkFromClient(paidIn, chunkInfo, chunkHash, ssID, n, pid, req, env)
 }
 
 // call escrow service to check if payment is received or not
-func periodicallyCheckPaymentFromClient() {
-	var isReceivedWithTimeOut bool
-	// TODO: isReceivedWithTimeOut := escrow.pay()
-	if !isReceivedWithTimeOut {
-		//TODO: delete file
-	}
+func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowPb.SignedContractID, configuration *config.Config) {
+	timeout := 3 * time.Second
+	newCtx, _ := context.WithTimeout(ctx, timeout)
+	ticker := time.NewTicker(300 * time.Millisecond)
+
+	go func() {
+		for {
+			select {
+			case t := <-ticker.C:
+				log.Debug("Tick at", zap.Any("time", t.UTC()))
+				paid, err := escrow.IsPaidin(configuration, contractID)
+				if err != nil {
+					log.Error("call IsPaid failed", zap.Error(err))
+				}
+				if paid {
+					paidIn <- true
+				}
+				return
+			case <-newCtx.Done():
+				log.Debug("timeout, tick stopped at", zap.Any("UTC", time.Now().UTC()))
+				ticker.Stop()
+				paidIn <- false
+				return
+			}
+		}
+	}()
 }
 
-func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
+func downloadChunkFromClient(paidIn chan bool, chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
+	paid := <-paidIn
+	if !paid {
+		//TODO
+	}
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID, n.Identity)
 

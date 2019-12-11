@@ -178,6 +178,28 @@ func UnmarshalEscrowContract(marshaledBody []byte) (*escrowpb.SignedEscrowContra
 	return signedContract, nil
 }
 
+func SignContractID(id string, privKey ic.PrivKey) (*escrowpb.SignedContractID, error) {
+	pubKeyRaw, err := privKey.GetPublic().Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	contractID := &escrowpb.ContractID{
+		ContractId: id,
+		Address:    pubKeyRaw,
+	}
+	// sign contractID
+	sig, err := crypto.Sign(privKey, contractID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &escrowpb.SignedContractID{
+		Data:      contractID,
+		Signature: sig,
+	}, nil
+}
+
 func IsPaidin(configuration *config.Config, contractID *escrowpb.SignedContractID) (bool, error) {
 	var signedPayinRes *escrowpb.SignedPayinStatus
 	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
