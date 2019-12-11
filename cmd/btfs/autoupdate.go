@@ -46,7 +46,7 @@ type Repo struct {
 }
 
 // Auto update function.
-func update(url string) {
+func update(url, hval string) {
 	// Get current program execution path.
 	defaultBtfsPath, err := getCurrentPath()
 	if err != nil {
@@ -283,24 +283,17 @@ func update(url string) {
 			continue
 		}
 
-		if runtime.GOOS == "windows" {
-			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "\\"),
-				"-download", fmt.Sprint(defaultBtfsPath, "\\"))
-			err = cmd.Start()
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-		} else {
-			// Start the btfs-updater binary process.
-			cmd := exec.Command(updateBinaryPath, "-url", url, "-project", fmt.Sprint(defaultBtfsPath, "/"),
-				"-download", fmt.Sprint(defaultBtfsPath, "/"))
-			err = cmd.Start()
-			if err != nil {
-				log.Error(err)
-				continue
-			}
+		// Start the btfs-updater binary process.
+		cmd := exec.Command(updateBinaryPath,
+			"-url", url,
+			"-project", defaultBtfsPath+string(os.PathSeparator),
+			"-download", defaultBtfsPath+string(os.PathSeparator),
+			"-hval", hval,
+		)
+		err = cmd.Start()
+		if err != nil {
+			log.Error(err)
+			continue
 		}
 		fmt.Println("Process will exit now and restart after the update completes.")
 		os.Exit(0)

@@ -43,7 +43,7 @@ func initLogger(logPath string) *zap.Logger {
 
 // Rollback function of auto update.
 
-func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath, url string) {
+func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath, url string, daemonArgs []string) {
 	defer func() {
 		wg.Done()
 	}()
@@ -117,15 +117,9 @@ func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDo
 		return
 	}
 
-	// Start the btfs daemon according to different operating systems.
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command(btfsBinaryPath, "daemon")
-		err = cmd.Start()
-	} else {
-		cmd := exec.Command(btfsBinaryPath, "daemon")
-		err = cmd.Start()
-	}
-
+	// Start the btfs daemon
+	cmd := exec.Command(btfsBinaryPath, daemonArgs...)
+	err = cmd.Start()
 	// Check if the btfs daemon start success.
 	if err != nil {
 		log.Error(fmt.Sprintf("BTFS rollback failed, reasons: [%v]", err))
@@ -137,10 +131,11 @@ func rollback(log *zap.Logger, wg *sync.WaitGroup, defaultProjectPath, defaultDo
 
 func update(log *zap.Logger) int {
 	time.Sleep(time.Second * 5)
-	defaultProjectPath := flag.String("project", "", "default project path")
-	defaultDownloadPath := flag.String("download", "", "default download path")
+	defaultProjectPath := flag.String("project", "", "Specify project path.")
+	defaultDownloadPath := flag.String("download", "", "Specify download path.")
 	// Input Where your local node is running on, default value is localhost:5001.
-	url := flag.String("url", "localhost:5001", "your node's http server addr")
+	url := flag.String("url", "localhost:5001", "Node daemon's http server address.")
+	defaultHval := flag.String("hval", "", "Specify H-value from BitTorrent Client.")
 
 	flag.Parse()
 
@@ -213,18 +208,23 @@ func update(log *zap.Logger) int {
 		return 1
 	}
 
+	daemonArgs := []string{"daemon"}
+	if *defaultHval != "" {
+		daemonArgs = append(daemonArgs, "--hval="+*defaultHval)
+	}
+
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
 
-	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath, *url)
+	go rollback(log, wg, *defaultProjectPath, *defaultDownloadPath, *url, daemonArgs)
 
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command(btfsBinaryPath, "daemon")
-		err = cmd.Start()
-	} else {
-		cmd := exec.Command(btfsBinaryPath, "daemon")
-		err = cmd.Start()
+	// Start the btfs daemon
+	cmd := exec.Command(btfsBinaryPath, daemonArgs...)
+	err = cmd.Start()
+	if err != nil {
+		log.Error(fmt.Sprintf("Error starting new BTFS process, reasons: [%v]", err))
+		return 1
 	}
 
 	// Wait for the rollback program to complete.
@@ -253,8 +253,8 @@ func pathExists(path string) bool {
 }
 
 // Select binary files and configure file path based on operating system.
-func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConfigPath string, backupConfigPath string,
-	latestConfigPath string, btfsBinaryPath string, btfsBackupPath string, latestBtfsBinaryPath string, err error) {
+func getProjectPath(defaultProjectPath, defaultDownloadPath string) (currentConfigPath, backupConfigPath,
+	latestConfigPath, btfsBinaryPath, btfsBackupPath, latestBtfsBinaryPath string, err error) {
 	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
 		ext := ""
 		if runtime.GOOS == "windows" {
