@@ -24,11 +24,11 @@ func Hosts(node *core.IpfsNode) {
 		m := configuration.Experimental.HostsSyncMode
 		fmt.Printf("Hosts info will be synced at [%s] mode\n", m)
 
-		go perodicSyncHosts(node, m)
+		go periodicSyncHosts(node, m)
 	}
 }
 
-func perodicSyncHosts(node *core.IpfsNode, mode string) {
+func periodicSyncHosts(node *core.IpfsNode, mode string) {
 	tick := time.NewTicker(syncPeriod)
 	defer tick.Stop()
 	// Force tick on immediate start
