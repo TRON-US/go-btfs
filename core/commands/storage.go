@@ -716,10 +716,6 @@ the shard and replies back to client for the next challenge step.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
-		api, err := cmdenv.GetApi(env, req)
-		if err != nil {
-			return err
-		}
 
 		ssID := req.Arguments[0]
 		fileHash, err := cidlib.Parse(req.Arguments[1])
