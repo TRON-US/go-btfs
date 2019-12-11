@@ -265,7 +265,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 
 		// add shards into session
 		for _, shardHash := range shardHashes {
-			ss.GetOrDefault(shardHash, shardSize, int64(storageLength), price)
+			ss.GetOrDefault(shardHash, int64(shardSize), storageLength, price)
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
 		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag)
@@ -472,7 +472,8 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		strconv.FormatInt(candidateHost.Price, 10),
 		halfSignedEscrowContract,
 		halfSignedGuardContract,
-		strconv.FormatInt(shard.StorageLength, 10))
+		strconv.FormatInt(shard.StorageLength, 10),
+		strconv.FormatInt(shard.ShardSize, 10))
 	// fail to connect with retry
 	if err != nil {
 		sendStepStateChan(shard.RetryChan, storage.InitState, false, nil, err)
@@ -703,6 +704,7 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("escrow-contract", true, false, "Client's initial escrow contract data."),
 		cmds.StringArg("guard-contract-meta", true, false, "Client's initial guard contract meta."),
 		cmds.StringArg("storage-length", true, false, "Store file for certain length in days."),
+		cmds.StringArg("shard-size", true, false, "Size of each shard received in bytes."),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -725,11 +727,7 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		shardHash := req.Arguments[2]
-		shardCid, err := cidlib.Parse(shardHash)
-		if err != nil {
-			return err
-		}
-		shardSize, err := getContractSizeFromCid(req.Context, shardCid, api)
+		shardSize, err := strconv.ParseInt(req.Arguments[7], 10, 64)
 		if err != nil {
 			return err
 		}
@@ -1426,7 +1424,7 @@ the challenge request back to the caller.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("contract-id", true, false, "Contract ID associated with the challenge requests."),
 		cmds.StringArg("file-hash", true, false, "File root multihash for the data stored at this host."),
-		cmds.StringArg("shard-hash", true, false, "Shard multihash for the data stored at this host."),
+		cmds.StringArg("chunk-hash", true, false, "Chunk multihash for the data stored at this host."),
 		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Shards available on this host include root + metadata + shard chunks."),
 		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
 	},
@@ -1455,7 +1453,7 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
-		shardHash, err := cidlib.Parse(req.Arguments[2])
+		chunkHash, err := cidlib.Parse(req.Arguments[2])
 		if err != nil {
 			return err
 		}
@@ -1465,7 +1463,7 @@ the challenge request back to the caller.`,
 		}
 		nonce := req.Arguments[4]
 		// Challenge ID is not relevant here because it's a sync operation
-		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "")
+		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, chunkHash, "")
 		if err != nil {
 			return err
 		}

@@ -16,6 +16,7 @@ require (
 	github.com/TRON-US/go-unixfs v0.4.14
 	github.com/TRON-US/interface-go-btfs-core v0.4.3
 	github.com/Workiva/go-datastructures v1.0.50
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cenkalti/backoff v2.1.1+incompatible

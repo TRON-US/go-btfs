@@ -84,7 +84,7 @@ type Shards struct {
 	Price                int64
 	TotalPay             int64
 	State                int
-	ShardSize            uint64
+	ShardSize            int64
 	StorageLength        int64
 	ContractLength       time.Duration
 	StartTime            time.Time
@@ -351,7 +351,7 @@ func (ss *FileContracts) RemoveShard(hash string) {
 	}
 }
 
-func (ss *FileContracts) GetOrDefault(hash string, shardSize uint64, length int64, price int64) *Shards {
+func (ss *FileContracts) GetOrDefault(hash string, shardSize int64, length int64, price int64) *Shards {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -364,7 +364,7 @@ func (ss *FileContracts) GetOrDefault(hash string, shardSize uint64, length int6
 		c.StorageLength = length
 		c.ContractLength = time.Duration(length*24) * time.Hour
 		c.Price = price
-		c.TotalPay = price * int64(shardSize) * length / int64(units.GiB)
+		c.TotalPay = int64(float64(price * shardSize * length) / float64(units.GiB))
 		ss.ShardInfo[hash] = c
 		return c
 	}
