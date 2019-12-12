@@ -21,13 +21,19 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	if err != nil {
 		return nil, err
 	}
+	var rentStart time.Time
+	var rentEnd time.Time
+	if len(contracts) > 0 {
+		rentStart = contracts[0].RentStart
+		rentEnd = contracts[0].RentEnd
+	}
 
 	fileStoreMeta := guardPb.FileStoreMeta{
 		RenterPid:        session.Renter.Pretty(),
 		FileHash:         session.FileHash.String(), //TODO need to check
 		FileSize:         10000,                     //TODO need to revise later
-		RentStart:        contracts[0].RentStart,    //TODO need to revise later
-		RentEnd:          contracts[0].RentEnd,      //TODO need to revise later
+		RentStart:        rentStart,                 //TODO need to revise later
+		RentEnd:          rentEnd,                   //TODO need to revise later
 		CheckFrequency:   0,
 		GuardFee:         0,
 		EscrowFee:        0,
