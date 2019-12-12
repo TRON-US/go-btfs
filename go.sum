@@ -24,9 +24,6 @@ github.com/Stebalien/go-bitfield v0.0.1 h1:X3kbSSPUaJK60wV2hjOPZwmpljr6VGCqdq4cB
 github.com/Stebalien/go-bitfield v0.0.1/go.mod h1:GNjFpasyUVkHMsfEOk8EFLJ9syQ6SI+XWrX9Wf2XH0s=
 github.com/TRON-US/go-btfs-api v0.1.0 h1:YRS/RF2lSWlUJE2CaCnfpNsUu/OEpic1AXnGBX/PXQc=
 github.com/TRON-US/go-btfs-api v0.1.0/go.mod h1:XoXb4w+3ZF665lSdbhCDnINII2lEdwi4pAItlpdZVHI=
-github.com/TRON-US/go-btfs-chunker v0.2.2/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
-github.com/TRON-US/go-btfs-chunker v0.2.3 h1:ky/HsQY8UU+Mas3qXptwO9x3Pd2HWDDm+ycpS+NI9Js=
-github.com/TRON-US/go-btfs-chunker v0.2.3/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
 github.com/TRON-US/go-btfs-chunker v0.2.4 h1:3dw5plmhDoI8QkzAbgkNHm5WbBsRWrjifjrHK5EP34s=
 github.com/TRON-US/go-btfs-chunker v0.2.4/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
 github.com/TRON-US/go-btfs-chunker v0.2.5 h1:mU4iu2jYs89PtIO5vnJwqZHUgx/gwV0z8RFHmZNDS1U=
@@ -43,13 +40,6 @@ github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElA
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
 github.com/TRON-US/go-mfs v0.2.2/go.mod h1:NduHl3CtI8J81aY4aV/Si/9XZbZ/+hHzPZUHC9Ho3WQ=
-github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
-github.com/TRON-US/go-unixfs v0.4.12 h1:8u8D6JQPngXKGHPgq98+TLPaSjCx/QtYipiuP/MtOtg=
-github.com/TRON-US/go-unixfs v0.4.12/go.mod h1:0Jv/z5OvpB4JpjJcUFB9turYohcoqjF/tmczQX9eeJ4=
-github.com/TRON-US/go-unixfs v0.4.13 h1:Ck55atVfRY4IIHEKlRFI/z+Z3qcYCNG34QmLMQgECNU=
-github.com/TRON-US/go-unixfs v0.4.13/go.mod h1:m/qCevblRIFFCxTHlKtljACjCIYV6nOivzx+jh0nOQU=
-github.com/TRON-US/go-unixfs v0.4.14 h1:M+FeKP0LX1fKdbN+dWYAM1vK/1X8OB6kdijsZlumnXI=
-github.com/TRON-US/go-unixfs v0.4.14/go.mod h1:m/qCevblRIFFCxTHlKtljACjCIYV6nOivzx+jh0nOQU=
 github.com/TRON-US/interface-go-btfs-core v0.4.3 h1:Ld/6GhCElyaQsBPdIU0DkZWdWzXvscnhUTAxWLBcuJ8=
 github.com/TRON-US/interface-go-btfs-core v0.4.3/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=

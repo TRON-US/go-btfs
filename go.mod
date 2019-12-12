@@ -143,3 +143,5 @@ require (
 )
 
 go 1.13
+
+replace github.com/TRON-US/go-unixfs => ../go-unixfs
