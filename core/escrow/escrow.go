@@ -102,7 +102,7 @@ func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []
 	return nil
 }
 
-func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic.PubKey, payerPrivKey ic.PrivKey) (*escrowpb.SignedPayinRquest, error) {
+func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic.PubKey, payerPrivKey ic.PrivKey) (*escrowpb.SignedPayinRequest, error) {
 	chanState := result.Result.BuyerChannelState
 	sig, err := crypto.Sign(payerPrivKey, chanState.Channel)
 	if err != nil {
@@ -113,7 +113,7 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 	if err != nil {
 		return nil, err
 	}
-	payinReq := &escrowpb.PayinRquest{
+	payinReq := &escrowpb.PayinRequest{
 		PayinId:           result.Result.PayinId,
 		BuyerAddress:      payerAddr,
 		BuyerChannelState: chanState,
@@ -122,13 +122,13 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 	if err != nil {
 		return nil, err
 	}
-	return &escrowpb.SignedPayinRquest{
+	return &escrowpb.SignedPayinRequest{
 		Request:        payinReq,
 		BuyerSignature: payinSig,
 	}, nil
 }
 
-func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRquest) (*escrowpb.SignedPayinResult, error) {
+func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRequest) (*escrowpb.SignedPayinResult, error) {
 	var signedPayinRes *escrowpb.SignedPayinResult
 	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
