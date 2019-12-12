@@ -10,12 +10,13 @@ require (
 	github.com/TRON-US/go-btfs-chunker v0.2.5
 	github.com/TRON-US/go-btfs-cmds v0.1.5
 	github.com/TRON-US/go-btfs-config v0.2.1
-	github.com/TRON-US/go-btfs-files v0.1.1
+	github.com/TRON-US/go-btfs-files v0.1.2
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
-	github.com/TRON-US/go-unixfs v0.4.13
+	github.com/TRON-US/go-unixfs v0.4.14
 	github.com/TRON-US/interface-go-btfs-core v0.4.3
 	github.com/Workiva/go-datastructures v1.0.50
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/cenkalti/backoff v2.1.1+incompatible
@@ -120,7 +121,7 @@ require (
 	github.com/shirou/gopsutil v0.0.0-20190901111213-e4ec7b275ada
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/go-btfs-common v0.1.9
+	github.com/tron-us/go-btfs-common v0.1.11
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
@@ -141,4 +142,4 @@ require (
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
-go 1.12
+go 1.13

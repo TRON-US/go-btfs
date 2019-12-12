@@ -178,8 +178,8 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 	return res
 }
 
-func (dc *dataCollection) sendData(btfsNode *core.IpfsNode, config *config.Config) {
-	sm, errs, err := dc.doPrepData(btfsNode)
+func (dc *dataCollection) sendData(node *core.IpfsNode, config *config.Config) {
+	sm, errs, err := dc.doPrepData(node)
 	if errs != nil || err != nil {
 		var sb strings.Builder
 		errs := append(errs, err)
@@ -187,7 +187,7 @@ func (dc *dataCollection) sendData(btfsNode *core.IpfsNode, config *config.Confi
 			sb.WriteString(err.Error())
 			sb.WriteRune('\n')
 		}
-		dc.reportHealthAlert(config, sb.String())
+		dc.reportHealthAlert(node.Context(), config, sb.String())
 		// If complete prep failure we return
 		if err != nil {
 			return
@@ -197,7 +197,7 @@ func (dc *dataCollection) sendData(btfsNode *core.IpfsNode, config *config.Confi
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		err := dc.doSendData(config, sm)
+		err := dc.doSendData(node.Context(), config, sm)
 		if err != nil {
 			log.Error("failed to send data to status server: ", err)
 		} else {
@@ -235,9 +235,9 @@ func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics
 	return sm, errs, nil
 }
 
-func (dc *dataCollection) doSendData(config *config.Config, sm *pb.SignedMetrics) error {
+func (dc *dataCollection) doSendData(ctx context.Context, config *config.Config, sm *pb.SignedMetrics) error {
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
+	return cb.WithContext(ctx, func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.UpdateMetrics(ctx, sm)
 		return err
 	})
@@ -263,6 +263,7 @@ func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
 	nd.Upload = dc.Upload
 	nd.TotalUpload = dc.TotalUp
 	nd.TotalDownload = dc.TotalDown
+	nd.HVal = dc.HVal
 	if config, err := dc.node.Repo.Config(); err == nil {
 		if storageMax, err := humanize.ParseBytes(config.Datastore.StorageMax); err == nil {
 			nd.StorageVolumeCap = storageMax
@@ -299,11 +300,11 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	}
 }
 
-func (dc *dataCollection) reportHealthAlert(config *config.Config, failurePoint string) {
+func (dc *dataCollection) reportHealthAlert(ctx context.Context, config *config.Config, failurePoint string) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
-		err := dc.doReportHealthAlert(config, failurePoint)
+		err := dc.doReportHealthAlert(ctx, config, failurePoint)
 		if err != nil {
 			log.Error("failed to report health alert to status server: ", err)
 		}
@@ -311,7 +312,7 @@ func (dc *dataCollection) reportHealthAlert(config *config.Config, failurePoint 
 	}, bo)
 }
 
-func (dc *dataCollection) doReportHealthAlert(config *config.Config, failurePoint string) error {
+func (dc *dataCollection) doReportHealthAlert(ctx context.Context, config *config.Config, failurePoint string) error {
 	n := new(pb.NodeHealth)
 	n.BtfsVersion = dc.BTFSVersion
 	n.FailurePoint = failurePoint
@@ -319,7 +320,7 @@ func (dc *dataCollection) doReportHealthAlert(config *config.Config, failurePoin
 	n.TimeCreated = time.Now()
 
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client pb.StatusServiceClient) error {
+	return cb.WithContext(ctx, func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.CollectHealth(ctx, n)
 		return err
 	})

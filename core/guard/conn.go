@@ -14,7 +14,7 @@ import (
 func sendChallengeQuestions(ctx context.Context, cfg *config.Config,
 	req *guardpb.FileChallengeQuestions) error {
 	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
-	return cb.WithContext(context.Background(), func(ctx context.Context, client guardpb.GuardServiceClient) error {
+	return cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
 		res, err := client.SendQuestions(ctx, req)
 		if err != nil {
 			return err

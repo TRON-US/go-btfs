@@ -12,6 +12,7 @@ import (
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 )
 
+
 func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
@@ -60,12 +61,12 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, c
 		ContractId:    shard.ContractID,
 		RenterPid:     session.Renter.Pretty(),
 		HostPid:       shard.Receiver.Pretty(),
-		ShardHash:     chunkHash,
-		ShardIndex:    chunkIndex,
-		ShardFileSize: int64(shard.Size),
-		FileHash:      session.FileHash.KeyString(),
+		ShardHash:     shardHash,
+		ShardIndex:    shardIndex,
+		ShardFileSize: int64(shard.ShardSize),
+		FileHash:      session.FileHash.String(),
 		RentStart:     shard.StartTime,
-		RentEnd:       shard.StartTime.Add(shard.Length),
+		RentEnd:       shard.StartTime.Add(shard.ContractLength),
 		GuardPid:      guardPid.Pretty(),
 		EscrowPid:     escrowPid.Pretty(),
 		Price:         shard.Price,

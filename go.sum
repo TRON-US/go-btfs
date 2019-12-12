@@ -37,6 +37,8 @@ github.com/TRON-US/go-btfs-config v0.2.1 h1:VEJojgve8JfsbPvKJ882KCn4JO6BthrJOkW6
 github.com/TRON-US/go-btfs-config v0.2.1/go.mod h1:SdSLMMxOxqLYvMI0eJItYH7mWkG22EX5WaGyUwOq3fU=
 github.com/TRON-US/go-btfs-files v0.1.1 h1:GuDIiWDM66bfhfxJy8+dBL4Cfbcp3iBp7pgHpKKCw8k=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
+github.com/TRON-US/go-btfs-files v0.1.2 h1:iXaPv9w5zND7rFbjRzX7kP7TEWr4G3Y1h4inslEtyxk=
+github.com/TRON-US/go-btfs-files v0.1.2/go.mod h1:WbnH7HFFolwxJyzuZlE2qWBJfCCVczzpRQwerYIZApM=
 github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElAe7A0=
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
@@ -46,12 +48,15 @@ github.com/TRON-US/go-unixfs v0.4.12 h1:8u8D6JQPngXKGHPgq98+TLPaSjCx/QtYipiuP/Mt
 github.com/TRON-US/go-unixfs v0.4.12/go.mod h1:0Jv/z5OvpB4JpjJcUFB9turYohcoqjF/tmczQX9eeJ4=
 github.com/TRON-US/go-unixfs v0.4.13 h1:Ck55atVfRY4IIHEKlRFI/z+Z3qcYCNG34QmLMQgECNU=
 github.com/TRON-US/go-unixfs v0.4.13/go.mod h1:m/qCevblRIFFCxTHlKtljACjCIYV6nOivzx+jh0nOQU=
+github.com/TRON-US/go-unixfs v0.4.14 h1:M+FeKP0LX1fKdbN+dWYAM1vK/1X8OB6kdijsZlumnXI=
+github.com/TRON-US/go-unixfs v0.4.14/go.mod h1:m/qCevblRIFFCxTHlKtljACjCIYV6nOivzx+jh0nOQU=
 github.com/TRON-US/interface-go-btfs-core v0.4.3 h1:Ld/6GhCElyaQsBPdIU0DkZWdWzXvscnhUTAxWLBcuJ8=
 github.com/TRON-US/interface-go-btfs-core v0.4.3/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
 github.com/Workiva/go-datastructures v1.0.50/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
+github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf h1:qet1QNfXsQxTZqLG4oE62mJzwPIB8+Tee4RNCL9ulrY=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
@@ -827,8 +832,8 @@ github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.
 github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e h1:RumXZ56IrCj4CL+g1b9OL/oH0QnsF976bC8xQFYUD5Q=
 github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/tron-us/go-btfs-common v0.1.9 h1:RWjBvlJfJK2D7X0JxYbNrYVTpopXnp7zg3d2YAZzQ4I=
-github.com/tron-us/go-btfs-common v0.1.9/go.mod h1:vvz4y9UC2KNJ8srb5xjUWHNNW18h1LDuWd5OR6UAf4s=
+github.com/tron-us/go-btfs-common v0.1.11 h1:nBTgSNYBMzdC3l8RKwt1DNgdtWSEj8nhgeEKBG9Su/A=
+github.com/tron-us/go-btfs-common v0.1.11/go.mod h1:vvz4y9UC2KNJ8srb5xjUWHNNW18h1LDuWd5OR6UAf4s=
 github.com/tron-us/go-common/v2 v2.0.4 h1:9NcfOawrRPGnkEuQ1v9k5WtaUzXC1haHBESamMzfwR4=
 github.com/tron-us/go-common/v2 v2.0.4/go.mod h1:JpoNstw8RF4aotepf5R7RjVR0klUjBB94kYZS23TGuA=
 github.com/tron-us/protobuf v1.3.4 h1:oqokl6jMAfe1fb/B6t1UMllbw/KtfdJcCn8plxPkHM8=
