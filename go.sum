@@ -40,8 +40,6 @@ github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElA
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
 github.com/TRON-US/go-mfs v0.2.2/go.mod h1:NduHl3CtI8J81aY4aV/Si/9XZbZ/+hHzPZUHC9Ho3WQ=
-github.com/TRON-US/interface-go-btfs-core v0.4.3 h1:Ld/6GhCElyaQsBPdIU0DkZWdWzXvscnhUTAxWLBcuJ8=
-github.com/TRON-US/interface-go-btfs-core v0.4.3/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
 github.com/Workiva/go-datastructures v1.0.50/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=

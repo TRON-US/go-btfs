@@ -145,3 +145,5 @@ require (
 go 1.13
 
 replace github.com/TRON-US/go-unixfs => ../go-unixfs
+
+replace github.com/TRON-US/interface-go-btfs-core => ../interface-go-btfs-core

@@ -15,6 +15,7 @@ import (
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
+	uio "github.com/TRON-US/go-unixfs/io"
 	"github.com/TRON-US/go-unixfs/mod"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
@@ -286,7 +287,7 @@ func (modifier *MetaModifier) buildMetaDagModifier(nd ipld.Node, mnode ipld.Node
 	var b []byte
 	var err error
 	if !noMeta {
-		b, err = ihelper.GetMetaDataFromDagRoot(modifier.ctx, nd, modifier.dagService)
+		b, err = uio.GetMetaDataFromDagRoot(modifier.ctx, nd, modifier.dagService)
 		if err != nil {
 			return nil, err
 		}
@@ -465,5 +466,5 @@ func GetMetaData(ctx context.Context, api coreiface.CoreAPI, path ipath.Path) ([
 
 	ds := api.Dag()
 
-	return ihelper.GetMetaDataFromDagRoot(ctx, nd, ds)
+	return uio.GetMetaDataFromDagRoot(ctx, nd, ds)
 }
