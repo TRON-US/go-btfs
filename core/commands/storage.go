@@ -612,16 +612,14 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 
-			go payFullToEscrowAndSubmitToGuard(submitContractRes, cfg, ss)
-
+			go payFullToEscrowAndSubmitToGuard(context.Background(), submitContractRes, cfg, ss)
 		}
 		return nil
 	},
 }
 
-
-func payFullToEscrowAndSubmitToGuard(response *escrowPb.SignedSubmitContractResult, configuration *config.Config, ss *storage.FileContracts) {
-
+func payFullToEscrowAndSubmitToGuard(ctx context.Context, response *escrowPb.SignedSubmitContractResult,
+	configuration *config.Config, ss *storage.FileContracts) {
 	privKeyStr := configuration.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {

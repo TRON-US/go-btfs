@@ -1,17 +1,20 @@
 package guard
 
 import (
-	"github.com/gogo/protobuf/proto"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"context"
+	"fmt"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/go-btfs-common/crypto"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
-)
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/gogo/protobuf/proto"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
+)
 
 func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
@@ -50,14 +53,13 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	}, nil
 }
 
-func NewContract(session *storage.FileContracts, configuration *config.Config, chunkHash string, chunkIndex int32) (*guardPb.ContractMeta, error) {
-	shard := session.ShardInfo[chunkHash]
+func NewContract(session *storage.FileContracts, configuration *config.Config, shardHash string, shardIndex int32) (*guardPb.ContractMeta, error) {
+	shard := session.ShardInfo[shardHash]
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
 		return nil, err
 	}
 	return &guardPb.ContractMeta{
-
 		ContractId:    shard.ContractID,
 		RenterPid:     session.Renter.Pretty(),
 		HostPid:       shard.Receiver.Pretty(),
