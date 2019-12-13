@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -18,9 +16,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
-	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -28,10 +23,14 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -638,40 +637,12 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, response *escrowPb.Sig
 		log.Error(err)
 		return
 	}
-	//TODO talk with Jin for doing signature for every contract
-	// get escrow sig, add them to guard
-	sig := payinRes.EscrowSignature
-	for _, guardContract := range ss.GetGuardContracts() {
-		guardContract.EscrowSignature = sig
-		guardContract.EscrowSignedTime = payinRes.Result.EscrowSignedTime
-		guardContract.LastModifyTime = time.Now()
-	}
-	// TODO: upload filemeta to guard
-	go UploadFileMetaToGuard(ss, ss.GetGuardContracts(), response, payerPrivKey, configuration)
-}
 
-// TODO: after upload persist data in leveldb
-func UploadFileMetaToGuard(ss *storage.FileContracts, contracts []*guardPb.Contract,
-	escrowResults *escrowPb.SignedSubmitContractResult, payerPriKey ic.PrivKey, configuration *config.Config) {
-	fileStatus, err := guard.NewFileStatus(ss, contracts, configuration)
+	// TODO: after upload persist data in leveldb
+	err = guard.UploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, configuration)
 	if err != nil {
 		log.Error(err)
 		return
-	}
-	//TODO below code supposedly will copy the escrow signature from every contract to the guard contract
-	//for _,ct:=range contracts{
-	//	for _,result:=range escrowResults.r{
-	//
-	//	}
-	//}
-
-	if fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta); err != nil {
-		log.Error(err)
-		return
-	}
-	err = guard.SubmitFileStatus(configuration, *fileStatus)
-	if err != nil {
-		log.Error(err)
 	}
 }
 

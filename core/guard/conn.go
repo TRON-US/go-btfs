@@ -25,3 +25,19 @@ func sendChallengeQuestions(ctx context.Context, cfg *config.Config,
 		return nil
 	})
 }
+
+// submitFileStatus opens a grpc connection, sends the file meta, and closes (short) connection
+func submitFileStatus(ctx context.Context, cfg *config.Config,
+	fileStatus *guardpb.FileStoreStatus) error {
+	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
+	return cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
+		res, err := client.SubmitFileStoreMeta(ctx, fileStatus)
+		if err != nil {
+			return err
+		}
+		if res.Code != guardpb.ResponseCode_SUCCESS {
+			return fmt.Errorf("failed to execute submit file status to gurad: %v", res.Message)
+		}
+		return nil
+	})
+}
