@@ -264,7 +264,14 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 			return nil, notSupport(f)
 		}
 	} else {
-		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd,
+		var ds ipld.DAGService
+		// If needing repair, the dag has to be writable
+		if settings.Repairs != nil {
+			ds = api.dag
+		} else {
+			ds = ses.dag
+		}
+		node, err = unixfile.NewUnixfsFile(ctx, ds, nd,
 			unixfile.UnixfsFileOptions{Meta: settings.Metadata, RepairShards: settings.Repairs})
 		if settings.Metadata {
 			f, ok := node.(files.File)
