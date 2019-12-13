@@ -1,17 +1,63 @@
 package guard
 
 import (
+	"context"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/go-btfs-common/crypto"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
+
+	"github.com/gogo/protobuf/proto"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
+
+func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
+	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
+	if err != nil {
+		return nil, err
+	}
+	var rentStart time.Time
+	var rentEnd time.Time
+	if len(contracts) > 0 {
+		rentStart = contracts[0].RentStart
+		rentEnd = contracts[0].RentEnd
+	}
+
+	fileStoreMeta := guardPb.FileStoreMeta{
+		RenterPid:        session.Renter.Pretty(),
+		FileHash:         session.FileHash.String(), //TODO need to check
+		FileSize:         10000,                     //TODO need to revise later
+		RentStart:        rentStart,                 //TODO need to revise later
+		RentEnd:          rentEnd,                   //TODO need to revise later
+		CheckFrequency:   0,
+		GuardFee:         0,
+		EscrowFee:        0,
+		ShardCount:       int32(len(contracts)),
+		MinimumShards:    0,
+		RecoverThreshold: 0,
+		EscrowPid:        escrowPid.Pretty(),
+		GuardPid:         guardPid.Pretty(),
+	}
+
+	return &guardPb.FileStoreStatus{
+		FileStoreMeta:     fileStoreMeta,
+		State:             0,
+		Contracts:         contracts,
+		RenterSignature:   nil,
+		GuardReceiveTime:  time.Time{},
+		ChangeLog:         nil,
+		CurrentTime:       time.Now(),
+		GuardSignature:    nil,
+		RentalState:       0,
+		PreparerPid:       "",
+		PreparerSignature: nil,
+	}, nil
+}
 
 func NewContract(session *storage.FileContracts, configuration *config.Config, shardHash string, shardIndex int32) (*guardPb.ContractMeta, error) {
 	shard := session.ShardInfo[shardHash]
@@ -33,6 +79,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		EscrowPid:     escrowPid.Pretty(),
 		Price:         shard.Price,
 		Amount:        shard.TotalPay, // TODO: CHANGE and aLL other optional fields
+
 	}, nil
 }
 
@@ -121,4 +168,18 @@ func pidFromString(key string) (peer.ID, error) {
 		return "", err
 	}
 	return peer.IDFromPublicKey(pubKey)
+}
+
+func SubmitFileStatus(configuration *config.Config, fileStatus guardPb.FileStoreStatus) error {
+	return grpc.GuardClient(configuration.Services.GuardDomain).WithContext(context.Background(), func(ctx context.Context,
+		c guardPb.GuardServiceClient) error {
+
+		fileStatusResponse, err := c.SubmitFileStoreMeta(context.Background(), &fileStatus)
+		if err != nil {
+			return err
+		} else if fileStatusResponse.Code != guardPb.ResponseCode_SUCCESS {
+			return fmt.Errorf("failed to execute submit file status to gurad %s", fileStatusResponse.Code.String())
+		}
+		return nil
+	})
 }
