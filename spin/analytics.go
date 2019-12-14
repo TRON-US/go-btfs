@@ -15,7 +15,7 @@ import (
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
-	"github.com/TRON-US/go-btfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/cenkalti/backoff"
 	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
@@ -182,7 +182,9 @@ func (dc *dataCollection) sendData(node *core.IpfsNode, config *config.Config) {
 	sm, errs, err := dc.doPrepData(node)
 	if errs != nil || err != nil {
 		var sb strings.Builder
-		errs := append(errs, err)
+		if err != nil {
+			errs = append(errs, err)
+		}
 		for _, err := range errs {
 			sb.WriteString(err.Error())
 			sb.WriteRune('\n')
