@@ -180,20 +180,21 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 
 func (dc *dataCollection) sendData(node *core.IpfsNode, config *config.Config) {
 	sm, errs, err := dc.doPrepData(node)
-	if errs != nil || err != nil {
-		var sb strings.Builder
-		if err != nil {
-			errs = append(errs, err)
-		}
-		for _, err := range errs {
-			sb.WriteString(err.Error())
-			sb.WriteRune('\n')
-		}
-		dc.reportHealthAlert(node.Context(), config, sb.String())
-		// If complete prep failure we return
-		if err != nil {
-			return
-		}
+	if errs == nil {
+		errs = make([]error, 0)
+	}
+	var sb strings.Builder
+	if err != nil {
+		errs = append(errs, err)
+	}
+	for _, err := range errs {
+		sb.WriteString(err.Error())
+		sb.WriteRune('\n')
+	}
+	dc.reportHealthAlert(node.Context(), config, sb.String())
+	// If complete prep failure we return
+	if err != nil {
+		return
 	}
 
 	bo := backoff.NewExponentialBackOff()
