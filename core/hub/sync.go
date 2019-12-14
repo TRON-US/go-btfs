@@ -2,7 +2,9 @@ package hub
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
 	"github.com/TRON-US/go-btfs/core"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
@@ -49,6 +51,9 @@ func QueryHub(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.H
 		})
 		if err != nil {
 			return err
+		}
+		if resp.Code != 0 {
+			return errors.New(resp.Message)
 		}
 		return nil
 	})
