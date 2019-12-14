@@ -10,12 +10,13 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/info"
 	"github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
-	"github.com/TRON-US/go-btfs-config"
 	"github.com/cenkalti/backoff"
 	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
@@ -180,18 +181,21 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 
 func (dc *dataCollection) sendData(node *core.IpfsNode, config *config.Config) {
 	sm, errs, err := dc.doPrepData(node)
-	if errs != nil || err != nil {
-		var sb strings.Builder
-		errs := append(errs, err)
-		for _, err := range errs {
-			sb.WriteString(err.Error())
-			sb.WriteRune('\n')
-		}
-		dc.reportHealthAlert(node.Context(), config, sb.String())
-		// If complete prep failure we return
-		if err != nil {
-			return
-		}
+	if errs == nil {
+		errs = make([]error, 0)
+	}
+	var sb strings.Builder
+	if err != nil {
+		errs = append(errs, err)
+	}
+	for _, err := range errs {
+		sb.WriteString(err.Error())
+		sb.WriteRune('\n')
+	}
+	dc.reportHealthAlert(node.Context(), config, sb.String())
+	// If complete prep failure we return
+	if err != nil {
+		return
 	}
 
 	bo := backoff.NewExponentialBackOff()

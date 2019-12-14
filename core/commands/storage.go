@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -1214,6 +1215,9 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datasto
 		resp, err := client.GetSettings(ctx, req)
 		if err != nil {
 			return err
+		}
+		if resp.Code != 200 {
+			return errors.New(resp.Message)
 		}
 		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
 		ns.StoragePriceAsk = uint64(resp.SettingsData.StoragePriceAsk)
