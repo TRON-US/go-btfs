@@ -52,7 +52,7 @@ func QueryHub(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.H
 		if err != nil {
 			return err
 		}
-		if resp.Code != 0 {
+		if resp.Code != 200 {
 			return errors.New(resp.Message)
 		}
 		return nil
