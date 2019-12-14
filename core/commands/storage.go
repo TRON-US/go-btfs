@@ -16,6 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
+	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -612,15 +613,26 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 
-			go payFullToEscrowAndSubmitToGuard(context.Background(), submitContractRes, cfg, ss)
+			// get node
+			n, err := cmdenv.GetNode(env)
+			if err != nil {
+				return err
+			}
+			// get core api
+			api, err := cmdenv.GetApi(env, req)
+			if err != nil {
+				return err
+			}
+
+			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
 		}
 		return nil
 	},
 }
 
-func payFullToEscrowAndSubmitToGuard(ctx context.Context, response *escrowPb.SignedSubmitContractResult,
-	configuration *config.Config, ss *storage.FileContracts) {
-	privKeyStr := configuration.Identity.PrivKey
+func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts) {
+	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
 		log.Error(err)
@@ -632,14 +644,45 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, response *escrowPb.Sig
 		log.Error(err)
 		return
 	}
-	payinRes, err := escrow.PayInToEscrow(ctx, configuration, payinRequest)
+	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
 	// TODO: after upload persist data in leveldb
-	err = guard.UploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, configuration)
+	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	fileHash, err := cidlib.Parse(fsStatus.FileHash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	var shardHashes []cidlib.Cid
+	var hostIDs []string
+	for _, c := range fsStatus.Contracts {
+		sh, err := cidlib.Parse(c.ShardHash)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		shardHashes = append(shardHashes, sh)
+		hostIDs = append(hostIDs, c.HostPid)
+	}
+
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs,
+		cc.GetMinimumQuestionsCountPerShard(fsStatus))
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	err = guard.SendChallengeQuestions(ctx, cfg, fileHash, qs)
 	if err != nil {
 		log.Error(err)
 		return

@@ -170,9 +170,9 @@ func pidFromString(key string) (peer.ID, error) {
 	return peer.IDFromPublicKey(pubKey)
 }
 
-func UploadFileMeta(ctx context.Context, ss *storage.FileContracts,
+func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 	escrowResults *escrowPb.SignedSubmitContractResult, payinRes *escrowPb.SignedPayinResult,
-	payerPriKey ic.PrivKey, configuration *config.Config) error {
+	payerPriKey ic.PrivKey, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 	// TODO: talk with Jin for doing signature for every contract
 	// get escrow sig, add them to guard
 	contracts := ss.GetGuardContracts()
@@ -185,18 +185,18 @@ func UploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 
 	fileStatus, err := NewFileStatus(ss, contracts, configuration)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = submitFileStatus(ctx, configuration, fileStatus)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return fileStatus, nil
 }
