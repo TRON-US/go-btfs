@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +19,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
@@ -814,8 +814,6 @@ the shard and replies back to client for the next challenge step.`,
 
 func SignContractAndCheckPayment(shardInfo *storage.Shards, shardHash string, ssID string, n *core.IpfsNode,
 	pid peer.ID, req *cmds.Request, env cmds.Environment, escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
-	// TODO: Check if renter is paid, if so, download file
-	//go downloadChunkFromClient(shardInfo, shardHash, ssID, n, pid, req, env)
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
@@ -835,6 +833,7 @@ func SignContractAndCheckPayment(shardInfo *storage.Shards, shardHash string, ss
 		return
 	}
 	// TODO: download file from client
+	// TODO: Check if renter is paid, if so, download file
 	go downloadChunkFromClient(shardInfo, shardHash, ssID, n, pid, req, env)
 }
 
@@ -860,14 +859,15 @@ func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID s
 		return
 	}
 	p := path.New(chunkHash)
-	file, err := api.Unixfs().Get(context.Background(), p, false)
+	_, err = api.Unixfs().Get(context.Background(), p, false)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
-	_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
+	// Pin to make sure it does not gets accidentally deleted
+	err = api.Pin().Add(context.Background(), p, options.Pin.Recursive(true))
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.UploadStatus, false, err)
