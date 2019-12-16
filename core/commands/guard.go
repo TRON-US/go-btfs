@@ -11,7 +11,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
 	cconfig "github.com/tron-us/go-btfs-common/config"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	"github.com/ipfs/go-cid"
 )
@@ -44,12 +43,6 @@ by letting the BTFS client test individual guard endpoints.`,
 	Subcommands: map[string]*cmds.Command{
 		"send-challenges": guardSendChallengesCmd,
 	},
-}
-
-type questionRes struct {
-	qs  *guardpb.ShardChallengeQuestions
-	err error
-	i   int
 }
 
 var guardSendChallengesCmd = &cmds.Command{
@@ -95,7 +88,6 @@ to the guard service.`,
 		if err != nil {
 			return err
 		}
-		// check if we have enough hosts
 		var hostIDs []string
 		if hl, found := req.Options[guardHostsOptionName].(string); found {
 			hostIDs = strings.Split(hl, ",")
@@ -108,31 +100,12 @@ to the guard service.`,
 				hostIDs = append(hostIDs, ni.NodeId)
 			}
 		}
-		if len(hostIDs) < len(shardHashes) {
-			return fmt.Errorf("hosts list must be at least %d", len(shardHashes))
-		}
 
 		qCount, _ := req.Options[guardQuestionCountPerShardOptionName].(int64)
-		// generate each shard's questions individually, then combine
-		questions := make([]*guardpb.ShardChallengeQuestions, len(shardHashes))
-		qc := make(chan questionRes)
-		for i, sh := range shardHashes {
-			go func(shardIndex int, shardHash cid.Cid) {
-				qs, err := guard.PrepShardChallengeQuestions(req.Context, n, api,
-					rootHash, shardHash, "", int(qCount))
-				qc <- questionRes{
-					qs:  qs,
-					err: err,
-					i:   shardIndex,
-				}
-			}(i, sh)
-		}
-		for i := 0; i < len(questions); i++ {
-			res := <-qc
-			if res.err != nil {
-				return res.err
-			}
-			questions[res.i] = res.qs
+		questions, err := guard.PrepFileChallengeQuestions(req.Context, n, api, rootHash, shardHashes,
+			hostIDs, int(qCount))
+		if err != nil {
+			return err
 		}
 		// check if we need to update config for a different guard url
 		if gu, found := req.Options[guardUrlOptionName].(string); found {

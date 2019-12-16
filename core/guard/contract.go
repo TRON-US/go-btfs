@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/tron-us/go-btfs-common/crypto"
+	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -133,7 +133,7 @@ func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error
 	return guardPid, escrowPid, err
 }
 
-// Todo: modify or change it all
+// TODO: modify or change it all
 //func NewFileStoreStatus(session *storage.FileContracts, endTime time.Time, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 //
 //	escrowPid, err := pidFromString(configuration.Services.EscrowPubKeys[0])
@@ -170,16 +170,33 @@ func pidFromString(key string) (peer.ID, error) {
 	return peer.IDFromPublicKey(pubKey)
 }
 
-func SubmitFileStatus(configuration *config.Config, fileStatus guardPb.FileStoreStatus) error {
-	return grpc.GuardClient(configuration.Services.GuardDomain).WithContext(context.Background(), func(ctx context.Context,
-		c guardPb.GuardServiceClient) error {
+func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
+	escrowResults *escrowPb.SignedSubmitContractResult, payinRes *escrowPb.SignedPayinResult,
+	payerPriKey ic.PrivKey, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
+	// TODO: talk with Jin for doing signature for every contract
+	// get escrow sig, add them to guard
+	contracts := ss.GetGuardContracts()
+	sig := payinRes.EscrowSignature
+	for _, guardContract := range contracts {
+		guardContract.EscrowSignature = sig
+		guardContract.EscrowSignedTime = payinRes.Result.EscrowSignedTime
+		guardContract.LastModifyTime = time.Now()
+	}
 
-		fileStatusResponse, err := c.SubmitFileStoreMeta(context.Background(), &fileStatus)
-		if err != nil {
-			return err
-		} else if fileStatusResponse.Code != guardPb.ResponseCode_SUCCESS {
-			return fmt.Errorf("failed to execute submit file status to gurad %s", fileStatusResponse.Code.String())
-		}
-		return nil
-	})
+	fileStatus, err := NewFileStatus(ss, contracts, configuration)
+	if err != nil {
+		return nil, err
+	}
+
+	fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	err = submitFileStatus(ctx, configuration, fileStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileStatus, nil
 }
