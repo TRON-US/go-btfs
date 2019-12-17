@@ -57,6 +57,7 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 	if num > 0 && len(hosts) < num {
 		return nil, fmt.Errorf("there are not enough locally stored hosts")
 	}
+	fmt.Println("hosts:", len(hosts))
 	return hosts, nil
 }
 

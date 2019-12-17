@@ -178,7 +178,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			for _, h := range hashes {
 				shardHashes = append(shardHashes, h.String())
 			}
-			fmt.Println("length of hashes from reed solomon: ", len(shardHashes))
 		} else {
 			rootHash = cidlib.Undef
 			shardHashes = req.Arguments
@@ -348,9 +347,18 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				return
 			}
 
-			//TODO need to calculate the amount, duration, payout times blahblah here....
 			// init escrow Contract
-			escrowContract := escrow.NewContract(cfg, shardKey, n.Identity.Pretty(), candidateHost.Identity, shardInfo.TotalPay)
+			_, pid, err := ParsePeerParam(candidateHost.Identity)
+			if err != nil {
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
+			escrowContract, err := escrow.NewContract(cfg, shardKey, n, pid, shardInfo.TotalPay)
+			if err != nil {
+				log.Error("create escrow contract failed. ", err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
+				return
+			}
 			halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
 			if err != nil {
 				log.Error("sign escrow contract and marshal failed ")
@@ -611,7 +619,6 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		}
 
 		var contractRequest *escrowPb.EscrowContractRequest
-		fmt.Println("length of shard: ", len(ss.ShardInfo))
 		fmt.Println("complete contract: ", ss.GetCompleteContractNum())
 		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
 			contracts, totalPrice, err := storage.PrepareContractFromShard(ss.ShardInfo)
@@ -628,7 +635,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 			fmt.Println("submit to escrow")
-			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
+			submitContractRes, err := escrow.SubmitContractToEscrow(context.Background(), cfg, contractRequest)
 			if err != nil {
 				sendStepStateChan(shard.RetryChan, storage.SubmitState, false, err, nil)
 				log.Error(err)
