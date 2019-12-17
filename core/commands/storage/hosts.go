@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -47,7 +46,7 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 			return nil, r.Error
 		}
 		var h hubpb.Host
-		err := json.Unmarshal(r.Entry.Value, &h)
+		err := proto.Unmarshal(r.Entry.Value, &h)
 		if err != nil {
 			return nil, err
 		}
