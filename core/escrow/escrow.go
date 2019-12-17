@@ -43,6 +43,7 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 	// prepare channel commit
 	pid := configuration.Identity.PeerID
 	buyerPrivKey, err := configuration.Identity.DecodePrivateKey("")
+	fmt.Println("buyer private key: ", buyerPrivKey)
 	if err != nil {
 		return nil, err
 	}

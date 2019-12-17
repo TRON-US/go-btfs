@@ -2,7 +2,6 @@ package remote
 
 import (
 	"context"
-
 	"github.com/TRON-US/go-btfs/core"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -25,10 +24,12 @@ func GetStreamRequestRemotePeerID(req *cmds.Request, node *core.IpfsNode) (peer.
 func FindPeer(ctx context.Context, n *core.IpfsNode, pid string) (*peer.AddrInfo, error) {
 	id, err := peer.IDB58Decode(pid)
 	if err != nil {
+		log.Error("error decode:", pid, err)
 		return nil, err
 	}
 	pinfo, err := n.Routing.FindPeer(ctx, id)
 	if err != nil {
+		log.Error("error finding peer:", pinfo, err)
 		return nil, err
 	}
 	return &pinfo, nil

@@ -47,7 +47,8 @@ func QueryHub(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.H
 	err = grpc.HubQueryClient(config.Services.HubDomain).WithContext(ctx, func(ctx context.Context,
 		client hubpb.HubQueryServiceClient) error {
 		resp, err = client.GetHosts(ctx, &hubpb.HostsReq{
-			Id: node.Identity.Pretty(),
+			Id:       node.Identity.Pretty(),
+			RespSize: 30,
 		})
 		if err != nil {
 			return err
