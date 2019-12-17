@@ -3,6 +3,7 @@ package guard
 import (
 	"context"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/escrow"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -64,10 +65,10 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 
 func NewContract(session *storage.FileContracts, configuration *config.Config, shardHash string, shardIndex int32) (*guardPb.ContractMeta, error) {
 	shard := session.ShardInfo[shardHash]
-	//guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
-	//if err != nil {
-	//	return nil, err
-	//}
+	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
+	if err != nil {
+		return nil, err
+	}
 	return &guardPb.ContractMeta{
 		ContractId:    shard.ContractID,
 		RenterPid:     session.Renter.Pretty(),
@@ -78,10 +79,8 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		FileHash:      session.FileHash.String(),
 		RentStart:     shard.StartTime,
 		RentEnd:       shard.StartTime.Add(shard.ContractLength),
-		//GuardPid:      guardPid.Pretty(),
-		//EscrowPid:     escrowPid.Pretty(),
-		GuardPid:"guard Peer ID",
-		EscrowPid:"escrow Peer ID",
+		GuardPid:      guardPid.Pretty(),
+		EscrowPid:     escrowPid.Pretty(),
 		Price:         shard.Price,
 		Amount:        shard.TotalPay, // TODO: CHANGE and aLL other optional fields
 
@@ -170,7 +169,7 @@ func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error
 //}
 
 func pidFromString(key string) (peer.ID, error) {
-	pubKey, err := crypto.ToPubKey(key)
+	pubKey, err := escrow.ConvertPubKeyFromString(key)
 	if err != nil {
 		return "", err
 	}

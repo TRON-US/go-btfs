@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/alecthomas/units"
+	"strconv"
 	"sync"
 	"time"
 
@@ -28,12 +29,10 @@ const (
 
 	// chunk state
 	InitState     = 0
-	CollectState  = 1
-	SubmitState   = 2
-	PayState      = 3
-	GuardState    = 4
-	PaymentState  = 5
-	CompleteState = 6
+	SubmitState   = 1
+	PayState      = 2
+	GuardState    = 3
+	CompleteState = 4
 
 	// session status
 	InitStatus     = 0
@@ -77,6 +76,8 @@ type StatusChan struct {
 type Shards struct {
 	sync.Mutex
 
+	ShardHash            string
+	ShardIndex           int
 	ContractID           string
 	Challenge            *StorageChallenge
 	SignedEscrowContract []byte
@@ -107,9 +108,6 @@ func init() {
 	// init chunk state
 	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
-		TimeOut: 30 * time.Second}
-	StdStateFlow[CollectState] = &FlowControl{
-		State:   "collect contract",
 		TimeOut: 5 * time.Minute}
 	StdStateFlow[SubmitState] = &FlowControl{
 		State:   "submit",
@@ -119,10 +117,7 @@ func init() {
 		TimeOut: 30 * time.Second}
 	StdStateFlow[GuardState] = &FlowControl{
 		State:   "verify",
-		TimeOut: time.Second}
-	StdStateFlow[PaymentState] = &FlowControl{
-		State:   "payment",
-		TimeOut: 10 * time.Second}
+		TimeOut: 30 * time.Second}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
@@ -291,14 +286,14 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte, guardContract *guardPb.Contract) (bool, error) {
+func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, guardContract *guardPb.Contract) (bool, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.GuardContracts = append(ss.GuardContracts, guardContract)
-	chunk := ss.ShardInfo[chunkHash]
+	chunk := ss.ShardInfo[shardKey]
 	if chunk == nil {
-		return false, fmt.Errorf("chunk does not exists")
+		return false, fmt.Errorf("shard does not exists")
 	}
 	if chunk.SetSignedContract(contracts) {
 		ss.CompleteContracts++
@@ -353,32 +348,35 @@ func (ss *FileContracts) RemoveShard(hash string) {
 	}
 }
 
-func (ss *FileContracts) GetOrDefault(hash string, shardSize int64, length int64) *Shards {
+func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) *Shards {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ShardInfo[hash] == nil {
+	shardKey := shardHash + strconv.Itoa(shardIndex)
+	if ss.ShardInfo[shardKey] == nil {
 		c := &Shards{}
+		c.ShardHash = shardHash
+		c.ShardIndex = shardIndex
 		c.RetryChan = make(chan *StepRetryChan)
 		c.StartTime = time.Now()
 		c.State = InitState
 		c.ShardSize = shardSize
 		c.StorageLength = length
 		c.ContractLength = time.Duration(length*24) * time.Hour
-		ss.ShardInfo[hash] = c
+		ss.ShardInfo[shardKey] = c
 		return c
 	} else {
-		fmt.Println("duplicate hash: ", hash)
+		fmt.Println("duplicate hash: ", shardKey)
 	}
-	return ss.ShardInfo[hash]
+	return ss.ShardInfo[shardKey]
 }
 
-func (c *Shards) SetPrice(price int64)  {
+func (c *Shards) SetPrice(price int64) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.Price = price
-	totalPay := int64( float64(c.ShardSize) / float64(units.GiB) * float64(price) * float64(c.ContractLength) )
+	totalPay := int64(float64(c.ShardSize) / float64(units.GiB) * float64(price) * float64(c.ContractLength))
 	if totalPay == 0 {
 		c.TotalPay = 1
 	} else {
@@ -408,7 +406,7 @@ func (c *Shards) UpdateShard(recvPid peer.ID) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) SetSignedContract(contract []byte) bool{
+func (c *Shards) SetSignedContract(contract []byte) bool {
 	c.Lock()
 	defer c.Unlock()
 
@@ -463,11 +461,18 @@ func (c *Shards) SetState(state int) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) GetState() string {
+func (c *Shards) GetStateStr() string {
 	c.Lock()
 	defer c.Unlock()
 
 	return StdStateFlow[c.State].State
+}
+
+func (c *Shards) GetState() int {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.State
 }
 
 func (c *Shards) GetTotalAmount() int64 {
