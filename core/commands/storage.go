@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -19,8 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
+	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -28,10 +24,14 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -645,15 +645,27 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			}
 			sendStepStateChan(shard.RetryChan, storage.SubmitState, true, nil, nil)
 			fmt.Println("submit contract success! ")
-			go payFullToEscrowAndSubmitToGuard(context.Background(), submitContractRes, cfg, ss)
+
+			// get node
+			n, err := cmdenv.GetNode(env)
+			if err != nil {
+				return err
+			}
+			// get core api
+			api, err := cmdenv.GetApi(env, req)
+			if err != nil {
+				return err
+			}
+
+			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
 		}
 		return nil
 	},
 }
 
-func payFullToEscrowAndSubmitToGuard(ctx context.Context, response *escrowPb.SignedSubmitContractResult,
-	configuration *config.Config, ss *storage.FileContracts) {
-	privKeyStr := configuration.Identity.PrivKey
+func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts) {
+	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
 		log.Error(err)
@@ -665,45 +677,48 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, response *escrowPb.Sig
 		log.Error(err)
 		return
 	}
-	payinRes, err := escrow.PayInToEscrow(ctx, configuration, payinRequest)
+	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	//TODO talk with Jin for doing signature for every contract
-	// get escrow sig, add them to guard
-	sig := payinRes.EscrowSignature
-	for _, guardContract := range ss.GetGuardContracts() {
-		guardContract.EscrowSignature = sig
-		guardContract.EscrowSignedTime = payinRes.Result.EscrowSignedTime
-		guardContract.LastModifyTime = time.Now()
-	}
-	// TODO: upload filemeta to guard
-	go UploadFileMetaToGuard(ss, ss.GetGuardContracts(), response, payerPrivKey, configuration)
-}
 
-// TODO: after upload persist data in leveldb
-func UploadFileMetaToGuard(ss *storage.FileContracts, contracts []*guardPb.Contract,
-	escrowResults *escrowPb.SignedSubmitContractResult, payerPriKey ic.PrivKey, configuration *config.Config) {
-	fileStatus, err := guard.NewFileStatus(ss, contracts, configuration)
+	// TODO: after upload persist data in leveldb
+	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	//TODO below code supposedly will copy the escrow signature from every contract to the guard contract
-	//for _,ct:=range contracts{
-	//	for _,result:=range escrowResults.r{
-	//
-	//	}
-	//}
 
-	if fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta); err != nil {
+	fileHash, err := cidlib.Parse(fsStatus.FileHash)
+	if err != nil {
 		log.Error(err)
 		return
 	}
-	err = guard.SubmitFileStatus(configuration, *fileStatus)
+
+	var shardHashes []cidlib.Cid
+	var hostIDs []string
+	for _, c := range fsStatus.Contracts {
+		sh, err := cidlib.Parse(c.ShardHash)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		shardHashes = append(shardHashes, sh)
+		hostIDs = append(hostIDs, c.HostPid)
+	}
+
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs,
+		cc.GetMinimumQuestionsCountPerShard(fsStatus))
 	if err != nil {
 		log.Error(err)
+		return
+	}
+
+	err = guard.SendChallengeQuestions(ctx, cfg, fileHash, qs)
+	if err != nil {
+		log.Error(err)
+		return
 	}
 }
 
@@ -816,8 +831,6 @@ the shard and replies back to client for the next challenge step.`,
 
 func SignContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
 	pid peer.ID, req *cmds.Request, env cmds.Environment, escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
-	// TODO: Check if renter is paid, if so, download file
-	//go downloadChunkFromClient(shardInfo, shardHash, ssID, n, pid, req, env)
 	escrowContract := escrowSignedContract.GetContract()
 	fmt.Println("escrow contract: ", escrowContract)
 	guardContractMeta := guardSignedContract.ContractMeta
@@ -864,14 +877,15 @@ func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID s
 		return
 	}
 	p := path.New(chunkHash)
-	file, err := api.Unixfs().Get(context.Background(), p, false)
+	_, err = api.Unixfs().Get(context.Background(), p, false)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 		storage.GlobalSession.Remove(ssID, chunkHash)
 		return
 	}
-	_, err = fileArchive(file, p.String(), false, gzip.NoCompression)
+	// Pin to make sure it does not gets accidentally deleted
+	err = api.Pin().Add(context.Background(), p, options.Pin.Recursive(true))
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)

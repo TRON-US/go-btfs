@@ -11,6 +11,7 @@ import (
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 )

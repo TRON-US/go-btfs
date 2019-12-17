@@ -2,15 +2,16 @@ package guard
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	core "github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ccrypto "github.com/tron-us/go-btfs-common/crypto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/ipfs/go-cid"
 )
 
@@ -53,6 +54,44 @@ func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api c
 	}
 	sq.PreparerSignature = sig
 	return sq, nil
+}
+
+type questionRes struct {
+	qs  *guardpb.ShardChallengeQuestions
+	err error
+	i   int
+}
+
+// PrepFileChallengeQuestions checks and prepares all shard questions in one setting
+func PrepFileChallengeQuestions(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+	fileHash cid.Cid, shardHashes []cid.Cid, hostIDs []string,
+	questionsPerShard int) ([]*guardpb.ShardChallengeQuestions, error) {
+	if len(hostIDs) < len(shardHashes) {
+		return nil, fmt.Errorf("hosts list must be at least %d", len(shardHashes))
+	}
+	// generate each shard's questions individually, then combine
+	questions := make([]*guardpb.ShardChallengeQuestions, len(shardHashes))
+	qc := make(chan questionRes)
+	for i, sh := range shardHashes {
+		go func(shardIndex int, shardHash cid.Cid) {
+			qs, err := PrepShardChallengeQuestions(ctx, n, api,
+				fileHash, shardHash, hostIDs[i], questionsPerShard)
+			qc <- questionRes{
+				qs:  qs,
+				err: err,
+				i:   shardIndex,
+			}
+		}(i, sh)
+	}
+	for i := 0; i < len(questions); i++ {
+		res := <-qc
+		if res.err != nil {
+			return nil, res.err
+		}
+		questions[res.i] = res.qs
+	}
+
+	return questions, nil
 }
 
 // SendChallengeQuestions combines all shard questions in a file and sends to guard service
