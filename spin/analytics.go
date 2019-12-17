@@ -28,8 +28,9 @@ import (
 )
 
 type dcWrap struct {
-	node *core.IpfsNode
-	pn   *nodepb.Node
+	node   *core.IpfsNode
+	pn     *nodepb.Node
+	config *config.Config
 }
 
 //Server URL for data collection
@@ -74,6 +75,12 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 	dc := new(dcWrap)
 	dc.node = node
 	dc.pn = new(nodepb.Node)
+	if c, err := dc.node.Repo.Config(); err != nil {
+		log.Error(err.Error())
+		dc.config = new(config.Config)
+	} else {
+		dc.config = c
+	}
 
 	if configuration.Experimental.Analytics {
 		infoStats, err := cpu.Info()
@@ -227,10 +234,8 @@ func (dc *dcWrap) doSendData(ctx context.Context, config *config.Config, sm *pb.
 }
 
 func (dc *dcWrap) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
-	if config, err := dc.node.Repo.Config(); err == nil {
-		if storageMax, err := humanize.ParseBytes(config.Datastore.StorageMax); err == nil {
-			dc.pn.StorageVolumeCap = storageMax
-		}
+	if storageMax, err := humanize.ParseBytes(dc.config.Datastore.StorageMax); err == nil {
+		dc.pn.StorageVolumeCap = storageMax
 	}
 	bytes, err := proto.Marshal(dc.pn)
 	if err != nil {
