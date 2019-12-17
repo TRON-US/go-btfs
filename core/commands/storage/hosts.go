@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -46,7 +46,7 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 			return nil, r.Error
 		}
 		var h hubpb.Host
-		err := json.Unmarshal(r.Entry.Value, &h)
+		err := proto.Unmarshal(r.Entry.Value, &h)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +91,7 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 	}
 
 	for i, ni := range nodes {
-		b, err := json.Marshal(ni)
+		b, err := proto.Marshal(ni)
 		if err != nil {
 			return err
 		}
