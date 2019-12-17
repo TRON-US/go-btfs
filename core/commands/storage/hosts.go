@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -91,7 +92,7 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 	}
 
 	for i, ni := range nodes {
-		b, err := json.Marshal(ni)
+		b, err := proto.Marshal(ni)
 		if err != nil {
 			return err
 		}
