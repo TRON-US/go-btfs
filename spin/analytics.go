@@ -75,14 +75,9 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 	dc := new(dcWrap)
 	dc.node = node
 	dc.pn = new(nodepb.Node)
-	if c, err := dc.node.Repo.Config(); err != nil {
-		log.Error(err.Error())
-		dc.config = new(config.Config)
-	} else {
-		dc.config = c
-	}
+	dc.config = configuration
 
-	if configuration.Experimental.Analytics {
+	if dc.config.Experimental.Analytics {
 		infoStats, err := cpu.Info()
 		if err == nil {
 			dc.pn.CpuInfo = infoStats[0].ModelName
@@ -99,6 +94,9 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 		dc.pn.BtfsVersion = BTFSVersion
 		dc.pn.OsType = runtime.GOOS
 		dc.pn.ArchType = runtime.GOARCH
+		if storageMax, err := humanize.ParseBytes(dc.config.Datastore.StorageMax); err == nil {
+			dc.pn.StorageVolumeCap = storageMax
+		}
 	}
 
 	go dc.collectionAgent(node)
@@ -234,9 +232,6 @@ func (dc *dcWrap) doSendData(ctx context.Context, config *config.Config, sm *pb.
 }
 
 func (dc *dcWrap) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
-	if storageMax, err := humanize.ParseBytes(dc.config.Datastore.StorageMax); err == nil {
-		dc.pn.StorageVolumeCap = storageMax
-	}
 	bytes, err := proto.Marshal(dc.pn)
 	if err != nil {
 		return nil, err
