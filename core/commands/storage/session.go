@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/alecthomas/units"
 	"strconv"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"

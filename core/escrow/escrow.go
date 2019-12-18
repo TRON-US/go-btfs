@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	logging "github.com/ipfs/go-log"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -16,9 +15,9 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
+	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
-
 
 var log = logging.Logger("core/escrow")
 
