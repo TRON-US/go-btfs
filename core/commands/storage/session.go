@@ -348,7 +348,7 @@ func (ss *FileContracts) RemoveShard(hash string) {
 	}
 }
 
-func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) *Shards {
+func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shards, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -363,12 +363,14 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSiz
 		c.ShardSize = shardSize
 		c.StorageLength = length
 		c.ContractLength = time.Duration(length*24) * time.Hour
+		if err := c.SetContractID(); err != nil {
+			return nil, err
+		}
 		ss.ShardInfo[shardKey] = c
-		return c
+		return c, nil
 	} else {
-		fmt.Println("duplicate hash: ", shardKey)
+		return ss.ShardInfo[shardKey], nil
 	}
-	return ss.ShardInfo[shardKey]
 }
 
 func (c *Shards) SetPrice(price int64) {
@@ -384,12 +386,16 @@ func (c *Shards) SetPrice(price int64) {
 	}
 }
 
-// TODO: modify later to be unique key even if payin fails
-func (c *Shards) SetContractID(ssID string, shardHash string) {
+func (c *Shards) SetContractID() error {
 	c.Lock()
 	defer c.Unlock()
 
-	c.ContractID = ssID + shardHash
+	contractID, err := NewSessionID()
+	if err != nil {
+		return err
+	}
+	c.ContractID = contractID
+	return nil
 }
 
 func (c *Shards) GetContractID() string {

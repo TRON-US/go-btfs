@@ -268,7 +268,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		// add shards into session
 		shardIndex := 0
 		for _, shardHash := range shardHashes {
-			ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), storageLength)
+			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), storageLength)
+			if err != nil {
+				return err
+			}
 			shardIndex++
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
@@ -354,7 +357,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
-			escrowContract, err := escrow.NewContract(cfg, shardKey, n, pid, shardInfo.TotalPay)
+			escrowContract, err := escrow.NewContract(cfg, shardInfo.ContractID, n, pid, shardInfo.TotalPay)
 			if err != nil {
 				log.Error("create escrow contract failed. ", err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
@@ -800,7 +803,10 @@ the shard and replies back to client for the next challenge step.`,
 		ss.SetFileHash(fileHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
-		shardInfo := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen))
+		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen))
+		if err != nil {
+			return err
+		}
 		shardInfo.UpdateShard(n.Identity)
 		shardInfo.SetState(storage.InitState)
 		shardInfo.SetPrice(price)

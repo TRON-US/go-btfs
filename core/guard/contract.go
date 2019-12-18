@@ -63,8 +63,8 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	}, nil
 }
 
-func NewContract(session *storage.FileContracts, configuration *config.Config, shardHash string, shardIndex int32) (*guardPb.ContractMeta, error) {
-	shard := session.ShardInfo[shardHash]
+func NewContract(session *storage.FileContracts, configuration *config.Config, shardKey string, shardIndex int32) (*guardPb.ContractMeta, error) {
+	shard := session.ShardInfo[shardKey]
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		ContractId:    shard.ContractID,
 		RenterPid:     session.Renter.Pretty(),
 		HostPid:       shard.Receiver.Pretty(),
-		ShardHash:     shardHash,
+		ShardHash:     shard.ShardHash,
 		ShardIndex:    shardIndex,
 		ShardFileSize: shard.ShardSize,
 		FileHash:      session.FileHash.String(),
