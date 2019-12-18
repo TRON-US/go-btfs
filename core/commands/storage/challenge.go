@@ -23,6 +23,7 @@ type StorageChallenge struct {
 	API  coreiface.CoreAPI
 
 	// Internal fields for parsing chunks
+	init     bool
 	seenCIDs map[string]bool
 	allCIDs  []cid.Cid // Not storing node for faster fetch
 	sync.Mutex
@@ -41,8 +42,9 @@ type StorageChallenge struct {
 // and initializes underlying CIDs to be ready for challenge generation.
 // When used by storage client: challengeID is "", will be randomly genenerated
 // When used by storage host: challengeID is a valid uuid v4
+// When host needs to get blocks and initialize the challenge for the very first time, use init=true
 func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	rootHash, shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
+	rootHash, shardHash cid.Cid, challengeID string, init bool) (*StorageChallenge, error) {
 	if challengeID == "" {
 		chid, err := uuid.NewRandom()
 		if err != nil {
@@ -54,6 +56,7 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 		Ctx:      ctx,
 		Node:     node,
 		API:      api,
+		init:     init,
 		seenCIDs: map[string]bool{},
 		ID:       challengeID,
 		RID:      rootHash,
@@ -67,12 +70,12 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 
 func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
 	rootHash, shardHash cid.Cid) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "")
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "", false)
 }
 
 func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	rootHash, shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID)
+	rootHash, shardHash cid.Cid, challengeID string, init bool) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID, init)
 }
 
 // getAllCIDsRecursive traverses the full DAG to find all cids and
@@ -91,6 +94,13 @@ func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
 	rp, err := sc.API.ResolvePath(sc.Ctx, path.IpfsPath(blockHash))
 	if err != nil {
 		return err
+	}
+	// Pin if initializing this on host
+	if sc.init {
+		err = sc.API.Pin().Add(sc.Ctx, rp)
+		if err != nil {
+			return err
+		}
 	}
 	// Mark as seen
 	sc.seenCIDs[ncs] = true
