@@ -216,7 +216,7 @@ func peerId2pubkey(peerId string) (string, error) {
 	return hex.EncodeToString(bytes[4:]), nil
 }
 
-func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts ...options.UnixfsGetOption) (files.Node, error) {
+func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.UnixfsGetOption) (files.Node, error) {
 	settings, err := options.UnixfsGetOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -229,8 +229,9 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 	}
 
 	var node files.Node
-	if !metadata && settings.Decrypt {
-		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, false)
+	if !settings.Metadata && settings.Decrypt {
+		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd,
+			unixfile.UnixfsFileOptions{RepairShards: settings.Repairs})
 		switch f := node.(type) {
 		case files.File:
 			privKey, err := api.getPrivateKey(settings.PrivateKey)
@@ -263,13 +264,21 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, metadata bool, opts 
 			return nil, notSupport(f)
 		}
 	} else {
-		node, err = unixfile.NewUnixfsFile(ctx, ses.dag, nd, metadata)
-		if metadata {
+		var ds ipld.DAGService
+		// If needing repair, the dag has to be writable
+		if settings.Repairs != nil {
+			ds = api.dag
+		} else {
+			ds = ses.dag
+		}
+		node, err = unixfile.NewUnixfsFile(ctx, ds, nd,
+			unixfile.UnixfsFileOptions{Meta: settings.Metadata, RepairShards: settings.Repairs})
+		if settings.Metadata {
 			f, ok := node.(files.File)
 			if !ok {
 				return nil, notSupport(f)
 			}
-			inb, err := ftutil.ReadMetadataBytes(ctx, nd, api.dag, metadata)
+			inb, err := ftutil.ReadMetadataBytes(ctx, nd, api.dag, settings.Metadata)
 			if err != nil {
 				return nil, err
 			}
@@ -545,7 +554,7 @@ func (api *UnixfsAPI) core() *CoreAPI {
 }
 
 func (api *UnixfsAPI) GetMetadata(ctx context.Context, p path.Path) ([]byte, error) {
-	f, err := api.core().Unixfs().Get(ctx, p, true)
+	f, err := api.core().Unixfs().Get(ctx, p, options.Unixfs.Metadata(true))
 	if err != nil {
 		return nil, err
 	}

@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	chunker "github.com/TRON-US/go-btfs-chunker"
+	gopath "path"
+
 	core "github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/pin"
+
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
@@ -21,7 +24,6 @@ import (
 	posinfo "github.com/ipfs/go-ipfs-posinfo"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	gopath "path"
 )
 
 // MetaModifier contains the options to the `metadata` command.
@@ -282,17 +284,16 @@ func (modifier *MetaModifier) removeMeta(nd ipld.Node) (ipld.Node, error) {
 
 func (modifier *MetaModifier) buildMetaDagModifier(nd ipld.Node, mnode ipld.Node, noMeta bool, dr []byte) (*mod.MetaDagModifier, error) {
 	// Retrieve SuperMeta.
-	var b []byte = nil
+	var b []byte
 	var err error
 	if !noMeta {
-		b, err = GetMetaDataFromDagRoot(modifier.ctx, nd, modifier.dagService)
+		b, err = uio.GetMetaDataFromDagRoot(modifier.ctx, nd, modifier.dagService)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	var sm ihelper.SuperMeta
-	err = GetOrDefaultSuperMeta(b, &sm)
+	sm, err := ihelper.GetOrDefaultSuperMeta(b)
 	if err != nil {
 		return nil, err
 	}
@@ -320,25 +321,6 @@ func (modifier *MetaModifier) buildMetaDagModifier(nd ipld.Node, mnode ipld.Node
 	mdagmod := mod.NewMetaDagModifierBalanced(dagmod, db)
 
 	return mdagmod, nil
-}
-
-func GetOrDefaultSuperMeta(b []byte, superMeta *ihelper.SuperMeta) error {
-	if b != nil {
-		err := json.Unmarshal(b, superMeta)
-		if err != nil {
-			return err
-		}
-	}
-
-	if b == nil || superMeta.ChunkSize == 0 {
-		superMeta.ChunkSize = uint64(chunker.DefaultBlockSize)
-	}
-
-	if b == nil || superMeta.MaxLinks == 0 {
-		superMeta.MaxLinks = uint64(ihelper.DefaultLinksPerBlock)
-	}
-
-	return nil
 }
 
 func AddMetadataTo(n *core.IpfsNode, skey string, m *ft.Metadata) (string, error) {
@@ -484,33 +466,5 @@ func GetMetaData(ctx context.Context, api coreiface.CoreAPI, path ipath.Path) ([
 
 	ds := api.Dag()
 
-	return GetMetaDataFromDagRoot(ctx, nd, ds)
-}
-
-func GetMetaDataFromDagRoot(ctx context.Context, root ipld.Node, ds ipld.DAGService) ([]byte, error) {
-	_, ok := root.(*dag.ProtoNode)
-	if !ok {
-		return nil, dag.ErrNotProtobuf
-	}
-
-	mnd, err := ft.GetMetaSubdagRoot(ctx, root, ds)
-	if err != nil {
-		return nil, err
-	}
-	if mnd == nil {
-		return nil, nil
-	}
-
-	mr, err := uio.NewDagReader(ctx, mnd, ds)
-	if err != nil {
-		return nil, err
-	}
-
-	b := make([]byte, mr.Size())
-	_, err = mr.CtxReadFull(ctx, b)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
+	return uio.GetMetaDataFromDagRoot(ctx, nd, ds)
 }

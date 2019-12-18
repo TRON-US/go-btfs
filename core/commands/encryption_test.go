@@ -97,7 +97,7 @@ func directAddCat(data []byte, conf testutil.LatencyConfig, addOpts []options.Un
 		return err
 	}
 
-	readerCatted, err := catterApi.Unixfs().Get(ctx, added, false, getOpts...)
+	readerCatted, err := catterApi.Unixfs().Get(ctx, added, getOpts...)
 	if err != nil {
 		return err
 	}

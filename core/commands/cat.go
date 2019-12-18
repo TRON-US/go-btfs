@@ -134,10 +134,11 @@ func cat(ctx context.Context, api iface.CoreAPI, paths []string, offset int64, m
 	getOptions := []options.UnixfsGetOption{
 		options.Unixfs.Decrypt(opts[decryptName].(bool)),
 		options.Unixfs.PrivateKey(opts[privateKeyName].(string)),
+		options.Unixfs.Metadata(meta),
 	}
 
 	for _, p := range paths {
-		f, err := api.Unixfs().Get(ctx, path.New(p), meta, getOptions...)
+		f, err := api.Unixfs().Get(ctx, path.New(p), getOptions...)
 		if err != nil {
 			return nil, 0, err
 		}
