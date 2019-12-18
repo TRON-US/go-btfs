@@ -16,6 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
+	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -722,8 +723,8 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		hostIDs = append(hostIDs, c.HostPid)
 	}
 
-	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs, 100)
-	//cc.GetMinimumQuestionsCountPerShard(fsStatus))
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs,
+		cc.GetMinimumQuestionsCountPerShard(fsStatus))
 	if err != nil {
 		log.Error(err)
 		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
