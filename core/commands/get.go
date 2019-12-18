@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/interface-go-btfs-core/options"
 	"io"
 	"os"
 	gopath "path"
@@ -17,7 +16,9 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	files "github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/ipfs/go-cid"
 	"github.com/whyrusleeping/tar-utils"
 	"gopkg.in/cheggaaa/pb.v1"
 )
@@ -32,6 +33,7 @@ const (
 	getMetaDisplayOptionName   = "meta"
 	decryptName                = "decrypt"
 	privateKeyName             = "private-key"
+	repairShardsName           = "repair-shards"
 )
 
 var GetCmd = &cmds.Command{
@@ -47,6 +49,11 @@ To output a TAR archive instead of unpacked files, use '--archive' or '-a'.
 
 To compress the output with GZIP compression, use '--compress' or '-C'. You
 may also specify the level of compression by specifying '-l=<1-9>'.
+
+To output just the metadata of this BTFS node, use '--meta' or '-m'.
+
+To repair missing shards of a Reed-Solomon encoded file, use '--repair-shards' or '-rs'.
+If '--meta' or '-m' is enabled, this option is ignored.
 `,
 	},
 
@@ -59,8 +66,9 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 		cmds.BoolOption(compressOptionName, "C", "Compress the output with GZIP compression."),
 		cmds.IntOption(compressionLevelOptionName, "l", "The level of compression (1-9)."),
 		cmds.BoolOption(getMetaDisplayOptionName, "m", "Display token metadata"),
-		cmds.BoolOption(decryptName, "Decrypt the file."),
-		cmds.StringOption(privateKeyName, "The private key to decrypt file."),
+		cmds.BoolOption(decryptName, "d", "Decrypt the file."),
+		cmds.StringOption(privateKeyName, "pk", "The private key to decrypt file."),
+		cmds.StringOption(repairShardsName, "rs", "Repair the list of shards. Multihashes separated by ','."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		_, err := getCompressOptions(req)
@@ -77,17 +85,31 @@ may also specify the level of compression by specifying '-l=<1-9>'.
 			return err
 		}
 
-		meta, _ := req.Options[getMetaDisplayOptionName].(bool)
-
 		p := path.New(req.Arguments[0])
 
 		decrypt, _ := req.Options[decryptName].(bool)
 		privateKey, _ := req.Options[privateKeyName].(string)
+		meta, _ := req.Options[getMetaDisplayOptionName].(bool)
+		var repairs []cid.Cid
+		if rs, ok := req.Options[repairShardsName].(string); ok {
+			rshards := strings.Split(rs, ",")
+			for _, rshard := range rshards {
+				rcid, err := cid.Parse(rshard)
+				if err != nil {
+					return err
+				}
+				repairs = append(repairs, rcid)
+			}
+		}
+
 		opts := []options.UnixfsGetOption{
 			options.Unixfs.Decrypt(decrypt),
 			options.Unixfs.PrivateKey(privateKey),
+			options.Unixfs.Metadata(meta),
+			options.Unixfs.Repairs(repairs),
 		}
-		file, err := api.Unixfs().Get(req.Context, p, meta, opts...)
+
+		file, err := api.Unixfs().Get(req.Context, p, opts...)
 		if err != nil {
 			return err
 		}

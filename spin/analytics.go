@@ -13,11 +13,11 @@ import (
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/info"
-	"github.com/tron-us/go-btfs-common/protos/node"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
-	"github.com/cenkalti/backoff"
+	"github.com/cenkalti/backoff/v3"
 	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
@@ -27,31 +27,10 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 )
 
-type programInfo struct {
-	node        *core.IpfsNode
-	startTime   time.Time //StartTime at which the Daemon was ready and analytics started
-	NodeID      string    `json:"node_id"`
-	HVal        string    `json:"h_val"`
-	CPUInfo     string    `json:"cpu_info"`
-	BTFSVersion string    `json:"btfs_version"`
-	OSType      string    `json:"os_type"`
-	ArchType    string    `json:"arch_type"`
-}
-
-type dataCollection struct {
-	info.NodeStorage
-	programInfo
-	UpTime      uint64  `json:"up_time"`         //Seconds
-	StorageUsed uint64  `json:"storage_used"`    //Stored in Kilobytes
-	MemUsed     uint64  `json:"memory_used"`     //Stored in Kilobytes
-	CPUUsed     float64 `json:"cpu_used"`        //Overall CPU used
-	Upload      uint64  `json:"upload"`          //Upload over last epoch, stored in Kilobytes
-	Download    uint64  `json:"download"`        //Download over last epoch, stored in Kilobytes
-	TotalUp     uint64  `json:"total_upload"`    //Total data up, Stored in Kilobytes
-	TotalDown   uint64  `json:"total_download"`  //Total data down, Stored in Kilobytes
-	BlocksUp    uint64  `json:"blocks_up"`       //Total num of blocks uploaded
-	BlocksDown  uint64  `json:"blocks_down"`     //Total num of blocks downloaded
-	NumPeers    uint64  `json:"peers_connected"` //Number of peers
+type dcWrap struct {
+	node   *core.IpfsNode
+	pn     *nodepb.Node
+	config *config.Config
 }
 
 //Server URL for data collection
@@ -93,33 +72,38 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 		return
 	}
 
-	dc := new(dataCollection)
+	dc := new(dcWrap)
 	dc.node = node
+	dc.pn = new(nodepb.Node)
+	dc.config = configuration
 
-	if configuration.Experimental.Analytics {
+	if dc.config.Experimental.Analytics {
 		infoStats, err := cpu.Info()
 		if err == nil {
-			dc.CPUInfo = infoStats[0].ModelName
+			dc.pn.CpuInfo = infoStats[0].ModelName
 		} else {
 			log.Warning(err.Error())
 		}
 
-		dc.startTime = time.Now().UTC()
+		dc.pn.TimeCreated = time.Now()
 		if node.Identity == "" {
 			return
 		}
-		dc.NodeID = node.Identity.Pretty()
-		dc.HVal = hValue
-		dc.BTFSVersion = BTFSVersion
-		dc.OSType = runtime.GOOS
-		dc.ArchType = runtime.GOARCH
+		dc.pn.NodeId = node.Identity.Pretty()
+		dc.pn.HVal = hValue
+		dc.pn.BtfsVersion = BTFSVersion
+		dc.pn.OsType = runtime.GOOS
+		dc.pn.ArchType = runtime.GOARCH
+		if storageMax, err := humanize.ParseBytes(dc.config.Datastore.StorageMax); err == nil {
+			dc.pn.StorageVolumeCap = storageMax
+		}
 	}
 
 	go dc.collectionAgent(node)
 }
 
 // update gets the latest analytics and returns a list of errors for reporting if available
-func (dc *dataCollection) update(node *core.IpfsNode) []error {
+func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	var res []error
 
 	var m runtime.MemStats
@@ -136,25 +120,25 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 		if err != nil {
 			res = append(res, fmt.Errorf("cannot parse nodestorage config: %s", err.Error()))
 		} else {
-			dc.StoragePriceAsk = ns.StoragePriceAsk
-			dc.BandwidthPriceAsk = ns.BandwidthPriceAsk
-			dc.StorageTimeMin = ns.StorageTimeMin
-			dc.BandwidthLimit = ns.BandwidthLimit
-			dc.CollateralStake = ns.CollateralStake
+			dc.pn.StoragePriceAsk = ns.StoragePriceAsk
+			dc.pn.BandwidthPriceAsk = ns.BandwidthPriceAsk
+			dc.pn.StorageTimeMin = ns.StorageTimeMin
+			dc.pn.BandwidthLimit = ns.BandwidthLimit
+			dc.pn.CollateralStake = ns.CollateralStake
 		}
 	}
 
-	dc.UpTime = durationToSeconds(time.Since(dc.startTime))
+	dc.pn.UpTime = durationToSeconds(time.Since(dc.pn.TimeCreated))
 	if cpus, err := cpu.Percent(0, false); err != nil {
 		res = append(res, fmt.Errorf("failed to get uptime: %s", err.Error()))
 	} else {
-		dc.CPUUsed = cpus[0]
+		dc.pn.CpuUsed = cpus[0]
 	}
-	dc.MemUsed = m.HeapAlloc / kilobyte
+	dc.pn.MemoryUsed = m.HeapAlloc / kilobyte
 	if storage, err := dc.node.Repo.GetStorageUsage(); err != nil {
 		res = append(res, fmt.Errorf("failed to get storage usage: %s", err.Error()))
 	} else {
-		dc.StorageUsed = storage / kilobyte
+		dc.pn.StorageUsed = storage / kilobyte
 	}
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
@@ -167,19 +151,19 @@ func (dc *dataCollection) update(node *core.IpfsNode) []error {
 	if err != nil {
 		res = append(res, fmt.Errorf("failed to perform bs.Stat() call: %s", err.Error()))
 	} else {
-		dc.Upload = valOrZero(st.DataSent-dc.TotalUp) / kilobyte
-		dc.Download = valOrZero(st.DataReceived-dc.TotalDown) / kilobyte
-		dc.TotalUp = st.DataSent / kilobyte
-		dc.TotalDown = st.DataReceived / kilobyte
-		dc.BlocksUp = st.BlocksSent
-		dc.BlocksDown = st.BlocksReceived
-		dc.NumPeers = uint64(len(st.Peers))
+		dc.pn.Upload = valOrZero(st.DataSent-dc.pn.TotalUpload) / kilobyte
+		dc.pn.Download = valOrZero(st.DataReceived-dc.pn.TotalDownload) / kilobyte
+		dc.pn.TotalUpload = st.DataSent / kilobyte
+		dc.pn.TotalDownload = st.DataReceived / kilobyte
+		dc.pn.BlocksUp = st.BlocksSent
+		dc.pn.BlocksDown = st.BlocksReceived
+		dc.pn.PeersConnected = uint64(len(st.Peers))
 	}
 
 	return res
 }
 
-func (dc *dataCollection) sendData(node *core.IpfsNode, config *config.Config) {
+func (dc *dcWrap) sendData(node *core.IpfsNode, config *config.Config) {
 	sm, errs, err := dc.doPrepData(node)
 	if errs == nil {
 		errs = make([]error, 0)
@@ -212,7 +196,7 @@ func (dc *dataCollection) sendData(node *core.IpfsNode, config *config.Config) {
 }
 
 // doPrepData gathers the latest analytics and returns (signed object, list of reporting errors, failure)
-func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, []error, error) {
+func (dc *dcWrap) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, []error, error) {
 	errs := dc.update(btfsNode)
 	payload, err := dc.getPayload(btfsNode)
 	if err != nil {
@@ -239,7 +223,7 @@ func (dc *dataCollection) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics
 	return sm, errs, nil
 }
 
-func (dc *dataCollection) doSendData(ctx context.Context, config *config.Config, sm *pb.SignedMetrics) error {
+func (dc *dcWrap) doSendData(ctx context.Context, config *config.Config, sm *pb.SignedMetrics) error {
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
 	return cb.WithContext(ctx, func(ctx context.Context, client pb.StatusServiceClient) error {
 		_, err := client.UpdateMetrics(ctx, sm)
@@ -247,46 +231,15 @@ func (dc *dataCollection) doSendData(ctx context.Context, config *config.Config,
 	})
 }
 
-func (dc *dataCollection) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
-	nd := new(node.Node)
-	now := time.Now().UTC()
-	nd.TimeCreated = now
-	nd.NodeId = dc.NodeID
-	nd.BtfsVersion = dc.BTFSVersion
-	nd.ArchType = dc.ArchType
-	nd.BlocksDown = dc.BlocksDown
-	nd.BlocksUp = dc.BlocksUp
-	nd.CpuInfo = dc.CPUInfo
-	nd.CpuUsed = dc.CPUUsed
-	nd.Download = dc.Download
-	nd.MemoryUsed = dc.MemUsed
-	nd.OsType = dc.OSType
-	nd.PeersConnected = dc.NumPeers
-	nd.StorageUsed = dc.StorageUsed
-	nd.UpTime = dc.UpTime
-	nd.Upload = dc.Upload
-	nd.TotalUpload = dc.TotalUp
-	nd.TotalDownload = dc.TotalDown
-	nd.HVal = dc.HVal
-	if config, err := dc.node.Repo.Config(); err == nil {
-		if storageMax, err := humanize.ParseBytes(config.Datastore.StorageMax); err == nil {
-			nd.StorageVolumeCap = storageMax
-		}
-	}
-
-	nd.StoragePriceAsk = dc.StoragePriceAsk
-	nd.BandwidthPriceAsk = dc.BandwidthPriceAsk
-	nd.StorageTimeMin = dc.StorageTimeMin
-	nd.BandwidthLimit = dc.BandwidthLimit
-	nd.CollateralStake = dc.CollateralStake
-	bytes, err := proto.Marshal(nd)
+func (dc *dcWrap) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
+	bytes, err := proto.Marshal(dc.pn)
 	if err != nil {
 		return nil, err
 	}
 	return bytes, nil
 }
 
-func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
+func (dc *dcWrap) collectionAgent(node *core.IpfsNode) {
 	tick := time.NewTicker(heartBeat)
 	defer tick.Stop()
 	// Force tick on immediate start
@@ -304,7 +257,7 @@ func (dc *dataCollection) collectionAgent(node *core.IpfsNode) {
 	}
 }
 
-func (dc *dataCollection) reportHealthAlert(ctx context.Context, config *config.Config, failurePoint string) {
+func (dc *dcWrap) reportHealthAlert(ctx context.Context, config *config.Config, failurePoint string) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = maxRetryTotal
 	backoff.Retry(func() error {
@@ -316,11 +269,11 @@ func (dc *dataCollection) reportHealthAlert(ctx context.Context, config *config.
 	}, bo)
 }
 
-func (dc *dataCollection) doReportHealthAlert(ctx context.Context, config *config.Config, failurePoint string) error {
+func (dc *dcWrap) doReportHealthAlert(ctx context.Context, config *config.Config, failurePoint string) error {
 	n := new(pb.NodeHealth)
-	n.BtfsVersion = dc.BTFSVersion
+	n.BtfsVersion = dc.pn.BtfsVersion
 	n.FailurePoint = failurePoint
-	n.NodeId = dc.NodeID
+	n.NodeId = dc.pn.NodeId
 	n.TimeCreated = time.Now()
 
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
