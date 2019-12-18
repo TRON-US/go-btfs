@@ -116,8 +116,8 @@ func init() {
 		State:   "pay",
 		TimeOut: 30 * time.Second}
 	StdStateFlow[GuardState] = &FlowControl{
-		State:   "verify",
-		TimeOut: 30 * time.Second}
+		State:   "guard",
+		TimeOut: 30 * time.Minute}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}

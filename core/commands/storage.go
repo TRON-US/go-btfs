@@ -16,7 +16,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
-	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -369,12 +368,14 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
+			shardInfo.UpdateShard(pid)
 			guardContractMeta, err := guard.NewContract(ss, cfg, shardKey, int32(shardIndex))
 			if err != nil {
 				log.Error("fail to new contract meta")
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
+			fmt.Println("guard contract: ", guardContractMeta)
 			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true)
 			if err != nil {
 				log.Error("fail to sign guard contract and marshal")
@@ -486,8 +487,6 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
 		return
 	}
-
-	shard.UpdateShard(hostPid)
 	// send over contract
 	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
 		ssID,
@@ -652,6 +651,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendStepStateChan(shard.RetryChan, storage.SubmitState, true, nil, nil)
 			shard.SetState(storage.PayState)
 			fmt.Println("submit contract success! ")
+			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
 
 			// get node
 			n, err := cmdenv.GetNode(env)
@@ -666,14 +666,14 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 
-			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
+			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss, shard)
 		}
 		return nil
 	},
 }
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts) {
+	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts, shard *storage.Shards) {
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -691,17 +691,21 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		log.Error(err)
 		return
 	}
+	fmt.Println("escrow pay in success!")
+	sendStepStateChan(shard.RetryChan, storage.PayState, true, nil, nil)
 
 	// TODO: after upload persist data in leveldb
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
 		log.Error(err)
+		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 		return
 	}
 
 	fileHash, err := cidlib.Parse(fsStatus.FileHash)
 	if err != nil {
 		log.Error(err)
+		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 		return
 	}
 
@@ -710,6 +714,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	for _, c := range fsStatus.Contracts {
 		sh, err := cidlib.Parse(c.ShardHash)
 		if err != nil {
+			sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 			log.Error(err)
 			return
 		}
@@ -717,18 +722,23 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		hostIDs = append(hostIDs, c.HostPid)
 	}
 
-	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs,
-		cc.GetMinimumQuestionsCountPerShard(fsStatus))
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs, 100)
+		//cc.GetMinimumQuestionsCountPerShard(fsStatus))
 	if err != nil {
 		log.Error(err)
+		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 		return
 	}
 
 	err = guard.SendChallengeQuestions(ctx, cfg, fileHash, qs)
 	if err != nil {
 		log.Error(err)
+		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 		return
 	}
+	sendStepStateChan(shard.RetryChan, storage.CompleteState, true, nil, nil)
+	sendSessionStatusChan(ss.SessionStatusChan, storage.CompleteStatus, true, nil)
+	fmt.Println("successfully send message to guard!")
 }
 
 type UploadRes struct {
