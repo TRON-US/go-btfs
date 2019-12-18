@@ -83,7 +83,6 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		EscrowPid:     escrowPid.Pretty(),
 		Price:         shard.Price,
 		Amount:        shard.TotalPay, // TODO: CHANGE and aLL other optional fields
-
 	}, nil
 }
 
