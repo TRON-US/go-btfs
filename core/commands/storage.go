@@ -212,6 +212,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return fmt.Errorf("price is smaller than minimum setting price")
 		}
 		if !found {
+			// todo: leave it for either no host prices or no user price, can be deleted later
 			price = 250000
 		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)

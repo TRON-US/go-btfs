@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core"

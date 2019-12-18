@@ -4,7 +4,6 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
-
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -12,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
@@ -323,8 +323,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	hValue, _ := req.Options[hValueKwd].(string)
 
 	// Btfs auto update.
-	//url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
-	//go update(url, hValue)
+	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
+	go update(url, hValue)
 
 	// Start assembling node config
 	ncfg := &core.BuildCfg{
