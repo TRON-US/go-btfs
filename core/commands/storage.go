@@ -376,7 +376,6 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
-			fmt.Println("guard contract: ", guardContractMeta)
 			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true)
 			if err != nil {
 				log.Error("fail to sign guard contract and marshal")
@@ -642,7 +641,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				sendStepStateChan(shard.RetryChan, storage.SubmitState, false, err, nil)
 				return err
 			}
-			fmt.Println("submit contract to escrow.")
+			fmt.Println("submit contract to escrow...")
 			submitContractRes, err := escrow.SubmitContractToEscrow(context.Background(), cfg, contractRequest)
 			if err != nil {
 				sendStepStateChan(shard.RetryChan, storage.SubmitState, false, err, nil)
@@ -651,7 +650,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			}
 			sendStepStateChan(shard.RetryChan, storage.SubmitState, true, nil, nil)
 			shard.SetState(storage.PayState)
-			fmt.Println("submit contract success! ")
+			fmt.Println("submit contract success!")
 			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
 
 			// get node
@@ -694,6 +693,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	}
 	fmt.Println("escrow pay in success!")
 	sendStepStateChan(shard.RetryChan, storage.PayState, true, nil, nil)
+	shard.SetState(storage.GuardState)
 
 	// TODO: after upload persist data in leveldb
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
@@ -702,6 +702,8 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 		return
 	}
+	fmt.Println("\nupload file meta to guard success！")
+	fmt.Printf("local file contracts info: %+v \n", ss.GuardContracts)
 
 	fileHash, err := cidlib.Parse(fsStatus.FileHash)
 	if err != nil {
@@ -737,9 +739,11 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
 		return
 	}
+	shard.SetState(storage.CompleteState)
+	ss.SetStatus(storage.CompleteStatus)
+	fmt.Println("successfully send challenge questions to guard!")
 	sendStepStateChan(shard.RetryChan, storage.CompleteState, true, nil, nil)
 	sendSessionStatusChan(ss.SessionStatusChan, storage.CompleteStatus, true, nil)
-	fmt.Println("successfully send message to guard!")
 }
 
 type UploadRes struct {
@@ -1036,27 +1040,22 @@ signature back to the host to complete payment.`,
 		// pre-check
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
-			sendStepStateChan(chunkInfo.RetryChan, storage.GuardState, false, err, nil)
 			return err
 		}
 		if !cfg.Experimental.StorageClientEnabled {
-			sendStepStateChan(chunkInfo.RetryChan, storage.GuardState, false, err, nil)
 			return fmt.Errorf("storage client api not enabled")
 		}
 
 		// verify challenge
 		if chunkInfo.Challenge.Hash != challengeHash {
 			err := fmt.Errorf("fail to verify challenge")
-			sendStepStateChan(chunkInfo.RetryChan, storage.GuardState, false, nil, err)
 			return err
 		}
-		sendStepStateChan(chunkInfo.RetryChan, storage.GuardState, true, nil, nil)
 
 		// from client's perspective, prepared payment finished
 		// but the actual payment does not.
 		// only the complete state timeOut or receiving error means
 		// host having trouble with either agreeing on payment or closing channel
-		sendStepStateChan(chunkInfo.RetryChan, storage.GuardState, true, nil, nil)
 		r := &PaymentRes{}
 		return cmds.EmitOnce(res, r)
 	},

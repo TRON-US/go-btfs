@@ -20,7 +20,7 @@ import (
 )
 
 var GlobalSession *SessionMap
-var StdStateFlow [7]*FlowControl
+var StdStateFlow [5]*FlowControl
 var StdSessionStateFlow [4]*FlowControl
 
 const (
@@ -114,10 +114,10 @@ func init() {
 		TimeOut: time.Minute}
 	StdStateFlow[PayState] = &FlowControl{
 		State:   "pay",
-		TimeOut: 30 * time.Second}
+		TimeOut: time.Minute}
 	StdStateFlow[GuardState] = &FlowControl{
 		State:   "guard",
-		TimeOut: 30 * time.Minute}
+		TimeOut: 10 * time.Minute}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
