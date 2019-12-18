@@ -17,6 +17,7 @@ import (
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
 	uio "github.com/TRON-US/go-unixfs/io"
 	"github.com/TRON-US/go-unixfs/mod"
+	ftutil "github.com/TRON-US/go-unixfs/util"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	cid "github.com/ipfs/go-cid"
@@ -175,6 +176,9 @@ func (modifier *MetaModifier) addMeta(nd ipld.Node) (ipld.Node, error) {
 	var metadataNotExist bool
 	var mnode ipld.Node
 	dr := []byte(modifier.TokenMetadata)
+	// Here please do not call CreateMetadataList() on modifier.TokenMetadata.
+	// Metadata element should be manipulated first before creating the metadata list.
+
 	children, err := ft.GetChildrenForDagWithMeta(modifier.ctx, nd, modifier.dagService)
 	if err != nil {
 		return nil, err
@@ -287,7 +291,7 @@ func (modifier *MetaModifier) buildMetaDagModifier(nd ipld.Node, mnode ipld.Node
 	var b []byte
 	var err error
 	if !noMeta {
-		b, err = uio.GetMetaDataFromDagRoot(modifier.ctx, nd, modifier.dagService)
+		b, err = ftutil.ReadMetadataElementFromDag(modifier.ctx, nd, modifier.dagService, false)
 		if err != nil {
 			return nil, err
 		}

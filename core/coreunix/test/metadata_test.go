@@ -16,6 +16,7 @@ import (
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
 	"github.com/TRON-US/go-unixfs/mod"
+	ftutil "github.com/TRON-US/go-unixfs/util"
 	bserv "github.com/ipfs/go-blockservice"
 	merkledag "github.com/ipfs/go-merkledag"
 
@@ -203,19 +204,38 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, r
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
+	var rsfileAdder *coreunix.ReedSolomonAdder
+	if rs {
+		rsfileAdder, err = coreunix.NewReedSolomonAdder(adder)
+		if err != nil {
+			return nil, err
+		}
+		rsfileAdder.IsDir = true
+	}
 	go func() {
 		defer close(output)
-		_, err := adder.AddAllAndPin(file)
+		if !rs {
+			_, err = adder.AddAllAndPin(file)
+
+		} else {
+			_, err = rsfileAdder.AddAllAndPin(file)
+		}
 		if err != nil {
 			output <- err
 		}
 	}()
 
 	var addedFileHash cid.Cid
-	size, err := directorySize(dir)
-	if err != nil {
-		return nil, err
+	var size int
+	if rs {
+		size = 1
+	} else {
+		size, err = directorySize(dir)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	for i := 0; i < int(size); i++ {
 		select {
 		case o := <-output:
@@ -252,7 +272,8 @@ func addMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path,
 		return nil, err
 	}
 	modifier.Out = output
-	modifier.TokenMetadata = meta
+	metaBytes := []byte(meta)
+	modifier.TokenMetadata = string(metaBytes)
 
 	go func() {
 		defer close(output)
@@ -305,9 +326,9 @@ func TestAddFileWithMetadata(t *testing.T) {
 
 	// Verify modified file.
 	verifyMetadataItems(t, node, path, &MetaStruct{Price: 11.2, Number: 2368})
-	if path.String() != "/btfs/QmbvwwwmJoqgyV3AYwSvCKvGRPx5G3BiwmBjenoLu2xhsC" {
+	if path.String() != "/btfs/QmXeTzZ1jRaYcXpyQmYajLw91XQCssWz6hCj5WLxduB8YV" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmbvwwwmJoqgyV3AYwSvCKvGRPx5G3BiwmBjenoLu2xhsC", path.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmXeTzZ1jRaYcXpyQmYajLw91XQCssWz6hCj5WLxduB8YV", path.String())
 	}
 }
 
@@ -343,9 +364,9 @@ func TestAppendMetadata(t *testing.T) {
 	// Verify modified file.
 	verifyMetadataItems(t, node, p, &MetaStruct{Price: 11.2, Number: 1234})
 
-	if p.String() != "/btfs/QmXDCec9RpJTBkUQyHFziVqWSdHfuBuKHNRTT31Hh5Wgtn" {
+	if p.String() != "/btfs/QmTeHFgkjCqcBbUfcWcU2FKhshoAbaicgtPkkjT7q2P3u5" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmXDCec9RpJTBkUQyHFziVqWSdHfuBuKHNRTT31Hh5Wgtn", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmTeHFgkjCqcBbUfcWcU2FKhshoAbaicgtPkkjT7q2P3u5", p.String())
 	}
 }
 
@@ -374,8 +395,8 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 	}
 
 	// Add token metadata to the BTFS file without existing metadata.
-	expected := fmt.Sprintf(`{"number":%d}`, 2368)
-	p, err := addMetadata(node, path, expected)
+	expected := `{"number":2368}#{}`
+	p, err := addMetadata(node, path, `{"number":2368}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,9 +410,9 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 		t.Fatalf("expected %d, got %d", len(expected), int(metaSize))
 	}
 	verifyMetadataItems(t, node, p, &MetaStruct{Number: 2368})
-	if p.String() != "/btfs/QmUjy2YN56NzJowxpY8419NdLXMwTfLPRAZPr55rxbYV1G" {
+	if p.String() != "/btfs/QmNoKCmonn3LpGfenLocMkzw4woRJ4CZ7hs88MgsA77tGb" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmUjy2YN56NzJowxpY8419NdLXMwTfLPRAZPr55rxbYV1G", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmNoKCmonn3LpGfenLocMkzw4woRJ4CZ7hs88MgsA77tGb", p.String())
 	}
 }
 
@@ -427,9 +448,9 @@ func TestUpdateMetadata(t *testing.T) {
 	// Verify modified file.
 	verifyMetadataItems(t, node, p, &MetaStruct{Price: 23.56, Number: 4356})
 
-	if p.String() != "/btfs/QmXay6rSJnUS4PcwkvqWtLbHWhH77RD7knvqkrwtREEcJ7" {
+	if p.String() != "/btfs/QmdmxXzfb95DiPjDZn6vGjt8ejVxbt1ifjLi27N8jk2zAp" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmXay6rSJnUS4PcwkvqWtLbHWhH77RD7knvqkrwtREEcJ7", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmdmxXzfb95DiPjDZn6vGjt8ejVxbt1ifjLi27N8jk2zAp", p.String())
 	}
 }
 
@@ -512,9 +533,9 @@ func TestRemoveMetadata(t *testing.T) {
 	// Verify modified file.
 	verifyMetadataItems(t, node, p, &MetaStruct{Number: 1234})
 
-	if p.String() != "/btfs/QmWJzTx5BNVwwuj92CJ5xPhyKWmwQHGt2eTwUMp6WQG3K2" {
+	if p.String() != "/btfs/QmdFTTBrDPB57r3FyqzSKiJmjJEptpHsUxTDUiQ3gkdiwE" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmWJzTx5BNVwwuj92CJ5xPhyKWmwQHGt2eTwUMp6WQG3K2", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmdFTTBrDPB57r3FyqzSKiJmjJEptpHsUxTDUiQ3gkdiwE", p.String())
 	}
 }
 
@@ -556,7 +577,8 @@ func verifyMetadataItems(t *testing.T, node *core.IpfsNode, p ipath.Path, exp *M
 		t.Fatal(err)
 	}
 	var meta MetaStruct
-	if err := json.Unmarshal(b, &meta); err != nil {
+	b1 := ftutil.GetMetadataElement(b)
+	if err := json.Unmarshal(b1, &meta); err != nil {
 		t.Fatal(err)
 	}
 
@@ -574,24 +596,28 @@ func verifyMetadataItems(t *testing.T, node *core.IpfsNode, p ipath.Path, exp *M
 // TestAddAddOneLevelDirecotryWithMetadata tests the functionality
 // to add a one level directory with meta data items to BTFS network.
 func TestAddOneLevelDirectoryWithMetadata(t *testing.T) {
-	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmPY3r4fC7z42Vk6b5raaDrp5XaEYn9Cox9r3mu14t6ACj", false)
+	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmTsvHDpjEGEEUKZsUGWgzDmszmkwgteMSZvHRjCCnRJps", false)
 }
 
 func TestAddOneLevelDirectoryWithMetadataReedSolomon(t *testing.T) {
-	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmaYixqwMW3oZoxL926E8jW9EsedPEGdkkGMCBhu8KKGyR", true)
+	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmZwx2ACsEnxHgTmVNCXR8Upp52eXmYY4Rq8UUdxdn1p1z", true)
 }
 
 // TestAddAddOneLevelDirecotryWithMetadata tests the functionality
 // to add a one level directory with meta data items to BTFS network.
 func TestAddTwoLevelDirectoryWithMetadata(t *testing.T) {
-	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmVvHUJsJNwinxUtLDBNysrccF5iYx2eYH5NbhvH4M8Rmv", false)
+	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmVmGgo864dMRAFkW8iUMN42eaP4yPbuF9PjQdb25aQwMQ", false)
 }
 
 func TestAddTwoLevelDirectoryWithMetadataReedSolomon(t *testing.T) {
-	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmPm1v2rUvBCaFBnLVbWEDe2ZjwhLWAj4io47i8wHXDfy7", true)
+	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmVdVz97ZE7HyCjQneL2j58E8TXYiBdWtC9FZssUys7CGB", true)
 }
 
-func testAddDirectoryWithMetadata(t *testing.T, file files.Node, expectedFileHash string, reedSolomon bool) {
+func testAddDirectoryWithMetadata(t *testing.T, file files.Node, originalMetadata string, reedSolomon bool) {
+	testAddDirectory(t, file, originalMetadata, reedSolomon)
+}
+
+func testAddDirectory(t *testing.T, file files.Node, originalMetadataString string, reedSolomon bool) {
 	// Create repo.
 	r := &repo.Mock{
 		C: config.Config{
@@ -616,9 +642,9 @@ func testAddDirectoryWithMetadata(t *testing.T, file files.Node, expectedFileHas
 
 	// Verify modified file.
 	verifyMetadataItems(t, node, path, &MetaStruct{Price: 11.2, Number: 2368})
-	if path.String() != expectedFileHash {
+	if path.String() != originalMetadataString {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", expectedFileHash, path.String())
+		t.Fatalf("expected %s, got %s", originalMetadataString, path.String())
 	}
 }
 

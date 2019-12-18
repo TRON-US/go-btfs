@@ -13,6 +13,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	files "github.com/TRON-US/go-btfs-files"
 	ecies "github.com/TRON-US/go-eccrypto"
 	"github.com/TRON-US/go-mfs"
@@ -183,7 +184,20 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 		}
 	}
 
-	nd, err := fileAdder.AddAllAndPin(node)
+	// if chunker is reed-solomon and the given `node` is directory,
+	// create ReedSolomonAdder. Otherwise use Adder.
+	var nd ipld.Node
+	_, ok := node.(files.Directory)
+	if ok && chunker.IsReedSolomon(settings.Chunker) {
+		rsfileAdder, err := coreunix.NewReedSolomonAdder(fileAdder)
+		if err != nil {
+			return nil, err
+		}
+		rsfileAdder.IsDir = true
+		nd, err = rsfileAdder.AddAllAndPin(node)
+	} else {
+		nd, err = fileAdder.AddAllAndPin(node)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +292,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 			if !ok {
 				return nil, notSupport(f)
 			}
-			inb, err := ftutil.ReadMetadataBytes(ctx, nd, api.dag, settings.Metadata)
+			inb, err := ftutil.ReadMetadataElementFromDag(ctx, nd, api.dag, settings.Metadata)
 			if err != nil {
 				return nil, err
 			}
