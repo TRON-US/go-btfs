@@ -723,7 +723,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	}
 
 	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs, 100)
-		//cc.GetMinimumQuestionsCountPerShard(fsStatus))
+	//cc.GetMinimumQuestionsCountPerShard(fsStatus))
 	if err != nil {
 		log.Error(err)
 		sendStepStateChan(shard.RetryChan, storage.GuardState, false, err, nil)
