@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	logging "github.com/ipfs/go-log"
 	"time"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -17,6 +18,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
+
+
+var log = logging.Logger("core/escrow")
 
 func NewContract(configuration *config.Config, id string, n *core.IpfsNode, pid peer.ID,
 	price int64) (*escrowpb.EscrowContract, error) {
@@ -178,10 +182,12 @@ func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayi
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			res, err := client.PayIn(ctx, signedPayinReq)
 			if err != nil {
+				log.Error(err)
 				return err
 			}
 			err = verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
 			if err != nil {
+				log.Error(err)
 				return err
 			}
 			signedPayinRes = res

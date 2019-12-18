@@ -213,7 +213,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		}
 		if !found {
 			// todo: leave it for either no host prices or no user price, can be deleted later
-			price = 250000
+			price = HostPriceLowBoundary
 		}
 		mode, _ := req.Options[hostSelectModeOptionName].(string)
 		if mode == "custom" {
@@ -238,6 +238,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		} else {
+			fmt.Println("import hosts info from hub...")
 			hosts, err := storage.GetHostsFromDatastore(req.Context, n, mode, len(shardHashes))
 			if err != nil {
 				return err
@@ -353,7 +354,6 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, err)
 				return
 			}
-			fmt.Println("shard Key as contract Id: ", shardKey)
 			escrowContract, err := escrow.NewContract(cfg, shardKey, n, pid, shardInfo.TotalPay)
 			if err != nil {
 				log.Error("create escrow contract failed. ", err)
@@ -561,6 +561,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 			}
 			// if connect successfully, return
 			candidateHost = nextHost
+			fmt.Println("successfully connect to host: ", candidateHost.Identity)
 		}
 	}
 	return candidateHost, nil
@@ -613,9 +614,9 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			return err
 		}
 		shard.SetState(storage.SubmitState)
-		sendStepStateChan(shard.RetryChan, storage.SubmitState, true, nil, nil)
 		ok, err := ss.IncrementContract(shardHash+shardIndex, signedContract, guardContract)
 		if err != nil || !ok {
+			sendStepStateChan(shard.RetryChan, storage.SubmitState, false, err, nil)
 			return err
 		}
 		// TODO: Modify client err return status
@@ -638,6 +639,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				sendStepStateChan(shard.RetryChan, storage.SubmitState, false, err, nil)
 				return err
 			}
+			fmt.Println("submit contract to escrow.")
 			submitContractRes, err := escrow.SubmitContractToEscrow(context.Background(), cfg, contractRequest)
 			if err != nil {
 				sendStepStateChan(shard.RetryChan, storage.SubmitState, false, err, nil)
@@ -645,16 +647,19 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 			sendStepStateChan(shard.RetryChan, storage.SubmitState, true, nil, nil)
+			shard.SetState(storage.PayState)
 			fmt.Println("submit contract success! ")
 
 			// get node
 			n, err := cmdenv.GetNode(env)
 			if err != nil {
+				sendStepStateChan(shard.RetryChan, storage.PayState, false, err, nil)
 				return err
 			}
 			// get core api
 			api, err := cmdenv.GetApi(env, req)
 			if err != nil {
+				sendStepStateChan(shard.RetryChan, storage.PayState, false, err, nil)
 				return err
 			}
 

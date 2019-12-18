@@ -384,6 +384,7 @@ func (c *Shards) SetPrice(price int64) {
 	}
 }
 
+// TODO: modify later to be unique key even if payin fails
 func (c *Shards) SetContractID(ssID string, shardHash string) {
 	c.Lock()
 	defer c.Unlock()
