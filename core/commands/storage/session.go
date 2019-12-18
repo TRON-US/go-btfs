@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,17 +28,15 @@ const (
 	ShardsStorePrefix        = "/shards/"
 
 	// chunk state
-	InitState      = 0
-	UploadState    = 1
-	ChallengeState = 2
-	SolveState     = 3
-	VerifyState    = 4
-	PaymentState   = 5
-	CompleteState  = 6
+	InitState     = 0
+	SubmitState   = 1
+	PayState      = 2
+	GuardState    = 3
+	CompleteState = 4
 
 	// session status
 	InitStatus     = 0
-	UploadStatus   = 1
+	SubmitStatus   = 1
 	CompleteStatus = 2
 	ErrStatus      = 3
 )
@@ -77,6 +76,8 @@ type StatusChan struct {
 type Shards struct {
 	sync.Mutex
 
+	ShardHash            string
+	ShardIndex           int
 	ContractID           string
 	Challenge            *StorageChallenge
 	SignedEscrowContract []byte
@@ -107,22 +108,16 @@ func init() {
 	// init chunk state
 	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
-		TimeOut: 10 * time.Second}
-	StdStateFlow[UploadState] = &FlowControl{
-		State:   "upload",
-		TimeOut: 10 * time.Second}
-	StdStateFlow[ChallengeState] = &FlowControl{
-		State:   "challenge",
-		TimeOut: 10 * time.Second}
-	StdStateFlow[SolveState] = &FlowControl{
-		State:   "solve",
+		TimeOut: 5 * time.Minute}
+	StdStateFlow[SubmitState] = &FlowControl{
+		State:   "submit",
+		TimeOut: time.Minute}
+	StdStateFlow[PayState] = &FlowControl{
+		State:   "pay",
 		TimeOut: 30 * time.Second}
-	StdStateFlow[VerifyState] = &FlowControl{
-		State:   "verify",
-		TimeOut: time.Second}
-	StdStateFlow[PaymentState] = &FlowControl{
-		State:   "payment",
-		TimeOut: 10 * time.Second}
+	StdStateFlow[GuardState] = &FlowControl{
+		State:   "guard",
+		TimeOut: 30 * time.Minute}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
 		TimeOut: 5 * time.Second}
@@ -130,7 +125,7 @@ func init() {
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
 		TimeOut: time.Minute}
-	StdSessionStateFlow[UploadStatus] = &FlowControl{
+	StdSessionStateFlow[SubmitStatus] = &FlowControl{
 		State:   "upload",
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[CompleteStatus] = &FlowControl{
@@ -291,18 +286,20 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(chunkHash string, contracts []byte, guardContract *guardPb.Contract) error {
+func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, guardContract *guardPb.Contract) (bool, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	ss.GuardContracts = append(ss.GuardContracts, guardContract)
-	chunk := ss.ShardInfo[chunkHash]
+	chunk := ss.ShardInfo[shardKey]
 	if chunk == nil {
-		return fmt.Errorf("chunk does not exists")
+		return false, fmt.Errorf("shard does not exists")
 	}
-	chunk.SetSignedContract(contracts)
-	ss.CompleteContracts++
-	return nil
+	if chunk.SetSignedContract(contracts) {
+		ss.CompleteContracts++
+		return true, nil
+	}
+	return false, nil
 }
 
 func (ss *FileContracts) GetGuardContracts() []*guardPb.Contract {
@@ -351,31 +348,54 @@ func (ss *FileContracts) RemoveShard(hash string) {
 	}
 }
 
-func (ss *FileContracts) GetOrDefault(hash string, shardSize int64, length int64, price int64) *Shards {
+func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shards, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ShardInfo[hash] == nil {
+	shardKey := shardHash + strconv.Itoa(shardIndex)
+	if ss.ShardInfo[shardKey] == nil {
 		c := &Shards{}
+		c.ShardHash = shardHash
+		c.ShardIndex = shardIndex
 		c.RetryChan = make(chan *StepRetryChan)
 		c.StartTime = time.Now()
 		c.State = InitState
 		c.ShardSize = shardSize
 		c.StorageLength = length
 		c.ContractLength = time.Duration(length*24) * time.Hour
-		c.Price = price
-		c.TotalPay = int64(float64(shardSize) / float64(units.GiB) * float64(price) * float64(length))
-		ss.ShardInfo[hash] = c
-		return c
+		if err := c.SetContractID(); err != nil {
+			return nil, err
+		}
+		ss.ShardInfo[shardKey] = c
+		return c, nil
+	} else {
+		return ss.ShardInfo[shardKey], nil
 	}
-	return ss.ShardInfo[hash]
 }
 
-func (c *Shards) SetContractID(ssID string, shardHash string) {
+func (c *Shards) SetPrice(price int64) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.ContractID = ssID + shardHash
+	c.Price = price
+	totalPay := int64(float64(c.ShardSize) / float64(units.GiB) * float64(price) * float64(c.ContractLength))
+	if totalPay == 0 {
+		c.TotalPay = 1
+	} else {
+		c.TotalPay = totalPay
+	}
+}
+
+func (c *Shards) SetContractID() error {
+	c.Lock()
+	defer c.Unlock()
+
+	contractID, err := NewSessionID()
+	if err != nil {
+		return err
+	}
+	c.ContractID = contractID
+	return nil
 }
 
 func (c *Shards) GetContractID() string {
@@ -393,11 +413,16 @@ func (c *Shards) UpdateShard(recvPid peer.ID) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) SetSignedContract(contract []byte) {
+func (c *Shards) SetSignedContract(contract []byte) bool {
 	c.Lock()
 	defer c.Unlock()
 
-	c.SignedEscrowContract = contract
+	if c.SignedEscrowContract == nil {
+		c.SignedEscrowContract = contract
+		return true
+	} else {
+		return false
+	}
 }
 
 // used on client to record a new challenge
@@ -443,11 +468,18 @@ func (c *Shards) SetState(state int) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) GetState() string {
+func (c *Shards) GetStateStr() string {
 	c.Lock()
 	defer c.Unlock()
 
 	return StdStateFlow[c.State].State
+}
+
+func (c *Shards) GetState() int {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.State
 }
 
 func (c *Shards) GetTotalAmount() int64 {

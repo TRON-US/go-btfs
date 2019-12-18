@@ -3,6 +3,7 @@ package guard
 import (
 	"context"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/escrow"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -12,9 +13,12 @@ import (
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
+	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
+
+var log = logging.Logger("core/guard")
 
 func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
@@ -59,8 +63,8 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	}, nil
 }
 
-func NewContract(session *storage.FileContracts, configuration *config.Config, shardHash string, shardIndex int32) (*guardPb.ContractMeta, error) {
-	shard := session.ShardInfo[shardHash]
+func NewContract(session *storage.FileContracts, configuration *config.Config, shardKey string, shardIndex int32) (*guardPb.ContractMeta, error) {
+	shard := session.ShardInfo[shardKey]
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
 		return nil, err
@@ -69,9 +73,9 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		ContractId:    shard.ContractID,
 		RenterPid:     session.Renter.Pretty(),
 		HostPid:       shard.Receiver.Pretty(),
-		ShardHash:     shardHash,
+		ShardHash:     shard.ShardHash,
 		ShardIndex:    shardIndex,
-		ShardFileSize: int64(shard.ShardSize),
+		ShardFileSize: shard.ShardSize,
 		FileHash:      session.FileHash.String(),
 		RentStart:     shard.StartTime,
 		RentEnd:       shard.StartTime.Add(shard.ContractLength),
@@ -124,10 +128,12 @@ func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error
 	}
 	escrowPid, err := pidFromString(escrowPubKeys[0])
 	if err != nil {
+		log.Error("parse escrow config failed", escrowPubKeys[0])
 		return "", "", err
 	}
 	guardPid, err := pidFromString(guardPubKeys[0])
 	if err != nil {
+		log.Error("parse guard config failed", guardPubKeys[1])
 		return "", "", err
 	}
 	return guardPid, escrowPid, err
@@ -163,7 +169,7 @@ func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error
 //}
 
 func pidFromString(key string) (peer.ID, error) {
-	pubKey, err := crypto.ToPubKey(key)
+	pubKey, err := escrow.ConvertPubKeyFromString(key)
 	if err != nil {
 		return "", err
 	}
@@ -185,16 +191,19 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 
 	fileStatus, err := NewFileStatus(ss, contracts, configuration)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	err = submitFileStatus(ctx, configuration, fileStatus)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
