@@ -11,6 +11,7 @@ import (
 
 	core "github.com/TRON-US/go-btfs/core"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
 	cid "github.com/ipfs/go-cid"
 
@@ -95,13 +96,6 @@ func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
 	if err != nil {
 		return err
 	}
-	// Pin if initializing this on host
-	if sc.init {
-		err = sc.API.Pin().Add(sc.Ctx, rp)
-		if err != nil {
-			return err
-		}
-	}
 	// Mark as seen
 	sc.seenCIDs[ncs] = true
 	sc.allCIDs = append(sc.allCIDs, blockHash)
@@ -113,7 +107,21 @@ func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
 	// Check if we are at the shard hash level
 	for _, l := range links {
 		if l.Cid == sc.SID {
+			// Let shard dag get pinned recursively to track pin relations
+			if sc.init {
+				err = sc.API.Pin().Add(sc.Ctx, rp, options.Pin.Recursive(true))
+				if err != nil {
+					return err
+				}
+			}
 			return sc.getAllCIDsRecursive(l.Cid)
+		}
+	}
+	// Pin each dag node non-recursively
+	if sc.init {
+		err = sc.API.Pin().Add(sc.Ctx, rp, options.Pin.Recursive(false))
+		if err != nil {
+			return err
 		}
 	}
 	for _, l := range links {
