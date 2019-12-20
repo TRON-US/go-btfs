@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"context"
+	//"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	//coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
@@ -20,25 +20,25 @@ import (
 )
 
 var GlobalSession *SessionMap
-var StdStateFlow [7]*FlowControl
-var StdSessionStateFlow [4]*FlowControl
+var StdStateFlow [3]*FlowControl
+var StdSessionStateFlow [6]*FlowControl
 
 const (
 	FileContractsStorePrefix = "/file-contracts/"
 	ShardsStorePrefix        = "/shards/"
 
-	// chunk state
+	// shard state
 	InitState     = 0
-	SubmitState   = 1
-	PayState      = 2
-	GuardState    = 3
-	CompleteState = 4
+	ContractState = 1
+	CompleteState = 2
 
 	// session status
 	InitStatus     = 0
 	SubmitStatus   = 1
-	CompleteStatus = 2
-	ErrStatus      = 3
+	PayStatus      = 2
+	GuardStatus    = 3
+	CompleteStatus = 4
+	ErrStatus      = 5
 )
 
 type FlowControl struct {
@@ -79,7 +79,6 @@ type Shards struct {
 	ShardHash            string
 	ShardIndex           int
 	ContractID           string
-	Challenge            *StorageChallenge
 	SignedEscrowContract []byte
 	Receiver             peer.ID
 	Price                int64
@@ -109,24 +108,24 @@ func init() {
 	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
 		TimeOut: 5 * time.Minute}
-	StdStateFlow[SubmitState] = &FlowControl{
-		State:   "submit",
-		TimeOut: time.Minute}
-	StdStateFlow[PayState] = &FlowControl{
-		State:   "pay",
-		TimeOut: 30 * time.Second}
-	StdStateFlow[GuardState] = &FlowControl{
-		State:   "guard",
-		TimeOut: 30 * time.Minute}
+	StdStateFlow[ContractState] = &FlowControl{
+		State:   "contract",
+		TimeOut: 5 * time.Minute}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
-		TimeOut: 5 * time.Second}
+		TimeOut: time.Minute}
 	// init session status
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
-		TimeOut: time.Minute}
+		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[SubmitStatus] = &FlowControl{
-		State:   "upload",
+		State:   "submit",
+		TimeOut: 5 * time.Minute}
+	StdSessionStateFlow[PayStatus] = &FlowControl{
+		State:   "pay",
+		TimeOut: 5 * time.Minute}
+	StdSessionStateFlow[GuardStatus] = &FlowControl{
+		State:   "guard",
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[CompleteStatus] = &FlowControl{
 		State: "complete"}
@@ -378,7 +377,7 @@ func (c *Shards) SetPrice(price int64) {
 	defer c.Unlock()
 
 	c.Price = price
-	totalPay := int64(float64(c.ShardSize) / float64(units.GiB) * float64(price) * float64(c.ContractLength))
+	totalPay := int64(float64(c.ShardSize) / float64(units.GiB) * float64(price) * float64(c.StorageLength))
 	if totalPay == 0 {
 		c.TotalPay = 1
 	} else {
@@ -425,40 +424,40 @@ func (c *Shards) SetSignedContract(contract []byte) bool {
 	}
 }
 
-// used on client to record a new challenge
-func (c *Shards) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	var sch *StorageChallenge
-	var err error
-	// if the chunk hasn't been generated challenge before
-	if c.Challenge == nil {
-		sch, err = NewStorageChallenge(ctx, n, api, rootCid, shardCid)
-		if err != nil {
-			return nil, err
-		}
-		c.Challenge = sch
-	} else {
-		sch = c.Challenge
-	}
-
-	if err = sch.GenChallenge(); err != nil {
-		return nil, err
-	}
-	c.StartTime = time.Now()
-	return sch, nil
-}
-
-// usually used on host, to record host challenge info
-func (c *Shards) UpdateChallenge(sch *StorageChallenge) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.Challenge = sch
-	c.StartTime = time.Now()
-}
+//// used on client to record a new challenge
+//func (c *Shards) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+//	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
+//	c.Lock()
+//	defer c.Unlock()
+//
+//	var sch *StorageChallenge
+//	var err error
+//	// if the chunk hasn't been generated challenge before
+//	if c.Challenge == nil {
+//		sch, err = NewStorageChallenge(ctx, n, api, rootCid, shardCid)
+//		if err != nil {
+//			return nil, err
+//		}
+//		c.Challenge = sch
+//	} else {
+//		sch = c.Challenge
+//	}
+//
+//	if err = sch.GenChallenge(); err != nil {
+//		return nil, err
+//	}
+//	c.StartTime = time.Now()
+//	return sch, nil
+//}
+//
+//// usually used on host, to record host challenge info
+//func (c *Shards) UpdateChallenge(sch *StorageChallenge) {
+//	c.Lock()
+//	defer c.Unlock()
+//
+//	c.Challenge = sch
+//	c.StartTime = time.Now()
+//}
 
 func (c *Shards) SetState(state int) {
 	c.Lock()
