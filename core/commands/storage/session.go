@@ -32,6 +32,8 @@ const (
 	ContractState = 1
 	CompleteState = 2
 
+	// TODO: host state: init->contract->download->complete
+
 	// session status
 	InitStatus     = 0
 	SubmitStatus   = 1

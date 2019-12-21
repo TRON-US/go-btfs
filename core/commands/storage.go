@@ -782,17 +782,15 @@ the shard and replies back to client for the next challenge step.`,
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(fileHash)
-		ss.SetStatus(storage.InitStatus)
+		// TODO: set host shard state in the following steps
 		go controlSessionTimeout(ss)
 		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen))
 		if err != nil {
 			return err
 		}
 		shardInfo.UpdateShard(n.Identity)
-		shardInfo.SetState(storage.InitState)
 		shardInfo.SetPrice(price)
 
-		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 		// review contract and send back to client
 		halfSignedEscrowContract, err := escrow.UnmarshalEscrowContract([]byte(halfSignedEscrowContBytes))
 		if err != nil {
@@ -845,7 +843,7 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		return
 	}
 
-	downloadShardFromClient(shardInfo, ssID, n, pid, req, env)
+	downloadShardFromClient(shardInfo, ssID, n, req, env)
 }
 
 // call escrow service to check if payment is received or not
@@ -857,16 +855,13 @@ func periodicallyCheckPaymentFromClient() {
 	}
 }
 
-func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, pid peer.ID,
-	req *cmds.Request, env cmds.Environment) {
+func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID, n.Identity)
 
-	shardInfo.SetState(storage.SubmitStatus)
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
 		return
 	}
@@ -874,7 +869,6 @@ func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.Ipf
 	shCid, err := cidlib.Parse(shardInfo.ShardHash)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
 		return
 	}
@@ -884,12 +878,9 @@ func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.Ipf
 	_, err = storage.NewStorageChallengeResponse(context.Background(), n, api, ss.FileHash, shCid, "", true)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
 		return
 	}
-
-	shardInfo.SetState(storage.CompleteState)
 }
 
 var storageHostsCmd = &cmds.Command{
