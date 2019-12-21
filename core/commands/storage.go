@@ -51,7 +51,8 @@ const (
 	testOnlyOptionName            = "host-search-local"
 	storageLengthOptionName       = "storage-length"
 
-	defaultRepFactor = 3
+	defaultRepFactor     = 3
+	defaultStorageLength = 30
 
 	// retry limit
 	RetryLimit = 3
@@ -119,11 +120,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price Per GB per day of storage in BTT."),
-		cmds.Int64Option(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
+		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault(storage.HostModeDefault),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
-		cmds.Int64Option(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(30),
+		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -256,7 +257,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		}
-		storageLength := req.Options[storageLengthOptionName].(int64)
+		storageLength := req.Options[storageLengthOptionName].(int)
 
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
@@ -264,7 +265,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		// add shards into session
 		shardIndex := 0
 		for _, shardHash := range shardHashes {
-			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), storageLength)
+			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), int64(storageLength))
 			if err != nil {
 				return err
 			}

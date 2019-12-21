@@ -36,6 +36,9 @@ func NewContract(configuration *config.Config, id string, n *core.IpfsNode, pid 
 	if err != nil {
 		return nil, err
 	}
+	if len(configuration.Services.GuardPubKeys) == 0 {
+		return nil, fmt.Errorf("No Services.GuardPubKeys are set in config")
+	}
 	authAddress, err := ConvertToAddress(configuration.Services.GuardPubKeys[0])
 	if err != nil {
 		return nil, err
@@ -86,6 +89,9 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 	buyerAddr, err := buyerPubKey.Raw()
 	if err != nil {
 		return nil, err
+	}
+	if len(configuration.Services.EscrowPubKeys) == 0 {
+		return nil, fmt.Errorf("No Services.EscrowPubKeys are set in config")
 	}
 	escrowAddress, err := ConvertToAddress(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
