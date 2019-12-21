@@ -783,6 +783,7 @@ the shard and replies back to client for the next challenge step.`,
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(fileHash)
 		// TODO: set host shard state in the following steps
+		// TODO: maybe extract code on renter step timeout control and reuse it here
 		go controlSessionTimeout(ss)
 		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen))
 		if err != nil {
