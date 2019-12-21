@@ -10,11 +10,13 @@ import (
 	"sync"
 
 	core "github.com/TRON-US/go-btfs/core"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	path "github.com/TRON-US/interface-go-btfs-core/path"
-	cid "github.com/ipfs/go-cid"
 
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	uuid "github.com/google/uuid"
+	cid "github.com/ipfs/go-cid"
+	ipld "github.com/ipfs/go-ipld-format"
 )
 
 type StorageChallenge struct {
@@ -41,8 +43,9 @@ type StorageChallenge struct {
 // and initializes underlying CIDs to be ready for challenge generation.
 // When used by storage client: challengeID is "", will be randomly genenerated
 // When used by storage host: challengeID is a valid uuid v4
+// When host needs to get blocks and initialize the challenge for the very first time, use init=true
 func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	rootHash, shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
+	rootHash, shardHash cid.Cid, challengeID string, init bool) (*StorageChallenge, error) {
 	if challengeID == "" {
 		chid, err := uuid.NewRandom()
 		if err != nil {
@@ -59,7 +62,7 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 		RID:      rootHash,
 		SID:      shardHash,
 	}
-	if err := sc.getAllCIDsRecursive(rootHash); err != nil {
+	if err := sc.getAllCIDsRecursive(rootHash, init); err != nil {
 		return nil, err
 	}
 	return sc, nil
@@ -67,12 +70,12 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 
 func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
 	rootHash, shardHash cid.Cid) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "")
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "", false)
 }
 
 func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	rootHash, shardHash cid.Cid, challengeID string) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID)
+	rootHash, shardHash cid.Cid, challengeID string, init bool) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID, init)
 }
 
 // getAllCIDsRecursive traverses the full DAG to find all cids and
@@ -81,7 +84,7 @@ func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api c
 // the selected shard hash, since all other shard hash sub-DAGs belong
 // to other hosts, however, everything else is shared for (meta) info
 // retrieval and DAG traversal.
-func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
+func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid, init bool) error {
 	ncs := string(blockHash.Bytes()) // shorter/faster key
 	// Already seen
 	if _, ok := sc.seenCIDs[ncs]; ok {
@@ -100,16 +103,25 @@ func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid) error {
 	if err != nil {
 		return err
 	}
-	// Check if we are at the shard hash level
+	// Check if we are at the shard hash level - only check selected shard
 	for _, l := range links {
 		if l.Cid == sc.SID {
-			return sc.getAllCIDsRecursive(l.Cid)
+			links = []*ipld.Link{l}
+			break
 		}
 	}
+	isSelectedShard := blockHash == sc.SID
 	for _, l := range links {
-		if err := sc.getAllCIDsRecursive(l.Cid); err != nil {
+		// All children of selected shard won't need any pin as they will
+		// be recursively pinned below
+		if err := sc.getAllCIDsRecursive(l.Cid, init && !isSelectedShard); err != nil {
 			return err
 		}
+	}
+	// If shard dag, recursively pin the full dag to store relation
+	// Otherwise, just singlely pin a dag
+	if init {
+		return sc.API.Pin().Add(sc.Ctx, rp, options.Pin.Recursive(isSelectedShard))
 	}
 	return nil
 }

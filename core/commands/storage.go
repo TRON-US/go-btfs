@@ -27,7 +27,6 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	options "github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
@@ -783,17 +782,16 @@ the shard and replies back to client for the next challenge step.`,
 		sm := storage.GlobalSession
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(fileHash)
-		ss.SetStatus(storage.InitStatus)
+		// TODO: set host shard state in the following steps
+		// TODO: maybe extract code on renter step timeout control and reuse it here
 		go controlSessionTimeout(ss)
 		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen))
 		if err != nil {
 			return err
 		}
 		shardInfo.UpdateShard(n.Identity)
-		shardInfo.SetState(storage.InitState)
 		shardInfo.SetPrice(price)
 
-		sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 		// review contract and send back to client
 		halfSignedEscrowContract, err := escrow.UnmarshalEscrowContract([]byte(halfSignedEscrowContBytes))
 		if err != nil {
@@ -818,13 +816,15 @@ the shard and replies back to client for the next challenge step.`,
 		if !ok || err != nil {
 			return fmt.Errorf("can't verify guard contract")
 		}
-		go SignContractAndCheckPayment(shardInfo, ssID, n, pid, req, env, halfSignedEscrowContract, halfSignedGuardContract)
+
+		go signContractAndCheckPayment(shardInfo, ssID, n, pid, req, env, halfSignedEscrowContract, halfSignedGuardContract)
 		return nil
 	},
 }
 
-func SignContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
-	pid peer.ID, req *cmds.Request, env cmds.Environment, escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
+func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
+	pid peer.ID, req *cmds.Request, env cmds.Environment,
+	escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
@@ -843,8 +843,8 @@ func SignContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		log.Error(err)
 		return
 	}
-	// TODO: download file from client
-	go downloadChunkFromClient(shardInfo, shardInfo.ShardHash, ssID, n, pid, req, env)
+
+	downloadShardFromClient(shardInfo, ssID, n, req, env)
 }
 
 // call escrow service to check if payment is received or not
@@ -856,37 +856,32 @@ func periodicallyCheckPaymentFromClient() {
 	}
 }
 
-func downloadChunkFromClient(chunkInfo *storage.Shards, chunkHash string, ssID string, n *core.IpfsNode, pid peer.ID, req *cmds.Request, env cmds.Environment) {
+func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID, n.Identity)
 
-	chunkInfo.SetState(storage.SubmitStatus)
 	api, err := cmdenv.GetApi(env, req)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
 		return
 	}
-	p := path.New(chunkHash)
-	_, err = api.Unixfs().Get(context.Background(), p)
+	// TODO: Parse should happen on saving shard hash
+	shCid, err := cidlib.Parse(shardInfo.ShardHash)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
 		return
 	}
-	// Pin to make sure it does not gets accidentally deleted
-	err = api.Pin().Add(context.Background(), p, options.Pin.Recursive(true))
+	// Get + pin to make sure it does not get accidentally deleted
+	// Sharded scheme as special pin logic to add
+	// file root dag + shard root dag + metadata full dag + only this shard dag
+	_, err = storage.NewStorageChallengeResponse(context.Background(), n, api, ss.FileHash, shCid, "", true)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-		storage.GlobalSession.Remove(ssID, chunkHash)
+		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
 		return
 	}
-
-	// RemoteCall(user, hash) to api/v0/storage/upload/reqc to get chid and ch
-	chunkInfo.SetState(storage.CompleteState)
 }
 
 var storageHostsCmd = &cmds.Command{
@@ -1346,7 +1341,7 @@ the challenge request back to the caller.`,
 		}
 		nonce := req.Arguments[4]
 		// Challenge ID is not relevant here because it's a sync operation
-		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "")
+		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", false)
 		if err != nil {
 			return err
 		}
