@@ -600,7 +600,7 @@ func TestAddOneLevelDirectoryWithMetadata(t *testing.T) {
 }
 
 func TestAddOneLevelDirectoryWithMetadataReedSolomon(t *testing.T) {
-	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmZwx2ACsEnxHgTmVNCXR8Upp52eXmYY4Rq8UUdxdn1p1z", true)
+	testAddDirectoryWithMetadata(t, oneLevelDirectory(), "/btfs/QmeFqYjDyioqi7SRDZmJJivPd6s9q6Cu7Mgt1u4RTdKRpJ", true)
 }
 
 // TestAddAddOneLevelDirecotryWithMetadata tests the functionality
@@ -610,7 +610,7 @@ func TestAddTwoLevelDirectoryWithMetadata(t *testing.T) {
 }
 
 func TestAddTwoLevelDirectoryWithMetadataReedSolomon(t *testing.T) {
-	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmVdVz97ZE7HyCjQneL2j58E8TXYiBdWtC9FZssUys7CGB", true)
+	testAddDirectoryWithMetadata(t, twoLevelDirectory(), "/btfs/QmeMVoYW8z6cpCByMzn5E6YMK2Ah9fwkhy4huanep5c5bz", true)
 }
 
 func testAddDirectoryWithMetadata(t *testing.T, file files.Node, originalMetadata string, reedSolomon bool) {
