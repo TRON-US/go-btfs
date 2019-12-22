@@ -1,25 +1,23 @@
 package coreunix
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
-	gopath "path"
-	"strings"
 
+	"encoding/json"
 	"github.com/TRON-US/go-btfs-files"
 	"github.com/TRON-US/go-unixfs"
 	uio "github.com/TRON-US/go-unixfs/io"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
+	gopath "path"
 )
 
 type ReedSolomonAdder struct {
 	Adder
-	InfileReaders         []io.Reader
-	IsDir                 bool
-	DirTreeSeparatorCount int
-	CurrentOffset         uint64
+	InfileReaders []io.Reader
+	IsDir         bool
+	CurrentOffset uint64
 }
 
 // NewReedSolomonAdder returns a new ReedSolomonAdder used for a file/directory add operation.
@@ -60,11 +58,15 @@ func (rsadder *ReedSolomonAdder) AddAllAndPin(file files.Node) (ipld.Node, error
 	default:
 		return nil, errors.New("unexpected node type")
 	}
-	rsadder.DirTreeSeparatorCount = strings.Count(string(byts), "},{")
+
+	var reader io.Reader = io.MultiReader(rsadder.InfileReaders...)
+	if rsadder.Progress {
+		reader = &progressReader{file: reader, path: "", out: rsadder.Out}
+	}
 
 	// Create a DAG with the above directory tree as metadata and
 	// the data from the given `file` directory or file.
-	nd, err := rsadder.add(io.MultiReader(rsadder.InfileReaders...), byts)
+	nd, err := rsadder.add(reader, byts)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +134,7 @@ func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, toplev
 	}
 
 	it := dir.Entries()
+	var size uint64
 	for it.Next() {
 		fpath := gopath.Join(path, it.Name())
 		child, err := rsadder.addFileNode(fpath, it.Node(), false)
@@ -139,7 +142,9 @@ func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, toplev
 			return nil, err
 		}
 		node.Links = append(node.Links, child)
+		size += uint64(child.NodeSize())
 	}
+	node.Siz = size
 
 	return node, it.Err()
 }

@@ -151,7 +151,6 @@ If '--meta' or '-m' is enabled, this option is ignored.
 			}
 
 			archive, _ := req.Options[archiveOptionName].(bool)
-
 			gw := getWriter{
 				Out:         os.Stdout,
 				Err:         os.Stderr,
