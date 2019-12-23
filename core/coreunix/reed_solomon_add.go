@@ -121,10 +121,6 @@ func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, toplev
 	log.Infof("adding directory: %s", path)
 
 	_, dstName := gopath.Split(path)
-	// fdir, err := rsadder.NewUfsDirectory()
-	//if err != nil {
-	//      return nil, err
-	//}
 	node := &uio.DirNode{
 		BaseNode: uio.BaseNode{
 			NodeType: uio.DirNodeType,
@@ -166,8 +162,6 @@ func (rsadder *ReedSolomonAdder) addFile(path string, file files.File) (uio.Node
 
 	var reader io.Reader = file
 	rsadder.InfileReaders = append(rsadder.InfileReaders, reader)
-	// TODO: make sure file.Size() is accurate. This should never be stale.
-	// So ..
 	size, err := file.Size()
 	if err != nil {
 		return nil, err
