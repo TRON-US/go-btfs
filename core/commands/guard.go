@@ -57,7 +57,7 @@ to the guard service.`,
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(guardUrlOptionName, "u", "Guard service url including protocol and port. Default: reads from BTFS config."),
-		cmds.Int64Option(guardQuestionCountPerShardOptionName, "q", "Number of challenge questions per shard to generate").WithDefault(cconfig.ConstMinQuestionsCountPerChallenge),
+		cmds.IntOption(guardQuestionCountPerShardOptionName, "q", "Number of challenge questions per shard to generate").WithDefault(cconfig.ConstMinQuestionsCountPerChallenge),
 		cmds.StringOption(guardHostsOptionName, "sh", "List of hosts for each shard, ordered sequentially and separated by ','. Default: reads from BTFS datastore."),
 	},
 	RunTimeout: 30 * time.Second,
@@ -101,9 +101,9 @@ to the guard service.`,
 			}
 		}
 
-		qCount, _ := req.Options[guardQuestionCountPerShardOptionName].(int64)
+		qCount, _ := req.Options[guardQuestionCountPerShardOptionName].(int)
 		questions, err := guard.PrepFileChallengeQuestions(req.Context, n, api, rootHash, shardHashes,
-			hostIDs, int(qCount))
+			hostIDs, qCount)
 		if err != nil {
 			return err
 		}
