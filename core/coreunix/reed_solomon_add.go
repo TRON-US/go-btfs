@@ -3,14 +3,15 @@ package coreunix
 import (
 	"errors"
 	"io"
+	gopath "path"
 
+	"container/list"
 	"encoding/json"
 	"github.com/TRON-US/go-btfs-files"
 	"github.com/TRON-US/go-unixfs"
 	uio "github.com/TRON-US/go-unixfs/io"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	gopath "path"
 )
 
 type ReedSolomonAdder struct {
@@ -44,7 +45,16 @@ func (rsadder *ReedSolomonAdder) AddAllAndPin(file files.Node) (ipld.Node, error
 	}()
 
 	// Create a directory tree from the input `file` directory.
-	n, err := rsadder.addFileNode("", file, true)
+	fileList := list.New()
+	defer func() {
+		for ent := fileList.Front(); ent != nil; ent = ent.Next() {
+			if node, ok := ent.Value.(files.Node); ok {
+				node.Close()
+			}
+		}
+	}()
+
+	n, err := rsadder.addFileNode("", file, fileList, true)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +101,10 @@ func (rsadder *ReedSolomonAdder) AddAllAndPin(file files.Node) (ipld.Node, error
 
 // addFileNode traverses the directory tree under
 // the given `file` in a bottom up DFS way.
-func (rsadder *ReedSolomonAdder) addFileNode(path string, file files.Node, toplevel bool) (uio.Node, error) {
-	//defer file.Close()
+func (rsadder *ReedSolomonAdder) addFileNode(path string, file files.Node, fList *list.List, toplevel bool) (uio.Node, error) {
+	defer func() {
+		fList.PushFront(file)
+	}()
 
 	err := rsadder.maybePauseForGC()
 	if err != nil {
@@ -107,7 +119,7 @@ func (rsadder *ReedSolomonAdder) addFileNode(path string, file files.Node, tople
 
 	switch f := file.(type) {
 	case files.Directory:
-		return rsadder.addDir(path, f, toplevel)
+		return rsadder.addDir(path, f, fList, toplevel)
 	case *files.Symlink:
 		return rsadder.addSymlink(path, f)
 	case files.File:
@@ -117,7 +129,7 @@ func (rsadder *ReedSolomonAdder) addFileNode(path string, file files.Node, tople
 	}
 }
 
-func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, toplevel bool) (uio.Node, error) {
+func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, fList *list.List, toplevel bool) (uio.Node, error) {
 	log.Infof("adding directory: %s", path)
 
 	_, dstName := gopath.Split(path)
@@ -126,6 +138,7 @@ func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, toplev
 			NodeType: uio.DirNodeType,
 			NodePath: path,
 			NodeName: dstName},
+		// Kept the following line for possible use cases than `btfs get`
 		//Directory: dir,
 	}
 
@@ -133,7 +146,7 @@ func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, toplev
 	var size uint64
 	for it.Next() {
 		fpath := gopath.Join(path, it.Name())
-		child, err := rsadder.addFileNode(fpath, it.Node(), false)
+		child, err := rsadder.addFileNode(fpath, it.Node(), fList, false)
 		if err != nil {
 			return nil, err
 		}
@@ -153,6 +166,7 @@ func (rsadder *ReedSolomonAdder) addSymlink(path string, l *files.Symlink) (uio.
 			NodePath: path,
 			NodeName: dstName},
 		Data: l.Target,
+		// Kept the following line for the same reason as DirNode.
 		//Symlink:   *l,
 	}, nil
 }
@@ -176,6 +190,7 @@ func (rsadder *ReedSolomonAdder) addFile(path string, file files.File) (uio.Node
 			Siz:         uint64(size),
 			StartOffset: currentOffset,
 		},
+		// Kept the following line for the same reason as DirNode.
 		//File: file,
 	}
 	return node, nil
