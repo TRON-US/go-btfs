@@ -15,6 +15,7 @@ import (
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	config "github.com/TRON-US/go-btfs-config"
 	files "github.com/TRON-US/go-btfs-files"
+	ftutil "github.com/TRON-US/go-unixfs/util"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	cid "github.com/ipfs/go-cid"
@@ -96,7 +97,8 @@ func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface
 		t.Fatal(err)
 	}
 	var rsMeta chunker.RsMetaMap
-	err = json.Unmarshal(b, &rsMeta)
+	b1 := ftutil.GetMetadataElement(b)
+	err = json.Unmarshal(b1, &rsMeta)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,6 +19,7 @@ import (
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
 	"github.com/TRON-US/go-unixfs/importer/trickle"
 	uio "github.com/TRON-US/go-unixfs/io"
+	ftutil "github.com/TRON-US/go-unixfs/util"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/ipfs/go-cid"
@@ -110,10 +111,13 @@ func (adder *Adder) SetMfsRoot(r *mfs.Root) {
 }
 
 // Constructs a node from reader's data, and adds it. Doesn't pin.
-func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
+func (adder *Adder) add(reader io.Reader, dirTreeBytes []byte) (ipld.Node, error) {
 	chnk, err := chunker.FromString(reader, adder.Chunker)
 	if err != nil {
 		return nil, err
+	}
+	if dirTreeBytes != nil {
+		chnk.SetIsDir(true)
 	}
 
 	var metaBytes []byte
@@ -152,6 +156,9 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 		}
 	}
 
+	// Merge regular metadata and encoded directory tree.
+	metaBytes = ftutil.CreateMetadataList(metaBytes, dirTreeBytes)
+
 	params := ihelper.DagBuilderParams{
 		Dagserv:       adder.bufferedDS,
 		RawLeaves:     adder.RawLeaves,
@@ -184,7 +191,9 @@ func (adder *Adder) add(reader io.Reader) (ipld.Node, error) {
 				// The next code line sets nil to `db.metaDb`.
 				// The newly created metadada DAG `metaDag` will be
 				// attached to the directory root instead.
-				db.SetMetaDb(nil)
+				if dirTreeBytes == nil {
+					db.SetMetaDb(nil)
+				}
 			}
 		}
 		nd, err = balanced.Layout(db)
@@ -262,6 +271,7 @@ func (adder *Adder) PinRoot(root ipld.Node) error {
 	return adder.pinning.Flush()
 }
 
+// outputDirs outputs directory dagnodes in a postorder DFS pattern.
 func (adder *Adder) outputDirs(path string, fsn mfs.FSNode) error {
 	switch fsn := fsn.(type) {
 	case *mfs.File:
@@ -359,6 +369,20 @@ func (adder *Adder) AddAllAndPin(file files.Node) (ipld.Node, error) {
 		return nil, err
 	}
 
+	nd, err := adder.addToMfs(file)
+	if err != nil {
+		return nil, err
+	}
+
+	if !adder.Pin {
+		return nd, nil
+	}
+	return nd, adder.PinRoot(nd)
+}
+
+// addToMfs adds the given file(s) to MFS and return the root.
+func (adder *Adder) addToMfs(file files.Node) (ipld.Node, error) {
+
 	// get root
 	mr, err := adder.mfsRoot()
 	if err != nil {
@@ -411,10 +435,7 @@ func (adder *Adder) AddAllAndPin(file files.Node) (ipld.Node, error) {
 		return nil, err
 	}
 
-	if !adder.Pin {
-		return nd, nil
-	}
-	return nd, adder.PinRoot(nd)
+	return nd, nil
 }
 
 func (adder *Adder) addFileNode(path string, file files.Node, toplevel bool) error {
@@ -480,7 +501,7 @@ func (adder *Adder) addFile(path string, file files.File) error {
 		}
 	}
 
-	dagnode, err := adder.add(reader)
+	dagnode, err := adder.add(reader, nil)
 	if err != nil {
 		return err
 	}
