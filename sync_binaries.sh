@@ -28,11 +28,9 @@ for OS in ${OS_VALUE[@]}; do
     for ARCH in ${ARCH_VALUE[@]}; do
         echo "=== Performing dload for "$OS" "$ARCH" ==="
         cd "$OS"/"$ARCH"
-        pwd
         wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/btfs-"$OS"-"$ARCH".tar.gz 
         gunzip btfs-"$OS"-"$ARCH".tar.gz 
         tar -xf btfs-"$OS"-"$ARCH".tar
-        wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/config_"$OS"_"$ARCH".yaml 
         wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/update-"$OS"-"$ARCH".tar.gz
         tar -xf update-"$OS"-"$ARCH".tar.gz
         rm update-"$OS"-"$ARCH".tar.gz
@@ -45,10 +43,8 @@ done
 for ARCH in ${ARCH_VALUE[@]}; do
     echo "=== Performing dload for windows "$ARCH" ==="
     cd windows/"$ARCH"
-    pwd
-    wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/btfs-windows-"$ARCH".exe.zip
-    unzip -q btfs-windows-"$ARCH".exe.zip
-    wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/config_windows_"$ARCH".yaml
+    wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/btfs-windows-"$ARCH".zip
+    unzip -q btfs-windows-"$ARCH".zip
     wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/update-windows-"$ARCH".exe.zip
     unzip -q update-windows-"$ARCH".exe.zip
     rm update-windows-"$ARCH".exe.zip
