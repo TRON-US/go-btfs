@@ -7,7 +7,7 @@ require (
 	github.com/Kubuxu/gocovmerge v0.0.0-20161216165753-7ecaa51963cd
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/TRON-US/go-btfs-api v0.1.0
-	github.com/TRON-US/go-btfs-chunker v0.2.6
+	github.com/TRON-US/go-btfs-chunker v0.2.7
 	github.com/TRON-US/go-btfs-cmds v0.1.5
 	github.com/TRON-US/go-btfs-config v0.2.1
 	github.com/TRON-US/go-btfs-files v0.1.3
