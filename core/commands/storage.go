@@ -858,7 +858,7 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 	}
 
 	paidIn := make(chan bool)
-	checkPaymentFromClient(req.Context, paidIn, signedContractID, cfg)
+	checkPaymentFromClient(context.Background(), paidIn, signedContractID, cfg)
 	paid := <-paidIn
 	if !paid {
 		log.Error("contract is not paid", escrowContract.ContractId)
@@ -881,7 +881,7 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 			select {
 			case t := <-ticker.C:
 				log.Debug("Tick at", t.UTC())
-				paid, err = escrow.IsPaidin(configuration, contractID)
+				paid, err = escrow.IsPaidin(ctx, configuration, contractID)
 				if err != nil {
 					log.Error("IsPaidin return error", err)
 				}

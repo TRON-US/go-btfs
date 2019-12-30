@@ -256,11 +256,11 @@ func SignContractID(id string, privKey ic.PrivKey) (*escrowpb.SignedContractID, 
 	}, nil
 }
 
-func IsPaidin(configuration *config.Config, contractID *escrowpb.SignedContractID) (bool, error) {
+func IsPaidin(ctx context.Context, configuration *config.Config, contractID *escrowpb.SignedContractID) (bool, error) {
 	var signedPayinRes *escrowpb.SignedPayinStatus
-	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(context.Background(),
+	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			res, err := client.IsPaid(context.Background(), contractID)
+			res, err := client.IsPaid(ctx, contractID)
 			if err != nil {
 				return err
 			}
