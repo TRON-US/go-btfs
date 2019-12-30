@@ -845,16 +845,58 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		return
 	}
 
+	// check payment
+	cfg, err := cmdenv.GetConfig(env)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	signedContractID, err := escrow.SignContractID(escrowContract.ContractId, n.PrivateKey)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	paidIn := make(chan bool)
+	checkPaymentFromClient(context.Background(), paidIn, signedContractID, cfg)
+	paid := <-paidIn
+	if !paid {
+		log.Error("contract is not paid", escrowContract.ContractId)
+		return
+	}
+
 	downloadShardFromClient(shardInfo, ssID, n, req, env)
 }
 
 // call escrow service to check if payment is received or not
-func periodicallyCheckPaymentFromClient() {
-	var isReceivedWithTimeOut bool
-	// TODO: isReceivedWithTimeOut := escrow.pay()
-	if !isReceivedWithTimeOut {
-		//TODO: delete file
-	}
+func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowPb.SignedContractID, configuration *config.Config) {
+	timeout := 3 * time.Second
+	newCtx, _ := context.WithTimeout(ctx, timeout)
+	ticker := time.NewTicker(300 * time.Millisecond)
+	paid := false
+	var err error
+
+	go func() {
+		for {
+			select {
+			case t := <-ticker.C:
+				log.Debug("Tick at", t.UTC())
+				paid, err = escrow.IsPaidin(ctx, configuration, contractID)
+				if err != nil {
+					log.Error("IsPaidin return error", err)
+				}
+				if paid {
+					paidIn <- true
+					return
+				}
+			case <-newCtx.Done():
+				log.Debug("timeout, tick stopped at", time.Now().UTC())
+				ticker.Stop()
+				paidIn <- paid
+				return
+			}
+		}
+	}()
 }
 
 func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
