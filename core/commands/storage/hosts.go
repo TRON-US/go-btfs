@@ -7,12 +7,15 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/hub"
+	"github.com/TRON-US/go-btfs/repo"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
+	"github.com/shirou/gopsutil/disk"
 )
 
 const (
@@ -102,4 +105,52 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 	}
 
 	return nil
+}
+
+// CheckAndValidateHostStorageMax makes sure the current storage max is under the accepted
+// disk space max, if not, corrects this value.
+// Optionally, this function can take a new max and sets the max to this value.
+func CheckAndValidateHostStorageMax(cfgRoot string, r repo.Repo, newMax *uint64) (uint64, error) {
+	cfg, err := r.Config()
+	if err != nil {
+		return 0, err
+	}
+
+	// Check current available space + already used for accurate counting of max storage
+	su, err := r.GetStorageUsage()
+	if err != nil {
+		return 0, err
+	}
+	du, err := disk.Usage(cfgRoot)
+	if err != nil {
+		return 0, err
+	}
+	totalAvailable := su + du.Free
+
+	// Setting a new max storage, check if it exceeds available space
+	if newMax != nil {
+		if *newMax > totalAvailable {
+			return 0, fmt.Errorf("new max storage size is invalid (exceeds available space)")
+		}
+		if *newMax < su {
+			return 0, fmt.Errorf("new max storage size is invalid (lower than currently used)")
+		}
+		cfg.Datastore.StorageMax = humanize.Bytes(*newMax)
+		err = r.SetConfig(cfg)
+		if err != nil {
+			return 0, err
+		}
+		// Return newly updated size
+		return *newMax, nil
+	}
+
+	// Grab existing setting and verify
+	curMax, err := humanize.ParseBytes(cfg.Datastore.StorageMax)
+	if err != nil {
+		return 0, err
+	}
+	if curMax > totalAvailable {
+		return 0, fmt.Errorf("current max storage size is invalid (exceeds available space)")
+	}
+	return curMax, nil
 }

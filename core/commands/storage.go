@@ -28,6 +28,7 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/alecthomas/units"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
@@ -48,6 +49,7 @@ const (
 	hostCollateralPriceOptionName = "host-collateral-price"
 	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
+	hostStorageMaxOptionName      = "host-storage-max"
 	testOnlyOptionName            = "host-search-local"
 	storageLengthOptionName       = "storage-length"
 
@@ -1160,6 +1162,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GB in BTT."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
+		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1175,6 +1178,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
+		sm, smFound := req.Options[hostStorageMaxOptionName].(uint64)
 
 		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
@@ -1208,6 +1212,18 @@ This command updates host information and broadcasts to the BTFS network.`,
 		}
 		if stmFound {
 			ns.StorageTimeMin = stm
+		}
+		// Storage size max is set in config instead of dynamic store
+		if smFound {
+			cfgRoot, err := cmdenv.GetConfigRoot(env)
+			if err != nil {
+				return err
+			}
+			sm = sm * uint64(units.GB)
+			_, err = storage.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, &sm)
+			if err != nil {
+				return err
+			}
 		}
 
 		nb, err := proto.Marshal(ns)
