@@ -17,8 +17,8 @@ import (
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
-	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
 	ds "github.com/ipfs/go-datastore"
@@ -40,8 +40,6 @@ var (
 
 // other constants
 const (
-	kilobyte = 1024
-
 	// HeartBeat is how often we send data to server, at the moment set to 15 Minutes
 	heartBeat = 15 * time.Minute
 
@@ -62,8 +60,8 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
-//Analytics starts the process to collect data and starts the GoRoutine for constant collection
-func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
+// Analytics starts the process to collect data and starts the GoRoutine for constant collection
+func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) {
 	if node == nil {
 		return
 	}
@@ -94,8 +92,10 @@ func Analytics(node *core.IpfsNode, BTFSVersion, hValue string) {
 		dc.pn.BtfsVersion = BTFSVersion
 		dc.pn.OsType = runtime.GOOS
 		dc.pn.ArchType = runtime.GOARCH
-		if storageMax, err := humanize.ParseBytes(dc.config.Datastore.StorageMax); err == nil {
+		if storageMax, err := storage.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil); err == nil {
 			dc.pn.StorageVolumeCap = storageMax
+		} else {
+			log.Warning(err.Error())
 		}
 	}
 
@@ -134,11 +134,11 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	} else {
 		dc.pn.CpuUsed = cpus[0]
 	}
-	dc.pn.MemoryUsed = m.HeapAlloc / kilobyte
+	dc.pn.MemoryUsed = m.HeapAlloc / uint64(units.KiB)
 	if storage, err := dc.node.Repo.GetStorageUsage(); err != nil {
 		res = append(res, fmt.Errorf("failed to get storage usage: %s", err.Error()))
 	} else {
-		dc.pn.StorageUsed = storage / kilobyte
+		dc.pn.StorageUsed = storage / uint64(units.KiB)
 	}
 
 	bs, ok := dc.node.Exchange.(*bitswap.Bitswap)
@@ -151,10 +151,10 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	if err != nil {
 		res = append(res, fmt.Errorf("failed to perform bs.Stat() call: %s", err.Error()))
 	} else {
-		dc.pn.Upload = valOrZero(st.DataSent-dc.pn.TotalUpload) / kilobyte
-		dc.pn.Download = valOrZero(st.DataReceived-dc.pn.TotalDownload) / kilobyte
-		dc.pn.TotalUpload = st.DataSent / kilobyte
-		dc.pn.TotalDownload = st.DataReceived / kilobyte
+		dc.pn.Upload = valOrZero(st.DataSent-dc.pn.TotalUpload) / uint64(units.KiB)
+		dc.pn.Download = valOrZero(st.DataReceived-dc.pn.TotalDownload) / uint64(units.KiB)
+		dc.pn.TotalUpload = st.DataSent / uint64(units.KiB)
+		dc.pn.TotalDownload = st.DataReceived / uint64(units.KiB)
 		dc.pn.BlocksUp = st.BlocksSent
 		dc.pn.BlocksDown = st.BlocksReceived
 		dc.pn.PeersConnected = uint64(len(st.Peers))
