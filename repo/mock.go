@@ -18,6 +18,8 @@ type Mock struct {
 	D Datastore
 	K keystore.Keystore
 	F *filestore.FileManager
+
+	Used uint64
 }
 
 func (m *Mock) Config() (*config.Config, error) {
@@ -43,7 +45,7 @@ func (m *Mock) GetConfigKey(key string) (interface{}, error) {
 
 func (m *Mock) Datastore() Datastore { return m.D }
 
-func (m *Mock) GetStorageUsage() (uint64, error) { return 0, nil }
+func (m *Mock) GetStorageUsage() (uint64, error) { return m.Used, nil }
 
 func (m *Mock) Close() error { return errTODO }
 

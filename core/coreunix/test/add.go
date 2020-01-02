@@ -31,13 +31,16 @@ const (
 )
 
 // HelpTestMockRepo creates the bare minimum mock repo and returns node
-func HelpTestMockRepo(t *testing.T) *core.IpfsNode {
+func HelpTestMockRepo(t *testing.T, cfg *config.Config) *core.IpfsNode {
+	mc := config.Config{}
+	if cfg != nil {
+		mc = *cfg
+	}
+	mc.Identity = config.Identity{
+		PeerID: testPeerID, // required by offline node
+	}
 	r := &repo.Mock{
-		C: config.Config{
-			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
-			},
-		},
+		C: mc,
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
 	}
 	node, err := core.NewNode(context.Background(), &core.BuildCfg{Repo: r})
@@ -51,7 +54,7 @@ func HelpTestMockRepo(t *testing.T) *core.IpfsNode {
 // and also a helper to add a reed solomon file for other features.
 // It returns a mock node, api, and added hash (cid).
 func HelpTestAddWithReedSolomonMetadata(t *testing.T) (*core.IpfsNode, coreiface.CoreAPI, cid.Cid, []byte) {
-	node := HelpTestMockRepo(t)
+	node := HelpTestMockRepo(t, nil)
 
 	out := make(chan interface{})
 	adder, err := coreunix.NewAdder(context.Background(), node.Pinning, node.Blockstore, node.DAG)
