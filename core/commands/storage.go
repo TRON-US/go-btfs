@@ -1220,7 +1220,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 				return err
 			}
 			sm = sm * uint64(units.GB)
-			_, err = storage.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, &sm)
+			_, err = storage.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, &sm, false)
 			if err != nil {
 				return err
 			}

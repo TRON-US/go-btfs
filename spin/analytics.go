@@ -92,7 +92,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.BtfsVersion = BTFSVersion
 		dc.pn.OsType = runtime.GOOS
 		dc.pn.ArchType = runtime.GOARCH
-		if storageMax, err := storage.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil); err == nil {
+		if storageMax, err := storage.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil, true); err == nil {
 			dc.pn.StorageVolumeCap = storageMax
 		} else {
 			log.Warning(err.Error())

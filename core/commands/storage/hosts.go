@@ -110,7 +110,8 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 // CheckAndValidateHostStorageMax makes sure the current storage max is under the accepted
 // disk space max, if not, corrects this value.
 // Optionally, this function can take a new max and sets the max to this value.
-func CheckAndValidateHostStorageMax(cfgRoot string, r repo.Repo, newMax *uint64) (uint64, error) {
+// Optionally, maxAllowed enables reducing unreasonable settings down to an allowed value.
+func CheckAndValidateHostStorageMax(cfgRoot string, r repo.Repo, newMax *uint64, maxAllowed bool) (uint64, error) {
 	cfg, err := r.Config()
 	if err != nil {
 		return 0, err
@@ -149,8 +150,20 @@ func CheckAndValidateHostStorageMax(cfgRoot string, r repo.Repo, newMax *uint64)
 	if err != nil {
 		return 0, err
 	}
+
 	if curMax > totalAvailable {
-		return 0, fmt.Errorf("current max storage size is invalid (exceeds available space)")
+		if !maxAllowed {
+			return 0, fmt.Errorf("current max storage size is invalid (exceeds available space)")
+		}
+		// Reduce current settings down to the max allowed
+		cfg.Datastore.StorageMax = humanize.Bytes(totalAvailable)
+		err = r.SetConfig(cfg)
+		if err != nil {
+			return 0, err
+		}
+		return totalAvailable, nil
 	}
+
+	// No change
 	return curMax, nil
 }
