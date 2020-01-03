@@ -16,10 +16,11 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
+
 	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
-	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
@@ -608,7 +609,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		}
 		sendStepStateChan(shard.RetryChan, storage.CompleteState, true, nil, nil)
 
-		var contractRequest *escrowPb.EscrowContractRequest
+		var contractRequest *escrowpb.EscrowContractRequest
 		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
 			// collecting all signed contracts means init status finished
 			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
@@ -651,7 +652,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 }
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
+	response *escrowpb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
 	shard *storage.Shards, ssID string) {
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
@@ -837,7 +838,7 @@ the shard and replies back to client for the next challenge step.`,
 
 func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
 	pid peer.ID, req *cmds.Request, env cmds.Environment,
-	escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
+	escrowSignedContract *escrowpb.SignedEscrowContract, guardSignedContract *guardpb.Contract) {
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
@@ -881,7 +882,7 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 }
 
 // call escrow service to check if payment is received or not
-func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowPb.SignedContractID, configuration *config.Config) {
+func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowpb.SignedContractID, configuration *config.Config) {
 	timeout := 3 * time.Second
 	newCtx, _ := context.WithTimeout(ctx, timeout)
 	ticker := time.NewTicker(300 * time.Millisecond)
