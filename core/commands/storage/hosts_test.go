@@ -4,17 +4,22 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	unixtest "github.com/TRON-US/go-btfs/core/coreunix/test"
 	"github.com/TRON-US/go-btfs/core/hub"
+	"github.com/TRON-US/go-btfs/repo"
 
-	"github.com/gogo/protobuf/proto"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+
+	config "github.com/TRON-US/go-btfs-config"
+	"github.com/alecthomas/units"
+	"github.com/gogo/protobuf/proto"
 )
 
 func TestHostsSaveGet(t *testing.T) {
-	node := unixtest.HelpTestMockRepo(t)
+	node := unixtest.HelpTestMockRepo(t, nil)
 
 	// test all possible modes
 	for _, mode := range []string{hub.HubModeAll, hub.HubModeScore,
@@ -45,5 +50,83 @@ func TestHostsSaveGet(t *testing.T) {
 				t.Fatal("stored nodes do not match saved nodes")
 			}
 		}
+	}
+}
+
+func newSmCfg(max string) *config.Config {
+	cfg := &config.Config{}
+	cfg.Datastore.StorageMax = max
+	return cfg
+}
+
+func TestCheckAndValidateHostStorageMax(t *testing.T) {
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// test normal case of checking for current storage
+	node := unixtest.HelpTestMockRepo(t, newSmCfg("1GB"))
+	m, err := CheckAndValidateHostStorageMax(pwd, node.Repo, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m != uint64(units.GB) {
+		t.Fatalf("current max is incorrect, got %v, want %v", m, uint64(units.GB))
+	}
+
+	// test oversetting case of checking for current storage
+	node = unixtest.HelpTestMockRepo(t, newSmCfg("1PB"))
+	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, nil, false)
+	if err == nil {
+		t.Fatal("should return an error for current max")
+	}
+
+	// test oversetting case of checking for current storage, then correct to max allowed
+	node = unixtest.HelpTestMockRepo(t, newSmCfg("1PB"))
+	m, err = CheckAndValidateHostStorageMax(pwd, node.Repo, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m == 0 {
+		t.Fatal("should return max allowed for current max")
+	}
+
+	// test normal case of setting a new reasonable max
+	node = unixtest.HelpTestMockRepo(t, newSmCfg("500MB"))
+	nm := uint64(units.GB)
+	m, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m != uint64(units.GB) {
+		t.Fatalf("new max is incorrect, got %v, want %v", m, uint64(units.GB))
+	}
+
+	// test normal case of setting a new unreasonable max
+	node = unixtest.HelpTestMockRepo(t, newSmCfg("500MB"))
+	nm = uint64(units.PB)
+	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, false)
+	if err == nil {
+		t.Fatal("should return error for too large of a new max")
+	}
+	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, true)
+	if err == nil {
+		t.Fatal("should return error for too large of a new max (even on max allowed flag)")
+	}
+
+	// test normal case of setting a new unreasonable max below used size
+	node = unixtest.HelpTestMockRepo(t, newSmCfg("500MB"))
+	// mock used size
+	mn := node.Repo.(*repo.Mock)
+	mn.Used = 10000
+	nm = uint64(1000)
+	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, false)
+	if err == nil {
+		t.Fatal("should return error for too small of a new max")
+	}
+	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, true)
+	if err == nil {
+		t.Fatal("should return error for too small of a new max (even on max allowed flag)")
 	}
 }

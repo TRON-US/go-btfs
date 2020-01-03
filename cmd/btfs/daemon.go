@@ -470,7 +470,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		node.Repo.SetConfigKey("Experimental.Analytics", dc)
 	}
 	// Spin jobs in the background
-	spin.Analytics(node, version.CurrentVersionNumber, hValue)
+	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node)
 	spin.Settings(node)
 

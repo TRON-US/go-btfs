@@ -16,10 +16,11 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
+
 	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
-	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
@@ -28,6 +29,7 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/alecthomas/units"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
@@ -48,6 +50,7 @@ const (
 	hostCollateralPriceOptionName = "host-collateral-price"
 	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName  = "host-storage-time-min"
+	hostStorageMaxOptionName      = "host-storage-max"
 	testOnlyOptionName            = "host-search-local"
 	storageLengthOptionName       = "storage-length"
 
@@ -119,7 +122,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
-		cmds.Int64Option(uploadPriceOptionName, "p", "Max price Per GB per day of storage in BTT."),
+		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in BTT."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault(storage.HostModeDefault),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
@@ -606,7 +609,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		}
 		sendStepStateChan(shard.RetryChan, storage.CompleteState, true, nil, nil)
 
-		var contractRequest *escrowPb.EscrowContractRequest
+		var contractRequest *escrowpb.EscrowContractRequest
 		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
 			// collecting all signed contracts means init status finished
 			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
@@ -649,7 +652,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 }
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
+	response *escrowpb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
 	shard *storage.Shards, ssID string) {
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
@@ -739,7 +742,7 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("file-hash", true, false, "Root file storage node should fetch (the DAG)."),
 		cmds.StringArg("shard-hash", true, false, "Shard the storage node should fetch."),
-		cmds.StringArg("price", true, false, "Per GB per day in BTT for storing this shard offered by client."),
+		cmds.StringArg("price", true, false, "Per GiB per day in BTT for storing this shard offered by client."),
 		cmds.StringArg("escrow-contract", true, false, "Client's initial escrow contract data."),
 		cmds.StringArg("guard-contract-meta", true, false, "Client's initial guard contract meta."),
 		cmds.StringArg("storage-length", true, false, "Store file for certain length in days."),
@@ -835,7 +838,7 @@ the shard and replies back to client for the next challenge step.`,
 
 func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
 	pid peer.ID, req *cmds.Request, env cmds.Environment,
-	escrowSignedContract *escrowPb.SignedEscrowContract, guardSignedContract *guardPb.Contract) {
+	escrowSignedContract *escrowpb.SignedEscrowContract, guardSignedContract *guardpb.Contract) {
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
@@ -879,7 +882,7 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 }
 
 // call escrow service to check if payment is received or not
-func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowPb.SignedContractID, configuration *config.Config) {
+func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowpb.SignedContractID, configuration *config.Config) {
 	timeout := 3 * time.Second
 	newCtx, _ := context.WithTimeout(ctx, timeout)
 	ticker := time.NewTicker(300 * time.Millisecond)
@@ -1155,11 +1158,12 @@ var storageAnnounceCmd = &cmds.Command{
 This command updates host information and broadcasts to the BTFS network.`,
 	},
 	Options: []cmds.Option{
-		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GB of storage in BTT."),
-		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MB of bandwidth in BTT."),
-		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GB in BTT."),
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage in BTT."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MiB of bandwidth in BTT."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in BTT."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
+		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1175,6 +1179,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
+		sm, smFound := req.Options[hostStorageMaxOptionName].(uint64)
 
 		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
@@ -1208,6 +1213,18 @@ This command updates host information and broadcasts to the BTFS network.`,
 		}
 		if stmFound {
 			ns.StorageTimeMin = stm
+		}
+		// Storage size max is set in config instead of dynamic store
+		if smFound {
+			cfgRoot, err := cmdenv.GetConfigRoot(env)
+			if err != nil {
+				return err
+			}
+			sm = sm * uint64(units.GB)
+			_, err = storage.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, &sm, false)
+			if err != nil {
+				return err
+			}
 		}
 
 		nb, err := proto.Marshal(ns)
