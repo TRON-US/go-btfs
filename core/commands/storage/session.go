@@ -151,7 +151,7 @@ func (sm *SessionMap) GetSession(node *core.IpfsNode, ssID string) (*FileContrac
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		f, err := GetFileMetaFromDatabase(node, ssID)
+		f, err := GetFileMetaFromDatabase(node, FileContractsStorePrefix+ssID)
 		if err != nil {
 			return nil, err
 		}
@@ -198,9 +198,9 @@ func NewSessionID() (string, error) {
 	return ssid.String(), nil
 }
 
-func GetFileMetaFromDatabase(node *core.IpfsNode, ssID string) (*FileContracts, error) {
+func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, error) {
 	rds := node.Repo.Datastore()
-	value, err := rds.Get(ds.NewKey(FileContractsStorePrefix + ssID))
+	value, err := rds.Get(ds.NewKey(key))
 	if err != nil {
 		return nil, err
 	}
