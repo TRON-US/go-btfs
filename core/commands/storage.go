@@ -572,7 +572,11 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		guardContractBytes := []byte(req.Arguments[1])
 		//fmt.Println("renter received guard fully signed contract: ", guardContractBytes)
 		ssID := req.Arguments[2]
-		ss, err := storage.GlobalSession.GetSession(ssID)
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
 		if err != nil {
 			return err
 		}
@@ -638,14 +642,15 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 
-			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss, shard)
+			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss, shard, ssID)
 		}
 		return nil
 	},
 }
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts, shard *storage.Shards) {
+	response *escrowPb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
+	shard *storage.Shards, ssID string) {
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -668,8 +673,13 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, true, nil)
 
-	// TODO: after upload persist data in leveldb
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
+	if err != nil {
+		log.Error(err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		return
+	}
+	err = storage.PersistFileMetaToDatabase(n, storage.FileContractsStorePrefix, ssID)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
@@ -1239,7 +1249,8 @@ This command print upload and payment status by the time queried.`,
 		status := &StatusRes{}
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]
-		ss, err := storage.GlobalSession.GetSession(ssID)
+		n, err := cmdenv.GetNode(env)
+		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
 		if err != nil {
 			return err
 		}

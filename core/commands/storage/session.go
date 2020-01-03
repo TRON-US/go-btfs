@@ -64,9 +64,8 @@ type FileContracts struct {
 	ShardInfo         map[string]*Shards // mapping chunkHash with Shards info
 	CompleteChunks    int
 	CompleteContracts int
-	RetryQueue        *RetryQueue
-
-	SessionStatusChan chan StatusChan
+	RetryQueue        *RetryQueue     `json:"-"`
+	SessionStatusChan chan StatusChan `json:"-"`
 }
 
 type StatusChan struct {
@@ -92,7 +91,7 @@ type Shards struct {
 	StartTime            time.Time
 	Err                  error
 
-	RetryChan chan *StepRetryChan
+	RetryChan chan *StepRetryChan `json:"-"`
 }
 
 type StepRetryChan struct {
@@ -105,6 +104,7 @@ type StepRetryChan struct {
 
 func init() {
 	GlobalSession = &SessionMap{}
+
 	GlobalSession.Map = make(map[string]*FileContracts)
 	// init chunk state
 	StdStateFlow[InitState] = &FlowControl{
@@ -146,12 +146,19 @@ func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(ssID string) (*FileContracts, error) {
+func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix string, ssID string) (*FileContracts, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		return nil, fmt.Errorf("session id doesn't exist")
+		f, err := GetFileMetaFromDatabase(node, prefix+ssID)
+		if err != nil {
+			return nil, err
+		}
+		if f == nil {
+			return nil, fmt.Errorf("session id doesn't exist")
+		}
+		return f, nil
 	}
 	return sm.Map[ssID], nil
 }
@@ -191,9 +198,24 @@ func NewSessionID() (string, error) {
 	return ssid.String(), nil
 }
 
-func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
+func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, error) {
 	rds := node.Repo.Datastore()
-	ss, err := GlobalSession.GetSession(ssID)
+	value, err := rds.Get(ds.NewKey(key))
+	if err != nil {
+		return nil, err
+	}
+
+	f := new(FileContracts)
+	err = json.Unmarshal(value, f)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) error {
+	rds := node.Repo.Datastore()
+	ss, err := GlobalSession.GetSession(node, prefix, ssID)
 	if err != nil {
 		return err
 	}
@@ -201,7 +223,7 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
 	if err != nil {
 		return err
 	}
-	err = rds.Put(ds.NewKey(FileContractsStorePrefix+ssID), fileContractsBytes)
+	err = rds.Put(ds.NewKey(prefix+ssID), fileContractsBytes)
 	if err != nil {
 		return err
 	}
