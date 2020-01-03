@@ -576,7 +576,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		ss, err := storage.GlobalSession.GetSession(n, ssID)
+		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
 		if err != nil {
 			return err
 		}
@@ -679,7 +679,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
 		return
 	}
-	err = storage.PersistFileMetaToDatabase(n, ssID)
+	err = storage.PersistFileMetaToDatabase(n, storage.FileContractsStorePrefix, ssID)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
@@ -1250,7 +1250,7 @@ This command print upload and payment status by the time queried.`,
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
-		ss, err := storage.GlobalSession.GetSession(n, ssID)
+		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
 		if err != nil {
 			return err
 		}

@@ -146,12 +146,12 @@ func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(node *core.IpfsNode, ssID string) (*FileContracts, error) {
+func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix string, ssID string) (*FileContracts, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		f, err := GetFileMetaFromDatabase(node, FileContractsStorePrefix+ssID)
+		f, err := GetFileMetaFromDatabase(node, prefix+ssID)
 		if err != nil {
 			return nil, err
 		}
@@ -213,9 +213,9 @@ func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, e
 	return f, nil
 }
 
-func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
+func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) error {
 	rds := node.Repo.Datastore()
-	ss, err := GlobalSession.GetSession(node, ssID)
+	ss, err := GlobalSession.GetSession(node, prefix, ssID)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, ssID string) error {
 	if err != nil {
 		return err
 	}
-	err = rds.Put(ds.NewKey(FileContractsStorePrefix+ssID), fileContractsBytes)
+	err = rds.Put(ds.NewKey(prefix+ssID), fileContractsBytes)
 	if err != nil {
 		return err
 	}
