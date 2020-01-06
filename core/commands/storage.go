@@ -35,7 +35,6 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"go.uber.org/zap"
 )
 
 const (
@@ -508,7 +507,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				// it's normal to fail in finding peer,
 				// would give host another chance
 				nextHost.IncrementFail()
-				log.Error(err, zap.String("host", nextHost.Identity))
+				log.Error(err, "host", nextHost.Identity)
 				err = retryQueue.Offer(nextHost)
 				if err != nil {
 					return nil, err
@@ -797,6 +796,7 @@ the shard and replies back to client for the next challenge step.`,
 		// build session
 		sm := storage.GlobalSession
 		ss, err := sm.GetSession(n, storage.ShardsStorePrefix, ssID)
+		// TODO: refactor GetSession: don't return err when ssID not existed
 		if err != nil {
 			log.Error(err)
 		}
