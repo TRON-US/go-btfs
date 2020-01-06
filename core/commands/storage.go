@@ -24,11 +24,12 @@ import (
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
-
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+
+	"go.uber.org/zap"
 	"github.com/alecthomas/units"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
@@ -507,7 +508,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				// it's normal to fail in finding peer,
 				// would give host another chance
 				nextHost.IncrementFail()
-				log.Error(err)
+				log.Error(err, zap.String("host", nextHost.Identity))
 				err = retryQueue.Offer(nextHost)
 				if err != nil {
 					return nil, err
@@ -751,6 +752,7 @@ the shard and replies back to client for the next challenge step.`,
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+
 		// check flags
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -794,7 +796,13 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		// build session
 		sm := storage.GlobalSession
-		ss := sm.GetOrDefault(ssID, n.Identity)
+		ss, err := sm.GetSession(n, storage.ShardsStorePrefix, ssID)
+		if err != nil {
+			log.Error(err)
+		}
+		if ss == nil {
+			ss = sm.GetOrDefault(ssID, n.Identity)
+		}
 		ss.SetFileHash(fileHash)
 		// TODO: set host shard state in the following steps
 		// TODO: maybe extract code on renter step timeout control and reuse it here
@@ -852,7 +860,15 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		log.Error(err)
 		return
 	}
+
 	_, err = remote.P2PCall(nil, n, pid, "/storage/upload/recvcontract", marshaledSignedEscrowContract, marshaledSignedGuardContract, ssID, shardInfo.ShardHash, strconv.Itoa(shardInfo.ShardIndex))
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// persist file meta
+	err = storage.PersistFileMetaToDatabase(n, storage.ShardsStorePrefix, ssID)
 	if err != nil {
 		log.Error(err)
 		return
