@@ -143,3 +143,5 @@ require (
 )
 
 go 1.13
+
+replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1.0
