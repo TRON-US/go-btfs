@@ -138,10 +138,10 @@ func update(url, hval string) {
 			continue
 		}
 
-		// Get latest config file.
+		// Parse latest config file.
 		latestConfig, err := getConfigure(latestConfigPath)
 		if err != nil {
-			log.Errorf("Get latest config file error, reasons: [%v]", err)
+			log.Errorf("Parse latest config file error, reasons: [%v]", err)
 			continue
 		}
 		time.Sleep(time.Second * 5)
@@ -192,6 +192,16 @@ func update(url, hval string) {
 		fmt.Println("BTFS auto update begin.")
 
 		if configRepo.compressed {
+			// Delete the newly downloaded config file since the compressed file contains the config file
+			if pathExists(latestConfigPath) {
+				// Delete the latest btfs config file.
+				err = os.Remove(latestConfigPath)
+				if err != nil {
+					log.Errorf("Remove latest btfs config file error, reasons: [%v]", err)
+					continue
+				}
+			}
+
 			// Get the btfs latest compressed file.
 			err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepo.url, routePath, latestBtfsBinaryCompressed))
 			if err != nil {
@@ -213,6 +223,16 @@ func update(url, hval string) {
 				log.Errorf("Remove btfs latest compressed file error, reasons: [%v]", err)
 				continue
 			}
+			// Verify config file is present after unarchiving compressed file
+			if pathExists(latestConfigPath) == false {
+				// Re-download the config file
+				err = download(latestConfigPath, fmt.Sprint(configRepo.url, routePath, latestConfigFile))
+				if err != nil {
+					log.Errorf("Re-download latest btfs config file error, reasons: [%v]", err)
+					continue
+				}
+			}
+
 		} else {
 			err = download(latestBtfsBinaryPath, fmt.Sprint(configRepo.url, routePath, latestBtfsBinary))
 			if err != nil {
