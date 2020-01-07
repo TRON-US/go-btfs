@@ -40,6 +40,8 @@ github.com/TRON-US/go-btfs-files v0.1.3 h1:yM+PQbQDoUjy10colCqBoKkC1ii8WKf995zAl
 github.com/TRON-US/go-btfs-files v0.1.3/go.mod h1:I8LeoFulha712BW03zGgmDdNwa0qbAPwfMIglzw0fnE=
 github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElAe7A0=
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
+github.com/TRON-US/go-ipld-format v0.1.0 h1:/JlZFthx4haJJMW456sNiupIGH717f0/7Po4hALVI9I=
+github.com/TRON-US/go-ipld-format v0.1.0/go.mod h1:2Wr3LYadP0zd+8lHcwbUZ5zBvemRmWj10e5gwo0xEl8=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
 github.com/TRON-US/go-mfs v0.2.2/go.mod h1:NduHl3CtI8J81aY4aV/Si/9XZbZ/+hHzPZUHC9Ho3WQ=
 github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
@@ -358,9 +360,6 @@ github.com/ipfs/go-ipfs-util v0.0.1/go.mod h1:spsl5z8KUnrve+73pOhSVZND1SIxPW5RyB
 github.com/ipfs/go-ipld-cbor v0.0.1/go.mod h1:RXHr8s4k0NE0TKhnrxqZC9M888QfsBN9rhS5NjfKzY8=
 github.com/ipfs/go-ipld-cbor v0.0.2 h1:amzFztBQQQ69UA5+f7JRfoXF/z2l//MGfEDHVkS20+s=
 github.com/ipfs/go-ipld-cbor v0.0.2/go.mod h1:wTBtrQZA3SoFKMVkp6cn6HMRteIB1VsmHA0AQFOn7Nc=
-github.com/ipfs/go-ipld-format v0.0.1/go.mod h1:kyJtbkDALmFHv3QR6et67i35QzO3S0dCDnkOJhcZkms=
-github.com/ipfs/go-ipld-format v0.0.2 h1:OVAGlyYT6JPZ0pEfGntFPS40lfrDmaDbQwNHEY2G9Zs=
-github.com/ipfs/go-ipld-format v0.0.2/go.mod h1:4B6+FM2u9OJ9zCV+kSbgFAZlOrv1Hqbf0INGQgiKf9k=
 github.com/ipfs/go-ipld-git v0.0.2 h1:dn5Quu9lgjkSqkc9CaTsRjzg90kaIitj9wENtigVMH8=
 github.com/ipfs/go-ipld-git v0.0.2/go.mod h1:RuvMXa9qtJpDbqngyICCU/d+cmLFXxLsbIclmD0Lcr0=
 github.com/ipfs/go-ipns v0.0.1 h1:5vX0+ehF55YWxE8Pmf4eB8szcP+fh24AXnvCkOmSLCc=
