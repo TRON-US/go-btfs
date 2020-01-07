@@ -1,76 +1,76 @@
 package commands
 
 import (
+	"context"
+	"fmt"
+	"os"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/namesys/resolve"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	path2 "github.com/ipfs/go-path"
+	ipld "github.com/ipfs/go-ipld-format"
 )
 
 var RmCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "Remove a file or directory from a local btfs node.",
-		ShortDescription: `Removes contents of <hash> from a local btfs node.`,
+		Tagline:          "Remove files or directories from a local btfs node.",
+		ShortDescription: `Removes all blocks under <hash> recursively from a local btfs node.`,
 	},
 
 	Arguments: []cmds.Argument{
-		cmds.StringArg("hash", true, true, "The hash of the file to be removed from local btfs node.").EnableStdin(),
+		cmds.StringArg("hash", true, true, "The hash(es) of the file(s)/directory(s) to be removed from the local btfs node.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
 
-		// Since we are removing a file, we need to set recursive flag to true
-		recursive := true
-
-		if err := req.ParseBodyArgs(); err != nil {
-			return err
-		}
-
 		for _, b := range req.Arguments {
-			rp, err := api.ResolvePath(req.Context, path.New(b))
+			// Make sure node exists
+			p := path.New(b)
+			node, err := api.ResolveNode(req.Context, p)
 			if err != nil {
 				return err
 			}
 
-			api.Pin().Rm(req.Context, rp, options.Pin.RmRecursive(recursive))
-		}
-
-		// Surgincal approach
-		p, err := path2.ParsePath(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-
-		object, err := resolve.Resolve(req.Context, n.Namesys, n.Resolver, p)
-		if err != nil {
-			return err
-		}
-
-		// rm all child links
-		for _, cid := range object.Links() {
-			if err := api.Dag().Remove(req.Context, cid.Cid); err != nil {
-				res.Emit("Error removing object " + cid.Cid.String())
-			} else {
-				res.Emit("Removed " + cid.Cid.String())
+			// Since we are removing a file, we need to set recursive flag to true
+			err = api.Pin().Rm(req.Context, p, options.Pin.RmRecursive(true))
+			if err != nil {
+				return err
 			}
-		}
 
-		// rm parent node
-		if err := api.Dag().Remove(req.Context, object.Cid()); err == nil {
-			res.Emit("Removed " + object.Cid().String())
+			// Rm all child links
+			err = rmAllDags(req.Context, api, node)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
 	},
+}
+
+func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node) error {
+	for _, nl := range node.Links() {
+		// Resolve, recurse, then finally remove
+		rn, err := api.ResolveNode(ctx, path.IpfsPath(nl.Cid))
+		if err != nil {
+			return err
+		}
+		if err := rmAllDags(ctx, api, rn); err != nil {
+			return err
+		}
+	}
+	ncid := node.Cid()
+	if err := api.Dag().Remove(ctx, ncid); err != nil {
+		fmt.Fprintf(os.Stdout, "Error removing object %s\n", ncid)
+		return err
+	} else {
+		fmt.Fprintf(os.Stdout, "Removed %s\n", ncid)
+	}
+	return nil
 }
