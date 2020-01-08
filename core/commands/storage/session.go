@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
@@ -75,7 +77,7 @@ type StatusChan struct {
 type Shard struct {
 	sync.Mutex
 
-	ShardHash            string
+	ShardHash            cidlib.Cid
 	ShardIndex           int
 	ContractID           string
 	SignedEscrowContract []byte
@@ -354,19 +356,18 @@ func (ss *FileContracts) GetShard(hash string) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ShardInfo[hash] == nil {
-		return nil, fmt.Errorf("chunk hash doesn't exist ")
+	si, ok := ss.ShardInfo[hash]
+	if !ok {
+		return nil, fmt.Errorf("chunk hash doesn't exist: %s", hash)
 	}
-	return ss.ShardInfo[hash], nil
+	return si, nil
 }
 
 func (ss *FileContracts) RemoveShard(hash string) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ShardInfo[hash] != nil {
-		delete(ss.ShardInfo, hash)
-	}
+	delete(ss.ShardInfo, hash)
 }
 
 func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shard, error) {
@@ -376,7 +377,11 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSiz
 	shardKey := shardHash + strconv.Itoa(shardIndex)
 	if ss.ShardInfo[shardKey] == nil {
 		c := &Shard{}
-		c.ShardHash = shardHash
+		sh, err := cidlib.Parse(shardHash)
+		if err != nil {
+			return nil, err
+		}
+		c.ShardHash = sh
 		c.ShardIndex = shardIndex
 		c.RetryChan = make(chan *StepRetryChan)
 		c.StartTime = time.Now()
@@ -446,11 +451,19 @@ func (c *Shard) SetSignedContract(contract []byte) bool {
 	}
 }
 
-func (c *Shard) SetChallenge(sc *StorageChallenge) {
+func (c *Shard) GetChallengeOrNew(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	fileHash cidlib.Cid) (*StorageChallenge, error) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.Challenge = sc
+	if c.Challenge == nil {
+		sc, err := NewStorageChallenge(ctx, node, api, fileHash, c.ShardHash)
+		if err != nil {
+			return nil, err
+		}
+		c.Challenge = sc
+	}
+	return c.Challenge, nil
 }
 
 func (c *Shard) SetState(state int) {

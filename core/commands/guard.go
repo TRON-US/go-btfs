@@ -102,8 +102,8 @@ to the guard service.`,
 		}
 
 		qCount, _ := req.Options[guardQuestionCountPerShardOptionName].(int)
-		questions, err := guard.PrepFileChallengeQuestions(req.Context, n, api, rootHash, shardHashes,
-			hostIDs, qCount)
+		questions, err := guard.PrepCustomFileChallengeQuestions(req.Context, n, api, nil,
+			rootHash, shardHashes, hostIDs, qCount)
 		if err != nil {
 			return err
 		}

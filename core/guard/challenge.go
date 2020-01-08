@@ -7,6 +7,7 @@ import (
 
 	core "github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	cc "github.com/tron-us/go-btfs-common/config"
 	ccrypto "github.com/tron-us/go-btfs-common/crypto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
@@ -18,13 +19,24 @@ import (
 // PrepShardChallengeQuestions checks and prepares an amount of random challenge questions
 // and returns the necessary guard proto struct
 func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	fileHash, shardHash cid.Cid, hostID string, numQuestions int) (*guardpb.ShardChallengeQuestions, error) {
+	fileHash cid.Cid, shardInfo *storage.Shard, shardHash cid.Cid,
+	hostID string, numQuestions int) (*guardpb.ShardChallengeQuestions, error) {
 	var shardQuestions []*guardpb.ChallengeQuestion
-	// Generate questions
-	sc, err := storage.NewStorageChallenge(ctx, node, api, fileHash, shardHash)
-	if err != nil {
-		return nil, err
+	var sc *storage.StorageChallenge
+	var err error
+	if shardInfo != nil {
+		sc, err = shardInfo.GetChallengeOrNew(ctx, node, api, fileHash)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// For testing, no session concept, create new challenge
+		sc, err = storage.NewStorageChallenge(ctx, node, api, fileHash, shardHash)
+		if err != nil {
+			return nil, err
+		}
 	}
+	// Generate questions
 	sh := shardHash.String()
 	for i := 0; i < numQuestions; i++ {
 		err := sc.GenChallenge()
@@ -64,8 +76,28 @@ type questionRes struct {
 
 // PrepFileChallengeQuestions checks and prepares all shard questions in one setting
 func PrepFileChallengeQuestions(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	fileHash cid.Cid, shardHashes []cid.Cid, hostIDs []string,
-	questionsPerShard int) ([]*guardpb.ShardChallengeQuestions, error) {
+	ss *storage.FileContracts, fsStatus *guardpb.FileStoreStatus) ([]*guardpb.ShardChallengeQuestions, error) {
+	var shardHashes []cid.Cid
+	var hostIDs []string
+	for _, c := range fsStatus.Contracts {
+		sh, err := cid.Parse(c.ShardHash)
+		if err != nil {
+			return nil, err
+		}
+		shardHashes = append(shardHashes, sh)
+		hostIDs = append(hostIDs, c.HostPid)
+	}
+
+	questionsPerShard := cc.GetMinimumQuestionsCountPerShard(fsStatus)
+	return PrepCustomFileChallengeQuestions(ctx, n, api, ss, ss.FileHash, shardHashes, hostIDs, questionsPerShard)
+}
+
+// PrepCustomFileChallengeQuestions is the inner version of PrepFileChallengeQuestions without
+// using a real guard file contracts, but rather custom parameters (mostly for manual testing)
+func PrepCustomFileChallengeQuestions(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+	ss *storage.FileContracts, fileHash cid.Cid, shardHashes []cid.Cid,
+	hostIDs []string, questionsPerShard int) ([]*guardpb.ShardChallengeQuestions, error) {
+	// safety check
 	if len(hostIDs) < len(shardHashes) {
 		return nil, fmt.Errorf("hosts list must be at least %d", len(shardHashes))
 	}
@@ -73,15 +105,23 @@ func PrepFileChallengeQuestions(ctx context.Context, n *core.IpfsNode, api corei
 	questions := make([]*guardpb.ShardChallengeQuestions, len(shardHashes))
 	qc := make(chan questionRes)
 	for i, sh := range shardHashes {
-		go func(shardIndex int, shardHash cid.Cid) {
+		var si *storage.Shard
+		if ss != nil {
+			var err error
+			si, err = ss.GetShard(sh.String())
+			if err != nil {
+				return nil, err
+			}
+		}
+		go func(shardIndex int, shardInfo *storage.Shard, shardHash cid.Cid, hostID string) {
 			qs, err := PrepShardChallengeQuestions(ctx, n, api,
-				fileHash, shardHash, hostIDs[i], questionsPerShard)
+				fileHash, shardInfo, shardHash, hostID, questionsPerShard)
 			qc <- questionRes{
 				qs:  qs,
 				err: err,
 				i:   shardIndex,
 			}
-		}(i, sh)
+		}(i, si, sh, hostIDs[i])
 	}
 	for i := 0; i < len(questions); i++ {
 		res := <-qc

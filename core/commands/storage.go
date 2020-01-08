@@ -21,7 +21,6 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -692,35 +691,14 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		return
 	}
 
-	fileHash, err := cidlib.Parse(fsStatus.FileHash)
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
 		return
 	}
 
-	var shardHashes []cidlib.Cid
-	var hostIDs []string
-	for _, c := range fsStatus.Contracts {
-		sh, err := cidlib.Parse(c.ShardHash)
-		if err != nil {
-			sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
-			log.Error(err)
-			return
-		}
-		shardHashes = append(shardHashes, sh)
-		hostIDs = append(hostIDs, c.HostPid)
-	}
-
-	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs,
-		cc.GetMinimumQuestionsCountPerShard(fsStatus))
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
-		return
-	}
-
-	err = guard.SendChallengeQuestions(ctx, cfg, fileHash, qs)
+	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
@@ -933,20 +911,14 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
 	shardInfo *storage.Shard) {
-	// TODO: Parse should happen on saving shard hash
-	shCid, err := cidlib.Parse(shardInfo.ShardHash)
-	if err != nil {
-		log.Error(err)
-		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash)
-		return
-	}
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
-	_, err = storage.NewStorageChallengeResponse(context.Background(), n, api, ss.FileHash, shCid, "", true)
+	_, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.FileHash,
+		shardInfo.ShardHash, "", true)
 	if err != nil {
 		log.Error(err)
-		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash)
+		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
 		return
 	}
 }

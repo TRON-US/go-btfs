@@ -73,7 +73,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		ContractId:    shard.ContractID,
 		RenterPid:     session.Renter.Pretty(),
 		HostPid:       shard.Receiver.Pretty(),
-		ShardHash:     shard.ShardHash,
+		ShardHash:     shard.ShardHash.String(),
 		ShardIndex:    shardIndex,
 		ShardFileSize: shard.ShardSize,
 		FileHash:      session.FileHash.String(),
