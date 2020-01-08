@@ -124,7 +124,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in BTT."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
-		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically.").WithDefault(storage.HostModeDefault),
+		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
 		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
@@ -216,8 +216,8 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			// todo: leave it for either no host prices or no user price, can be deleted later
 			price = HostPriceLowBoundary
 		}
-		mode, _ := req.Options[hostSelectModeOptionName].(string)
-		if mode == "custom" {
+		mode, ok := req.Options[hostSelectModeOptionName].(string)
+		if ok && mode == "custom" {
 			// get host list as user specified
 			hosts, found := req.Options[hostSelectionOptionName].(string)
 			if !found {
@@ -239,6 +239,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				}
 			}
 		} else {
+			// Use default setting if not set
+			if !ok {
+				mode = cfg.Experimental.HostsSyncMode
+			}
 			hosts, err := storage.GetHostsFromDatastore(req.Context, n, mode, len(shardHashes))
 			if err != nil {
 				return err
@@ -975,18 +979,12 @@ var storageHostsInfoCmd = &cmds.Command{
 This command displays saved information from btfs-hub under multiple modes.
 Each mode ranks hosts based on its criteria and is randomized based on current node location.
 
-Mode options include:
-- "score": top overall score
-- "geo":   closest location
-- "rep":   highest reputation
-- "price": lowest price
-- "speed": highest transfer speed
-- "all":   all existing hosts`,
+Mode options include:` + hub.AllModeHelpText,
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -995,10 +993,6 @@ Mode options include:
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-		mode, _ := req.Options[hostInfoModeOptionName].(string)
-		return hub.CheckValidMode(mode)
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		mode, _ := req.Options[hostInfoModeOptionName].(string)
 
 		n, err := cmdenv.GetNode(env)
@@ -1027,18 +1021,12 @@ var storageHostsSyncCmd = &cmds.Command{
 This command synchronizes information from btfs-hub using multiple modes.
 Each mode ranks hosts based on its criteria and is randomized based on current node location.
 
-Mode options include:
-- "score": top overall score
-- "geo":   closest location
-- "rep":   highest reputation
-- "price": lowest price
-- "speed": highest transfer speed
-- "all":   update existing hosts`,
+Mode options include:` + hub.AllModeHelpText,
 	},
 	Options: []cmds.Option{
-		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode.").WithDefault(hub.HubModeScore),
+		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode."),
 	},
-	PreRun: func(req *cmds.Request, env cmds.Environment) error {
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -1047,11 +1035,10 @@ Mode options include:
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-		mode, _ := req.Options[hostSyncModeOptionName].(string)
-		return hub.CheckValidMode(mode)
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		mode, _ := req.Options[hostSyncModeOptionName].(string)
+		mode, ok := req.Options[hostSyncModeOptionName].(string)
+		if !ok {
+			mode = cfg.Experimental.HostsSyncMode
+		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {

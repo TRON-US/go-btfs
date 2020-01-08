@@ -21,22 +21,22 @@ import (
 const (
 	HostStorePrefix       = "/hosts/"        // from btfs-hub
 	HostStorageInfoPrefix = "/host_storage/" // self or from network
-
-	HostModeDefault = hub.HubModeScore
 )
 
 // GetHostsFromDatastore retrieves `num` hosts from the datastore, if not enough hosts are
 // available, return an error instead of partial return.
 // When num=0 it means unlimited.
 func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string, num int) ([]*hubpb.Host, error) {
-	// check mode: all = display everything
-	if mode == hub.HubModeAll {
-		mode = ""
+	// Check valid mode, including all (everything)
+	_, mp, err := hub.CheckValidMode(mode, true)
+	if err != nil {
+		return nil, err
 	}
+
 	// get host list from storage
 	rds := node.Repo.Datastore()
 	qr, err := rds.Query(query.Query{
-		Prefix: HostStorePrefix + mode,
+		Prefix: HostStorePrefix + mp,
 		Orders: []query.Order{query.OrderByKey{}},
 	})
 	if err != nil {
@@ -56,7 +56,7 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 		hosts = append(hosts, &h)
 	}
 	// we can re-use hosts, but for higher availability, we choose to have the
-	// greater than `num assumption
+	// greater than `num` assumption
 	if num > 0 && len(hosts) < num {
 		return nil, fmt.Errorf("there are not enough locally stored hosts")
 	}
@@ -74,11 +74,17 @@ func newKeyHelper(kss ...string) ds.Key {
 // SaveHostsIntoDatastore overwrites (removes all existing) hosts and saves the updated
 // hosts according to mode.
 func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode string, nodes []*hubpb.Host) error {
+	// Check valid mode, including all (everything)
+	_, mp, err := hub.CheckValidMode(mode, true)
+	if err != nil {
+		return err
+	}
+
 	rds := node.Repo.Datastore()
 
 	// Dumb strategy right now: remove all existing and add the new ones
 	// TODO: Update by timestamp and only overwrite updated
-	qr, err := rds.Query(query.Query{Prefix: HostStorePrefix + mode})
+	qr, err := rds.Query(query.Query{Prefix: HostStorePrefix + mp})
 	if err != nil {
 		return err
 	}
@@ -98,7 +104,7 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 		if err != nil {
 			return err
 		}
-		err = rds.Put(newKeyHelper(HostStorePrefix, mode, "/", fmt.Sprintf("%04d", i), "/", ni.NodeId), b)
+		err = rds.Put(newKeyHelper(HostStorePrefix, mp, "/", fmt.Sprintf("%04d", i), "/", ni.NodeId), b)
 		if err != nil {
 			return err
 		}
