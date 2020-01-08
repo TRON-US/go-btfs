@@ -1,7 +1,6 @@
 package storage
 
 import (
-	//"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -9,14 +8,13 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
-	//coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 )
 
 var GlobalSession *SessionMap
@@ -31,8 +29,6 @@ const (
 	InitState     = 0
 	ContractState = 1
 	CompleteState = 2
-
-	// TODO: host state: init->contract->download->complete
 
 	// session status
 	InitStatus     = 0
@@ -56,14 +52,16 @@ type SessionMap struct {
 type FileContracts struct {
 	sync.Mutex
 
+	ID                string
 	Time              time.Time
-	GuardContracts    []*guardPb.Contract
+	GuardContracts    []*guardpb.Contract
 	Renter            peer.ID
 	FileHash          cidlib.Cid
 	Status            string
 	ShardInfo         map[string]*Shard // mapping chunkHash with Shards info
 	CompleteChunks    int
 	CompleteContracts int
+
 	RetryQueue        *RetryQueue     `json:"-"`
 	SessionStatusChan chan StatusChan `json:"-"`
 }
@@ -90,6 +88,7 @@ type Shard struct {
 	ContractLength       time.Duration
 	StartTime            time.Time
 	Err                  error
+	Challenge            *StorageChallenge
 
 	RetryChan chan *StepRetryChan `json:"-"`
 }
@@ -168,8 +167,7 @@ func (sm *SessionMap) GetOrDefault(ssID string, pid peer.ID) *FileContracts {
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		ss := &FileContracts{}
-		ss.new(pid)
+		ss := NewFileContracts(ssID, pid)
 		sm.Map[ssID] = ss
 		return ss
 	}
@@ -240,15 +238,15 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) 
 	return nil
 }
 
-func (ss *FileContracts) new(pid peer.ID) {
-	ss.Lock()
-	defer ss.Unlock()
-
-	ss.Renter = pid
-	ss.Time = time.Now()
-	ss.Status = "init"
-	ss.ShardInfo = make(map[string]*Shard)
-	ss.SessionStatusChan = make(chan StatusChan)
+func NewFileContracts(id string, pid peer.ID) *FileContracts {
+	return &FileContracts{
+		ID:                id,
+		Renter:            pid,
+		Time:              time.Now(),
+		Status:            "init",
+		ShardInfo:         make(map[string]*Shard),
+		SessionStatusChan: make(chan StatusChan),
+	}
 }
 
 func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) bool {
@@ -309,7 +307,7 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, guardContract *guardPb.Contract) (bool, error) {
+func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, guardContract *guardpb.Contract) (bool, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -325,7 +323,7 @@ func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, gu
 	return false, nil
 }
 
-func (ss *FileContracts) GetGuardContracts() []*guardPb.Contract {
+func (ss *FileContracts) GetGuardContracts() []*guardpb.Contract {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -448,40 +446,12 @@ func (c *Shard) SetSignedContract(contract []byte) bool {
 	}
 }
 
-//// used on client to record a new challenge
-//func (c *Shard) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-//	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
-//	c.Lock()
-//	defer c.Unlock()
-//
-//	var sch *StorageChallenge
-//	var err error
-//	// if the chunk hasn't been generated challenge before
-//	if c.Challenge == nil {
-//		sch, err = NewStorageChallenge(ctx, n, api, rootCid, shardCid)
-//		if err != nil {
-//			return nil, err
-//		}
-//		c.Challenge = sch
-//	} else {
-//		sch = c.Challenge
-//	}
-//
-//	if err = sch.GenChallenge(); err != nil {
-//		return nil, err
-//	}
-//	c.StartTime = time.Now()
-//	return sch, nil
-//}
-//
-//// usually used on host, to record host challenge info
-//func (c *Shard) UpdateChallenge(sch *StorageChallenge) {
-//	c.Lock()
-//	defer c.Unlock()
-//
-//	c.Challenge = sch
-//	c.StartTime = time.Now()
-//}
+func (c *Shard) SetChallenge(sc *StorageChallenge) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.Challenge = sc
+}
 
 func (c *Shard) SetState(state int) {
 	c.Lock()
