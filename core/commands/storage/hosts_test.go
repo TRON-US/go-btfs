@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	unixtest "github.com/TRON-US/go-btfs/core/coreunix/test"
-	"github.com/TRON-US/go-btfs/core/hub"
 	"github.com/TRON-US/go-btfs/repo"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
@@ -22,8 +21,7 @@ func TestHostsSaveGet(t *testing.T) {
 	node := unixtest.HelpTestMockRepo(t, nil)
 
 	// test all possible modes
-	for _, mode := range []string{hub.HubModeAll, hub.HubModeScore,
-		hub.HubModeGeo, hub.HubModeRep, hub.HubModePrice, hub.HubModeSpeed} {
+	for _, mode := range hubpb.HostsReq_Mode_name {
 		var nodes []*hubpb.Host
 		for i := 0; i < 100; i++ {
 			ni := &hubpb.Host{NodeId: fmt.Sprintf("%s:node:%d", mode, i)}
