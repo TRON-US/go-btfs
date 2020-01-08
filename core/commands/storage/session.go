@@ -61,7 +61,7 @@ type FileContracts struct {
 	Renter            peer.ID
 	FileHash          cidlib.Cid
 	Status            string
-	ShardInfo         map[string]*Shards // mapping chunkHash with Shards info
+	ShardInfo         map[string]*Shard // mapping chunkHash with Shards info
 	CompleteChunks    int
 	CompleteContracts int
 	RetryQueue        *RetryQueue     `json:"-"`
@@ -74,7 +74,7 @@ type StatusChan struct {
 	Err         error
 }
 
-type Shards struct {
+type Shard struct {
 	sync.Mutex
 
 	ShardHash            string
@@ -247,7 +247,7 @@ func (ss *FileContracts) new(pid peer.ID) {
 	ss.Renter = pid
 	ss.Time = time.Now()
 	ss.Status = "init"
-	ss.ShardInfo = make(map[string]*Shards)
+	ss.ShardInfo = make(map[string]*Shard)
 	ss.SessionStatusChan = make(chan StatusChan)
 }
 
@@ -352,7 +352,7 @@ func (ss *FileContracts) GetStatus() string {
 	return ss.Status
 }
 
-func (ss *FileContracts) GetShard(hash string) (*Shards, error) {
+func (ss *FileContracts) GetShard(hash string) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -371,13 +371,13 @@ func (ss *FileContracts) RemoveShard(hash string) {
 	}
 }
 
-func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shards, error) {
+func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	shardKey := shardHash + strconv.Itoa(shardIndex)
 	if ss.ShardInfo[shardKey] == nil {
-		c := &Shards{}
+		c := &Shard{}
 		c.ShardHash = shardHash
 		c.ShardIndex = shardIndex
 		c.RetryChan = make(chan *StepRetryChan)
@@ -396,7 +396,7 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSiz
 	}
 }
 
-func (c *Shards) SetPrice(price int64) {
+func (c *Shard) SetPrice(price int64) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -409,7 +409,7 @@ func (c *Shards) SetPrice(price int64) {
 	}
 }
 
-func (c *Shards) SetContractID() error {
+func (c *Shard) SetContractID() error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -421,14 +421,14 @@ func (c *Shards) SetContractID() error {
 	return nil
 }
 
-func (c *Shards) GetContractID() string {
+func (c *Shard) GetContractID() string {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.ContractID
 }
 
-func (c *Shards) UpdateShard(recvPid peer.ID) {
+func (c *Shard) UpdateShard(recvPid peer.ID) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -436,7 +436,7 @@ func (c *Shards) UpdateShard(recvPid peer.ID) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) SetSignedContract(contract []byte) bool {
+func (c *Shard) SetSignedContract(contract []byte) bool {
 	c.Lock()
 	defer c.Unlock()
 
@@ -449,7 +449,7 @@ func (c *Shards) SetSignedContract(contract []byte) bool {
 }
 
 //// used on client to record a new challenge
-//func (c *Shards) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+//func (c *Shard) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
 //	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
 //	c.Lock()
 //	defer c.Unlock()
@@ -475,7 +475,7 @@ func (c *Shards) SetSignedContract(contract []byte) bool {
 //}
 //
 //// usually used on host, to record host challenge info
-//func (c *Shards) UpdateChallenge(sch *StorageChallenge) {
+//func (c *Shard) UpdateChallenge(sch *StorageChallenge) {
 //	c.Lock()
 //	defer c.Unlock()
 //
@@ -483,7 +483,7 @@ func (c *Shards) SetSignedContract(contract []byte) bool {
 //	c.StartTime = time.Now()
 //}
 
-func (c *Shards) SetState(state int) {
+func (c *Shard) SetState(state int) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -491,35 +491,35 @@ func (c *Shards) SetState(state int) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) GetStateStr() string {
+func (c *Shard) GetStateStr() string {
 	c.Lock()
 	defer c.Unlock()
 
 	return StdStateFlow[c.State].State
 }
 
-func (c *Shards) GetState() int {
+func (c *Shard) GetState() int {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.State
 }
 
-func (c *Shards) GetTotalAmount() int64 {
+func (c *Shard) GetTotalAmount() int64 {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.TotalPay
 }
 
-func (c *Shards) SetTime(time time.Time) {
+func (c *Shard) SetTime(time time.Time) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.StartTime = time
 }
 
-func (c *Shards) GetTime() time.Time {
+func (c *Shard) GetTime() time.Time {
 	c.Lock()
 	defer c.Unlock()
 

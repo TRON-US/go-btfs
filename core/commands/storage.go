@@ -329,7 +329,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	// loop over each shard
 	shardIndex := 0
 	for shardKey, shardInfo := range ss.ShardInfo {
-		go func(shardKey string, shardInfo *storage.Shards, shardIndex int) {
+		go func(shardKey string, shardInfo *storage.Shard, shardIndex int) {
 			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
 			if err != nil {
 				return
@@ -657,7 +657,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
 	response *escrowpb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
-	shard *storage.Shards, ssID string) {
+	shard *storage.Shard, ssID string) {
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -848,7 +848,7 @@ the shard and replies back to client for the next challenge step.`,
 	},
 }
 
-func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
+func signContractAndCheckPayment(shardInfo *storage.Shard, ssID string, n *core.IpfsNode,
 	pid peer.ID, req *cmds.Request, env cmds.Environment,
 	escrowSignedContract *escrowpb.SignedEscrowContract, guardSignedContract *guardpb.Contract) {
 	escrowContract := escrowSignedContract.GetContract()
@@ -932,7 +932,7 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 	}()
 }
 
-func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
+func downloadShardFromClient(shardInfo *storage.Shard, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
 	sm := storage.GlobalSession
 	ss := sm.GetOrDefault(ssID, n.Identity)
 
