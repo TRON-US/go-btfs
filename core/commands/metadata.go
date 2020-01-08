@@ -36,8 +36,8 @@ var metadataAddCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Add token metadata to a BTFS file.",
 		ShortDescription: `
-'btfs metadata add' is to add token metata item(s) to a BTFS file that is
-        stored on BTFS network through BTT payment. 
+'btfs metadata add' adds token metadata item(s) to a BTFS file that is
+        stored on the BTFS network through BTT payment. 
         We specify the target BTFS file hash and metadata items in JSON string format.
 
 For example:
