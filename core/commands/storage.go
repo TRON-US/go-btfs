@@ -962,6 +962,7 @@ func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.Ipf
 
 var storageHostsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
+		Tagline: "Interact with information on hosts.",
 		ShortDescription: `Allows interaction with information on hosts. Host information is synchronized from btfs-hub and saved in local datastore.`,
 	},
 	Subcommands: map[string]*cmds.Command{
