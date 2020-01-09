@@ -38,13 +38,15 @@ var metadataAddCmd = &cmds.Command{
 		ShortDescription: `
 'btfs metadata add' adds token metadata item(s) to a BTFS file that is
         stored on the BTFS network through BTT payment. 
-        We specify the target BTFS file hash and metadata items in JSON string format.
+        We specify the target BTFS file hash and metadata items key-value pair in JSON string format.
 
-For example:
+Example:
+
+To add metadata for a file, specify the file hash and metadata key-value pair:
+
+        $btfs metadata add <file-hash> '{"price":11.2}'
         
-        btfs metadata add $file-hash '{"price":11.2}'
-        
-Then this command returns a new file-hash for the file.`,
+This command returns a new file-hash for the file.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "BTFS target file hash."),
@@ -101,15 +103,17 @@ var metadataRemoveCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Remove token metadata on a BTFS file.",
 		ShortDescription: `
-'btfs metadata rm' is to remove specified token metata on a BTFS file that is
-        stored on BTFS network through BTT payment. 
-        We specify the target BTFS file hash and metadata item keys.
+'btfs metadata rm' removes specified token metadata on a BTFS file that is
+        stored on the BTFS network through BTT payment. 
+        We specify the target BTFS file hash and the metadata item keys.
 
-For example:
+Example:
         
-        btfs metadata rm $file-hash 'price,nodeid'
+To remove the metadata for file, specify the file hash and metadata key:
+	
+       	$btfs metadata rm <file-hash> 'price'
         
-Then this command returns a new file-hash for the file.`,
+The output returns a new file-hash for the file.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "BTFS target file hash."),
