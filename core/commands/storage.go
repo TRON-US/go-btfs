@@ -191,6 +191,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 		}
 		// start new session
+		// TODO: Genereate session ID on new
 		sm := storage.GlobalSession
 		ssID, err := storage.NewSessionID()
 		// start new session
@@ -582,7 +583,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
 		if err != nil {
 			return err
 		}
@@ -684,7 +685,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
 		return
 	}
-	err = storage.PersistFileMetaToDatabase(n, storage.FileContractsStorePrefix, ss.ID)
+	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
 	if err != nil {
 		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
@@ -775,7 +776,7 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		// build session
 		sm := storage.GlobalSession
-		ss, err := sm.GetSession(n, storage.ShardsStorePrefix, ssID)
+		ss, err := sm.GetSession(n, storage.HostStoragePrefix, ssID)
 		// TODO: refactor GetSession: don't return err when ssID not existed
 		if err != nil {
 			log.Error(err)
@@ -805,7 +806,7 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
-		// get render's public key
+		// get renter's public key
 		payerPubKey, err := pid.ExtractPublicKey()
 		if err != nil {
 			return err
@@ -854,7 +855,7 @@ func signContractAndCheckPayment(n *core.IpfsNode, api coreiface.CoreAPI, cfg *c
 	}
 
 	// persist file meta
-	err = storage.PersistFileMetaToDatabase(n, storage.ShardsStorePrefix, ss.ID)
+	err = storage.PersistFileMetaToDatastore(n, storage.HostStoragePrefix, ss.ID)
 	if err != nil {
 		log.Error(err)
 		return
@@ -914,8 +915,7 @@ func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storag
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
-	_, err := storage.NewStorageChallengeResponse(context.Background(), n, api, ss.FileHash,
-		shardInfo.ShardHash, "", true)
+	_, err := shardInfo.GetChallengeResponseOrNew(context.Background(), n, api, ss.FileHash, true)
 	if err != nil {
 		log.Error(err)
 		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
@@ -1233,7 +1233,7 @@ This command print upload and payment status by the time queried.`,
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
-		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
 		if err != nil {
 			return err
 		}
@@ -1343,7 +1343,7 @@ the challenge request back to the caller.`,
 		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
 		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
 	},
-	RunTimeout: 3 * time.Second, // TODO: consider large files?
+	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -1363,22 +1363,35 @@ the challenge request back to the caller.`,
 			return err
 		}
 
-		// TODO: Check if host store has this contract id
 		fileHash, err := cidlib.Parse(req.Arguments[1])
 		if err != nil {
 			return err
 		}
-		shardHash, err := cidlib.Parse(req.Arguments[2])
+		sh := req.Arguments[2]
+		shardHash, err := cidlib.Parse(sh)
 		if err != nil {
 			return err
+		}
+		// Check if host store has this contract id
+		shardInfo, err := storage.GetShardInfoFromDatastore(n, storage.HostStoragePrefix, sh)
+		if err != nil {
+			return err
+		}
+		ctID := req.Arguments[0]
+		if ctID != shardInfo.ContractID {
+			return fmt.Errorf("contract id does not match, has [%s], needs [%s]", shardInfo.ContractID, ctID)
+		}
+		if !shardHash.Equals(shardInfo.ShardHash) {
+			return fmt.Errorf("datastore internal error: mismatched existing shard hash %s with %s",
+				shardInfo.ShardHash.String(), shardHash.String())
 		}
 		chunkIndex, err := strconv.Atoi(req.Arguments[3])
 		if err != nil {
 			return err
 		}
 		nonce := req.Arguments[4]
-		// Challenge ID is not relevant here because it's a sync operation
-		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", false)
+		// Get (cached) challenge response object and solve challenge
+		sc, err := shardInfo.GetChallengeResponseOrNew(req.Context, n, api, fileHash, false)
 		if err != nil {
 			return err
 		}

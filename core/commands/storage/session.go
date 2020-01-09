@@ -24,8 +24,12 @@ var StdStateFlow [3]*FlowControl
 var StdSessionStateFlow [6]*FlowControl
 
 const (
-	FileContractsStorePrefix = "/file-contracts/"
-	ShardsStorePrefix        = "/shards/"
+	// prefixes for datastore persistency keys
+	HostStoragePrefix   = "/host-storage/"
+	RenterStoragePrefix = "/renter-storage/"
+	// secondary path segments after prefix for datastore persistency keys
+	FileContractsStoreSeg = "file-contracts/"
+	ShardsStoreSeg        = "shards/"
 
 	// shard state
 	InitState     = 0
@@ -147,12 +151,12 @@ func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix string, ssID string) (*FileContracts, error) {
+func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		f, err := GetFileMetaFromDatabase(node, prefix+ssID)
+		f, err := GetFileMetaFromDatastore(node, prefix, ssID)
 		if err != nil {
 			return nil, err
 		}
@@ -198,9 +202,10 @@ func NewSessionID() (string, error) {
 	return ssid.String(), nil
 }
 
-func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, error) {
+// GetFileMetaFromDatastore retrieves persisted session/contract information from datastore
+func GetFileMetaFromDatastore(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
 	rds := node.Repo.Datastore()
-	value, err := rds.Get(ds.NewKey(key))
+	value, err := rds.Get(ds.NewKey(prefix + FileContractsStoreSeg + ssID))
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +218,24 @@ func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, e
 	return f, nil
 }
 
-func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) error {
+// GetShardInfoFromDatastore retrieves persisted shard information from datastore
+func GetShardInfoFromDatastore(node *core.IpfsNode, prefix, shardHash string) (*Shard, error) {
+	rds := node.Repo.Datastore()
+	value, err := rds.Get(ds.NewKey(prefix + ShardsStoreSeg + shardHash))
+	if err != nil {
+		return nil, err
+	}
+
+	s := new(Shard)
+	err = json.Unmarshal(value, s)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// PersistFileMetaToDatastore saves session/contract information into datastore
+func PersistFileMetaToDatastore(node *core.IpfsNode, prefix string, ssID string) error {
 	rds := node.Repo.Datastore()
 	ss, err := GlobalSession.GetSession(node, prefix, ssID)
 	if err != nil {
@@ -223,16 +245,16 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) 
 	if err != nil {
 		return err
 	}
-	err = rds.Put(ds.NewKey(prefix+ssID), fileContractsBytes)
+	err = rds.Put(ds.NewKey(prefix+FileContractsStoreSeg+ssID), fileContractsBytes)
 	if err != nil {
 		return err
 	}
-	for chunkHash, chunkInfo := range ss.ShardInfo {
-		shardBytes, err := json.Marshal(chunkInfo)
+	for shardHash, shardInfo := range ss.ShardInfo {
+		shardBytes, err := json.Marshal(shardInfo)
 		if err != nil {
 			return err
 		}
-		err = rds.Put(ds.NewKey(ShardsStorePrefix+chunkHash), shardBytes)
+		err = rds.Put(ds.NewKey(prefix+ShardsStoreSeg+shardHash), shardBytes)
 		if err != nil {
 			return err
 		}
@@ -458,6 +480,21 @@ func (c *Shard) GetChallengeOrNew(ctx context.Context, node *core.IpfsNode, api 
 
 	if c.Challenge == nil {
 		sc, err := NewStorageChallenge(ctx, node, api, fileHash, c.ShardHash)
+		if err != nil {
+			return nil, err
+		}
+		c.Challenge = sc
+	}
+	return c.Challenge, nil
+}
+
+func (c *Shard) GetChallengeResponseOrNew(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	fileHash cidlib.Cid, init bool) (*StorageChallenge, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.Challenge == nil {
+		sc, err := NewStorageChallengeResponse(ctx, node, api, fileHash, c.ShardHash, "", init)
 		if err != nil {
 			return nil, err
 		}
