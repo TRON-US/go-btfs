@@ -175,6 +175,9 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 		}
 	}
 
+	if settings.PinDuration != 0 {
+		fileAdder.PinDuration = settings.PinDuration
+	}
 	// This block is intentionally placed here so that
 	// any execution case can append metadata
 	if settings.TokenMetadata != "" {

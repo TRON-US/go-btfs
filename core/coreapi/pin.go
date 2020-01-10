@@ -3,7 +3,7 @@ package coreapi
 import (
 	"context"
 	"fmt"
-
+	"github.com/TRON-US/go-btfs/pin"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
@@ -28,7 +28,8 @@ func (api *PinAPI) Add(ctx context.Context, p path.Path, opts ...caopts.PinAddOp
 
 	defer api.blockstore.PinLock().Unlock()
 
-	err = api.pinning.Pin(ctx, dagNode, settings.Recursive)
+	expir, err := pin.ExpiresAtWithUnitAndCount(pin.DefaultDurationUnit, settings.DurationCount)
+	err = api.pinning.Pin(ctx, dagNode, settings.Recursive, expir)
 	if err != nil {
 		return fmt.Errorf("pin: %s", err)
 	}

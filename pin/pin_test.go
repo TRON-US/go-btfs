@@ -71,7 +71,7 @@ func TestPinnerBasic(t *testing.T) {
 	}
 
 	// Pin A{}
-	err = p.Pin(ctx, a, false)
+	err = p.Pin(ctx, a, false, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestPinnerBasic(t *testing.T) {
 	bk := b.Cid()
 
 	// recursively pin B{A,C}
-	err = p.Pin(ctx, b, true)
+	err = p.Pin(ctx, b, true, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestPinnerBasic(t *testing.T) {
 	}
 
 	// Add D{A,C,E}
-	err = p.Pin(ctx, d, true)
+	err = p.Pin(ctx, d, true, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestIsPinnedLookup(t *testing.T) {
 	}
 
 	// Pin A5 recursively
-	if err := p.Pin(ctx, aNodes[aBranchLen-1], true); err != nil {
+	if err := p.Pin(ctx, aNodes[aBranchLen-1], true, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -249,13 +249,13 @@ func TestIsPinnedLookup(t *testing.T) {
 
 	// Pin C recursively
 
-	if err := p.Pin(ctx, c, true); err != nil {
+	if err := p.Pin(ctx, c, true, 0); err != nil {
 		t.Fatal(err)
 	}
 
 	// Pin B recursively
 
-	if err := p.Pin(ctx, b, true); err != nil {
+	if err := p.Pin(ctx, b, true, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -299,19 +299,19 @@ func TestDuplicateSemantics(t *testing.T) {
 	}
 
 	// pin is recursively
-	err = p.Pin(ctx, a, true)
+	err = p.Pin(ctx, a, true, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// pinning directly should fail
-	err = p.Pin(ctx, a, false)
+	err = p.Pin(ctx, a, false, 0)
 	if err == nil {
 		t.Fatal("expected direct pin to fail")
 	}
 
 	// pinning recursively again should succeed
-	err = p.Pin(ctx, a, true)
+	err = p.Pin(ctx, a, true, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +326,7 @@ func TestFlush(t *testing.T) {
 	p := NewPinner(dstore, dserv, dserv)
 	_, k := randNode()
 
-	p.PinWithMode(k, Recursive)
+	p.PinWithMode(k, 0, Recursive)
 	if err := p.Flush(); err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +353,7 @@ func TestPinRecursiveFail(t *testing.T) {
 	mctx, cancel := context.WithTimeout(ctx, time.Millisecond)
 	defer cancel()
 
-	err = p.Pin(mctx, a, true)
+	err = p.Pin(mctx, a, true, 0)
 	if err == nil {
 		t.Fatal("should have failed to pin here")
 	}
@@ -371,7 +371,7 @@ func TestPinRecursiveFail(t *testing.T) {
 	// this one is time based... but shouldnt cause any issues
 	mctx, cancel = context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	err = p.Pin(mctx, a, true)
+	err = p.Pin(mctx, a, true, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +396,7 @@ func TestPinUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := p.Pin(ctx, n1, true); err != nil {
+	if err := p.Pin(ctx, n1, true, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -413,4 +413,148 @@ func TestPinUpdate(t *testing.T) {
 
 	assertPinned(t, p, c2, "c2 should be pinned still")
 	assertPinned(t, p, c1, "c1 should be pinned now")
+}
+
+func TestPinWithExpiration(t *testing.T) {
+	ctx := context.Background()
+
+	dstore := dssync.MutexWrap(ds.NewMapDatastore())
+	bstore := blockstore.NewBlockstore(dstore)
+	bserv := bs.New(bstore, offline.Exchange(bstore))
+
+	dserv := mdag.NewDAGService(bserv)
+
+	p := NewPinner(dstore, dserv, dserv)
+
+	a, ak := randNode()
+	err := dserv.Add(ctx, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pin A{} with duration 2*time.Second
+
+	err = p.Pin(ctx, a, false, ExpiresAt(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertPinned(t, p, ak, "Failed to find key")
+
+	time.Sleep(time.Second)
+
+	assertUnpinned(t, p, ak, "object with expiration did not expire")
+
+	// create new node c, to be indirectly pinned through b
+	c, _ := randNode()
+	err = dserv.Add(ctx, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ck := c.Cid()
+
+	// Create new node b, to be parent to a and c
+	b, _ := randNode()
+	err = b.AddNodeLink("child", a)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.AddNodeLink("otherchild", c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = dserv.Add(ctx, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bk := b.Cid()
+
+	// recursively pin B{A,C}
+	err = p.Pin(ctx, b, true, ExpiresAt(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertPinned(t, p, ck, "child of recursively pinned node not found")
+
+	assertPinned(t, p, bk, "Recursively pinned node not found..")
+
+	time.Sleep(time.Second)
+
+	assertUnpinned(t, p, ck, "child object whose parent has expired did not expire")
+}
+
+func TestIndirectPinWithMultipleInheritance(t *testing.T) {
+	// We will test that A0 is still pinned when A2 expires and B is still pinned.
+	//
+	// A2->A1->A0
+	//         /
+	// B-------
+	//
+	aBranchLen := 3
+
+	ctx := context.Background()
+	dstore := dssync.MutexWrap(ds.NewMapDatastore())
+	bstore := blockstore.NewBlockstore(dstore)
+	bserv := bs.New(bstore, offline.Exchange(bstore))
+
+	dserv := mdag.NewDAGService(bserv)
+
+	p := NewPinner(dstore, dserv, dserv)
+
+	aNodes := make([]*mdag.ProtoNode, aBranchLen)
+	aKeys := make([]cid.Cid, aBranchLen)
+	for i := 0; i < aBranchLen; i++ {
+		a, _ := randNode()
+		if i >= 1 {
+			err := a.AddNodeLink("child", aNodes[i-1])
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		err := dserv.Add(ctx, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		aNodes[i] = a
+		aKeys[i] = a.Cid()
+	}
+
+	// Pin A2 recursively with expiration within 1 second
+	if err := p.Pin(ctx, aNodes[aBranchLen-1], true, ExpiresAt(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create node B and add A0 as child
+	b, _ := randNode()
+	if err := b.AddNodeLink("mychild", aNodes[0]); err != nil {
+		t.Fatal(err)
+	}
+	bk := b.Cid()
+
+	// Add B
+	err := dserv.Add(ctx, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pin B recursively without expiration time
+	if err := p.Pin(ctx, b, true, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	assertPinned(t, p, aKeys[0], "A0 should be pinned")
+	assertPinned(t, p, aKeys[1], "A1 should be pinned")
+	assertPinned(t, p, bk, "B should be pinned")
+
+	time.Sleep(time.Second)
+
+	assertPinned(t, p, aKeys[0], "A0 should be pinned")
+	assertUnpinned(t, p, aKeys[1], "A4 should be unpinned")
+	assertUnpinned(t, p, aKeys[2], "A4 should be unpinned")
+	assertPinned(t, p, bk, "B should be pinned")
+
 }

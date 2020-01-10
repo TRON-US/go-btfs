@@ -54,7 +54,7 @@ func (s sortByHash) Swap(a, b int) {
 	s.links[a], s.links[b] = s.links[b], s.links[a]
 }
 
-func storeItems(ctx context.Context, dag ipld.DAGService, estimatedLen uint64, depth uint32, iter itemIterator, internalKeys keyObserver) (*merkledag.ProtoNode, error) {
+func storeItems(ctx context.Context, dag ipld.DAGService, estimatedLen uint64, depth uint32, iter itemIterator, pinSet *cid.Set, pinMap *cid.Map, internalKeys keyObserver) (*merkledag.ProtoNode, error) {
 	links := make([]*ipld.Link, 0, defaultFanout+maxItems)
 	for i := 0; i < defaultFanout; i++ {
 		links = append(links, &ipld.Link{Cid: emptyKey})
@@ -84,6 +84,8 @@ func storeItems(ctx context.Context, dag ipld.DAGService, estimatedLen uint64, d
 				// all done
 				break
 			}
+			// Remove the current items from the set and its map if expired.
+			removeIfExpired(pinSet, pinMap, k)
 
 			links = append(links, &ipld.Link{Cid: k})
 		}
@@ -129,7 +131,7 @@ func storeItems(ctx context.Context, dag ipld.DAGService, estimatedLen uint64, d
 		childIter := getCidListIterator(items)
 
 		// recursively create a pinset from the items for this bucket index
-		child, err := storeItems(ctx, dag, uint64(len(items)), depth+1, childIter, internalKeys)
+		child, err := storeItems(ctx, dag, uint64(len(items)), depth+1, childIter, pinSet, pinMap, internalKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -281,10 +283,10 @@ func getCidListIterator(cids []cid.Cid) itemIterator {
 	}
 }
 
-func storeSet(ctx context.Context, dag ipld.DAGService, cids []cid.Cid, internalKeys keyObserver) (*merkledag.ProtoNode, error) {
+func storeSet(ctx context.Context, dag ipld.DAGService, cids []cid.Cid, pinSet *cid.Set, pinMap *cid.Map, internalKeys keyObserver) (*merkledag.ProtoNode, error) {
 	iter := getCidListIterator(cids)
 
-	n, err := storeItems(ctx, dag, uint64(len(cids)), 0, iter, internalKeys)
+	n, err := storeItems(ctx, dag, uint64(len(cids)), 0, iter, pinSet, pinMap, internalKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -294,4 +296,11 @@ func storeSet(ctx context.Context, dag ipld.DAGService, cids []cid.Cid, internal
 	}
 	internalKeys(n.Cid())
 	return n, nil
+}
+
+func removeIfExpired(pinSet *cid.Set, pinMap *cid.Map, k cid.Cid) {
+	if pinSet != nil && pinMap != nil && pinMap.IsExpired(k) {
+		pinSet.Remove(k)
+		pinMap.Remove(k)
+	}
 }

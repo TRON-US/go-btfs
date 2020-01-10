@@ -4,6 +4,7 @@ package pin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -18,7 +19,11 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
+const DefaultDurationUnit = time.Hour * 24
+
 var log = logging.Logger("pin")
+var recursivePinsKey = ds.NewKey("/local/pins/recursive/keys")
+var directPinskey = ds.NewKey("/local/pins/direct/keys")
 
 var pinDatastoreKey = ds.NewKey("/local/pins")
 
@@ -112,7 +117,7 @@ type Pinner interface {
 	IsPinnedWithType(cid.Cid, Mode) (string, bool, error)
 
 	// Pin the given node, optionally recursively.
-	Pin(ctx context.Context, node ipld.Node, recursive bool) error
+	Pin(ctx context.Context, node ipld.Node, recursive bool, expir uint64) error
 
 	// Unpin the given cid. If recursive is true, removes either a recursive or
 	// a direct pin. If recursive is false, only removes a direct pin.
@@ -130,7 +135,7 @@ type Pinner interface {
 	// PinWithMode is for manually editing the pin structure. Use with
 	// care! If used improperly, garbage collection may not be
 	// successful.
-	PinWithMode(cid.Cid, Mode)
+	PinWithMode(cid.Cid, uint64, Mode)
 
 	// RemovePinWithMode is for manually editing the pin structure.
 	// Use with care! If used improperly, garbage collection may not
@@ -143,12 +148,22 @@ type Pinner interface {
 	// DirectKeys returns all directly pinned cids
 	DirectKeys() []cid.Cid
 
+	// DirectMap returns all directly pinned cids and its values
+	DirectMap() *cid.Map
+
 	// DirectKeys returns all recursively pinned cids
 	RecursiveKeys() []cid.Cid
+
+	// RecursiveMap returns all recursively pinned cids and its values
+	RecursiveMap() *cid.Map
 
 	// InternalPins returns all cids kept pinned for the internal state of the
 	// pinner
 	InternalPins() []cid.Cid
+
+	// HasExpiration returns true if the given Cid or its ancestor has
+	// expiration time
+	HasExpiration(cid.Cid) (bool, error)
 }
 
 // Pinned represents CID which has been pinned with a pinning strategy.
@@ -181,9 +196,11 @@ func (p Pinned) String() string {
 
 // pinner implements the Pinner interface
 type pinner struct {
-	lock       sync.RWMutex
-	recursePin *cid.Set
-	directPin  *cid.Set
+	lock          sync.RWMutex
+	recursePin    *cid.Set
+	directPin     *cid.Set
+	recursePinMap *cid.Map
+	directPinMap  *cid.Map
 
 	// Track the keys used for storing the pinning state, so gc does
 	// not delete them.
@@ -198,19 +215,23 @@ func NewPinner(dstore ds.Datastore, serv, internal ipld.DAGService) Pinner {
 
 	rcset := cid.NewSet()
 	dirset := cid.NewSet()
+	rcmap := cid.NewMap()
+	dirmap := cid.NewMap()
 
 	return &pinner{
-		recursePin:  rcset,
-		directPin:   dirset,
-		dserv:       serv,
-		dstore:      dstore,
-		internal:    internal,
-		internalPin: cid.NewSet(),
+		recursePin:    rcset,
+		directPin:     dirset,
+		recursePinMap: rcmap,
+		directPinMap:  dirmap,
+		dserv:         serv,
+		dstore:        dstore,
+		internal:      internal,
+		internalPin:   cid.NewSet(),
 	}
 }
 
 // Pin the given node, optionally recursive
-func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool) error {
+func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool, expir uint64) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	err := p.dserv.Add(ctx, node)
@@ -245,6 +266,7 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool) error {
 		}
 
 		p.recursePin.Add(c)
+		p.recursePinMap.Add(c, expir)
 	} else {
 		p.lock.Unlock()
 		_, err := p.dserv.Get(ctx, c)
@@ -258,6 +280,7 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool) error {
 		}
 
 		p.directPin.Add(c)
+		p.directPinMap.Add(c, expir)
 	}
 	return nil
 }
@@ -274,10 +297,12 @@ func (p *pinner) Unpin(ctx context.Context, c cid.Cid, recursive bool) error {
 			return fmt.Errorf("%s is pinned recursively", c)
 		}
 		p.recursePin.Remove(c)
+		p.recursePinMap.Remove(c)
 		return nil
 	}
 	if p.directPin.Has(c) {
 		p.directPin.Remove(c)
+		p.directPinMap.Remove(c)
 		return nil
 	}
 	return ErrNotPinned
@@ -304,7 +329,7 @@ func (p *pinner) IsPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 }
 
 // isPinnedWithType is the implementation of IsPinnedWithType that does not lock.
-// intended for use by other pinned methods that already take locks
+// intended for use by other pinned methods that already take locks.
 func (p *pinner) isPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 	switch mode {
 	case Any, Direct, Indirect, Recursive, Internal:
@@ -314,6 +339,10 @@ func (p *pinner) isPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 		return "", false, err
 	}
 	if (mode == Recursive || mode == Any) && p.recursePin.Has(c) {
+		// Check if the given `c` is expired, if yes, return false.
+		if p.recursePinMap.IsExpired(c) {
+			return "", false, nil
+		}
 		return linkRecursive, true, nil
 	}
 	if mode == Recursive {
@@ -321,6 +350,9 @@ func (p *pinner) isPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 	}
 
 	if (mode == Direct || mode == Any) && p.directPin.Has(c) {
+		if p.directPinMap.IsExpired(c) {
+			return "", false, nil
+		}
 		return linkDirect, true, nil
 	}
 	if mode == Direct {
@@ -337,6 +369,11 @@ func (p *pinner) isPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 	// Default is Indirect
 	visitedSet := cid.NewSet()
 	for _, rc := range p.recursePin.Keys() {
+		// If "rc" is expired, just skip. This will sufficiently satisfy the requirement
+		// that a node should be kept until its last ancestor is still before expiration point in time.
+		if p.recursePinMap.IsExpired(rc) {
+			continue
+		}
 		has, err := hasChild(p.dserv, rc, c, visitedSet.Visit)
 		if err != nil {
 			return "", false, err
@@ -359,8 +396,14 @@ func (p *pinner) CheckIfPinned(cids ...cid.Cid) ([]Pinned, error) {
 	// First check for non-Indirect pins directly
 	for _, c := range cids {
 		if p.recursePin.Has(c) {
+			if p.recursePinMap.IsExpired(c) {
+				continue
+			}
 			pinned = append(pinned, Pinned{Key: c, Mode: Recursive})
 		} else if p.directPin.Has(c) {
+			if p.directPinMap.IsExpired(c) {
+				continue
+			}
 			pinned = append(pinned, Pinned{Key: c, Mode: Direct})
 		} else if p.isInternalPin(c) {
 			pinned = append(pinned, Pinned{Key: c, Mode: Internal})
@@ -398,6 +441,9 @@ func (p *pinner) CheckIfPinned(cids ...cid.Cid) ([]Pinned, error) {
 	}
 
 	for _, rk := range p.recursePin.Keys() {
+		if p.recursePinMap.IsExpired(rk) {
+			continue
+		}
 		err := checkChildren(rk, rk)
 		if err != nil {
 			return nil, err
@@ -470,20 +516,30 @@ func LoadPinner(d ds.Datastore, dserv, internal ipld.DAGService) (Pinner, error)
 	internalset.Add(rootCid)
 	recordInternal := internalset.Add
 
-	{ // load recursive set
+	{ // load recursive set and map
 		recurseKeys, err := loadSet(ctx, internal, rootpb, linkRecursive, recordInternal)
 		if err != nil {
 			return nil, fmt.Errorf("cannot load recursive pins: %v", err)
 		}
 		p.recursePin = cidSetWithValues(recurseKeys)
+
+		p.recursePinMap, err = LoadMap(d, recursivePinsKey)
+		if err != nil {
+			return nil, fmt.Errorf("cannot load recursive pins' map: %v", err)
+		}
 	}
 
-	{ // load direct set
+	{ // load direct set and map
 		directKeys, err := loadSet(ctx, internal, rootpb, linkDirect, recordInternal)
 		if err != nil {
 			return nil, fmt.Errorf("cannot load direct pins: %v", err)
 		}
 		p.directPin = cidSetWithValues(directKeys)
+
+		p.directPinMap, err = LoadMap(d, directPinskey)
+		if err != nil {
+			return nil, fmt.Errorf("cannot load direct pins' map: %v", err)
+		}
 	}
 
 	p.internalPin = internalset
@@ -504,12 +560,28 @@ func (p *pinner) DirectKeys() []cid.Cid {
 	return p.directPin.Keys()
 }
 
+// DirectMap returns the map for the directly pinned keys
+func (p *pinner) DirectMap() *cid.Map {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.directPinMap
+}
+
 // RecursiveKeys returns a slice containing the recursively pinned keys
 func (p *pinner) RecursiveKeys() []cid.Cid {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	return p.recursePin.Keys()
+}
+
+// RecursiveMap returns the map for the recursively pinned keys
+func (p *pinner) RecursiveMap() *cid.Map {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.recursePinMap
 }
 
 // Update updates a recursive pin from one cid to another
@@ -547,21 +619,29 @@ func (p *pinner) Flush() error {
 
 	root := &mdag.ProtoNode{}
 	{
-		n, err := storeSet(ctx, p.internal, p.directPin.Keys(), recordInternal)
+		n, err := storeSet(ctx, p.internal, p.directPin.Keys(), p.directPin, p.directPinMap, recordInternal)
 		if err != nil {
 			return err
 		}
 		if err := root.AddNodeLink(linkDirect, n); err != nil {
 			return err
 		}
+		err = storeMap(p.dstore, directPinskey, p.directPinMap)
+		if err != nil {
+			return err
+		}
 	}
 
 	{
-		n, err := storeSet(ctx, p.internal, p.recursePin.Keys(), recordInternal)
+		n, err := storeSet(ctx, p.internal, p.recursePin.Keys(), p.recursePin, p.recursePinMap, recordInternal)
 		if err != nil {
 			return err
 		}
 		if err := root.AddNodeLink(linkRecursive, n); err != nil {
+			return err
+		}
+		err = storeMap(p.dstore, recursivePinsKey, p.recursePinMap)
+		if err != nil {
 			return err
 		}
 	}
@@ -599,15 +679,51 @@ func (p *pinner) InternalPins() []cid.Cid {
 
 // PinWithMode allows the user to have fine grained control over pin
 // counts
-func (p *pinner) PinWithMode(c cid.Cid, mode Mode) {
+func (p *pinner) PinWithMode(c cid.Cid, expir uint64, mode Mode) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	switch mode {
 	case Recursive:
 		p.recursePin.Add(c)
+		p.recursePinMap.Add(c, expir)
 	case Direct:
 		p.directPin.Add(c)
+		p.directPinMap.Add(c, expir)
 	}
+}
+
+func (p *pinner) HasExpiration(c cid.Cid) (bool, error) {
+	if p.directPin.Has(c) {
+		if p.directPinMap.HasExpiration(c) {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+	visitedSet := cid.NewSet()
+	for _, k := range p.recursePin.Keys() {
+		if !p.recursePinMap.HasExpiration(k) {
+			continue
+		}
+		has, err := hasChild(p.dserv, k, c, visitedSet.Visit)
+		if err != nil {
+			return false, err
+		}
+		if has {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func IsExpiredPin(c cid.Cid, pinMap *cid.Map, pinMap2 *cid.Map) bool {
+	if pinMap != nil && pinMap.IsExpired(c) {
+		return true
+	}
+	if pinMap2 != nil && pinMap2.IsExpired(c) {
+		return true
+	}
+	return false
 }
 
 // hasChild recursively looks for a Cid among the children of a root Cid.
@@ -634,4 +750,54 @@ func hasChild(ng ipld.NodeGetter, root cid.Cid, child cid.Cid, visit func(cid.Ci
 		}
 	}
 	return false, nil
+}
+
+// Returns time.Unix value for the given `durationUnit` and `durationCount` from now.
+func ExpiresAtWithUnitAndCount(durationUnit time.Duration, durationCount int64) (uint64, error) {
+	if durationUnit == 0 || durationCount == 0 {
+		return 0, nil
+	}
+	timeDuration := time.Duration(durationUnit) * time.Duration(durationCount)
+	return ExpiresAt(timeDuration), nil
+}
+
+// Returns time.Unix value for the given `dur` from now.
+func ExpiresAt(dur time.Duration) uint64 {
+	// TODO: check overflow!
+	return uint64(time.Now().Add(dur).Unix())
+}
+
+func storeMap(d ds.Datastore, k ds.Key, v *cid.Map) error {
+	m := make(map[string]cid.Value)
+	for ke, va := range v.CidMap {
+		m[ke.String()] = va
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	return d.Put(k, b)
+}
+
+func LoadMap(d ds.Datastore, k ds.Key) (*cid.Map, error) {
+	val, err := d.Get(k)
+	if err != nil {
+		return nil, err
+	}
+
+	v := cid.NewMap()
+	m := make(map[string]cid.Value)
+	err = json.Unmarshal([]byte(val), &m)
+	if err != nil {
+		return nil, err
+	}
+	for ke, va := range m {
+		k, err := cid.Parse(ke)
+		if err != nil {
+			return nil, err
+		}
+		v.CidMap[k] = va
+	}
+	return v, nil
 }
