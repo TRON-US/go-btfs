@@ -120,10 +120,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		"status":       storageUploadStatusCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
-		cmds.StringArg("repair-shards", false, true, "Shard hashes to repair.").EnableStdin(),
-		cmds.StringArg("renter-id", false, true, "Original renter id.").EnableStdin(),
-		cmds.StringArg("blacklist", false, true, "Blacklist of hosts when upload.").EnableStdin(),
+		cmds.StringArg("file-hash", true, false, "Add hash of file to upload."),
+		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
+		cmds.StringArg("renter-id", false, false, "Original renter id."),
+		cmds.StringArg("blacklist", false, false, "Blacklist of hosts when upload."),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
