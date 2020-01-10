@@ -29,13 +29,13 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/Workiva/go-datastructures/set"
 )
 
 const (
@@ -312,7 +312,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			shardIndex++
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag)
+		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -352,7 +352,8 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 	}
 }
 
-func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode, ssID string, test bool) {
+func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
+	ssID string, test bool, isRepair bool) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -395,7 +396,8 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				log.Error("fail to new contract meta")
 				return
 			}
-			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true)
+			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true,
+				isRepair, ss.Renter.Pretty())
 			if err != nil {
 				log.Error("fail to sign guard contract and marshal")
 				return
@@ -871,7 +873,11 @@ the shard and replies back to client for the next challenge step.`,
 		if !ok || err != nil {
 			return fmt.Errorf("can't verify escrow contract")
 		}
-		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, halfSignedGuardContract.GetRenterSignature())
+		s := halfSignedGuardContract.GetRenterSignature()
+		if s == nil {
+			s = halfSignedGuardContract.GetPreparerSignature()
+		}
+		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, s)
 		if !ok || err != nil {
 			return fmt.Errorf("can't verify guard contract")
 		}
@@ -892,7 +898,8 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		log.Error(err)
 		return
 	}
-	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract, n.PrivateKey, false)
+	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
+		n.PrivateKey, false, false, "")
 	if err != nil {
 		log.Error(err)
 		return

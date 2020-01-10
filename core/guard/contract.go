@@ -25,11 +25,17 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	if err != nil {
 		return nil, err
 	}
-	var rentStart time.Time
-	var rentEnd time.Time
+	var (
+		rentStart   time.Time
+		rentEnd     time.Time
+		preparerPid = ""
+		rentalState = guardPb.FileStoreStatus_NEW
+	)
 	if len(contracts) > 0 {
 		rentStart = contracts[0].RentStart
 		rentEnd = contracts[0].RentEnd
+		preparerPid = contracts[0].PreparerPid
+		rentalState = guardPb.FileStoreStatus_PARTIAL_NEW
 	}
 
 	fileStoreMeta := guardPb.FileStoreMeta{
@@ -57,8 +63,8 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 		ChangeLog:         nil,
 		CurrentTime:       time.Now(),
 		GuardSignature:    nil,
-		RentalState:       0,
-		PreparerPid:       "",
+		RentalState:       rentalState,
+		PreparerPid:       preparerPid,
 		PreparerSignature: nil,
 	}, nil
 }
@@ -86,7 +92,8 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 	}, nil
 }
 
-func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey, isPayer bool) ([]byte, error) {
+func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey,
+	isPayer bool, isRepair bool, renterId string) ([]byte, error) {
 	sig, err := crypto.Sign(privKey, meta)
 	if err != nil {
 		return nil, err
@@ -100,7 +107,13 @@ func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract
 		cont.LastModifyTime = time.Now()
 	}
 	if isPayer {
-		cont.RenterSignature = sig
+		if isRepair {
+			cont.PreparerSignature = sig
+			cont.PreparerPid = renterId
+			cont.RenterSignature = sig
+		} else {
+			cont.RenterSignature = sig
+		}
 	} else {
 		cont.HostSignature = sig
 	}
@@ -193,8 +206,16 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 		log.Error(err)
 		return nil, err
 	}
-
-	fileStatus.RenterSignature, err = crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
+	sign, err := crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	if fileStatus.PreparerPid == "" {
+		fileStatus.RenterSignature = sign
+	} else {
+		fileStatus.PreparerSignature = sign
+	}
 	if err != nil {
 		log.Error(err)
 		return nil, err
