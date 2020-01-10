@@ -64,6 +64,7 @@ type FileContracts struct {
 	Renter            peer.ID
 	FileHash          cidlib.Cid
 	Status            string
+	StatusMessage     string            // most likely error or notice
 	ShardInfo         map[string]*Shard // mapping chunkHash with Shards info
 	CompleteChunks    int
 	CompleteContracts int
@@ -367,11 +368,20 @@ func (ss *FileContracts) SetStatus(status int) {
 
 	ss.Status = StdSessionStateFlow[status].State
 }
-func (ss *FileContracts) GetStatus() string {
+
+func (ss *FileContracts) SetStatusWithError(status int, err error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	return ss.Status
+	ss.Status = StdSessionStateFlow[status].State
+	ss.StatusMessage = err.Error()
+}
+
+func (ss *FileContracts) GetStatusAndMessage() (string, string) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	return ss.Status, ss.StatusMessage
 }
 
 func (ss *FileContracts) GetShard(hash string) (*Shard, error) {

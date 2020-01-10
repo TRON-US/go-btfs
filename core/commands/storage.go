@@ -308,12 +308,14 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 				curStatus = sessionState.CurrentStep + 1
 				ss.SetStatus(curStatus)
 			} else {
-				// TODO: ADD error info to status
-				ss.SetStatus(storage.ErrStatus)
+				if sessionState.Err == nil {
+					sessionState.Err = fmt.Errorf("unknown error, please file a bug report")
+				}
+				ss.SetStatusWithError(storage.ErrStatus, sessionState.Err)
 				return
 			}
 		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
-			ss.SetStatus(storage.ErrStatus)
+			ss.SetStatusWithError(storage.ErrStatus, fmt.Errorf("timed out"))
 			return
 		}
 	}
@@ -629,19 +631,15 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
-			submitContractRes, err := escrow.SubmitContractToEscrow(context.Background(), cfg, contractRequest)
+			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
 			if err != nil {
 				log.Error(err)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false,
+					fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
 				return err
 			}
 			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
-			// get node
-			n, err := cmdenv.GetNode(env)
-			if err != nil {
-				sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
-				return err
-			}
+
 			// get core api
 			api, err := cmdenv.GetApi(env, req)
 			if err != nil {
@@ -682,27 +680,30 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
+			fmt.Errorf("failed to send file meta to guard: [%v]", err))
 		return
 	}
+
 	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
+			fmt.Errorf("failed to send challenge questions to guard: [%v]", err))
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, true, nil)
@@ -1212,14 +1213,16 @@ This command updates host information and broadcasts to the BTFS network.`,
 
 type StatusRes struct {
 	Status   string
+	Message  string
 	FileHash string
 	Shards   map[string]*ShardStatus
 }
 
 type ShardStatus struct {
-	Price  int64
-	Host   string
-	Status string
+	ContractID string
+	Price      int64
+	Host       string
+	Status     string
 }
 
 var storageUploadStatusCmd = &cmds.Command{
@@ -1251,15 +1254,16 @@ This command print upload and payment status by the time queried.`,
 		}
 
 		// get shards info from session
-		status.Status = ss.GetStatus()
+		status.Status, status.Message = ss.GetStatusAndMessage()
 		status.FileHash = ss.GetFileHash().String()
 		shards := make(map[string]*ShardStatus)
 		status.Shards = shards
 		for hash, info := range ss.ShardInfo {
 			c := &ShardStatus{
-				Price:  info.Price,
-				Host:   info.Receiver.String(),
-				Status: info.GetStateStr(),
+				ContractID: info.ContractID,
+				Price:      info.Price,
+				Host:       info.Receiver.String(),
+				Status:     info.GetStateStr(),
 			}
 			shards[hash] = c
 		}
