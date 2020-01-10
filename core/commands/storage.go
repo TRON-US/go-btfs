@@ -35,6 +35,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/Workiva/go-datastructures/set"
 )
 
 const (
@@ -53,6 +54,7 @@ const (
 	hostStorageMaxOptionName      = "host-storage-max"
 	testOnlyOptionName            = "host-search-local"
 	storageLengthOptionName       = "storage-length"
+	repairModeOptionName          = "repair-mode"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -119,6 +121,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
+		cmds.StringArg("repair-shards", false, true, "Shard hashes to repair.").EnableStdin(),
+		cmds.StringArg("renter-id", false, true, "Original renter id.").EnableStdin(),
+		cmds.StringArg("blacklist", false, true, "Blacklist of hosts when upload.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
@@ -128,6 +133,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
 		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
+		cmds.BoolOption(repairModeOptionName, "repair mode").WithDefault(false),
 	},
 	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -154,9 +160,33 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			shardHashes []string
 			rootHash    cidlib.Cid
 			shardSize   uint64
+			blacklist   = set.New()
+			renterId    = n.Identity
 		)
-		lf, _ := req.Options[leafHashOptionName].(bool)
-		if lf == false {
+		isRepairMode := req.Options[repairModeOptionName].(bool)
+		lf := req.Options[leafHashOptionName].(bool)
+		if isRepairMode {
+			if len(req.Arguments) > 3 {
+				blacklistStr := req.Arguments[3]
+				for _, s := range strings.Split(blacklistStr, ",") {
+					blacklist.Add(s)
+				}
+			}
+			rootHash, err = cidlib.Parse(req.Arguments[0])
+			renterId, err = peer.IDB58Decode(req.Arguments[2])
+			if err != nil {
+				return err
+			}
+			shardHashes = strings.Split(req.Arguments[1], ",")
+			shardCid, err := cidlib.Parse(shardHashes[0])
+			if err != nil {
+				return err
+			}
+			shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
+			if err != nil {
+				return err
+			}
+		} else if !lf {
 			if len(req.Arguments) != 1 {
 				return fmt.Errorf("need one and only one root file hash")
 			}
@@ -198,7 +228,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
-		ss := sm.GetOrDefault(ssID, n.Identity)
+		ss := sm.GetOrDefault(ssID, renterId)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
@@ -248,6 +278,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return err
 			}
 			for _, ni := range hosts {
+				if blacklist.Exists(ni) {
+					continue
+				}
 				// use host askingPrice instead if provided
 				if int64(ni.StoragePriceAsk) > HostPriceLowBoundary {
 					price = int64(ni.StoragePriceAsk)
