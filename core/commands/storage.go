@@ -409,7 +409,7 @@ func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 					}
 				case <-time.After(storage.StdStateFlow[curState].TimeOut):
 					{
-						log.Errorf("StartTime Out on %s with state %s", shardKey, storage.StdStateFlow[curState])
+						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdStateFlow[curState].State)
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
 						go retryProcess(ctx, n, api, candidateHost, ss, halfSignedEscrowContract, halfSignGuardContract, shardKey, test)
@@ -472,7 +472,7 @@ func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
 		ss.ID,
 		ss.GetFileHash().String(),
-		shard.ShardHash,
+		shard.ShardHash.String(),
 		strconv.FormatInt(candidateHost.Price, 10),
 		halfSignedEscrowContract,
 		halfSignedGuardContract,
@@ -568,17 +568,17 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		Tagline: "For renter client to receive half signed contracts.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("escrow-contract", true, false, "Signed Escrow contract."),
-		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
 		cmds.StringArg("session-id", true, false, "Session ID which renter uses to store all shards information."),
 		cmds.StringArg("shard-hash", true, false, "Shard the storage node should fetch."),
 		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
+		cmds.StringArg("escrow-contract", true, false, "Signed Escrow contract."),
+		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
-		signedContract := []byte(req.Arguments[0])
-		guardContractBytes := []byte(req.Arguments[1])
-		ssID := req.Arguments[2]
+		signedContract := []byte(req.Arguments[3])
+		guardContractBytes := []byte(req.Arguments[4])
+		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -587,8 +587,8 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		shardHash := req.Arguments[3]
-		shardIndex := req.Arguments[4]
+		shardHash := req.Arguments[1]
+		shardIndex := req.Arguments[2]
 		shard, err := ss.GetShard(shardHash + shardIndex)
 		if err != nil {
 			return err
@@ -776,11 +776,8 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		// build session
 		sm := storage.GlobalSession
-		ss, err := sm.GetSession(n, storage.HostStoragePrefix, ssID)
-		// TODO: refactor GetSession: don't return err when ssID not existed
-		if err != nil {
-			log.Error(err)
-		}
+		ss, _ := sm.GetSession(n, storage.HostStoragePrefix, ssID)
+		// TODO: GetOrDefault and GetSession should be one call
 		if ss == nil {
 			ss = sm.GetOrDefault(ssID, n.Identity)
 		}
@@ -825,13 +822,13 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
-		go signContractAndCheckPayment(n, api, cfg, ss, shardInfo, pid,
+		go signContractAndCheckPayment(context.Background(), n, api, cfg, ss, shardInfo, pid,
 			halfSignedEscrowContract, halfSignedGuardContract)
 		return nil
 	},
 }
 
-func signContractAndCheckPayment(n *core.IpfsNode, api coreiface.CoreAPI, cfg *config.Config,
+func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cfg *config.Config,
 	ss *storage.FileContracts, shardInfo *storage.Shard, pid peer.ID,
 	escrowSignedContract *escrowpb.SignedEscrowContract, guardSignedContract *guardpb.Contract) {
 	escrowContract := escrowSignedContract.GetContract()
@@ -848,7 +845,13 @@ func signContractAndCheckPayment(n *core.IpfsNode, api coreiface.CoreAPI, cfg *c
 		return
 	}
 
-	_, err = remote.P2PCall(nil, n, pid, "/storage/upload/recvcontract", marshaledSignedEscrowContract, marshaledSignedGuardContract, ss.ID, shardInfo.ShardHash, strconv.Itoa(shardInfo.ShardIndex))
+	_, err = remote.P2PCall(ctx, n, pid, "/storage/upload/recvcontract",
+		ss.ID,
+		shardInfo.ShardHash.String(),
+		strconv.Itoa(shardInfo.ShardIndex),
+		marshaledSignedEscrowContract,
+		marshaledSignedGuardContract,
+	)
 	if err != nil {
 		log.Error(err)
 		return
@@ -869,7 +872,7 @@ func signContractAndCheckPayment(n *core.IpfsNode, api coreiface.CoreAPI, cfg *c
 	}
 
 	paidIn := make(chan bool)
-	checkPaymentFromClient(context.Background(), paidIn, signedContractID, cfg)
+	checkPaymentFromClient(ctx, paidIn, signedContractID, cfg)
 	paid := <-paidIn
 	if !paid {
 		log.Error("contract is not paid", escrowContract.ContractId)
