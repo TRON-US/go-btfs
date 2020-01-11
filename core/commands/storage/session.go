@@ -65,7 +65,7 @@ type FileContracts struct {
 	FileHash          cidlib.Cid
 	Status            string
 	StatusMessage     string            // most likely error or notice
-	ShardInfo         map[string]*Shard // mapping chunkHash with Shards info
+	ShardInfo         map[string]*Shard // mapping (shard hash + index) with shard info
 	CompleteChunks    int
 	CompleteContracts int
 
@@ -332,16 +332,23 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, guardContract *guardpb.Contract) (bool, error) {
+func (ss *FileContracts) IncrementContract(shardHash string, shardIndex int,
+	contracts []byte, guardContract *guardpb.Contract) (bool, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	ss.GuardContracts = append(ss.GuardContracts, guardContract)
-	chunk := ss.ShardInfo[shardKey]
-	if chunk == nil {
-		return false, fmt.Errorf("shard does not exists")
+	if ss.GuardContracts == nil {
+		ss.GuardContracts = make([]*guardpb.Contract, len(ss.ShardInfo))
 	}
-	if chunk.SetSignedContract(contracts) {
+	// insert contract according to shard order
+	ss.GuardContracts[shardIndex] = guardContract
+
+	shardKey := GetShardKey(shardHash, shardIndex)
+	shard, ok := ss.ShardInfo[shardKey]
+	if !ok {
+		return false, fmt.Errorf("shard key does not exist: %s", shardKey)
+	}
+	if shard.SetSignedContract(contracts) {
 		ss.CompleteContracts++
 		return true, nil
 	}
@@ -384,13 +391,14 @@ func (ss *FileContracts) GetStatusAndMessage() (string, string) {
 	return ss.Status, ss.StatusMessage
 }
 
-func (ss *FileContracts) GetShard(hash string) (*Shard, error) {
+func (ss *FileContracts) GetShard(hash string, index int) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	si, ok := ss.ShardInfo[hash]
+	shardKey := GetShardKey(hash, index)
+	si, ok := ss.ShardInfo[shardKey]
 	if !ok {
-		return nil, fmt.Errorf("chunk hash doesn't exist: %s", hash)
+		return nil, fmt.Errorf("shard hash key doesn't exist: %s", shardKey)
 	}
 	return si, nil
 }
@@ -402,12 +410,17 @@ func (ss *FileContracts) RemoveShard(hash string) {
 	delete(ss.ShardInfo, hash)
 }
 
-func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shard, error) {
+func GetShardKey(shardHash string, shardIndex int) string {
+	return shardHash + strconv.Itoa(shardIndex)
+}
+
+func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int,
+	shardSize int64, length int64) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	shardKey := shardHash + strconv.Itoa(shardIndex)
-	if ss.ShardInfo[shardKey] == nil {
+	shardKey := GetShardKey(shardHash, shardIndex)
+	if s, ok := ss.ShardInfo[shardKey]; !ok {
 		c := &Shard{}
 		sh, err := cidlib.Parse(shardHash)
 		if err != nil {
@@ -427,7 +440,7 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSiz
 		ss.ShardInfo[shardKey] = c
 		return c, nil
 	} else {
-		return ss.ShardInfo[shardKey], nil
+		return s, nil
 	}
 }
 

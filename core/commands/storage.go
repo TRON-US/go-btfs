@@ -270,13 +270,11 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		ss.SetRetryQueue(retryQueue)
 
 		// add shards into session
-		shardIndex := 0
-		for _, shardHash := range shardHashes {
+		for shardIndex, shardHash := range shardHashes {
 			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), int64(storageLength))
 			if err != nil {
 				return err
 			}
-			shardIndex++
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
 		go retryMonitor(context.Background(), n, api, ss, testFlag)
@@ -370,8 +368,8 @@ func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 				return
 			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, n, api, candidateHost, ss,
-				halfSignedEscrowContract, halfSignGuardContract, shardKey, test)
+			go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+				halfSignedEscrowContract, halfSignGuardContract, test)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
@@ -399,7 +397,8 @@ func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, n, api, candidateHost, ss, halfSignedEscrowContract, halfSignGuardContract, shardKey, test)
+							go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+								halfSignedEscrowContract, halfSignGuardContract, test)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -414,7 +413,8 @@ func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdStateFlow[curState].State)
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, n, api, candidateHost, ss, halfSignedEscrowContract, halfSignGuardContract, shardKey, test)
+						go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+							halfSignedEscrowContract, halfSignGuardContract, test)
 					}
 				}
 			}
@@ -441,14 +441,9 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 }
 
 func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, candidateHost *storage.HostNode,
-	ss *storage.FileContracts, halfSignedEscrowContract, halfSignedGuardContract []byte,
-	shardKey string, test bool) {
-	// record shard info in session
-	shard, err := ss.GetShard(shardKey)
-	if err != nil {
-		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
-		return
-	}
+	ss *storage.FileContracts, shard *storage.Shard,
+	halfSignedEscrowContract, halfSignedGuardContract []byte,
+	test bool) {
 	// check if current shard has been contacting and receiving results
 	if shard.GetState() >= storage.ContractState {
 		return
@@ -590,8 +585,12 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			return err
 		}
 		shardHash := req.Arguments[1]
-		shardIndex := req.Arguments[2]
-		shard, err := ss.GetShard(shardHash + shardIndex)
+		sidx := req.Arguments[2]
+		shardIndex, err := strconv.Atoi(sidx)
+		if err != nil {
+			return err
+		}
+		shard, err := ss.GetShard(shardHash, shardIndex)
 		if err != nil {
 			return err
 		}
@@ -602,12 +601,11 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		ok, err := ss.IncrementContract(shardHash+shardIndex, signedContract, guardContract)
+		ok, err := ss.IncrementContract(shardHash, shardIndex, signedContract, guardContract)
 		if err != nil || !ok {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		// TODO: Modify client err return status
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
@@ -672,7 +670,8 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false,
+			fmt.Errorf("failed to pay in to escrow: [%v]", err))
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, true, nil)
@@ -873,7 +872,7 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 	}
 
 	paidIn := make(chan bool)
-	checkPaymentFromClient(ctx, paidIn, signedContractID, cfg)
+	go checkPaymentFromClient(ctx, paidIn, signedContractID, cfg)
 	paid := <-paidIn
 	if !paid {
 		log.Error("contract is not paid", escrowContract.ContractId)
@@ -886,32 +885,35 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 // call escrow service to check if payment is received or not
 func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowpb.SignedContractID, configuration *config.Config) {
 	timeout := 3 * time.Second
-	newCtx, _ := context.WithTimeout(ctx, timeout)
+	newCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	ticker := time.NewTicker(300 * time.Millisecond)
 	paid := false
 	var err error
 
-	go func() {
-		for {
-			select {
-			case t := <-ticker.C:
-				log.Debug("Tick at", t.UTC())
-				paid, err = escrow.IsPaidin(ctx, configuration, contractID)
-				if err != nil {
-					log.Error("IsPaidin return error", err)
-				}
-				if paid {
-					paidIn <- true
-					return
-				}
-			case <-newCtx.Done():
-				log.Debug("timeout, tick stopped at", time.Now().UTC())
-				ticker.Stop()
-				paidIn <- paid
+	for {
+		select {
+		case t := <-ticker.C:
+			log.Debug("Check escrow IsPaidin, tick at", t.UTC())
+			paid, err = escrow.IsPaidin(ctx, configuration, contractID)
+			if err != nil {
+				// too verbose on errors, only err log the last err
+				log.Debug("Check escrow IsPaidin error", err)
+			}
+			if paid {
+				paidIn <- true
 				return
 			}
+		case <-newCtx.Done():
+			log.Debug("Check escrow IsPaidin timeout, tick stopped at", time.Now().UTC())
+			if err != nil {
+				log.Error("Check escrow IsPaidin failed", err)
+			}
+			ticker.Stop()
+			paidIn <- paid
+			return
 		}
-	}()
+	}
 }
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,

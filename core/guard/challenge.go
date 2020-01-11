@@ -108,7 +108,7 @@ func PrepCustomFileChallengeQuestions(ctx context.Context, n *core.IpfsNode, api
 		var si *storage.Shard
 		if ss != nil {
 			var err error
-			si, err = ss.GetShard(sh.String())
+			si, err = ss.GetShard(sh.String(), i)
 			if err != nil {
 				return nil, err
 			}
