@@ -141,7 +141,7 @@ You can now check what blocks have been created by:
 		cmds.BoolOption(encryptName, "Encrypt the file."),
 		cmds.StringOption(pubkeyName, "The public key to encrypt the file."),
 		cmds.StringOption(peerIdName, "The peer id to encrypt the file."),
-		cmds.Int64Option(pinDurationCountOptionName, "d", "Duration for which the object is pinned in days.").WithDefault(0),
+		cmds.IntOption(pinDurationCountOptionName, "d", "Duration for which the object is pinned in days.").WithDefault(0),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		quiet, _ := req.Options[quietOptionName].(bool)
@@ -186,7 +186,7 @@ You can now check what blocks have been created by:
 		encrypt, _ := req.Options[encryptName].(bool)
 		pubkey, _ := req.Options[pubkeyName].(string)
 		peerId, _ := req.Options[peerIdName].(string)
-		pinDuration, _ := req.Options[pinDurationCountOptionName].(int64)
+		pinDuration, _ := req.Options[pinDurationCountOptionName].(int)
 
 		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
 		if !ok {
@@ -222,7 +222,7 @@ You can now check what blocks have been created by:
 			options.Unixfs.Silent(silent),
 
 			options.Unixfs.TokenMetadata(tokenMetadata),
-			options.Unixfs.PinDuration(pinDuration),
+			options.Unixfs.PinDuration(int64(pinDuration)),
 		}
 
 		if cidVerSet {

@@ -66,7 +66,7 @@ var addPinCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively pin the object linked to by the specified object(s).").WithDefault(true),
 		cmds.BoolOption(pinProgressOptionName, "Show progress"),
-		cmds.Int64Option(durationCountOptionName, "d", "Duration for which the object is pinned in days. It is unpinned after the duration.").WithDefault(defaultDurationCount),
+		cmds.IntOption(durationCountOptionName, "d", "Duration for which the object is pinned in days. It is unpinned after the duration.").WithDefault(defaultDurationCount),
 	},
 	Type: AddPinOutput{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -78,7 +78,7 @@ var addPinCmd = &cmds.Command{
 		// set options
 		recursive, _ := req.Options[pinRecursiveOptionName].(bool)
 		showProgress, _ := req.Options[pinProgressOptionName].(bool)
-		duration := req.Options[durationCountOptionName].(int64)
+		duration := req.Options[durationCountOptionName].(int)
 
 		if err := req.ParseBodyArgs(); err != nil {
 			return err
@@ -90,7 +90,7 @@ var addPinCmd = &cmds.Command{
 		}
 
 		if !showProgress {
-			added, err := pinAddMany(req.Context, api, enc, req.Arguments, pin.DefaultDurationUnit, recursive, duration)
+			added, err := pinAddMany(req.Context, api, enc, req.Arguments, pin.DefaultDurationUnit, recursive, int64(duration))
 			if err != nil {
 				return err
 			}

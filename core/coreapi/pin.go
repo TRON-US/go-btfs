@@ -29,6 +29,9 @@ func (api *PinAPI) Add(ctx context.Context, p path.Path, opts ...caopts.PinAddOp
 	defer api.blockstore.PinLock().Unlock()
 
 	expir, err := pin.ExpiresAtWithUnitAndCount(pin.DefaultDurationUnit, settings.DurationCount)
+	if err != nil {
+		return err
+	}
 	err = api.pinning.Pin(ctx, dagNode, settings.Recursive, expir)
 	if err != nil {
 		return fmt.Errorf("pin: %s", err)

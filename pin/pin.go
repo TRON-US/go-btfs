@@ -19,7 +19,10 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
-const DefaultDurationUnit = time.Hour * 24
+const (
+	DefaultDurationUnit  = time.Hour * 24
+	DefaultDurationCount = 0
+)
 
 var log = logging.Logger("pin")
 var recursivePinsKey = ds.NewKey("/local/pins/recursive/keys")
@@ -716,11 +719,11 @@ func (p *pinner) HasExpiration(c cid.Cid) (bool, error) {
 	return false, nil
 }
 
-func IsExpiredPin(c cid.Cid, pinMap *cid.Map, pinMap2 *cid.Map) bool {
-	if pinMap != nil && pinMap.IsExpired(c) {
+func IsExpiredPin(c cid.Cid, pinRecurMap *cid.Map, pinDirectMap *cid.Map) bool {
+	if pinRecurMap != nil && pinRecurMap.IsExpired(c) {
 		return true
 	}
-	if pinMap2 != nil && pinMap2.IsExpired(c) {
+	if pinDirectMap != nil && pinDirectMap.IsExpired(c) {
 		return true
 	}
 	return false
