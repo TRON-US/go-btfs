@@ -293,7 +293,7 @@ func InitializeKeyspace(ctx context.Context, pub Publisher, pins pin.Pinner, key
 
 	// pin recursively because this might already be pinned
 	// and doing a direct pin would throw an error in that case
-	err := pins.Pin(ctx, emptyDir, true)
+	err := pins.Pin(ctx, emptyDir, true, 0)
 	if err != nil {
 		return err
 	}

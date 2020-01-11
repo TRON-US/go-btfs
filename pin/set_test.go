@@ -54,14 +54,14 @@ func TestSet(t *testing.T) {
 		inputs = append(inputs, c)
 	}
 
-	_, err := storeSet(context.Background(), ds, inputs[:len(inputs)-1], ignoreCids)
+	_, err := storeSet(context.Background(), ds, inputs[:len(inputs)-1], nil, nil, ignoreCids)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	objs1 := objCount(dst)
 
-	out, err := storeSet(context.Background(), ds, inputs, ignoreCids)
+	out, err := storeSet(context.Background(), ds, inputs, nil, nil, ignoreCids)
 	if err != nil {
 		t.Fatal(err)
 	}

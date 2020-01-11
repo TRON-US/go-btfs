@@ -14,7 +14,7 @@ require (
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
 	github.com/TRON-US/go-unixfs v0.5.3
-	github.com/TRON-US/interface-go-btfs-core v0.5.1
+	github.com/TRON-US/interface-go-btfs-core v0.5.2
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/blang/semver v3.5.1+incompatible
@@ -145,3 +145,5 @@ require (
 go 1.13
 
 replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1.0
+
+replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.1.0

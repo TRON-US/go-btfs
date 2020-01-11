@@ -47,8 +47,11 @@ type AddPinOutput struct {
 }
 
 const (
-	pinRecursiveOptionName = "recursive"
-	pinProgressOptionName  = "progress"
+	pinRecursiveOptionName  = "recursive"
+	pinProgressOptionName   = "progress"
+	durationCountOptionName = "durationCount"
+
+	defaultDurationCount = 0
 )
 
 var addPinCmd = &cmds.Command{
@@ -63,6 +66,7 @@ var addPinCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively pin the object linked to by the specified object(s).").WithDefault(true),
 		cmds.BoolOption(pinProgressOptionName, "Show progress"),
+		cmds.IntOption(durationCountOptionName, "d", "Duration for which the object is pinned in days. It is unpinned after the duration.").WithDefault(defaultDurationCount),
 	},
 	Type: AddPinOutput{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -71,9 +75,10 @@ var addPinCmd = &cmds.Command{
 			return err
 		}
 
-		// set recursive flag
+		// set options
 		recursive, _ := req.Options[pinRecursiveOptionName].(bool)
 		showProgress, _ := req.Options[pinProgressOptionName].(bool)
+		duration := req.Options[durationCountOptionName].(int)
 
 		if err := req.ParseBodyArgs(); err != nil {
 			return err
@@ -85,7 +90,7 @@ var addPinCmd = &cmds.Command{
 		}
 
 		if !showProgress {
-			added, err := pinAddMany(req.Context, api, enc, req.Arguments, recursive)
+			added, err := pinAddMany(req.Context, api, enc, req.Arguments, pin.DefaultDurationUnit, recursive, int64(duration))
 			if err != nil {
 				return err
 			}
@@ -103,7 +108,7 @@ var addPinCmd = &cmds.Command{
 
 		ch := make(chan pinResult, 1)
 		go func() {
-			added, err := pinAddMany(ctx, api, enc, req.Arguments, recursive)
+			added, err := pinAddMany(ctx, api, enc, req.Arguments, pin.DefaultDurationUnit, recursive, int64(duration))
 			ch <- pinResult{pins: added, err: err}
 		}()
 
@@ -179,7 +184,7 @@ var addPinCmd = &cmds.Command{
 	},
 }
 
-func pinAddMany(ctx context.Context, api coreiface.CoreAPI, enc cidenc.Encoder, paths []string, recursive bool) ([]string, error) {
+func pinAddMany(ctx context.Context, api coreiface.CoreAPI, enc cidenc.Encoder, paths []string, unit time.Duration, recursive bool, dur int64) ([]string, error) {
 	added := make([]string, len(paths))
 	for i, b := range paths {
 		rp, err := api.ResolvePath(ctx, path.New(b))
@@ -187,7 +192,7 @@ func pinAddMany(ctx context.Context, api coreiface.CoreAPI, enc cidenc.Encoder, 
 			return nil, err
 		}
 
-		if err := api.Pin().Add(ctx, rp, options.Pin.Recursive(recursive)); err != nil {
+		if err := api.Pin().Add(ctx, rp, options.Pin.Recursive(recursive), options.Pin.DurationCount(dur)); err != nil {
 			return nil, err
 		}
 		added[i] = enc.Encode(rp.Cid())
@@ -517,6 +522,9 @@ func pinLsAll(req *cmds.Request, typeStr string, n *core.IpfsNode, emit func(val
 	}
 	if typeStr == "indirect" || typeStr == "all" {
 		for _, k := range n.Pinning.RecursiveKeys() {
+			if pin.IsExpiredPin(k, n.Pinning.RecursiveMap(), n.Pinning.DirectMap()) {
+				continue
+			}
 			var visitErr error
 			err := dag.Walk(req.Context, dag.GetLinksWithDAG(n.DAG), k, func(c cid.Cid) bool {
 				r := keys.Visit(c)

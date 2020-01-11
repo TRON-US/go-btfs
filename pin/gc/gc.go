@@ -20,6 +20,12 @@ import (
 	"github.com/ipfs/go-verifcid"
 )
 
+const (
+	Eagar = iota + 1 // This may cause a deadlock when multiple GC's are running
+	Lazy
+)
+
+var cleanMode = Eagar
 var log = logging.Logger("gc")
 
 // Result represents an incremental output from a garbage collection
@@ -148,13 +154,15 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 // Descendants recursively finds all the descendants of the given roots and
 // adds them to the given cid.Set, using the provided dag.GetLinks function
 // to walk the tree.
-func Descendants(ctx context.Context, getLinks dag.GetLinks, set *cid.Set, roots []cid.Cid) error {
+func Descendants(ctx context.Context, pn pin.Pinner, getLinks dag.GetLinks, set *cid.Set, pinMap *cid.Map, pinMap2 *cid.Map, roots []cid.Cid) error {
 	verifyGetLinks := func(ctx context.Context, c cid.Cid) ([]*ipld.Link, error) {
 		err := verifcid.ValidateCid(c)
 		if err != nil {
 			return nil, err
 		}
-
+		if pin.IsExpiredPin(c, pinMap, pinMap2) {
+			return nil, nil
+		}
 		return getLinks(ctx, c)
 	}
 
@@ -170,6 +178,13 @@ func Descendants(ctx context.Context, getLinks dag.GetLinks, set *cid.Set, roots
 	}
 
 	for _, c := range roots {
+		if pin.IsExpiredPin(c, pinMap, pinMap2) {
+			if cleanMode == Eagar {
+				pn.Unpin(ctx, c, true)
+				pn.Flush()
+			}
+			continue
+		}
 		// Walk recursively walks the dag and adds the keys to the given set
 		err := dag.Walk(ctx, verifyGetLinks, c, set.Visit, dag.Concurrent())
 
@@ -201,7 +216,7 @@ func ColoredSet(ctx context.Context, pn pin.Pinner, ng ipld.NodeGetter, bestEffo
 		}
 		return links, nil
 	}
-	err := Descendants(ctx, getLinks, gcs, pn.RecursiveKeys())
+	err := Descendants(ctx, pn, getLinks, gcs, pn.RecursiveMap(), nil, pn.RecursiveKeys())
 	if err != nil {
 		errors = true
 		select {
@@ -223,7 +238,7 @@ func ColoredSet(ctx context.Context, pn pin.Pinner, ng ipld.NodeGetter, bestEffo
 		}
 		return links, nil
 	}
-	err = Descendants(ctx, bestEffortGetLinks, gcs, bestEffortRoots)
+	err = Descendants(ctx, pn, bestEffortGetLinks, gcs, pn.RecursiveMap(), pn.DirectMap(), bestEffortRoots)
 	if err != nil {
 		errors = true
 		select {
@@ -234,10 +249,18 @@ func ColoredSet(ctx context.Context, pn pin.Pinner, ng ipld.NodeGetter, bestEffo
 	}
 
 	for _, k := range pn.DirectKeys() {
+		// Skip expired pins
+		if pin.IsExpiredPin(k, pn.RecursiveMap(), pn.DirectMap()) {
+			if cleanMode == Eagar {
+				pn.Unpin(ctx, k, false)
+				pn.Flush()
+			}
+			continue
+		}
 		gcs.Add(k)
 	}
 
-	err = Descendants(ctx, getLinks, gcs, pn.InternalPins())
+	err = Descendants(ctx, pn, getLinks, gcs, pn.RecursiveMap(), pn.DirectMap(), pn.InternalPins())
 	if err != nil {
 		errors = true
 		select {

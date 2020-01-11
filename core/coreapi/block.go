@@ -55,7 +55,7 @@ func (api *BlockAPI) Put(ctx context.Context, src io.Reader, opts ...caopts.Bloc
 	}
 
 	if settings.Pin {
-		api.pinning.PinWithMode(b.Cid(), pin.Recursive)
+		api.pinning.PinWithMode(b.Cid(), pin.DefaultDurationCount, pin.Recursive)
 		if err := api.pinning.Flush(); err != nil {
 			return nil, err
 		}

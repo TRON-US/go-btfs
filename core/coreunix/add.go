@@ -9,10 +9,9 @@ import (
 	gopath "path"
 	"strconv"
 
-	"github.com/TRON-US/go-btfs/pin"
-
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-mfs"
 	"github.com/TRON-US/go-unixfs"
 	"github.com/TRON-US/go-unixfs/importer/balanced"
@@ -61,6 +60,7 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 		db:               nil,
 		Chunker:          "",
 		TokenMetadata:    "",
+		PinDuration:      0,
 	}, nil
 }
 
@@ -89,6 +89,7 @@ type Adder struct {
 	CidBuilder       cid.Builder
 	liveNodes        uint64
 	TokenMetadata    string
+	PinDuration      int64
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -267,7 +268,11 @@ func (adder *Adder) PinRoot(root ipld.Node) error {
 		adder.tempRoot = rnk
 	}
 
-	adder.pinning.PinWithMode(rnk, pin.Recursive)
+	dur, err := pin.ExpiresAtWithUnitAndCount(pin.DefaultDurationUnit, adder.PinDuration)
+	if err != nil {
+		return err
+	}
+	adder.pinning.PinWithMode(rnk, dur, pin.Recursive)
 	return adder.pinning.Flush()
 }
 
