@@ -108,7 +108,7 @@ var addPinCmd = &cmds.Command{
 
 		ch := make(chan pinResult, 1)
 		go func() {
-			added, err := pinAddMany(ctx, api, enc, req.Arguments, pin.DefaultDurationUnit, recursive, duration)
+			added, err := pinAddMany(ctx, api, enc, req.Arguments, pin.DefaultDurationUnit, recursive, int64(duration))
 			ch <- pinResult{pins: added, err: err}
 		}()
 
