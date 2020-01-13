@@ -276,3 +276,46 @@ func IsPaidin(ctx context.Context, configuration *config.Config, contractID *esc
 	}
 	return signedPayinRes.Status.Paid, nil
 }
+
+func Balance(ctx context.Context, configuration *config.Config) (int64, error) {
+	privKey, err := configuration.Identity.DecodePrivateKey("")
+	if err != nil {
+		return 0, err
+	}
+	pubKeyRaw, err := privKey.GetPublic().Raw()
+	if err != nil {
+		return 0, err
+	}
+
+	lgPubKey := &ledgerpb.PublicKey{
+		Key: pubKeyRaw,
+	}
+	sig, err := crypto.Sign(privKey, lgPubKey)
+	if err != nil {
+		return 0, err
+	}
+	lgSignedPubKey := &ledgerpb.SignedPublicKey{
+		Key:       lgPubKey,
+		Signature: sig,
+	}
+
+	var balance int64 = 0
+	err = grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			res, err := client.BalanceOf(ctx, lgSignedPubKey)
+			if err != nil {
+				return err
+			}
+			err = verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			if err != nil {
+				return err
+			}
+			balance = res.Result.Balance
+			log.Debug("balanceof account is ", balance)
+			return nil
+		})
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
+}

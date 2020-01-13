@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -632,6 +633,19 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
+			// check account balance, if not enough for the totalPrice do not submit to escrow
+			balance, err := escrow.Balance(req.Context, cfg)
+			if err != nil {
+				log.Error("get renter account balance failed, ", err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+				return err
+			}
+			if balance < totalPrice {
+				log.Error("not enough balance to submit contract, current balance is ", balance)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+				return errors.New("not enough balance to submit contract")
+			}
+
 			contractRequest, err = escrow.NewContractRequest(cfg, contracts, totalPrice)
 			if err != nil {
 				log.Error(err)
