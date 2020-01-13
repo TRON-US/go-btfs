@@ -633,7 +633,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 			// check account balance, if not enough for the totalPrice do not submit to escrow
-			balance, err := escrow.Balance(context.Background(), cfg)
+			balance, err := escrow.Balance(req.Context, cfg)
 			if err != nil {
 				log.Error("get renter account balance failed, ", err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
