@@ -75,6 +75,16 @@ func (api *PinAPI) Rm(ctx context.Context, p path.Path, opts ...caopts.PinRmOpti
 	// to take a lock to prevent a concurrent garbage collection
 	defer api.blockstore.PinLock().Unlock()
 
+	// If host has pinned the stored file with unexpired live contract
+	// We can only remove it if a manual --force is passed
+	exp, err := api.pinning.HasExpiration(rp.Cid())
+	if err != nil {
+		return err
+	}
+	if exp && !settings.Force {
+		return fmt.Errorf("pin cannot be removed due to host-storage constraint: contract has not expired")
+	}
+
 	if err = api.pinning.Unpin(ctx, rp.Cid(), settings.Recursive); err != nil {
 		return err
 	}
