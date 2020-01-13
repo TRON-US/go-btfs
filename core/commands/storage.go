@@ -87,7 +87,7 @@ var storageUploadCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
 		ShortDescription: `
-By default, BTFS will select hosts based on overall score according to current client's environment.
+By default, BTFS selects hosts based on overall score according to the current client's environment.
 To upload a file, <file-hash> must refer to a reed-solomon encoded file.
 
 To create a reed-solomon encoded file from a normal file:
@@ -99,7 +99,7 @@ Run command to upload:
 
     $ btfs storage upload <file-hash>
 
-To customly upload and store a file on specific hosts:
+To custom upload and store a file on specific hosts:
     Use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','.
 
     # Upload a file to a set of hosts
@@ -1013,9 +1013,8 @@ func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storag
 
 var storageHostsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Interact with information on hosts.",
-		ShortDescription: `
-Host information is synchronized from btfs-hub and saved in local datastore.`,
+		Tagline:          "Interact with information on hosts.",
+		ShortDescription: `Allows interaction with information on hosts. Host information is synchronized from btfs-hub and saved in local datastore.`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"info": storageHostsInfoCmd,
@@ -1157,7 +1156,12 @@ var storageAnnounceCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Update and announce storage host information.",
 		ShortDescription: `
-This command updates host information and broadcasts to the BTFS network.`,
+This command updates host information and broadcasts to the BTFS network. 
+
+Examples
+
+To set the max price per GiB to 1 BTT:
+$ btfs storage announce --host-storage-price=1`,
 	},
 	Options: []cmds.Option{
 		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage in BTT."),
@@ -1308,7 +1312,10 @@ var storageChallengeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Interact with storage challenge requests and responses.",
 		ShortDescription: `
-These commands contain both client-side and host-side challenge functions.`,
+These commands contain both client-side and host-side challenge functions.
+
+btfs storage challenge request <peer-id> <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>
+btfs storage challenge response <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"request":  storageChallengeRequestCmd,
