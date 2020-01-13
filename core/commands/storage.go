@@ -1162,7 +1162,7 @@ This command updates host information and broadcasts to the BTFS network.
 Examples
 
 To set the max price per GiB to 1 BTT:
-$ btfs storage announce --host-storage-price 1`,		
+$ btfs storage announce --host-storage-price=1`,		
 	},
 	Options: []cmds.Option{
 		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage in BTT."),
@@ -1313,17 +1313,7 @@ var storageChallengeCmd = &cmds.Command{
 These commands contain both client-side and host-side challenge functions.
 
 btfs storage challenge request <peer-id> <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>
-btfs storage challenge response <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>
-
-Where 
-
-  <peer-id>     - Host Peer ID to send challenge requests.
-  <contract-id> - Contract ID associated with the challenge requests.
-  <file-hash>   - File root multihash for the data stored at this host.
-  <shard-hash>  - Shard multihash for the data stored at this host.
-  <chunk-index> - Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks.
-  <nonce>       - Nonce for this challenge. A random UUIDv4 string.
-  `,
+btfs storage challenge response <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"request":  storageChallengeRequestCmd,
