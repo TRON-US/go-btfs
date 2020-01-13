@@ -178,6 +178,12 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return err
 			}
 			shardHashes = strings.Split(req.Arguments[1], ",")
+			for _, h := range shardHashes {
+				_, err := cidlib.Parse(h)
+				if err != nil {
+					return err
+				}
+			}
 			shardCid, err := cidlib.Parse(shardHashes[0])
 			if err != nil {
 				return err
