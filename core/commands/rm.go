@@ -24,6 +24,10 @@ var RmCmd = &cmds.Command{
 		cmds.StringArg("hash", true, true, "The hash(es) of the file(s)/directory(s) to be removed from the local btfs node.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
@@ -37,10 +41,16 @@ var RmCmd = &cmds.Command{
 				return err
 			}
 
-			// Since we are removing a file, we need to set recursive flag to true
-			err = api.Pin().Rm(req.Context, p, options.Pin.RmRecursive(true))
+			_, pinned, err := n.Pinning.IsPinned(node.Cid())
 			if err != nil {
 				return err
+			}
+			if pinned {
+				// Since we are removing a file, we need to set recursive flag to true
+				err = api.Pin().Rm(req.Context, p, options.Pin.RmRecursive(true))
+				if err != nil {
+					return err
+				}
 			}
 
 			// Rm all child links
