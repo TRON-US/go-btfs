@@ -3,8 +3,8 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -26,12 +26,10 @@ import (
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
-	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -212,9 +210,16 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if found && price < HostPriceLowBoundary {
 			return fmt.Errorf("price is smaller than minimum setting price")
 		}
+		if found && price >= math.MaxInt64 {
+			return fmt.Errorf("price should be smaller than max int64")
+		}
+		ns, err := hub.GetSettings(req.Context, cfg.Services.HubDomain,
+			n.Identity.String(), n.Repo.Datastore())
+		if err != nil {
+			return err
+		}
 		if !found {
-			// todo: leave it for either no host prices or no user price, can be deleted later
-			price = HostPriceLowBoundary
+			price = int64(ns.StoragePriceAsk)
 		}
 		mode, ok := req.Options[hostSelectModeOptionName].(string)
 		if ok && mode == "custom" {
@@ -265,6 +270,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 		}
 		storageLength := req.Options[storageLengthOptionName].(int)
+		if uint64(storageLength) < ns.StorageTimeMin {
+			return fmt.Errorf("invalid storage len. want: >= %d, got: %d",
+				ns.StorageTimeMin, storageLength)
+		}
 
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
@@ -766,6 +775,13 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
+		settings, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, n.Identity.Pretty(), n.Repo.Datastore())
+		if err != nil {
+			return err
+		}
+		if uint64(price) < settings.StoragePriceAsk {
+			return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
+		}
 		pid, ok := remote.GetStreamRequestRemotePeerID(req, n)
 		if !ok {
 			return fmt.Errorf("fail to get peer ID from request")
@@ -773,6 +789,9 @@ the shard and replies back to client for the next challenge step.`,
 		storeLen, err := strconv.Atoi(req.Arguments[6])
 		if err != nil {
 			return err
+		}
+		if uint64(storeLen) < settings.StorageTimeMin {
+			return fmt.Errorf("store length invalid: want: >=%d, got: %d", settings.StorageTimeMin, storeLen)
 		}
 		// build session
 		sm := storage.GlobalSession
@@ -1062,65 +1081,13 @@ By default it shows local host node information.`,
 			peerID = n.Identity.Pretty()
 		}
 
-		data, err := GetSettings(req.Context, cfg.Services.HubDomain, peerID, n.Repo.Datastore())
+		data, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, peerID, n.Repo.Datastore())
 		if err != nil {
 			return err
 		}
 		return cmds.EmitOnce(res, data)
 	},
 	Type: nodepb.Node_Settings{},
-}
-
-func GetSettings(ctx context.Context, addr string, peerId string, rds ds.Datastore) (*nodepb.Node_Settings, error) {
-	// get from LevelDB
-	b, err := rds.Get(storage.GetHostStorageKey(peerId))
-	if err == nil {
-		data := new(nodepb.Node_Settings)
-		err = proto.Unmarshal(b, data)
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
-	}
-
-	if err != ds.ErrNotFound {
-		return nil, err
-	}
-
-	// get from remote
-	ns := new(nodepb.Node_Settings)
-	err = grpc.HubQueryClient(addr).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
-		req := new(hubpb.SettingsReq)
-		req.Id = peerId
-		resp, err := client.GetSettings(ctx, req)
-		if err != nil {
-			return err
-		}
-		if resp.Code != 200 {
-			return errors.New(resp.Message)
-		}
-		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
-		ns.StoragePriceAsk = uint64(resp.SettingsData.StoragePriceAsk)
-		ns.BandwidthLimit = resp.SettingsData.BandwidthLimit
-		ns.BandwidthPriceAsk = uint64(resp.SettingsData.BandwidthPriceAsk)
-		ns.CollateralStake = uint64(resp.SettingsData.CollateralStake)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// save to rds
-	bytes, err := proto.Marshal(ns)
-	if err != nil {
-		return nil, err
-	}
-	err = rds.Put(storage.GetHostStorageKey(peerId), bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return ns, nil
 }
 
 var storageAnnounceCmd = &cmds.Command{
@@ -1165,7 +1132,7 @@ This command updates host information and broadcasts to the BTFS network.`,
 		rds := n.Repo.Datastore()
 		peerId := n.Identity.Pretty()
 
-		ns, err := GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds)
+		ns, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds)
 		if err != nil {
 			return err
 		}
