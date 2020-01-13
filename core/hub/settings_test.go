@@ -3,7 +3,6 @@ package hub
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/ipfs/go-datastore"
@@ -15,7 +14,7 @@ func TestGetSettings(t *testing.T) {
 	ns, err := GetSettings(context.Background(), "https://hub-dev.btfs.io",
 		"16Uiu2HAm9P1cur6Nhd542y7pM2EoXgVvGeNqdUCSLFAMooBeQqWy", d)
 	if err != nil {
-		log.Panic(err)
+		t.Fatal(err)
 	}
 	fmt.Println("settings", ns)
 }

@@ -23,7 +23,7 @@ func GetSettings(ctx context.Context, addr string, peerId string, rds datastore.
 	settings, err := repo.Get(rds, k, s)
 	if err == nil {
 		n := settings.(*nodepb.Node_Settings)
-		return n, err
+		return n, nil
 	}
 
 	// get from remote

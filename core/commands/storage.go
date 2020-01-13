@@ -211,11 +211,15 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			return fmt.Errorf("price is smaller than minimum setting price")
 		}
 		if found && price >= math.MaxInt64 {
-			return fmt.Errorf("price should be  smaller than max int64")
+			return fmt.Errorf("price should be smaller than max int64")
+		}
+		ns, err := hub.GetSettings(req.Context, cfg.Services.HubDomain,
+			n.Identity.String(), n.Repo.Datastore())
+		if err != nil {
+			return err
 		}
 		if !found {
-			// todo: leave it for either no host prices or no user price, can be deleted later
-			price = HostPriceLowBoundary
+			price = int64(ns.StoragePriceAsk)
 		}
 		mode, ok := req.Options[hostSelectModeOptionName].(string)
 		if ok && mode == "custom" {
@@ -266,12 +270,6 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 		}
 		storageLength := req.Options[storageLengthOptionName].(int)
-
-		ns, err := hub.GetSettings(req.Context, cfg.Services.HubDomain,
-			n.Identity.String(), n.Repo.Datastore())
-		if err != nil {
-			return err
-		}
 		if uint64(storageLength) < ns.StorageTimeMin {
 			return fmt.Errorf("invalid storage len. want: >= %d, got: %d",
 				ns.StorageTimeMin, storageLength)

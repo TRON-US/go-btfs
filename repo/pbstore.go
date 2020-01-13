@@ -1,23 +1,21 @@
 package repo
 
 import (
-	"fmt"
-	"github.com/ipfs/go-datastore"
 	"github.com/tron-us/protobuf/proto"
+
+	"github.com/ipfs/go-datastore"
 )
 
-func Get(d datastore.Datastore, k string, m interface{}) (interface{}, error) {
+func Get(d datastore.Datastore, k string, m proto.Message) (proto.Message, error) {
 	v, err := d.Get(datastore.NewKey(k))
 	if err != nil {
 		return nil, err
 	}
-	if msg, ok := m.(proto.Message); ok {
-		if err := proto.Unmarshal(v, msg); err != nil {
-			return nil, err
-		}
-		return msg, nil
+	err = proto.Unmarshal(v, m)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("invalid param:%v", m)
+	return m, nil
 }
 
 func Put(d datastore.Datastore, k string, v proto.Message) error {

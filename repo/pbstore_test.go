@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"log"
 	"testing"
 
 	"github.com/tron-us/go-btfs-common/protos/hub"
@@ -23,12 +22,12 @@ func TestGetPut(t *testing.T) {
 	k := "setting"
 	err := Put(d, k, settingData)
 	if err != nil {
-		log.Panic(err)
+		t.Fatal(err)
 	}
 	m := new(hub.SettingsData)
 	sd, err := Get(d, k, m)
 	if err != nil {
-		log.Panic(err)
+		t.Fatal(err)
 	}
 	assert.Equal(t, sd, settingData)
 }
