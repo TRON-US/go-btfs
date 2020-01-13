@@ -703,6 +703,11 @@ func (p *pinner) HasExpiration(c cid.Cid) (bool, error) {
 			return false, nil
 		}
 	}
+
+	if p.recursePin.Has(c) && p.recursePinMap.HasExpiration(c) {
+		return true, nil
+	}
+	
 	visitedSet := cid.NewSet()
 	for _, k := range p.recursePin.Keys() {
 		if !p.recursePinMap.HasExpiration(k) {
