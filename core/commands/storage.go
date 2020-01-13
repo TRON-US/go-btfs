@@ -962,7 +962,7 @@ func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.Ipf
 
 var storageHostsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Interact with information on hosts.",
+		Tagline:          "Interact with information on hosts.",
 		ShortDescription: `Allows interaction with information on hosts. Host information is synchronized from btfs-hub and saved in local datastore.`,
 	},
 	Subcommands: map[string]*cmds.Command{
@@ -1162,7 +1162,7 @@ This command updates host information and broadcasts to the BTFS network.
 Examples
 
 To set the max price per GiB to 1 BTT:
-$ btfs storage announce --host-storage-price=1`,		
+$ btfs storage announce --host-storage-price=1`,
 	},
 	Options: []cmds.Option{
 		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage in BTT."),
