@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Workiva/go-datastructures/set"
 	"math"
 	"strconv"
 	"strings"
@@ -28,6 +27,7 @@ import (
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
+	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
