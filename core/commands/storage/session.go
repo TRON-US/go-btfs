@@ -1,7 +1,7 @@
 package storage
 
 import (
-	//"context"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
-	//coreiface "github.com/TRON-US/interface-go-btfs-core"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/alecthomas/units"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 )
 
 var GlobalSession *SessionMap
@@ -24,15 +24,17 @@ var StdStateFlow [3]*FlowControl
 var StdSessionStateFlow [6]*FlowControl
 
 const (
-	FileContractsStorePrefix = "/file-contracts/"
-	ShardsStorePrefix        = "/shards/"
+	// prefixes for datastore persistency keys
+	HostStoragePrefix   = "/host-storage/"
+	RenterStoragePrefix = "/renter-storage/"
+	// secondary path segments after prefix for datastore persistency keys
+	FileContractsStoreSeg = "file-contracts/"
+	ShardsStoreSeg        = "shards/"
 
 	// shard state
 	InitState     = 0
 	ContractState = 1
 	CompleteState = 2
-
-	// TODO: host state: init->contract->download->complete
 
 	// session status
 	InitStatus     = 0
@@ -56,14 +58,17 @@ type SessionMap struct {
 type FileContracts struct {
 	sync.Mutex
 
+	ID                string
 	Time              time.Time
-	GuardContracts    []*guardPb.Contract
+	GuardContracts    []*guardpb.Contract
 	Renter            peer.ID
 	FileHash          cidlib.Cid
 	Status            string
-	ShardInfo         map[string]*Shards // mapping chunkHash with Shards info
+	StatusMessage     string            // most likely error or notice
+	ShardInfo         map[string]*Shard // mapping (shard hash + index) with shard info
 	CompleteChunks    int
 	CompleteContracts int
+
 	RetryQueue        *RetryQueue     `json:"-"`
 	SessionStatusChan chan StatusChan `json:"-"`
 }
@@ -74,10 +79,10 @@ type StatusChan struct {
 	Err         error
 }
 
-type Shards struct {
+type Shard struct {
 	sync.Mutex
 
-	ShardHash            string
+	ShardHash            cidlib.Cid
 	ShardIndex           int
 	ContractID           string
 	SignedEscrowContract []byte
@@ -90,6 +95,7 @@ type Shards struct {
 	ContractLength       time.Duration
 	StartTime            time.Time
 	Err                  error
+	Challenge            *StorageChallenge
 
 	RetryChan chan *StepRetryChan `json:"-"`
 }
@@ -146,12 +152,12 @@ func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix string, ssID string) (*FileContracts, error) {
+func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		f, err := GetFileMetaFromDatabase(node, prefix+ssID)
+		f, err := GetFileMetaFromDatastore(node, prefix, ssID)
 		if err != nil {
 			return nil, err
 		}
@@ -168,8 +174,7 @@ func (sm *SessionMap) GetOrDefault(ssID string, pid peer.ID) *FileContracts {
 	defer sm.Unlock()
 
 	if sm.Map[ssID] == nil {
-		ss := &FileContracts{}
-		ss.new(pid)
+		ss := NewFileContracts(ssID, pid)
 		sm.Map[ssID] = ss
 		return ss
 	}
@@ -198,9 +203,10 @@ func NewSessionID() (string, error) {
 	return ssid.String(), nil
 }
 
-func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, error) {
+// GetFileMetaFromDatastore retrieves persisted session/contract information from datastore
+func GetFileMetaFromDatastore(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
 	rds := node.Repo.Datastore()
-	value, err := rds.Get(ds.NewKey(key))
+	value, err := rds.Get(ds.NewKey(prefix + FileContractsStoreSeg + ssID))
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +219,24 @@ func GetFileMetaFromDatabase(node *core.IpfsNode, key string) (*FileContracts, e
 	return f, nil
 }
 
-func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) error {
+// GetShardInfoFromDatastore retrieves persisted shard information from datastore
+func GetShardInfoFromDatastore(node *core.IpfsNode, prefix, shardHash string) (*Shard, error) {
+	rds := node.Repo.Datastore()
+	value, err := rds.Get(ds.NewKey(prefix + ShardsStoreSeg + shardHash))
+	if err != nil {
+		return nil, err
+	}
+
+	s := new(Shard)
+	err = json.Unmarshal(value, s)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// PersistFileMetaToDatastore saves session/contract information into datastore
+func PersistFileMetaToDatastore(node *core.IpfsNode, prefix string, ssID string) error {
 	rds := node.Repo.Datastore()
 	ss, err := GlobalSession.GetSession(node, prefix, ssID)
 	if err != nil {
@@ -223,16 +246,16 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) 
 	if err != nil {
 		return err
 	}
-	err = rds.Put(ds.NewKey(prefix+ssID), fileContractsBytes)
+	err = rds.Put(ds.NewKey(prefix+FileContractsStoreSeg+ssID), fileContractsBytes)
 	if err != nil {
 		return err
 	}
-	for chunkHash, chunkInfo := range ss.ShardInfo {
-		shardBytes, err := json.Marshal(chunkInfo)
+	for shardHash, shardInfo := range ss.ShardInfo {
+		shardBytes, err := json.Marshal(shardInfo)
 		if err != nil {
 			return err
 		}
-		err = rds.Put(ds.NewKey(ShardsStorePrefix+chunkHash), shardBytes)
+		err = rds.Put(ds.NewKey(prefix+ShardsStoreSeg+shardHash), shardBytes)
 		if err != nil {
 			return err
 		}
@@ -240,15 +263,15 @@ func PersistFileMetaToDatabase(node *core.IpfsNode, prefix string, ssID string) 
 	return nil
 }
 
-func (ss *FileContracts) new(pid peer.ID) {
-	ss.Lock()
-	defer ss.Unlock()
-
-	ss.Renter = pid
-	ss.Time = time.Now()
-	ss.Status = "init"
-	ss.ShardInfo = make(map[string]*Shards)
-	ss.SessionStatusChan = make(chan StatusChan)
+func NewFileContracts(id string, pid peer.ID) *FileContracts {
+	return &FileContracts{
+		ID:                id,
+		Renter:            pid,
+		Time:              time.Now(),
+		Status:            "init",
+		ShardInfo:         make(map[string]*Shard),
+		SessionStatusChan: make(chan StatusChan),
+	}
 }
 
 func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) bool {
@@ -309,23 +332,30 @@ func (ss *FileContracts) GetFileHash() cidlib.Cid {
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(shardKey string, contracts []byte, guardContract *guardPb.Contract) (bool, error) {
+func (ss *FileContracts) IncrementContract(shardHash string, shardIndex int,
+	contracts []byte, guardContract *guardpb.Contract) (bool, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	ss.GuardContracts = append(ss.GuardContracts, guardContract)
-	chunk := ss.ShardInfo[shardKey]
-	if chunk == nil {
-		return false, fmt.Errorf("shard does not exists")
+	if ss.GuardContracts == nil {
+		ss.GuardContracts = make([]*guardpb.Contract, len(ss.ShardInfo))
 	}
-	if chunk.SetSignedContract(contracts) {
+	// insert contract according to shard order
+	ss.GuardContracts[shardIndex] = guardContract
+
+	shardKey := GetShardKey(shardHash, shardIndex)
+	shard, ok := ss.ShardInfo[shardKey]
+	if !ok {
+		return false, fmt.Errorf("shard key does not exist: %s", shardKey)
+	}
+	if shard.SetSignedContract(contracts) {
 		ss.CompleteContracts++
 		return true, nil
 	}
 	return false, nil
 }
 
-func (ss *FileContracts) GetGuardContracts() []*guardPb.Contract {
+func (ss *FileContracts) GetGuardContracts() []*guardpb.Contract {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -345,40 +375,58 @@ func (ss *FileContracts) SetStatus(status int) {
 
 	ss.Status = StdSessionStateFlow[status].State
 }
-func (ss *FileContracts) GetStatus() string {
+
+func (ss *FileContracts) SetStatusWithError(status int, err error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	return ss.Status
+	ss.Status = StdSessionStateFlow[status].State
+	ss.StatusMessage = err.Error()
 }
 
-func (ss *FileContracts) GetShard(hash string) (*Shards, error) {
+func (ss *FileContracts) GetStatusAndMessage() (string, string) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ShardInfo[hash] == nil {
-		return nil, fmt.Errorf("chunk hash doesn't exist ")
+	return ss.Status, ss.StatusMessage
+}
+
+func (ss *FileContracts) GetShard(hash string, index int) (*Shard, error) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	shardKey := GetShardKey(hash, index)
+	si, ok := ss.ShardInfo[shardKey]
+	if !ok {
+		return nil, fmt.Errorf("shard hash key doesn't exist: %s", shardKey)
 	}
-	return ss.ShardInfo[hash], nil
+	return si, nil
 }
 
 func (ss *FileContracts) RemoveShard(hash string) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.ShardInfo[hash] != nil {
-		delete(ss.ShardInfo, hash)
-	}
+	delete(ss.ShardInfo, hash)
 }
 
-func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSize int64, length int64) (*Shards, error) {
+func GetShardKey(shardHash string, shardIndex int) string {
+	return shardHash + strconv.Itoa(shardIndex)
+}
+
+func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int,
+	shardSize int64, length int64) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
-	shardKey := shardHash + strconv.Itoa(shardIndex)
-	if ss.ShardInfo[shardKey] == nil {
-		c := &Shards{}
-		c.ShardHash = shardHash
+	shardKey := GetShardKey(shardHash, shardIndex)
+	if s, ok := ss.ShardInfo[shardKey]; !ok {
+		c := &Shard{}
+		sh, err := cidlib.Parse(shardHash)
+		if err != nil {
+			return nil, err
+		}
+		c.ShardHash = sh
 		c.ShardIndex = shardIndex
 		c.RetryChan = make(chan *StepRetryChan)
 		c.StartTime = time.Now()
@@ -392,11 +440,11 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int, shardSiz
 		ss.ShardInfo[shardKey] = c
 		return c, nil
 	} else {
-		return ss.ShardInfo[shardKey], nil
+		return s, nil
 	}
 }
 
-func (c *Shards) SetPrice(price int64) {
+func (c *Shard) SetPrice(price int64) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -409,7 +457,7 @@ func (c *Shards) SetPrice(price int64) {
 	}
 }
 
-func (c *Shards) SetContractID() error {
+func (c *Shard) SetContractID() error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -421,14 +469,14 @@ func (c *Shards) SetContractID() error {
 	return nil
 }
 
-func (c *Shards) GetContractID() string {
+func (c *Shard) GetContractID() string {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.ContractID
 }
 
-func (c *Shards) UpdateShard(recvPid peer.ID) {
+func (c *Shard) UpdateShard(recvPid peer.ID) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -436,7 +484,7 @@ func (c *Shards) UpdateShard(recvPid peer.ID) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) SetSignedContract(contract []byte) bool {
+func (c *Shard) SetSignedContract(contract []byte) bool {
 	c.Lock()
 	defer c.Unlock()
 
@@ -448,42 +496,37 @@ func (c *Shards) SetSignedContract(contract []byte) bool {
 	}
 }
 
-//// used on client to record a new challenge
-//func (c *Shards) SetChallenge(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-//	rootCid, shardCid cidlib.Cid) (*StorageChallenge, error) {
-//	c.Lock()
-//	defer c.Unlock()
-//
-//	var sch *StorageChallenge
-//	var err error
-//	// if the chunk hasn't been generated challenge before
-//	if c.Challenge == nil {
-//		sch, err = NewStorageChallenge(ctx, n, api, rootCid, shardCid)
-//		if err != nil {
-//			return nil, err
-//		}
-//		c.Challenge = sch
-//	} else {
-//		sch = c.Challenge
-//	}
-//
-//	if err = sch.GenChallenge(); err != nil {
-//		return nil, err
-//	}
-//	c.StartTime = time.Now()
-//	return sch, nil
-//}
-//
-//// usually used on host, to record host challenge info
-//func (c *Shards) UpdateChallenge(sch *StorageChallenge) {
-//	c.Lock()
-//	defer c.Unlock()
-//
-//	c.Challenge = sch
-//	c.StartTime = time.Now()
-//}
+func (c *Shard) GetChallengeOrNew(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	fileHash cidlib.Cid) (*StorageChallenge, error) {
+	c.Lock()
+	defer c.Unlock()
 
-func (c *Shards) SetState(state int) {
+	if c.Challenge == nil {
+		sc, err := NewStorageChallenge(ctx, node, api, fileHash, c.ShardHash)
+		if err != nil {
+			return nil, err
+		}
+		c.Challenge = sc
+	}
+	return c.Challenge, nil
+}
+
+func (c *Shard) GetChallengeResponseOrNew(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
+	fileHash cidlib.Cid, init bool) (*StorageChallenge, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.Challenge == nil {
+		sc, err := NewStorageChallengeResponse(ctx, node, api, fileHash, c.ShardHash, "", init)
+		if err != nil {
+			return nil, err
+		}
+		c.Challenge = sc
+	}
+	return c.Challenge, nil
+}
+
+func (c *Shard) SetState(state int) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -491,35 +534,35 @@ func (c *Shards) SetState(state int) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shards) GetStateStr() string {
+func (c *Shard) GetStateStr() string {
 	c.Lock()
 	defer c.Unlock()
 
 	return StdStateFlow[c.State].State
 }
 
-func (c *Shards) GetState() int {
+func (c *Shard) GetState() int {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.State
 }
 
-func (c *Shards) GetTotalAmount() int64 {
+func (c *Shard) GetTotalAmount() int64 {
 	c.Lock()
 	defer c.Unlock()
 
 	return c.TotalPay
 }
 
-func (c *Shards) SetTime(time time.Time) {
+func (c *Shard) SetTime(time time.Time) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.StartTime = time
 }
 
-func (c *Shards) GetTime() time.Time {
+func (c *Shard) GetTime() time.Time {
 	c.Lock()
 	defer c.Unlock()
 

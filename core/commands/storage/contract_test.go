@@ -17,11 +17,14 @@ func TestGenContractsFromChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chunk := make(map[string]*Shards)
-	chunk["1"] = &Shards{TotalPay: 1, SignedEscrowContract: contract1Bytes}
-	chunk["2"] = &Shards{TotalPay: 10, SignedEscrowContract: contract2Bytes}
+	chunk := make(map[string]*Shard)
+	chunk["1"] = &Shard{TotalPay: 1, SignedEscrowContract: contract1Bytes}
+	chunk["2"] = &Shard{TotalPay: 10, SignedEscrowContract: contract2Bytes}
 
 	_, totalPrice, err := PrepareContractFromShard(chunk)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if totalPrice != 11 {
 		t.Fatal("price doesn't match")
 	}

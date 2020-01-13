@@ -21,7 +21,6 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -129,7 +128,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
 		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
 	},
-	RunTimeout: 5 * time.Minute, // TODO: handle large file uploads?
+	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// get config settings
 		cfg, err := cmdenv.GetConfig(env)
@@ -192,6 +191,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 		}
 		// start new session
+		// TODO: Genereate session ID on new
 		sm := storage.GlobalSession
 		ssID, err := storage.NewSessionID()
 		// start new session
@@ -270,16 +270,14 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		ss.SetRetryQueue(retryQueue)
 
 		// add shards into session
-		shardIndex := 0
-		for _, shardHash := range shardHashes {
+		for shardIndex, shardHash := range shardHashes {
 			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), int64(storageLength))
 			if err != nil {
 				return err
 			}
-			shardIndex++
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag)
+		go retryMonitor(context.Background(), n, api, ss, testFlag)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -308,18 +306,20 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 				curStatus = sessionState.CurrentStep + 1
 				ss.SetStatus(curStatus)
 			} else {
-				// TODO: ADD error info to status
-				ss.SetStatus(storage.ErrStatus)
+				if sessionState.Err == nil {
+					sessionState.Err = fmt.Errorf("unknown error, please file a bug report")
+				}
+				ss.SetStatusWithError(storage.ErrStatus, sessionState.Err)
 				return
 			}
 		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
-			ss.SetStatus(storage.ErrStatus)
+			ss.SetStatusWithError(storage.ErrStatus, fmt.Errorf("timed out"))
 			return
 		}
 	}
 }
 
-func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode, ssID string, test bool) {
+func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts, test bool) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -329,7 +329,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	// loop over each shard
 	shardIndex := 0
 	for shardKey, shardInfo := range ss.ShardInfo {
-		go func(shardKey string, shardInfo *storage.Shards, shardIndex int) {
+		go func(shardKey string, shardInfo *storage.Shard, shardIndex int) {
 			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
 			if err != nil {
 				return
@@ -368,7 +368,8 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				return
 			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, api, candidateHost, ss, n, halfSignedEscrowContract, halfSignGuardContract, shardKey, ssID, test)
+			go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+				halfSignedEscrowContract, halfSignGuardContract, test)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
@@ -396,7 +397,8 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, api, candidateHost, ss, n, halfSignedEscrowContract, halfSignGuardContract, shardKey, ssID, test)
+							go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+								halfSignedEscrowContract, halfSignGuardContract, test)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -408,10 +410,11 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 					}
 				case <-time.After(storage.StdStateFlow[curState].TimeOut):
 					{
-						log.Errorf("StartTime Out on %s with state %s", shardKey, storage.StdStateFlow[curState])
+						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdStateFlow[curState].State)
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, api, candidateHost, ss, n, halfSignedEscrowContract, halfSignGuardContract, shardKey, ssID, test)
+						go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+							halfSignedEscrowContract, halfSignGuardContract, test)
 					}
 				}
 			}
@@ -437,14 +440,10 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 	}
 }
 
-func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *storage.HostNode, ss *storage.FileContracts,
-	n *core.IpfsNode, halfSignedEscrowContract []byte, halfSignedGuardContract []byte, shardKey string, ssID string, test bool) {
-	// record shard info in session
-	shard, err := ss.GetShard(shardKey)
-	if err != nil {
-		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
-		return
-	}
+func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, candidateHost *storage.HostNode,
+	ss *storage.FileContracts, shard *storage.Shard,
+	halfSignedEscrowContract, halfSignedGuardContract []byte,
+	test bool) {
 	// check if current shard has been contacting and receiving results
 	if shard.GetState() >= storage.ContractState {
 		return
@@ -468,9 +467,9 @@ func retryProcess(ctx context.Context, api coreiface.CoreAPI, candidateHost *sto
 	}
 	// send over contract
 	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
-		ssID,
+		ss.ID,
 		ss.GetFileHash().String(),
-		shard.ShardHash,
+		shard.ShardHash.String(),
 		strconv.FormatInt(candidateHost.Price, 10),
 		halfSignedEscrowContract,
 		halfSignedGuardContract,
@@ -566,30 +565,32 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		Tagline: "For renter client to receive half signed contracts.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("escrow-contract", true, false, "Signed Escrow Contract."),
-		cmds.StringArg("guard-contract", true, false, "Signed Guard Contract."),
-		cmds.StringArg("session-id", true, false, "Session ID which render used to store all shardsInfo"),
+		cmds.StringArg("session-id", true, false, "Session ID which renter uses to store all shards information."),
 		cmds.StringArg("shard-hash", true, false, "Shard the storage node should fetch."),
-		cmds.StringArg("shard-index", true, false, "Index of shard."),
+		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
+		cmds.StringArg("escrow-contract", true, false, "Signed Escrow contract."),
+		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
-		signedContract := []byte(req.Arguments[0])
-		//fmt.Println("renter received escrow fully signed contract: ", signedContract)
-		guardContractBytes := []byte(req.Arguments[1])
-		//fmt.Println("renter received guard fully signed contract: ", guardContractBytes)
-		ssID := req.Arguments[2]
+		signedContract := []byte(req.Arguments[3])
+		guardContractBytes := []byte(req.Arguments[4])
+		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
 		if err != nil {
 			return err
 		}
-		shardHash := req.Arguments[3]
-		shardIndex := req.Arguments[4]
-		shard, err := ss.GetShard(shardHash + shardIndex)
+		shardHash := req.Arguments[1]
+		sidx := req.Arguments[2]
+		shardIndex, err := strconv.Atoi(sidx)
+		if err != nil {
+			return err
+		}
+		shard, err := ss.GetShard(shardHash, shardIndex)
 		if err != nil {
 			return err
 		}
@@ -600,12 +601,11 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		ok, err := ss.IncrementContract(shardHash+shardIndex, signedContract, guardContract)
+		ok, err := ss.IncrementContract(shardHash, shardIndex, signedContract, guardContract)
 		if err != nil || !ok {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		// TODO: Modify client err return status
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
@@ -629,19 +629,15 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
-			submitContractRes, err := escrow.SubmitContractToEscrow(context.Background(), cfg, contractRequest)
+			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
 			if err != nil {
 				log.Error(err)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false,
+					fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
 				return err
 			}
 			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
-			// get node
-			n, err := cmdenv.GetNode(env)
-			if err != nil {
-				sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
-				return err
-			}
+
 			// get core api
 			api, err := cmdenv.GetApi(env, req)
 			if err != nil {
@@ -649,15 +645,14 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 
-			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss, shard, ssID)
+			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
 		}
 		return nil
 	},
 }
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
-	response *escrowpb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts,
-	shard *storage.Shards, ssID string) {
+	response *escrowpb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts) {
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
@@ -675,7 +670,8 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false,
+			fmt.Errorf("failed to pay in to escrow: [%v]", err))
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, true, nil)
@@ -683,48 +679,30 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
-		return
-	}
-	err = storage.PersistFileMetaToDatabase(n, storage.FileContractsStorePrefix, ssID)
-	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
+			fmt.Errorf("failed to send file meta to guard: [%v]", err))
 		return
 	}
 
-	fileHash, err := cidlib.Parse(fsStatus.FileHash)
+	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
-	var shardHashes []cidlib.Cid
-	var hostIDs []string
-	for _, c := range fsStatus.Contracts {
-		sh, err := cidlib.Parse(c.ShardHash)
-		if err != nil {
-			sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
-			log.Error(err)
-			return
-		}
-		shardHashes = append(shardHashes, sh)
-		hostIDs = append(hostIDs, c.HostPid)
-	}
-
-	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, fileHash, shardHashes, hostIDs,
-		cc.GetMinimumQuestionsCountPerShard(fsStatus))
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
-	err = guard.SendChallengeQuestions(ctx, cfg, fileHash, qs)
+	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
 	if err != nil {
 		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, nil)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
+			fmt.Errorf("failed to send challenge questions to guard: [%v]", err))
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, true, nil)
@@ -751,11 +729,10 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("guard-contract-meta", true, false, "Client's initial guard contract meta."),
 		cmds.StringArg("storage-length", true, false, "Store file for certain length in days."),
 		cmds.StringArg("shard-size", true, false, "Size of each shard received in bytes."),
-		cmds.StringArg("shard-index", true, false, "Index of each shard."),
+		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
 	},
 	RunTimeout: 5 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-
 		// check flags
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -799,11 +776,8 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		// build session
 		sm := storage.GlobalSession
-		ss, err := sm.GetSession(n, storage.ShardsStorePrefix, ssID)
-		// TODO: refactor GetSession: don't return err when ssID not existed
-		if err != nil {
-			log.Error(err)
-		}
+		ss, _ := sm.GetSession(n, storage.HostStoragePrefix, ssID)
+		// TODO: GetOrDefault and GetSession should be one call
 		if ss == nil {
 			ss = sm.GetOrDefault(ssID, n.Identity)
 		}
@@ -829,27 +803,33 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
-		// get render's public key
+		// get renter's public key
 		payerPubKey, err := pid.ExtractPublicKey()
 		if err != nil {
 			return err
 		}
 		ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
 		if !ok || err != nil {
-			return fmt.Errorf("can't verify escrow contract")
+			return fmt.Errorf("can't verify escrow contract: %v", err)
 		}
 		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, halfSignedGuardContract.GetRenterSignature())
 		if !ok || err != nil {
-			return fmt.Errorf("can't verify guard contract")
+			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
-		go signContractAndCheckPayment(shardInfo, ssID, n, pid, req, env, halfSignedEscrowContract, halfSignedGuardContract)
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+
+		go signContractAndCheckPayment(context.Background(), n, api, cfg, ss, shardInfo, pid,
+			halfSignedEscrowContract, halfSignedGuardContract)
 		return nil
 	},
 }
 
-func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core.IpfsNode,
-	pid peer.ID, req *cmds.Request, env cmds.Environment,
+func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, cfg *config.Config,
+	ss *storage.FileContracts, shardInfo *storage.Shard, pid peer.ID,
 	escrowSignedContract *escrowpb.SignedEscrowContract, guardSignedContract *guardpb.Contract) {
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
@@ -865,25 +845,26 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 		return
 	}
 
-	_, err = remote.P2PCall(nil, n, pid, "/storage/upload/recvcontract", marshaledSignedEscrowContract, marshaledSignedGuardContract, ssID, shardInfo.ShardHash, strconv.Itoa(shardInfo.ShardIndex))
+	_, err = remote.P2PCall(ctx, n, pid, "/storage/upload/recvcontract",
+		ss.ID,
+		shardInfo.ShardHash.String(),
+		strconv.Itoa(shardInfo.ShardIndex),
+		marshaledSignedEscrowContract,
+		marshaledSignedGuardContract,
+	)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
 	// persist file meta
-	err = storage.PersistFileMetaToDatabase(n, storage.ShardsStorePrefix, ssID)
+	err = storage.PersistFileMetaToDatastore(n, storage.HostStoragePrefix, ss.ID)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
 	// check payment
-	cfg, err := cmdenv.GetConfig(env)
-	if err != nil {
-		log.Error(err)
-		return
-	}
 	signedContractID, err := escrow.SignContractID(escrowContract.ContractId, n.PrivateKey)
 	if err != nil {
 		log.Error(err)
@@ -891,71 +872,59 @@ func signContractAndCheckPayment(shardInfo *storage.Shards, ssID string, n *core
 	}
 
 	paidIn := make(chan bool)
-	checkPaymentFromClient(context.Background(), paidIn, signedContractID, cfg)
+	go checkPaymentFromClient(ctx, paidIn, signedContractID, cfg)
 	paid := <-paidIn
 	if !paid {
 		log.Error("contract is not paid", escrowContract.ContractId)
 		return
 	}
 
-	downloadShardFromClient(shardInfo, ssID, n, req, env)
+	downloadShardFromClient(n, api, ss, shardInfo)
 }
 
 // call escrow service to check if payment is received or not
 func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowpb.SignedContractID, configuration *config.Config) {
 	timeout := 3 * time.Second
-	newCtx, _ := context.WithTimeout(ctx, timeout)
+	newCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	ticker := time.NewTicker(300 * time.Millisecond)
 	paid := false
 	var err error
 
-	go func() {
-		for {
-			select {
-			case t := <-ticker.C:
-				log.Debug("Tick at", t.UTC())
-				paid, err = escrow.IsPaidin(ctx, configuration, contractID)
-				if err != nil {
-					log.Error("IsPaidin return error", err)
-				}
-				if paid {
-					paidIn <- true
-					return
-				}
-			case <-newCtx.Done():
-				log.Debug("timeout, tick stopped at", time.Now().UTC())
-				ticker.Stop()
-				paidIn <- paid
+	for {
+		select {
+		case t := <-ticker.C:
+			log.Debug("Check escrow IsPaidin, tick at", t.UTC())
+			paid, err = escrow.IsPaidin(ctx, configuration, contractID)
+			if err != nil {
+				// too verbose on errors, only err log the last err
+				log.Debug("Check escrow IsPaidin error", err)
+			}
+			if paid {
+				paidIn <- true
 				return
 			}
+		case <-newCtx.Done():
+			log.Debug("Check escrow IsPaidin timeout, tick stopped at", time.Now().UTC())
+			if err != nil {
+				log.Error("Check escrow IsPaidin failed", err)
+			}
+			ticker.Stop()
+			paidIn <- paid
+			return
 		}
-	}()
+	}
 }
 
-func downloadShardFromClient(shardInfo *storage.Shards, ssID string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment) {
-	sm := storage.GlobalSession
-	ss := sm.GetOrDefault(ssID, n.Identity)
-
-	api, err := cmdenv.GetApi(env, req)
-	if err != nil {
-		log.Error(err)
-		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
-		return
-	}
-	// TODO: Parse should happen on saving shard hash
-	shCid, err := cidlib.Parse(shardInfo.ShardHash)
-	if err != nil {
-		log.Error(err)
-		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
-		return
-	}
+func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
+	shardInfo *storage.Shard) {
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
-	_, err = storage.NewStorageChallengeResponse(context.Background(), n, api, ss.FileHash, shCid, "", true)
+	_, err := shardInfo.GetChallengeResponseOrNew(context.Background(), n, api, ss.FileHash, true)
 	if err != nil {
 		log.Error(err)
-		storage.GlobalSession.Remove(ssID, shardInfo.ShardHash)
+		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
 		return
 	}
 }
@@ -1246,14 +1215,16 @@ This command updates host information and broadcasts to the BTFS network.`,
 
 type StatusRes struct {
 	Status   string
+	Message  string
 	FileHash string
 	Shards   map[string]*ShardStatus
 }
 
 type ShardStatus struct {
-	Price  int64
-	Host   string
-	Status string
+	ContractID string
+	Price      int64
+	Host       string
+	Status     string
 }
 
 var storageUploadStatusCmd = &cmds.Command{
@@ -1270,7 +1241,7 @@ This command print upload and payment status by the time queried.`,
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
-		ss, err := storage.GlobalSession.GetSession(n, storage.FileContractsStorePrefix, ssID)
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
 		if err != nil {
 			return err
 		}
@@ -1285,15 +1256,16 @@ This command print upload and payment status by the time queried.`,
 		}
 
 		// get shards info from session
-		status.Status = ss.GetStatus()
+		status.Status, status.Message = ss.GetStatusAndMessage()
 		status.FileHash = ss.GetFileHash().String()
 		shards := make(map[string]*ShardStatus)
 		status.Shards = shards
 		for hash, info := range ss.ShardInfo {
 			c := &ShardStatus{
-				Price:  info.Price,
-				Host:   info.Receiver.String(),
-				Status: info.GetStateStr(),
+				ContractID: info.ContractID,
+				Price:      info.Price,
+				Host:       info.Receiver.String(),
+				Status:     info.GetStateStr(),
 			}
 			shards[hash] = c
 		}
@@ -1380,7 +1352,7 @@ the challenge request back to the caller.`,
 		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
 		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
 	},
-	RunTimeout: 3 * time.Second, // TODO: consider large files?
+	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -1400,22 +1372,35 @@ the challenge request back to the caller.`,
 			return err
 		}
 
-		// TODO: Check if host store has this contract id
 		fileHash, err := cidlib.Parse(req.Arguments[1])
 		if err != nil {
 			return err
 		}
-		shardHash, err := cidlib.Parse(req.Arguments[2])
+		sh := req.Arguments[2]
+		shardHash, err := cidlib.Parse(sh)
 		if err != nil {
 			return err
+		}
+		// Check if host store has this contract id
+		shardInfo, err := storage.GetShardInfoFromDatastore(n, storage.HostStoragePrefix, sh)
+		if err != nil {
+			return err
+		}
+		ctID := req.Arguments[0]
+		if ctID != shardInfo.ContractID {
+			return fmt.Errorf("contract id does not match, has [%s], needs [%s]", shardInfo.ContractID, ctID)
+		}
+		if !shardHash.Equals(shardInfo.ShardHash) {
+			return fmt.Errorf("datastore internal error: mismatched existing shard hash %s with %s",
+				shardInfo.ShardHash.String(), shardHash.String())
 		}
 		chunkIndex, err := strconv.Atoi(req.Arguments[3])
 		if err != nil {
 			return err
 		}
 		nonce := req.Arguments[4]
-		// Challenge ID is not relevant here because it's a sync operation
-		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", false)
+		// Get (cached) challenge response object and solve challenge
+		sc, err := shardInfo.GetChallengeResponseOrNew(req.Context, n, api, fileHash, false)
 		if err != nil {
 			return err
 		}
