@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
@@ -33,6 +32,7 @@ var RmCmd = &cmds.Command{
 			return err
 		}
 
+		var results stringList
 		for _, b := range req.Arguments {
 			// Make sure node exists
 			p := path.New(b)
@@ -54,33 +54,37 @@ var RmCmd = &cmds.Command{
 			}
 
 			// Rm all child links
-			err = rmAllDags(req.Context, api, node)
+			err = rmAllDags(req.Context, api, node, &results)
 			if err != nil {
 				return err
 			}
 		}
 
-		return nil
+		return cmds.EmitOnce(res, results)
+	},
+	Type: stringList{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(stringListEncoder),
 	},
 }
 
-func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node) error {
+func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *stringList) error {
 	for _, nl := range node.Links() {
 		// Resolve, recurse, then finally remove
 		rn, err := api.ResolveNode(ctx, path.IpfsPath(nl.Cid))
 		if err != nil {
 			return err
 		}
-		if err := rmAllDags(ctx, api, rn); err != nil {
+		if err := rmAllDags(ctx, api, rn, res); err != nil {
 			return err
 		}
 	}
 	ncid := node.Cid()
 	if err := api.Dag().Remove(ctx, ncid); err != nil {
-		fmt.Fprintf(os.Stdout, "Error removing object %s\n", ncid)
+		res.Strings = append(res.Strings, fmt.Sprintf("Error removing object %s", ncid))
 		return err
 	} else {
-		fmt.Fprintf(os.Stdout, "Removed %s\n", ncid)
+		res.Strings = append(res.Strings, fmt.Sprintf("Removed %s", ncid))
 	}
 	return nil
 }
