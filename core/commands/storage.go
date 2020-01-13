@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Workiva/go-datastructures/set"
 	"math"
 	"strconv"
 	"strings"
@@ -50,6 +51,7 @@ const (
 	hostStorageMaxOptionName      = "host-storage-max"
 	testOnlyOptionName            = "host-search-local"
 	storageLengthOptionName       = "storage-length"
+	repairModeOptionName          = "repair-mode"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -115,7 +117,10 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		"status":       storageUploadStatusCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, true, "Add hash of file to upload.").EnableStdin(),
+		cmds.StringArg("file-hash", true, false, "Add hash of file to upload."),
+		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
+		cmds.StringArg("renter-id", false, false, "Original renter id."),
+		cmds.StringArg("blacklist", false, false, "Blacklist of hosts when upload."),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
@@ -125,6 +130,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
 		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
+		cmds.BoolOption(repairModeOptionName, "repair mode").WithDefault(false),
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -151,9 +157,36 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			shardHashes []string
 			rootHash    cidlib.Cid
 			shardSize   uint64
+			blacklist   = set.New()
+			renterId    = n.Identity
 		)
-		lf, _ := req.Options[leafHashOptionName].(bool)
-		if lf == false {
+		isRepairMode := req.Options[repairModeOptionName].(bool)
+		lf := req.Options[leafHashOptionName].(bool)
+		if isRepairMode {
+			if len(req.Arguments) > 3 {
+				blacklistStr := req.Arguments[3]
+				for _, s := range strings.Split(blacklistStr, ",") {
+					blacklist.Add(s)
+				}
+			}
+			rootHash, err = cidlib.Parse(req.Arguments[0])
+			if err != nil {
+				return err
+			}
+			renterId, err = peer.IDB58Decode(req.Arguments[2])
+			if err != nil {
+				return err
+			}
+			shardHashes = strings.Split(req.Arguments[1], ",")
+			shardCid, err := cidlib.Parse(shardHashes[0])
+			if err != nil {
+				return err
+			}
+			shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
+			if err != nil {
+				return err
+			}
+		} else if !lf {
 			if len(req.Arguments) != 1 {
 				return fmt.Errorf("need one and only one root file hash")
 			}
@@ -196,7 +229,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
-		ss := sm.GetOrDefault(ssID, n.Identity)
+		ss := sm.GetOrDefault(ssID, renterId)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
@@ -253,6 +286,9 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 				return err
 			}
 			for _, ni := range hosts {
+				if blacklist.Exists(ni) {
+					continue
+				}
 				// use host askingPrice instead if provided
 				if int64(ni.StoragePriceAsk) > HostPriceLowBoundary {
 					price = int64(ni.StoragePriceAsk)
@@ -286,7 +322,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			}
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), n, api, ss, testFlag)
+		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -328,7 +364,8 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 	}
 }
 
-func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts, test bool) {
+func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
+	ssID string, test bool, isRepair bool) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -371,7 +408,8 @@ func retryMonitor(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 				log.Error("fail to new contract meta")
 				return
 			}
-			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true)
+			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true,
+				isRepair, ss.Renter.Pretty())
 			if err != nil {
 				log.Error("fail to sign guard contract and marshal")
 				return
@@ -831,7 +869,11 @@ the shard and replies back to client for the next challenge step.`,
 		if !ok || err != nil {
 			return fmt.Errorf("can't verify escrow contract: %v", err)
 		}
-		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, halfSignedGuardContract.GetRenterSignature())
+		s := halfSignedGuardContract.GetRenterSignature()
+		if s == nil {
+			s = halfSignedGuardContract.GetPreparerSignature()
+		}
+		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, s)
 		if !ok || err != nil {
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
@@ -858,7 +900,8 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		log.Error(err)
 		return
 	}
-	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract, n.PrivateKey, false)
+	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
+		n.PrivateKey, false, false, "")
 	if err != nil {
 		log.Error(err)
 		return
