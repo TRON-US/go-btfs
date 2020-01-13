@@ -121,8 +121,8 @@ require (
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/protobuf v1.3.4
 	github.com/tron-us/go-btfs-common v0.2.9
+	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
