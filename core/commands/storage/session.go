@@ -512,12 +512,12 @@ func (c *Shard) GetChallengeOrNew(ctx context.Context, node *core.IpfsNode, api 
 }
 
 func (c *Shard) GetChallengeResponseOrNew(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	fileHash cidlib.Cid, init bool) (*StorageChallenge, error) {
+	fileHash cidlib.Cid, init bool, expir uint64) (*StorageChallenge, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.Challenge == nil {
-		sc, err := NewStorageChallengeResponse(ctx, node, api, fileHash, c.ShardHash, "", init)
+		sc, err := NewStorageChallengeResponse(ctx, node, api, fileHash, c.ShardHash, "", init, expir)
 		if err != nil {
 			return nil, err
 		}
