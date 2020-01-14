@@ -13,6 +13,10 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 )
 
+const (
+	rmForceOptionName = "force"
+)
+
 var RmCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "Remove files or directories from a local btfs node.",
@@ -21,6 +25,9 @@ var RmCmd = &cmds.Command{
 
 	Arguments: []cmds.Argument{
 		cmds.StringArg("hash", true, true, "The hash(es) of the file(s)/directory(s) to be removed from the local btfs node.").EnableStdin(),
+	},
+	Options: []cmds.Option{
+		cmds.BoolOption(rmForceOptionName, "f", "Forcibly remove the object, even if there are constraints (such as host-stored file).").WithDefault(false),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -31,6 +38,8 @@ var RmCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+
+		force, _ := req.Options[rmForceOptionName].(bool)
 
 		var results stringList
 		for _, b := range req.Arguments {
@@ -47,7 +56,7 @@ var RmCmd = &cmds.Command{
 			}
 			if pinned {
 				// Since we are removing a file, we need to set recursive flag to true
-				err = api.Pin().Rm(req.Context, p, options.Pin.RmRecursive(true))
+				err = api.Pin().Rm(req.Context, p, options.Pin.RmRecursive(true), options.Pin.RmForce(force))
 				if err != nil {
 					return err
 				}

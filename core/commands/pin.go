@@ -47,9 +47,10 @@ type AddPinOutput struct {
 }
 
 const (
-	pinRecursiveOptionName  = "recursive"
-	pinProgressOptionName   = "progress"
-	durationCountOptionName = "durationCount"
+	pinRecursiveOptionName        = "recursive"
+	pinForceOptionName            = "force"
+	pinProgressOptionName         = "progress"
+	pinAddDurationCountOptionName = "duration-count"
 
 	defaultDurationCount = 0
 )
@@ -66,7 +67,7 @@ var addPinCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively pin the object linked to by the specified object(s).").WithDefault(true),
 		cmds.BoolOption(pinProgressOptionName, "Show progress"),
-		cmds.IntOption(durationCountOptionName, "d", "Duration for which the object is pinned in days. It is unpinned after the duration.").WithDefault(defaultDurationCount),
+		cmds.IntOption(pinAddDurationCountOptionName, "d", "Duration for which the object is pinned in days. It is unpinned after the duration.").WithDefault(defaultDurationCount),
 	},
 	Type: AddPinOutput{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -78,7 +79,7 @@ var addPinCmd = &cmds.Command{
 		// set options
 		recursive, _ := req.Options[pinRecursiveOptionName].(bool)
 		showProgress, _ := req.Options[pinProgressOptionName].(bool)
-		duration := req.Options[durationCountOptionName].(int)
+		duration := req.Options[pinAddDurationCountOptionName].(int)
 
 		if err := req.ParseBodyArgs(); err != nil {
 			return err
@@ -215,6 +216,7 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(pinRecursiveOptionName, "r", "Recursively unpin the object linked to by the specified object(s).").WithDefault(true),
+		cmds.BoolOption(pinForceOptionName, "f", "Forcibly unpin the object, even if there are constraints (such as host-stored file).").WithDefault(false),
 	},
 	Type: PinOutput{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -232,6 +234,8 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 
 		// set recursive flag
 		recursive, _ := req.Options[pinRecursiveOptionName].(bool)
+		// set force flag
+		force, _ := req.Options[pinForceOptionName].(bool)
 
 		if err := req.ParseBodyArgs(); err != nil {
 			return err
@@ -252,7 +256,8 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 
 			id := enc.Encode(rp.Cid())
 			pins = append(pins, id)
-			if err := api.Pin().Rm(req.Context, rp, options.Pin.RmRecursive(recursive)); err != nil {
+			if err := api.Pin().Rm(req.Context, rp,
+				options.Pin.RmRecursive(recursive), options.Pin.RmForce(force)); err != nil {
 				return err
 			}
 		}
