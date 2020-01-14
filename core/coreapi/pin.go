@@ -82,7 +82,7 @@ func (api *PinAPI) Rm(ctx context.Context, p path.Path, opts ...caopts.PinRmOpti
 		return err
 	}
 	if exp && !settings.Force {
-		return fmt.Errorf("pin cannot be removed due to host-storage constraint: contract has not expired")
+		return fmt.Errorf("pin cannot be removed due to constraint: has not expired")
 	}
 
 	if err = api.pinning.Unpin(ctx, rp.Cid(), settings.Recursive); err != nil {
