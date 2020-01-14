@@ -29,13 +29,14 @@ type StorageChallenge struct {
 	sync.Mutex
 
 	// Selections and generations for challenge
-	ID     string  // Challenge ID (randomly generated on creation)
-	RID    cid.Cid // Root hash in multihash format (initial file root)
-	SID    cid.Cid // Shard hash in multihash format (selected shard on each host)
-	CIndex int     // Chunk index within each shard (selected index on each challenge request)
-	CID    cid.Cid // Chunk hash in multihash format (selected chunk on each challenge request)
-	Nonce  string  // Random nonce for each challenge request (uuidv4)
-	Hash   string  // Generated SHA-256 hash (chunk bytes + nonce bytes) for proof-of-file-existence
+	ID         string  // Challenge ID (randomly generated on creation)
+	RID        cid.Cid // Root hash in multihash format (initial file root)
+	SID        cid.Cid // Shard hash in multihash format (selected shard on each host)
+	CIndex     int     // Chunk index within each shard (selected index on each challenge request)
+	CID        cid.Cid // Chunk hash in multihash format (selected chunk on each challenge request)
+	Nonce      string  // Random nonce for each challenge request (uuidv4)
+	Hash       string  // Generated SHA-256 hash (chunk bytes + nonce bytes) for proof-of-file-existence
+	Expiration uint64  // End date of the pinned chunks
 }
 
 // newStorageChallengeHelper creates a challenge object with new ID, resolves the cid path
@@ -44,7 +45,7 @@ type StorageChallenge struct {
 // When used by storage host: challengeID is a valid uuid v4
 // When host needs to get blocks and initialize the challenge for the very first time, use init=true
 func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	rootHash, shardHash cid.Cid, challengeID string, init bool) (*StorageChallenge, error) {
+	rootHash, shardHash cid.Cid, challengeID string, init bool, expir uint64) (*StorageChallenge, error) {
 	if challengeID == "" {
 		chid, err := uuid.NewRandom()
 		if err != nil {
@@ -53,13 +54,14 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 		challengeID = chid.String()
 	}
 	sc := &StorageChallenge{
-		Ctx:      ctx,
-		Node:     node,
-		API:      api,
-		seenCIDs: map[string]bool{},
-		ID:       challengeID,
-		RID:      rootHash,
-		SID:      shardHash,
+		Ctx:        ctx,
+		Node:       node,
+		API:        api,
+		seenCIDs:   map[string]bool{},
+		ID:         challengeID,
+		RID:        rootHash,
+		SID:        shardHash,
+		Expiration: expir,
 	}
 	if err := sc.getAllCIDsRecursive(rootHash, init); err != nil {
 		return nil, err
@@ -69,12 +71,12 @@ func newStorageChallengeHelper(ctx context.Context, node *core.IpfsNode, api cor
 
 func NewStorageChallenge(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
 	rootHash, shardHash cid.Cid) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "", false)
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, "", false, 0)
 }
 
 func NewStorageChallengeResponse(ctx context.Context, node *core.IpfsNode, api coreiface.CoreAPI,
-	rootHash, shardHash cid.Cid, challengeID string, init bool) (*StorageChallenge, error) {
-	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID, init)
+	rootHash, shardHash cid.Cid, challengeID string, init bool, expir uint64) (*StorageChallenge, error) {
+	return newStorageChallengeHelper(ctx, node, api, rootHash, shardHash, challengeID, init, expir)
 }
 
 // getAllCIDsRecursive traverses the full DAG to find all cids and
@@ -120,7 +122,8 @@ func (sc *StorageChallenge) getAllCIDsRecursive(blockHash cid.Cid, init bool) er
 	// If shard dag, recursively pin the full dag to store relation
 	// Otherwise, just singlely pin a dag
 	if init {
-		return sc.API.Pin().Add(sc.Ctx, rp, options.Pin.Recursive(isSelectedShard))
+		return sc.API.Pin().Add(sc.Ctx, rp,
+			options.Pin.Recursive(isSelectedShard), options.Pin.Expiration(sc.Expiration))
 	}
 	return nil
 }

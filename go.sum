@@ -50,8 +50,8 @@ github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh
 github.com/TRON-US/go-unixfs v0.4.12/go.mod h1:0Jv/z5OvpB4JpjJcUFB9turYohcoqjF/tmczQX9eeJ4=
 github.com/TRON-US/go-unixfs v0.5.3 h1:Dz5fBJ3tK1UiiKjUgpGdm+YAZIVg2X2GjwhOxCOvRnY=
 github.com/TRON-US/go-unixfs v0.5.3/go.mod h1:r89GEeiq8xVLDz0mxyaVjx9qCrOZrR3h5hJUTKAoeEE=
-github.com/TRON-US/interface-go-btfs-core v0.5.3 h1:4DNfkYct96IheqcQXCGJzMO2HJTt/IgeI5BtJXL7qzo=
-github.com/TRON-US/interface-go-btfs-core v0.5.3/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
+github.com/TRON-US/interface-go-btfs-core v0.5.4 h1:rGtjXV8pRM0ap56XsI/lwB4vGUytS7mRrih0lmx+KJA=
+github.com/TRON-US/interface-go-btfs-core v0.5.4/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/Workiva/go-datastructures v1.0.50 h1:slDmfW6KCHcC7U+LP3DDBbm4fqTwZGn1beOFPfGaLvo=
 github.com/Workiva/go-datastructures v1.0.50/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=

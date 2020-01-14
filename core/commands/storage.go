@@ -1000,10 +1000,17 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
 	shardInfo *storage.Shard) {
+	contracts := ss.GetGuardContracts()
+	if len(contracts) == 0 {
+		log.Error("No guard contract available")
+		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
+		return
+	}
+	expir := uint64(contracts[0].RentEnd.Unix())
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
-	_, err := shardInfo.GetChallengeResponseOrNew(context.Background(), n, api, ss.FileHash, true)
+	_, err := shardInfo.GetChallengeResponseOrNew(context.Background(), n, api, ss.FileHash, true, expir)
 	if err != nil {
 		log.Error(err)
 		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
@@ -1437,7 +1444,7 @@ the challenge request back to the caller.`,
 		}
 		nonce := req.Arguments[4]
 		// Get (cached) challenge response object and solve challenge
-		sc, err := shardInfo.GetChallengeResponseOrNew(req.Context, n, api, fileHash, false)
+		sc, err := shardInfo.GetChallengeResponseOrNew(req.Context, n, api, fileHash, false, 0)
 		if err != nil {
 			return err
 		}

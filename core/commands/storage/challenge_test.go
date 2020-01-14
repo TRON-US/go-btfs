@@ -34,7 +34,7 @@ func TestGenAndSolveChallenge(t *testing.T) {
 			t.Fatal(err)
 		}
 		// simulate host challenge preparation
-		scr, err := NewStorageChallengeResponse(context.Background(), node, api, root, sid, sc.ID, false)
+		scr, err := NewStorageChallengeResponse(context.Background(), node, api, root, sid, sc.ID, false, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
