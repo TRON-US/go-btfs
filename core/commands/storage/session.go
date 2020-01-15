@@ -266,7 +266,7 @@ func PersistFileMetaToDatastore(node *core.IpfsNode, prefix string, ssID string)
 				shardHash = shardHash[:46]
 			}
 		}
-		err = rds.Put(ds.NewKey(prefix + ShardsStoreSeg + shardHash), shardBytes)
+		err = rds.Put(ds.NewKey(prefix+ShardsStoreSeg+shardHash), shardBytes)
 		if err != nil {
 			return err
 		}
