@@ -110,7 +110,8 @@ To custom upload and store a file on specific hosts:
     # Total # of hosts must match # of shards given
     $ btfs storage upload <shard-hash1> <shard-hash2> -l -m=custom -s=<host_address1>,<host_address2>
 
-Receive proofs as collateral evidence after selected nodes agree to store the file.`,
+Use status command to check for completion:
+    $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"init":         storageUploadInitCmd,
@@ -1175,7 +1176,7 @@ To set the max price per GiB to 1 BTT:
 $ btfs storage announce --host-storage-price=1`,
 	},
 	Options: []cmds.Option{
-		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage in BTT."),
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage per day in BTT."),
 		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MiB of bandwidth in BTT."),
 		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in BTT."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
