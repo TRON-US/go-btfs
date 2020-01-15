@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/node/libp2p"
 	"github.com/TRON-US/go-btfs/p2p"
+
+	"github.com/tron-us/go-btfs-common/crypto"
 
 	"github.com/TRON-US/go-btfs-config"
 	uio "github.com/TRON-US/go-unixfs/io"
@@ -156,6 +159,12 @@ func Identity(cfg *config.Config) fx.Option {
 	}
 
 	// Private Key
+	// Use env override if available
+	pk := os.Getenv("BTFS_PRIV_KEY")
+	if pk != "" {
+		// Override stored peer id
+		cfg.Identity.PrivKey = pk
+	}
 
 	if cfg.Identity.PrivKey == "" {
 		return fx.Options( // No PK (usually in tests)
@@ -164,9 +173,19 @@ func Identity(cfg *config.Config) fx.Option {
 		)
 	}
 
-	sk, err := cfg.Identity.DecodePrivateKey("passphrase todo!")
+	sk, err := crypto.GetPrivKeyFromHexOrBase64(cfg.Identity.PrivKey)
 	if err != nil {
 		return fx.Error(err)
+	}
+
+	// Set correct peer id from overriden private key
+	if pk != "" {
+		pid, err := peer.IDFromPublicKey(sk.GetPublic())
+		if err != nil {
+			return fx.Error(err)
+		}
+		cfg.Identity.PeerID = pid.String()
+		id = pid
 	}
 
 	return fx.Options( // Full identity
