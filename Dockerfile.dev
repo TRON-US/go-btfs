@@ -97,5 +97,8 @@ ENV BTFS_LOGGING ""
 # 2. The API and Gateway are accessible from outside the container.
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start_btfs"]
 
+RUN btfs init
+RUN btfs config profile apply storage-client-dev
+
 # Execute the daemon subcommand by default
 CMD ["daemon", "--migrate=true"]
