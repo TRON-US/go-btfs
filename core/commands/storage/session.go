@@ -222,7 +222,13 @@ func GetFileMetaFromDatastore(node *core.IpfsNode, prefix, ssID string) (*FileCo
 // GetShardInfoFromDatastore retrieves persisted shard information from datastore
 func GetShardInfoFromDatastore(node *core.IpfsNode, prefix, shardHash string) (*Shard, error) {
 	rds := node.Repo.Datastore()
-	value, err := rds.Get(ds.NewKey(prefix + ShardsStoreSeg + shardHash))
+	if prefix == HostStoragePrefix {
+		if len(shardHash) != 46 {
+			shardHash = shardHash[:46]
+		}
+	}
+	key := ds.NewKey(prefix + ShardsStoreSeg + shardHash)
+	value, err := rds.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -254,6 +260,11 @@ func PersistFileMetaToDatastore(node *core.IpfsNode, prefix string, ssID string)
 		shardBytes, err := json.Marshal(shardInfo)
 		if err != nil {
 			return err
+		}
+		if prefix == HostStoragePrefix {
+			if len(shardHash) != 46 {
+				shardHash = shardHash[:46]
+			}
 		}
 		err = rds.Put(ds.NewKey(prefix+ShardsStoreSeg+shardHash), shardBytes)
 		if err != nil {
@@ -415,7 +426,7 @@ func GetShardKey(shardHash string, shardIndex int) string {
 }
 
 func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int,
-	shardSize int64, length int64) (*Shard, error) {
+	shardSize int64, length int64, contractId string) (*Shard, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -434,7 +445,7 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int,
 		c.ShardSize = shardSize
 		c.StorageLength = length
 		c.ContractLength = time.Duration(length*24) * time.Hour
-		if err := c.SetContractID(); err != nil {
+		if err := c.SetContractID(contractId); err != nil {
 			return nil, err
 		}
 		ss.ShardInfo[shardKey] = c
@@ -457,16 +468,18 @@ func (c *Shard) SetPrice(price int64) {
 	}
 }
 
-func (c *Shard) SetContractID() error {
+func (c *Shard) SetContractID(contractID string) (err error) {
 	c.Lock()
 	defer c.Unlock()
 
-	contractID, err := NewSessionID()
-	if err != nil {
-		return err
+	if contractID == "" {
+		if contractID, err = NewSessionID(); err != nil {
+			return
+		}
 	}
+
 	c.ContractID = contractID
-	return nil
+	return
 }
 
 func (c *Shard) GetContractID() string {
