@@ -120,7 +120,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Add hash of file to upload."),
 		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
-		cmds.StringArg("renter-id", false, false, "Original renter id."),
+		cmds.StringArg("renter-pid", false, false, "Original renter pid."),
 		cmds.StringArg("blacklist", false, false, "Blacklist of hosts when upload."),
 	},
 	Options: []cmds.Option{
@@ -159,7 +159,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			rootHash    cidlib.Cid
 			shardSize   uint64
 			blacklist   = set.New()
-			renterId    = n.Identity
+			renterPid   = n.Identity
 		)
 		isRepairMode := req.Options[repairModeOptionName].(bool)
 		lf := req.Options[leafHashOptionName].(bool)
@@ -174,7 +174,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 			if err != nil {
 				return err
 			}
-			renterId, err = peer.IDB58Decode(req.Arguments[2])
+			renterPid, err = peer.IDB58Decode(req.Arguments[2])
 			if err != nil {
 				return err
 			}
@@ -236,7 +236,7 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 		if err != nil {
 			return err
 		}
-		ss := sm.GetOrDefault(ssID, renterId)
+		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(storage.InitStatus)
 		go controlSessionTimeout(ss)
@@ -323,13 +323,13 @@ Receive proofs as collateral evidence after selected nodes agree to store the fi
 
 		// add shards into session
 		for shardIndex, shardHash := range shardHashes {
-			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), int64(storageLength))
+			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), int64(storageLength), "")
 			if err != nil {
 				return err
 			}
 		}
 		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode)
+		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode, renterPid.Pretty())
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -372,7 +372,7 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 }
 
 func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
-	ssID string, test bool, isRepair bool) {
+	ssID string, test bool, isRepair bool, renterPid string) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -380,9 +380,9 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	}
 
 	// loop over each shard
-	shardIndex := 0
 	for shardKey, shardInfo := range ss.ShardInfo {
-		go func(shardKey string, shardInfo *storage.Shard, shardIndex int) {
+		go func(shardKey string, shardInfo *storage.Shard) {
+			shardIndex := shardInfo.ShardIndex
 			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
 			if err != nil {
 				return
@@ -410,13 +410,13 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				return
 			}
 			shardInfo.UpdateShard(pid)
-			guardContractMeta, err := guard.NewContract(ss, cfg, shardKey, int32(shardIndex))
+			guardContractMeta, err := guard.NewContract(ss, cfg, shardKey, int32(shardIndex), renterPid)
 			if err != nil {
 				log.Error("fail to new contract meta")
 				return
 			}
 			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true,
-				isRepair, ss.Renter.Pretty())
+				isRepair, renterPid, n.Identity.Pretty())
 			if err != nil {
 				log.Error("fail to sign guard contract and marshal")
 				return
@@ -472,8 +472,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 					}
 				}
 			}
-		}(shardKey, shardInfo, shardIndex)
-		shardIndex++
+		}(shardKey, shardInfo)
 	}
 }
 
@@ -520,6 +519,11 @@ func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 		return
 	}
 	// send over contract
+	c := new(guardpb.Contract)
+	err = proto.Unmarshal(halfSignedGuardContract, c)
+	if err != nil {
+		return
+	}
 	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
 		ss.ID,
 		ss.GetFileHash().String(),
@@ -862,7 +866,8 @@ the shard and replies back to client for the next challenge step.`,
 		// TODO: set host shard state in the following steps
 		// TODO: maybe extract code on renter step timeout control and reuse it here
 		go controlSessionTimeout(ss)
-		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen))
+		halfSignedGuardContract, err := guard.UnmarshalGuardContract([]byte(halfSignedGuardContBytes))
+		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen), halfSignedGuardContract.ContractId)
 		if err != nil {
 			return err
 		}
@@ -874,7 +879,6 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		halfSignedGuardContract, err := guard.UnmarshalGuardContract([]byte(halfSignedGuardContBytes))
 		if err != nil {
 			return err
 		}
@@ -921,7 +925,7 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		return
 	}
 	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
-		n.PrivateKey, false, false, "")
+		n.PrivateKey, false, false, pid.Pretty(), pid.Pretty())
 	if err != nil {
 		log.Error(err)
 		return

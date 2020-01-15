@@ -28,18 +28,22 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	var (
 		rentStart   time.Time
 		rentEnd     time.Time
-		preparerPid = ""
+		preparerPid = session.Renter.Pretty()
+		renterPid   = session.Renter.Pretty()
 		rentalState = guardPb.FileStoreStatus_NEW
 	)
 	if len(contracts) > 0 {
 		rentStart = contracts[0].RentStart
 		rentEnd = contracts[0].RentEnd
 		preparerPid = contracts[0].PreparerPid
-		rentalState = guardPb.FileStoreStatus_PARTIAL_NEW
+		renterPid = contracts[0].RenterPid
+		if contracts[0].PreparerPid != contracts[0].RenterPid {
+			rentalState = guardPb.FileStoreStatus_PARTIAL_NEW
+		}
 	}
 
 	fileStoreMeta := guardPb.FileStoreMeta{
-		RenterPid:        session.Renter.Pretty(),
+		RenterPid:        renterPid,
 		FileHash:         session.FileHash.String(), //TODO need to check
 		FileSize:         10000,                     //TODO need to revise later
 		RentStart:        rentStart,                 //TODO need to revise later
@@ -69,7 +73,8 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	}, nil
 }
 
-func NewContract(session *storage.FileContracts, configuration *config.Config, shardKey string, shardIndex int32) (*guardPb.ContractMeta, error) {
+func NewContract(session *storage.FileContracts, configuration *config.Config, shardKey string, shardIndex int32,
+	renterPid string) (*guardPb.ContractMeta, error) {
 	shard := session.ShardInfo[shardKey]
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
@@ -77,7 +82,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 	}
 	return &guardPb.ContractMeta{
 		ContractId:    shard.ContractID,
-		RenterPid:     session.Renter.Pretty(),
+		RenterPid:     renterPid,
 		HostPid:       shard.Receiver.Pretty(),
 		ShardHash:     shard.ShardHash.String(),
 		ShardIndex:    shardIndex,
@@ -93,7 +98,7 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 }
 
 func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey,
-	isPayer bool, isRepair bool, renterId string) ([]byte, error) {
+	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
 	sig, err := crypto.Sign(privKey, meta)
 	if err != nil {
 		return nil, err
@@ -107,10 +112,10 @@ func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract
 		cont.LastModifyTime = time.Now()
 	}
 	if isPayer {
+		cont.RenterPid = renterPid
+		cont.PreparerPid = nodePid
 		if isRepair {
 			cont.PreparerSignature = sig
-			cont.PreparerPid = renterId
-			cont.RenterSignature = sig
 		} else {
 			cont.RenterSignature = sig
 		}
@@ -212,9 +217,10 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 		log.Error(err)
 		return nil, err
 	}
-	if fileStatus.PreparerPid == "" {
+	if fileStatus.PreparerPid == fileStatus.RenterPid {
 		fileStatus.RenterSignature = sign
 	} else {
+		fileStatus.RenterSignature = sign
 		fileStatus.PreparerSignature = sign
 	}
 
