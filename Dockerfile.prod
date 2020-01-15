@@ -98,7 +98,7 @@ ENV BTFS_LOGGING ""
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start_btfs"]
 
 RUN btfs init
-RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' /btfs/config
+RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' $BTFS_PATH/config
 
 # Execute the daemon subcommand by default
 CMD ["daemon", "--migrate=true"]
