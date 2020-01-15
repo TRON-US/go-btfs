@@ -98,7 +98,6 @@ ENV BTFS_LOGGING ""
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start_btfs"]
 
 RUN btfs init
-RUN btfs config profile apply storage-client-dev
 RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' /btfs/config
 
 # Execute the daemon subcommand by default
