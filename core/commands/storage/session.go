@@ -224,7 +224,7 @@ func GetShardInfoFromDatastore(node *core.IpfsNode, prefix, shardHash string) (*
 	rds := node.Repo.Datastore()
 	if prefix == HostStoragePrefix {
 		if len(shardHash) != 46 {
-			shardHash = shardHash[:45]
+			shardHash = shardHash[:46]
 		}
 	}
 	key := ds.NewKey(prefix + ShardsStoreSeg + shardHash)
