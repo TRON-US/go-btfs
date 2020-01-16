@@ -85,6 +85,7 @@ RUN mkdir /btfs /btns \
   && chown btfs:users /btfs /btns
 
 RUN btfs init
+RUN btfs config profile apply storage-client
 RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' $BTFS_PATH/config
 
 # Expose the fs-repo as a volume.
