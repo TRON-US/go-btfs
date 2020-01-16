@@ -26,7 +26,7 @@ else
   esac
   btfs init $INIT_ARGS
   btfs config profile apply storage-client-dev
-  sed 's/\"Analytics\": false,/\"Analytics\": true,/g' $repo/config
+  btfs config --bool Experimental.Analytics true
   btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
   btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 fi
