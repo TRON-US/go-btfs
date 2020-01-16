@@ -30,7 +30,7 @@ func FindPeer(ctx context.Context, n *core.IpfsNode, pid string) (*peer.AddrInfo
 	}
 	var pinfo peer.AddrInfo
 	//FIXME
-	bo := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5)
+	bo := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 	err = backoff.Retry(func() error {
 		pinfo, err = n.Routing.FindPeer(ctx, id)
 		return err
