@@ -53,7 +53,7 @@ MAINTAINER TRON-US <support@tron.network>
 # Get the btfs binary, entrypoint script, and TLS CAs from the build container.
 ENV SRC_DIR /go-btfs
 COPY --from=0 $SRC_DIR/cmd/btfs/btfs /usr/local/bin/btfs
-COPY --from=0 $SRC_DIR/bin/container_daemon /usr/local/bin/start_btfs
+COPY --from=0 $SRC_DIR/bin/container_daemon_prod /usr/local/bin/start_btfs
 COPY --from=0 /tmp/su-exec/su-exec /sbin/su-exec
 COPY --from=0 /tmp/tini /sbin/tini
 COPY --from=0 /bin/fusermount /usr/local/bin/fusermount
@@ -83,10 +83,6 @@ RUN mkdir -p $BTFS_PATH \
 # Create mount points for `btfs mount` command
 RUN mkdir /btfs /btns \
   && chown btfs:users /btfs /btns
-
-RUN btfs init
-RUN btfs config profile apply storage-client
-RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' $BTFS_PATH/config
 
 # Expose the fs-repo as a volume.
 # start_btfs initializes an fs-repo if none is mounted.

@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+user=btfs
+repo="$BTFS_PATH"
+bin=/usr/local/bin
+
+if [ `id -u` -eq 0 ]; then
+  echo "Changing user to $user"
+  # ensure folder is writable
+  su-exec "$user" test -w "$repo" || chown -R -- "$user" "$repo"
+  # ensure local bin is writable (for auto-update)
+  su-exec "$user" test -w "$bin" || chown -R -- "$user" "$bin"
+  # restart script with new privileges
+  exec su-exec "$user" "$0" "$@"
+fi
+
+# 2nd invocation with regular user
+btfs version
+
+if [ -e "$repo/config" ]; then
+  echo "Found BTFS fs-repo at $repo"
+else
+  case "$IPFS_PROFILE" in
+    "") INIT_ARGS="" ;;
+    *) INIT_ARGS="--profile=$IPFS_PROFILE" ;;
+  esac
+  btfs init $INIT_ARGS
+  btfs config profile apply storage-client-dev
+  sed 's/\"Analytics\": false,/\"Analytics\": true,/g' $repo/config
+  btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
+  btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+fi
+
+exec btfs "$@"
