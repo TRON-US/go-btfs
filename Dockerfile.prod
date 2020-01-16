@@ -84,6 +84,9 @@ RUN mkdir -p $BTFS_PATH \
 RUN mkdir /btfs /btns \
   && chown btfs:users /btfs /btns
 
+RUN btfs init
+RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' $BTFS_PATH/config
+
 # Expose the fs-repo as a volume.
 # start_btfs initializes an fs-repo if none is mounted.
 # Important this happens after the USER directive so permission are correct.
@@ -96,9 +99,6 @@ ENV BTFS_LOGGING ""
 # 1. There's an fs-repo, and initializes one if there isn't.
 # 2. The API and Gateway are accessible from outside the container.
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start_btfs"]
-
-RUN btfs init
-RUN sed -i "" 's/\"Analytics\": false,/\"Analytics\": true,/g' $BTFS_PATH/config
 
 # Execute the daemon subcommand by default
 CMD ["daemon", "--migrate=true"]
