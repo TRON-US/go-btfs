@@ -25,6 +25,13 @@ else
     *) INIT_ARGS="--profile=$IPFS_PROFILE" ;;
   esac
   btfs init $INIT_ARGS
+  if [ "$BTFS_ENV" == "dev" ] || [ "$BTFS_ENV" == "staging" ]; then
+    btfs config profile apply storage-client-dev
+    btfs config --bool Experimental.Analytics true
+  elif [ "$BTFS_ENV" == "production" ]; then
+    btfs config profile apply storage-client
+    btfs config --bool Experimental.Analytics true
+  fi
   btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
   btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 fi
