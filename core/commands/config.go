@@ -381,12 +381,14 @@ By setting the configuration value to 'true', you agree to the collection of the
 			return err
 		}
 
-		cfg, err := n.Repo.Config()
+		config, err := n.Repo.Config()
 		if err != nil {
 			return err
 		}
 
-		cfg.Experimental.Analytics = true
+		config.Experimental.Analytics = true
+
+		var output *ConfigField
 
 		cfgRoot, err := cmdenv.GetConfigRoot(env)
 		if err != nil {
@@ -397,22 +399,12 @@ By setting the configuration value to 'true', you agree to the collection of the
 			return err
 		}
 
-		hostProfile, ok := config.Profiles["storage-host"]
-		if !ok {
-			return fmt.Errorf("storage-host profile is not available, please file a bug report")
-		}
-
-		err = hostProfile.Transform(cfg)
+		output, err = setConfig(r, "Experimental.Analytics", true)
 		if err != nil {
 			return err
 		}
 
-		err = r.SetConfig(cfg)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &ConfigField{"Experimental.Analytics", true})
+		return cmds.EmitOnce(res, output)
 	},
 }
 
@@ -438,13 +430,14 @@ By setting the configuration value to 'false', you disable the collection of the
 			return err
 		}
 
-		cfg, err := n.Repo.Config()
+		config, err := n.Repo.Config()
 		if err != nil {
 			return err
 		}
 
-		cfg.Experimental.Analytics = false
-		cfg.Experimental.StorageHostEnabled = false // no longer storing files
+		config.Experimental.Analytics = false
+
+		var output *ConfigField
 
 		cfgRoot, err := cmdenv.GetConfigRoot(env)
 		if err != nil {
@@ -455,12 +448,12 @@ By setting the configuration value to 'false', you disable the collection of the
 			return err
 		}
 
-		err = r.SetConfig(cfg)
+		output, err = setConfig(r, "Experimental.Analytics", false)
 		if err != nil {
 			return err
 		}
 
-		return cmds.EmitOnce(res, &ConfigField{"Experimental.Analytics", false})
+		return cmds.EmitOnce(res, output)
 	},
 }
 
