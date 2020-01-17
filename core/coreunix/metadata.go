@@ -30,6 +30,7 @@ import (
 // MetaModifier contains the options to the `metadata` command.
 type MetaModifier struct {
 	*Adder
+	Overwrite bool
 }
 
 func NewMetaModifier(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAGService) (*MetaModifier, error) {
@@ -37,7 +38,8 @@ func NewMetaModifier(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds i
 	if err != nil {
 		return nil, err
 	}
-	return &MetaModifier{adder}, nil
+
+	return &MetaModifier{adder, false}, nil
 }
 
 // Add metadata to the given DAG root node for a BTFS file.
@@ -62,6 +64,11 @@ func (modifier *MetaModifier) AddMetaAndPin(node ipld.Node) (ipld.Node, ipath.Re
 	}
 
 	nd, err := root.GetNode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -215,7 +222,6 @@ func (modifier *MetaModifier) RemoveMetaAndPin(node ipld.Node) (ipld.Node, ipath
 			modifier.unlocker.Unlock()
 		}
 	}()
-
 	p, err := modifier.removeMetaItemsFromFileNode(node)
 	if err != nil {
 		return nil, nil, err
@@ -227,6 +233,11 @@ func (modifier *MetaModifier) RemoveMetaAndPin(node ipld.Node) (ipld.Node, ipath
 	}
 
 	nd, err := root.GetNode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -322,7 +333,7 @@ func (modifier *MetaModifier) buildMetaDagModifier(nd ipld.Node, mnode ipld.Node
 	}
 
 	// Finally create a Meta Dag Modifier
-	mdagmod := mod.NewMetaDagModifierBalanced(dagmod, db)
+	mdagmod := mod.NewMetaDagModifierBalanced(dagmod, db, modifier.Overwrite)
 
 	return mdagmod, nil
 }

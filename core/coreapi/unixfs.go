@@ -425,6 +425,7 @@ func (api *UnixfsAPI) AddMetadata(ctx context.Context, p path.Path, m string, op
 	}
 
 	metaModifier.Pin = settings.Pin
+	metaModifier.Overwrite = settings.Overwrite
 
 	ses := api.core().getSession(ctx)
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/pin/gc"
 
 	"io"
 	"io/ioutil"
@@ -252,7 +253,30 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, r
 	return ipath.IpfsPath(addedFileHash), nil
 }
 
-func addMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path, error) {
+func verifyUnpinViaGC(node *core.IpfsNode, removed ipld.Node) error {
+	var gcOutput <-chan gc.Result
+	gcStarted := make(chan struct{})
+	go func() {
+		defer close(gcStarted)
+		gcOutput = gc.GC(context.Background(), node.Blockstore, node.Repo.Datastore(), node.Pinning, nil)
+	}()
+
+	<-gcStarted
+
+	removedHashes := make(map[string]struct{})
+	for item := range gcOutput {
+		if item.Error != nil {
+			return item.Error
+		}
+		removedHashes[item.KeyRemoved.String()] = struct{}{}
+	}
+	if _, found := removedHashes[removed.Cid().String()]; !found {
+		return errors.New("Previous node not gc'ed")
+	}
+	return nil
+}
+
+func addMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillBeUnpinned bool) (ipath.Path, error) {
 	api, err := coreapi.NewCoreAPI(node)
 	if err != nil {
 		return nil, err
@@ -272,16 +296,19 @@ func addMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path,
 		return nil, err
 	}
 	modifier.Out = output
+	modifier.Overwrite = true
 	metaBytes := []byte(meta)
 	modifier.TokenMetadata = string(metaBytes)
 
+	var n ipld.Node
 	go func() {
 		defer close(output)
-		n, _, err := modifier.AddMetaAndPin(nd)
+		n, _, err = modifier.AddMetaAndPin(nd)
 		if err != nil {
 			output <- err
+		} else {
+			modifier.Out <- n.Cid()
 		}
-		modifier.Out <- n.Cid()
 	}()
 
 	var modifiedFileHash cid.Cid
@@ -294,6 +321,13 @@ func addMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path,
 		modifiedFileHash = o.(cid.Cid)
 	case <-ctx.Done():
 		return nil, ctx.Err()
+	}
+
+	if rootWillBeUnpinned {
+		err = verifyUnpinViaGC(node, nd)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return ipath.IpfsPath(modifiedFileHash), nil
@@ -356,7 +390,7 @@ func TestAppendMetadata(t *testing.T) {
 	}
 
 	// Append token metadata to the BTFS file.
-	p, err := addMetadata(node, path, fmt.Sprintf(`{"number":%d}`, 1234))
+	p, err := addMetadata(node, path, fmt.Sprintf(`{"number":%d}`, 1234), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +430,7 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 
 	// Add token metadata to the BTFS file without existing metadata.
 	expected := `{"number":2368}#{}`
-	p, err := addMetadata(node, path, `{"number":2368}`)
+	p, err := addMetadata(node, path, `{"number":2368}`, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +474,7 @@ func TestUpdateMetadata(t *testing.T) {
 	}
 
 	// Append token metadata to the BTFS file.
-	p, err := addMetadata(node, path, `{"price":23.56,"number":4356,"NewItem":"justSave"}`)
+	p, err := addMetadata(node, path, `{"price":23.56,"number":4356,"NewItem":"justSave"}`, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -456,7 +490,7 @@ func TestUpdateMetadata(t *testing.T) {
 
 // removeMetadata removes the metadata items for the key values from the given `meta` string.
 // `meta` will have a format of key list. E.g., "price,nodeId".
-func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Path, error) {
+func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWilBeUnpinned bool) (ipath.Path, error) {
 	api, err := coreapi.NewCoreAPI(node)
 	if err != nil {
 		return nil, err
@@ -478,13 +512,15 @@ func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Pa
 	modifier.Out = output
 	modifier.TokenMetadata = meta
 
+	var n ipld.Node
 	go func() {
 		defer close(output)
-		n, _, err := modifier.RemoveMetaAndPin(nd)
+		n, _, err = modifier.RemoveMetaAndPin(nd)
 		if err != nil {
 			output <- err
+		} else {
+			modifier.Out <- n.Cid()
 		}
-		modifier.Out <- n.Cid()
 	}()
 
 	var modifiedFileHash cid.Cid
@@ -499,6 +535,12 @@ func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string) (ipath.Pa
 		return nil, ctx.Err()
 	}
 
+	if rootWilBeUnpinned {
+		err = verifyUnpinViaGC(node, nd)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return ipath.IpfsPath(modifiedFileHash), nil
 }
 func TestRemoveMetadata(t *testing.T) {
@@ -525,7 +567,7 @@ func TestRemoveMetadata(t *testing.T) {
 	}
 
 	// Append token metadata to the BTFS file.
-	p, err := removeMetadata(node, path, `price,id`)
+	p, err := removeMetadata(node, path, `price,id`, true)
 	if err != nil {
 		t.Fatal(err)
 	}
