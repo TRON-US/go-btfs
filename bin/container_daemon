@@ -17,6 +17,11 @@ fi
 # 2nd invocation with regular user
 btfs version
 
+# remove data folder to keep config consistent on restart
+if [ -n "$BTFS_ENV" ]; then
+  rm -rf $repo/*
+fi
+
 if [ -e "$repo/config" ]; then
   echo "Found BTFS fs-repo at $repo"
 else
