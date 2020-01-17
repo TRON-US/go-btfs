@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/pin/gc"
 
 	"io"
 	"io/ioutil"
 	"testing"
 	"time"
 
+	"github.com/TRON-US/go-btfs/pin/gc"
 	ft "github.com/TRON-US/go-unixfs"
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
@@ -490,7 +490,7 @@ func TestUpdateMetadata(t *testing.T) {
 
 // removeMetadata removes the metadata items for the key values from the given `meta` string.
 // `meta` will have a format of key list. E.g., "price,nodeId".
-func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWilBeUnpinned bool) (ipath.Path, error) {
+func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillBeUnpinned bool) (ipath.Path, error) {
 	api, err := coreapi.NewCoreAPI(node)
 	if err != nil {
 		return nil, err
@@ -535,7 +535,7 @@ func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWilBe
 		return nil, ctx.Err()
 	}
 
-	if rootWilBeUnpinned {
+	if rootWillBeUnpinned {
 		err = verifyUnpinViaGC(node, nd)
 		if err != nil {
 			return nil, err

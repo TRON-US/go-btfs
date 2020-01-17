@@ -68,9 +68,11 @@ func (modifier *MetaModifier) AddMetaAndPin(node ipld.Node) (ipld.Node, ipath.Re
 		return nil, nil, err
 	}
 
-	err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
-	if err != nil {
-		return nil, nil, err
+	if node.Cid() != nd.Cid() {
+		err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if !modifier.Pin {
@@ -237,9 +239,11 @@ func (modifier *MetaModifier) RemoveMetaAndPin(node ipld.Node) (ipld.Node, ipath
 		return nil, nil, err
 	}
 
-	err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
-	if err != nil {
-		return nil, nil, err
+	if node.Cid() != nd.Cid() {
+		err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if !modifier.Pin {
