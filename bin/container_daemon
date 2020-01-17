@@ -17,6 +17,11 @@ fi
 # 2nd invocation with regular user
 btfs version
 
+# remove data folder to keep config consistent on restart
+if [ -n "$BTFS_ENV" ]; then
+  rm -rf $repo/*
+fi
+
 if [ -e "$repo/config" ]; then
   echo "Found BTFS fs-repo at $repo"
 else
@@ -28,11 +33,11 @@ else
   if [ "$BTFS_ENV" == "dev" ] || [ "$BTFS_ENV" == "staging" ]; then
     btfs config profile apply storage-client-dev
     btfs config --bool Experimental.Analytics true
-    btfs config Datastore.StorageMax 500GB
+    btfs config Datastore.StorageMax 500GiB
   elif [ "$BTFS_ENV" == "production" ]; then
     btfs config profile apply storage-client
     btfs config --bool Experimental.Analytics true
-    btfs config Datastore.StorageMax 10TB
+    btfs config Datastore.StorageMax 10TiB
   fi
   btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
   btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
