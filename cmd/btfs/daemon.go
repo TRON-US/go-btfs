@@ -248,8 +248,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// first, whether user has provided the initialization flag. we may be
 	// running in an uninitialized state.
 	initialize, _ := req.Options[initOptionKwd].(bool)
+	inited := false
 	if initialize {
-
 		cfg := cctx.ConfigRoot
 		if !fsrepo.IsInitialized(cfg) {
 			profiles, _ := req.Options[initProfileOptionKwd].(string)
@@ -258,6 +258,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 			if err != nil {
 				return err
 			}
+			inited = true
 		}
 	}
 
@@ -307,7 +308,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		return err
 	}
 
-	migrated := config.MigrateConfig(cfg)
+	hValue, hasHval := req.Options[hValueKwd].(string)
+
+	migrated := config.MigrateConfig(cfg, inited, hasHval)
 	if migrated {
 		// Flush changes if migrated
 		err = repo.SetConfig(cfg)
@@ -320,7 +323,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
 	mplex, _ := req.Options[enableMultiplexKwd].(bool)
-	hValue, _ := req.Options[hValueKwd].(string)
 
 	// Btfs auto update.
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
