@@ -20,7 +20,7 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
 
 ## Install
 
-The download and install instructions for BTFS are over at: https://docs.btfs.io/docs/install-btfs-1. 
+The download and install instructions for BTFS are over at: https://docs.btfs.io/docs/btfs-demo. 
 
 ### System Requirements
 
