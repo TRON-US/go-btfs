@@ -4,7 +4,10 @@
 
 BitTorrent File System (BTFS) is a protocol forked from 
 IPFS that utilizes the TRON network and the BitTorrent Ecosystem for integration with DApps and smart 
-contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation</a> walks developers through BTFS setup, usage, and contains all the API references.  
+contracts. 
+
+* The <a href="https://docs.btfs.io/" target="_blank">API documentation</a> walks developers through BTFS setup, usage, and API references. 
+* Please join the BTFS community at https://discord.gg/PQWfzWS.   
 
 ## Table of Contents
 
@@ -20,7 +23,7 @@ contracts. The <a href="https://docs.btfs.io/" target="_blank">API documentation
 
 ## Install
 
-The download and install instructions for BTFS are over at: https://docs.btfs.io/docs/install-btfs-1. 
+The download and install instructions for BTFS are over at: https://docs.btfs.io/docs/btfs-demo. 
 
 ### System Requirements
 
