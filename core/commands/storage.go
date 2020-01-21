@@ -240,7 +240,7 @@ Use status command to check for completion:
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(storage.InitStatus)
-		go controlSessionTimeout(ss)
+		go controlSessionTimeout(ss, storage.StdSessionStateFlow[0:])
 
 		// get hosts/peers
 		var peers []string
@@ -349,10 +349,10 @@ func getContractSizeFromCid(ctx context.Context, hash cidlib.Cid, api coreiface.
 	return ipldNode.Size()
 }
 
-func controlSessionTimeout(ss *storage.FileContracts) {
+func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowControl) {
 	// error is special std flow, will not be counted in here
 	// and complete status don't need to wait for signal coming
-	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-2; {
+	for curStatus := 0; curStatus < len(stateFlow)-2; {
 		select {
 		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {
@@ -365,7 +365,7 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 				ss.SetStatusWithError(storage.ErrStatus, sessionState.Err)
 				return
 			}
-		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
+		case <-time.After(stateFlow[curStatus].TimeOut):
 			ss.SetStatusWithError(storage.ErrStatus, fmt.Errorf("timed out"))
 			return
 		}
@@ -866,7 +866,7 @@ the shard and replies back to client for the next challenge step.`,
 		ss.SetFileHash(fileHash)
 		// TODO: set host shard state in the following steps
 		// TODO: maybe extract code on renter step timeout control and reuse it here
-		go controlSessionTimeout(ss)
+		go controlSessionTimeout(ss, storage.StdStateFlow[0:])
 		halfSignedGuardContract, err := guard.UnmarshalGuardContract([]byte(halfSignedGuardContBytes))
 		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen), halfSignedGuardContract.ContractId)
 		if err != nil {
