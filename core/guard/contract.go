@@ -208,13 +208,11 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 
 	fileStatus, err := NewFileStatus(ss, contracts, configuration)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
 	sign, err := crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	if fileStatus.PreparerPid == fileStatus.RenterPid {
@@ -226,7 +224,6 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 
 	err = submitFileStatus(ctx, configuration, fileStatus)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
