@@ -5,48 +5,24 @@ MAINTAINER TRON-US <support@tron.network>
 
 ENV SRC_DIR /go-btfs
 ENV TEST_NO_FUSE 1
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 #set timeout value for unit tests
 ENV GOTFLAGS -timeout 3m
 
-# Download packages first so they can be cached.
-COPY go.mod go.sum $SRC_DIR/
-RUN cd $SRC_DIR \
-  && go mod download
-
-COPY . $SRC_DIR
-
 # Install patch
 RUN apt-get update && apt-get install -y patch
 
-# Install FUSE
-RUN apt-get update && apt-get install -y fuse
-
-# Do this in the current container
-RUN mv /bin/fusermount /usr/local/bin/fusermount
-
-# Add suid bit on fusermount so it will run properly
-RUN chmod 4755 /usr/local/bin/fusermount
-
-# Create the fs-repo directory and switch to a non-privileged user.
-ENV BTFS_PATH /data/btfs
-RUN mkdir -p $BTFS_PATH
-
-# Create mount points for `btfs mount` command
-RUN mkdir /btfs /btns
-
-# Expose the fs-repo as a volume.
-# start_btfs initializes an fs-repo if none is mounted.
-# Important this happens after the USER directive so permission are correct.
-VOLUME $BTFS_PATH
-
-# The default logging level
-ENV BTFS_LOGGING ""
-ENV PATH="/usr/local/go/bin:${PATH}"
-
 WORKDIR /go-btfs
-RUN git init
-RUN git add .
+
+# Download packages first so they can be cached.
+COPY go.mod go.sum $SRC_DIR/
+
+RUN go mod download 
+
+COPY . .
+
+RUN git init && git add .
 
 # by default lets run the go fmt, tidy and unit tests
-CMD make test_go_fmt test_go_mod test_go_test 
+CMD make test_go_fmt test_go_mod test_go_test build
