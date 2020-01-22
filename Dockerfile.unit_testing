@@ -20,7 +20,7 @@ COPY go.mod go.sum $SRC_DIR/
 
 RUN go mod download 
 
-COPY . .
+COPY . $SRC_DIR
 
 RUN git init && git add .
 
