@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -440,7 +439,6 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						// if client itself has some error, no matter how many times it tries,
 						// it will fail again, in this case, we don't need retry
 						if shardRes.ClientErr != nil {
-							log.Error(shardRes.ClientErr)
 							sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, shardRes.ClientErr)
 							return
 						}
@@ -478,6 +476,9 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 }
 
 func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error) {
+	if err != nil {
+		log.Error("session error:", err)
+	}
 	channel <- storage.StatusChan{
 		CurrentStep: status,
 		Succeed:     succeed,
@@ -486,6 +487,12 @@ func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed 
 }
 
 func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed bool, clientErr error, hostErr error) {
+	if clientErr != nil {
+		log.Error("renter error:", clientErr)
+	}
+	if hostErr != nil {
+		log.Error("host error:", hostErr)
+	}
 	channel <- &storage.StepRetryChan{
 		CurrentStep: state,
 		Succeed:     succeed,
@@ -632,7 +639,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
-		signedContract := []byte(req.Arguments[3])
+		escrowContractBytes := []byte(req.Arguments[3])
 		guardContractBytes := []byte(req.Arguments[4])
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
@@ -660,8 +667,8 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		ok, err := ss.IncrementContract(shardHash, shardIndex, signedContract, guardContract)
-		if err != nil || !ok {
+		err = ss.IncrementContract(shard, escrowContractBytes, guardContract)
+		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
@@ -678,34 +685,31 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 			contracts, totalPrice, err := storage.PrepareContractFromShard(ss.ShardInfo)
 			if err != nil {
-				log.Error(err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			// check account balance, if not enough for the totalPrice do not submit to escrow
 			balance, err := escrow.Balance(req.Context, cfg)
 			if err != nil {
-				log.Error("get renter account balance failed, ", err)
+				err = fmt.Errorf("get renter account balance failed [%v]", err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			if balance < totalPrice {
-				log.Error("not enough balance to submit contract, current balance is ", balance)
+				err = fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return errors.New("not enough balance to submit contract")
+				return err
 			}
 
 			contractRequest, err = escrow.NewContractRequest(cfg, contracts, totalPrice)
 			if err != nil {
-				log.Error(err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
 			if err != nil {
-				log.Error(err)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false,
-					fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
+				err = fmt.Errorf("failed to submit contracts to escrow: [%v]", err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
@@ -728,53 +732,46 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
 		return
 	}
 	payerPubKey := payerPrivKey.GetPublic()
 	payinRequest, err := escrow.NewPayinRequest(response, payerPubKey, payerPrivKey)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
 		return
 	}
 	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
 	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false,
-			fmt.Errorf("failed to pay in to escrow: [%v]", err))
+		err = fmt.Errorf("failed to pay in to escrow: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, true, nil)
 
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
-			fmt.Errorf("failed to send file meta to guard: [%v]", err))
+		err = fmt.Errorf("failed to send file meta to guard: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
 	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
-			fmt.Errorf("failed to send challenge questions to guard: [%v]", err))
+		err = fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, true, nil)
@@ -920,12 +917,12 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
-	marshaledSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
+	signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
+	signedGuardContractBytes, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
 		n.PrivateKey, false, false, pid.Pretty(), pid.Pretty())
 	if err != nil {
 		log.Error(err)
@@ -936,9 +933,16 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		ss.ID,
 		shardInfo.ShardHash.String(),
 		strconv.Itoa(shardInfo.ShardIndex),
-		marshaledSignedEscrowContract,
-		marshaledSignedGuardContract,
+		signedEscrowContractBytes,
+		signedGuardContractBytes,
 	)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// set contracts since renter has received contracts
+	err = ss.IncrementContract(shardInfo, signedEscrowContractBytes, guardSignedContract)
 	if err != nil {
 		log.Error(err)
 		return
@@ -966,7 +970,7 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		return
 	}
 
-	downloadShardFromClient(n, api, ss, shardInfo)
+	downloadShardFromClient(n, api, ss, guardSignedContract, shardInfo)
 }
 
 // call escrow service to check if payment is received or not
@@ -1004,14 +1008,8 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 }
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
-	shardInfo *storage.Shard) {
-	contracts := ss.GetGuardContracts()
-	if len(contracts) == 0 {
-		log.Error("No guard contract available")
-		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
-		return
-	}
-	expir := uint64(contracts[0].RentEnd.Unix())
+	guardContract *guardpb.Contract, shardInfo *storage.Shard) {
+	expir := uint64(guardContract.RentEnd.Unix())
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
