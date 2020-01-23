@@ -639,7 +639,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
-		signedContract := []byte(req.Arguments[3])
+		escrowContractBytes := []byte(req.Arguments[3])
 		guardContractBytes := []byte(req.Arguments[4])
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
@@ -667,8 +667,8 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		ok, err := ss.IncrementContract(shardHash, shardIndex, signedContract, guardContract)
-		if err != nil || !ok {
+		err = ss.IncrementContract(shard, escrowContractBytes, guardContract)
+		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
@@ -917,12 +917,12 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
-	marshaledSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
+	signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
+	signedGuardContractBytes, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
 		n.PrivateKey, false, false, pid.Pretty(), pid.Pretty())
 	if err != nil {
 		log.Error(err)
@@ -933,9 +933,16 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		ss.ID,
 		shardInfo.ShardHash.String(),
 		strconv.Itoa(shardInfo.ShardIndex),
-		marshaledSignedEscrowContract,
-		marshaledSignedGuardContract,
+		signedEscrowContractBytes,
+		signedGuardContractBytes,
 	)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// set contracts since renter has received contracts
+	err = ss.IncrementContract(shardInfo, signedEscrowContractBytes, guardSignedContract)
 	if err != nil {
 		log.Error(err)
 		return
@@ -963,7 +970,7 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		return
 	}
 
-	downloadShardFromClient(n, api, ss, shardInfo)
+	downloadShardFromClient(n, api, ss, guardSignedContract, shardInfo)
 }
 
 // call escrow service to check if payment is received or not
@@ -1001,14 +1008,8 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 }
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
-	shardInfo *storage.Shard) {
-	contracts := ss.GetGuardContracts()
-	if len(contracts) == 0 {
-		log.Error("No guard contract available")
-		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
-		return
-	}
-	expir := uint64(contracts[0].RentEnd.Unix())
+	guardContract *guardpb.Contract, shardInfo *storage.Shard) {
+	expir := uint64(guardContract.RentEnd.Unix())
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag

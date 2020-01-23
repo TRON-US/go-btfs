@@ -328,7 +328,6 @@ func (ss *FileContracts) GetCompleteShards() int {
 }
 
 func (ss *FileContracts) SetFileHash(fileHash cidlib.Cid) {
-
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -336,15 +335,14 @@ func (ss *FileContracts) SetFileHash(fileHash cidlib.Cid) {
 }
 
 func (ss *FileContracts) GetFileHash() cidlib.Cid {
-
 	ss.Lock()
 	defer ss.Unlock()
 
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(shardHash string, shardIndex int,
-	contracts []byte, guardContract *guardpb.Contract) (bool, error) {
+func (ss *FileContracts) IncrementContract(shard *Shard, signedEscrowContract []byte,
+	guardContract *guardpb.Contract) error {
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -352,18 +350,13 @@ func (ss *FileContracts) IncrementContract(shardHash string, shardIndex int,
 		ss.GuardContracts = make([]*guardpb.Contract, len(ss.ShardInfo))
 	}
 	// insert contract according to shard order
-	ss.GuardContracts[shardIndex] = guardContract
+	ss.GuardContracts[shard.ShardIndex] = guardContract
 
-	shardKey := GetShardKey(shardHash, shardIndex)
-	shard, ok := ss.ShardInfo[shardKey]
-	if !ok {
-		return false, fmt.Errorf("shard key does not exist: %s", shardKey)
-	}
-	if shard.SetSignedContract(contracts) {
+	if shard.SetSignedEscrowContract(signedEscrowContract) {
 		ss.CompleteContracts++
-		return true, nil
+		return nil
 	}
-	return false, nil
+	return fmt.Errorf("escrow contract is already set")
 }
 
 func (ss *FileContracts) GetGuardContracts() []*guardpb.Contract {
@@ -497,7 +490,7 @@ func (c *Shard) UpdateShard(recvPid peer.ID) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shard) SetSignedContract(contract []byte) bool {
+func (c *Shard) SetSignedEscrowContract(contract []byte) bool {
 	c.Lock()
 	defer c.Unlock()
 
