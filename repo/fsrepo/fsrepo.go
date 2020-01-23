@@ -63,9 +63,6 @@ func (err NoRepoError) Error() string {
 	return fmt.Sprintf("no BTFS repo found in %s.\nplease run: 'btfs init'", err.Path)
 }
 
-//Hardcoding default swarm key
-const defaultSwarmValue = "/key/swarm/psk/1.0.0/\n/base16/\n64ef95289a6b998c776927ed6e33ca8c9202ee47df90141d09f5ffeeb64b8a66"
-
 const apiFile = "api"
 const swarmKeyFile = "swarm.key"
 
@@ -691,10 +688,15 @@ func (r *FSRepo) SwarmKey() ([]byte, error) {
 
 	f, err := os.Open(spath)
 	if err != nil {
+		// If does not exist, use default key
 		if os.IsNotExist(err) {
-			err = nil
+			// Maybe migration has not completed, use default key
+			if r.config.Swarm.SwarmKey == "" {
+				return []byte(config.DefaultSwarmKey), nil
+			}
+			return []byte(r.config.Swarm.SwarmKey), nil
 		}
-		return []byte(defaultSwarmValue), err
+		return nil, err
 	}
 	defer f.Close()
 
