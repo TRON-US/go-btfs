@@ -245,7 +245,7 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool, expir ui
 	c := node.Cid()
 
 	if recurse {
-		if p.recursePin.Has(c) {
+		if p.recursePin.Has(c) && expir == 0 {
 			return nil
 		}
 
@@ -260,7 +260,7 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool, expir ui
 			return err
 		}
 
-		if p.recursePin.Has(c) {
+		if p.recursePin.Has(c) && expir == 0 {
 			return nil
 		}
 
@@ -269,7 +269,16 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool, expir ui
 		}
 
 		p.recursePin.Add(c)
-		p.recursePinMap.Add(c, expir)
+		if expir != 0 {
+			v, found := p.recursePinMap.Get(c)
+			if found {
+				// If existing expiration time is later than the given `expir`, return
+				if v.Expir >= expir {
+					return nil
+				}
+			}
+			p.recursePinMap.Add(c, expir)
+		}
 	} else {
 		p.lock.Unlock()
 		_, err := p.dserv.Get(ctx, c)
@@ -282,8 +291,20 @@ func (p *pinner) Pin(ctx context.Context, node ipld.Node, recurse bool, expir ui
 			return fmt.Errorf("%s already pinned recursively", c.String())
 		}
 
+		// Check if c is there and has expir. if yes, check existing expir and the given expir
+		// Add only if existing expir < expir
 		p.directPin.Add(c)
-		p.directPinMap.Add(c, expir)
+		if expir != 0 {
+			v, found := p.directPinMap.Get(c)
+			if found {
+				// If existing expiration time is later than the given `expir`, return
+				if v.Expir >= expir {
+					return nil
+				}
+			}
+			p.directPinMap.Add(c, expir)
+		}
+
 	}
 	return nil
 }
