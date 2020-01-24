@@ -15,12 +15,12 @@ cd ../btfs-binary-releases
 
 #delete existing files
 echo "=== Deleting old files ==="
-rm -r ./darwin/386/*
-rm -r ./darwin/amd64/*
-rm -r ./linux/386/*
-rm -r ./linux/amd64/*
-rm -r ./windows/386/*
-rm -r ./windows/amd64/*
+rm -rf ./darwin/386/*
+rm -rf ./darwin/amd64/*
+rm -rf ./linux/386/*
+rm -rf ./linux/amd64/*
+rm -rf ./windows/386/*
+rm -rf ./windows/amd64/*
 echo "=== Completed deleting old files ==="
 
 #download files for darwin and linux
