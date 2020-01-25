@@ -346,8 +346,11 @@ func (ss *FileContracts) IncrementContract(shard *Shard, signedEscrowContract []
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.GuardContracts == nil {
-		ss.GuardContracts = make([]*guardpb.Contract, len(ss.ShardInfo))
+	// expand guard contracts storage according to number of shards
+	if shard.ShardIndex >= len(ss.GuardContracts) {
+		gcs := make([]*guardpb.Contract, shard.ShardIndex+1)
+		copy(gcs, ss.GuardContracts)
+		ss.GuardContracts = gcs
 	}
 	// insert contract according to shard order
 	ss.GuardContracts[shard.ShardIndex] = guardContract
