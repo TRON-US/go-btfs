@@ -377,7 +377,7 @@ func (p *pinner) isPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 		if p.recursePinMap.IsExpired(rc) {
 			continue
 		}
-		has, err := hasChild(p.dserv, rc, c, visitedSet.Visit)
+		has, err := hasChild(p.internal, rc, c, visitedSet.Visit)
 		if err != nil {
 			return "", false, err
 		}
@@ -713,7 +713,7 @@ func (p *pinner) HasExpiration(c cid.Cid) (bool, error) {
 		if !p.recursePinMap.HasExpiration(k) {
 			continue
 		}
-		has, err := hasChild(p.dserv, k, c, visitedSet.Visit)
+		has, err := hasChild(p.internal, k, c, visitedSet.Visit)
 		if err != nil {
 			return false, err
 		}

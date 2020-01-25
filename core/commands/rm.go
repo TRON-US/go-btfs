@@ -34,7 +34,8 @@ var RmCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		api, err := cmdenv.GetApi(env, req)
+		// do not perform online operations for local delete
+		api, err := cmdenv.GetApi(env, req, options.Api.Offline(true), options.Api.FetchBlocks(false))
 		if err != nil {
 			return err
 		}
