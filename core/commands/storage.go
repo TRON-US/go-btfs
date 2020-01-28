@@ -1295,7 +1295,7 @@ This command print upload and payment status by the time queried.`,
 		if err != nil {
 			return err
 		}
-		if !cfg.Experimental.StorageClientEnabled || !cfg.Experimental.StorageHostEnabled {
+		if !cfg.Experimental.StorageClientEnabled && !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage client/host api not enabled")
 		}
 
