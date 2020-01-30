@@ -129,7 +129,7 @@ Use status command to check for completion:
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
-		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
+		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
 		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(repairModeOptionName, "repair mode").WithDefault(false),
 	},
@@ -328,7 +328,11 @@ Use status command to check for completion:
 				return err
 			}
 		}
-		testFlag := req.Options[testOnlyOptionName].(bool)
+		// set to false if not specified
+		testFlag := false
+		if req.Options[testOnlyOptionName] != nil {
+			testFlag = req.Options[testOnlyOptionName].(bool)
+		}
 		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode, renterPid.Pretty())
 
 		seRes := &UploadRes{
