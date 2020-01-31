@@ -587,6 +587,11 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				}
 				continue
 			}
+			addr, err := ma.NewMultiaddr("/p2p-circuit/btfs/" + pi.ID.String())
+			if err != nil {
+				return nil, err
+			}
+			pi.Addrs = append(pi.Addrs, addr)
 			if err := api.Swarm().Connect(ctx, *pi); err != nil {
 				// force connect again
 				if err := api.Swarm().Connect(ctx, *pi); err != nil {
