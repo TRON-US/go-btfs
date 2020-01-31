@@ -2,11 +2,9 @@ package remote
 
 import (
 	"context"
-	"github.com/TRON-US/go-btfs/core"
-	"github.com/cenkalti/backoff/v3"
-
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	cmdsHttp "github.com/TRON-US/go-btfs-cmds/http"
+	"github.com/TRON-US/go-btfs/core"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -28,13 +26,7 @@ func FindPeer(ctx context.Context, n *core.IpfsNode, pid string) (*peer.AddrInfo
 		log.Error("error decode:", pid, err)
 		return nil, err
 	}
-	var pinfo peer.AddrInfo
-	//FIXME
-	bo := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
-	err = backoff.Retry(func() error {
-		pinfo, err = n.Routing.FindPeer(ctx, id)
-		return err
-	}, bo)
+	pinfo, err := n.Routing.FindPeer(ctx, id)
 	if err != nil {
 		log.Error("error finding peer:", pinfo, err)
 		return nil, err
