@@ -21,7 +21,6 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
-	multiaddr "github.com/multiformats/go-multiaddr"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -588,7 +587,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				}
 				continue
 			}
-			addr, err := multiaddr.NewMultiaddr("/p2p-circuit/btfs/" + pi.ID.String())
+			addr, err := ma.NewMultiaddr("/p2p-circuit/btfs/" + pi.ID.String())
 			if err != nil {
 				return nil, err
 			}
