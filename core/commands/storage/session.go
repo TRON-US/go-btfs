@@ -152,10 +152,11 @@ func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
-	sm.Lock()
-	defer sm.Unlock()
+func (sm *SessionMap) GetSessionWithoutLock(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
+	return sm.doGetSession(node, prefix, ssID)
+}
 
+func (sm *SessionMap) doGetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
 	if sm.Map[ssID] == nil {
 		f, err := GetFileMetaFromDatastore(node, prefix, ssID)
 		if err != nil {
@@ -167,6 +168,12 @@ func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*Fil
 		return f, nil
 	}
 	return sm.Map[ssID], nil
+}
+
+func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
+	sm.Lock()
+	defer sm.Unlock()
+	return sm.doGetSession(node, prefix, ssID)
 }
 
 func (sm *SessionMap) GetOrDefault(ssID string, pid peer.ID) *FileContracts {
