@@ -167,13 +167,19 @@ func update(url, hval string) {
 		}
 
 		// Compare version.
-		flg, err := versionCompare(latestConfig.Version, version)
+		upgradeFlg, err := versionCompare(latestConfig.Version, version)
 		if err != nil {
 			log.Errorf("Version compare error, reasons: [%v]", err)
 			continue
 		}
 
-		if flg <= 0 {
+		if upgradeFlg == 0 {
+			fmt.Println("BTFS will not automatically update.")
+			sleepTimeSeconds = latestConfig.SleepTimeSeconds
+			continue
+		}
+
+		if upgradeFlg == -1 {
 			fmt.Println("BTFS is up-to-date.")
 			sleepTimeSeconds = latestConfig.SleepTimeSeconds
 			continue
@@ -361,6 +367,19 @@ func versionCompare(version1, version2 string) (int, error) {
 	if s2 == nil || len(s2) != 3 {
 		log.Error("String fo version2 has wrong format.")
 		return 0, errors.New("string fo version2 has wrong format")
+	}
+
+	// If the current config.yaml contains a dash in the last section
+	// then do not automatic update.
+	if strings.Contains(s2[2], "-") {
+		fmt.Println("BTFS config.yaml shows a dev version.")
+		return 0, nil
+	}
+	// If the newly downloaded config.yaml contains a dash in the last section
+	// then do not automatic update.
+	if strings.Contains(s1[2], "-") {
+		fmt.Println("BTFS upgrade config.yaml shows a dev version.")
+		return 0, nil
 	}
 
 	for i := 0; i < 3; i++ {
