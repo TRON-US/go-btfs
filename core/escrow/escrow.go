@@ -134,7 +134,7 @@ func SubmitContractToEscrow(ctx context.Context, configuration *config.Config,
 				return fmt.Errorf("escrow reponse is nil")
 			}
 			// verify
-			err = verifyEscrowRes(configuration, response.Result, response.EscrowSignature)
+			err = VerifyEscrowRes(configuration, response.Result, response.EscrowSignature)
 			if err != nil {
 				return fmt.Errorf("verify escrow failed %v", err)
 			}
@@ -143,7 +143,7 @@ func SubmitContractToEscrow(ctx context.Context, configuration *config.Config,
 	return response, err
 }
 
-func verifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error {
+func VerifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error {
 	escrowPubkey, err := ConvertPubKeyFromString(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return err
@@ -181,6 +181,7 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 	}, nil
 }
 
+
 func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRequest) (*escrowpb.SignedPayinResult, error) {
 	var signedPayinRes *escrowpb.SignedPayinResult
 	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
@@ -190,7 +191,7 @@ func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayi
 				log.Error(err)
 				return err
 			}
-			err = verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			err = VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
 			if err != nil {
 				log.Error(err)
 				return err
@@ -217,6 +218,23 @@ func SignContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *e
 		signedContract.BuyerSignature = sig
 	} else {
 		signedContract.SellerSignature = sig
+	}
+	signedBytes, err := proto.Marshal(signedContract)
+	if err != nil {
+		return nil, err
+	}
+	return signedBytes, nil
+}
+
+func SignContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, signedBytes []byte, signedContract *escrowpb.SignedEscrowContract,
+    isPayer bool) ([]byte, error) {
+	if signedContract == nil {
+		signedContract = NewSignedContract(unsignedContract)
+	}
+	if isPayer {
+		signedContract.BuyerSignature = signedBytes
+	} else {
+		signedContract.SellerSignature = signedBytes
 	}
 	signedBytes, err := proto.Marshal(signedContract)
 	if err != nil {
@@ -264,7 +282,7 @@ func IsPaidin(ctx context.Context, configuration *config.Config, contractID *esc
 			if err != nil {
 				return err
 			}
-			err = verifyEscrowRes(configuration, res.Status, res.EscrowSignature)
+			err = VerifyEscrowRes(configuration, res.Status, res.EscrowSignature)
 			if err != nil {
 				return err
 			}
@@ -306,7 +324,7 @@ func Balance(ctx context.Context, configuration *config.Config) (int64, error) {
 			if err != nil {
 				return err
 			}
-			err = verifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			err = VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
 			if err != nil {
 				return err
 			}

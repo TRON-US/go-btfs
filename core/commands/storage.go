@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
@@ -25,6 +27,7 @@ import (
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	"github.com/Workiva/go-datastructures/set"
@@ -52,6 +55,7 @@ const (
 	testOnlyOptionName            = "host-search-local"
 	storageLengthOptionName       = "storage-length"
 	repairModeOptionName          = "repair-mode"
+	offlinesignModeOptionName     = "offline-sign-mode"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -61,6 +65,13 @@ const (
 	FailLimit  = 3
 
 	bttTotalSupply uint64 = 990_000_000_000
+)
+
+const (
+	regularMode = iota
+	customMode
+	repairMode
+	offlineSignMode
 )
 
 // TODO: get/set the value from/in go-btfs-common
@@ -113,15 +124,22 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":         storageUploadInitCmd,
-		"recvcontract": storageUploadRecvContractCmd,
-		"status":       storageUploadStatusCmd,
+		"init":             storageUploadInitCmd,
+		"recvcontract":     storageUploadRecvContractCmd,
+		"status":           storageUploadStatusCmd,
+		"getcontractbatch": storageUploadGetContractBatchCmd,
+		"signbatch":        storageUploadSignbatchCmd,
+		"getunsigned":      storageUploadGetUnsignedCmd,
+		"sign":             storageUploadSignCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Add hash of file to upload."),
 		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
 		cmds.StringArg("renter-pid", false, false, "Original renter pid."),
 		cmds.StringArg("blacklist", false, false, "Blacklist of hosts when upload."),
+		cmds.StringArg("offline-peerid", false, false, "Peer id when offline upload."),
+		cmds.StringArg("offline-nouncets", false, false, "Nounce timestamp when offline upload."),
+		cmds.StringArg("offline-signature", false, false, "Session signature when offline upload."),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
@@ -132,6 +150,7 @@ Use status command to check for completion:
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
 		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(repairModeOptionName, "repair mode").WithDefault(false),
+		cmds.BoolOption(offlinesignModeOptionName, "offline sign mode").WithDefault(false),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -155,15 +174,25 @@ Use status command to check for completion:
 		}
 		// check file hash
 		var (
-			shardHashes []string
-			rootHash    cidlib.Cid
-			shardSize   uint64
-			blacklist   = set.New()
-			renterPid   = n.Identity
+			shardHashes         []string
+			rootHash            cidlib.Cid
+			shardSize           uint64
+			blacklist           = set.New()
+			renterPid           = n.Identity
+			offPeerId           peer.ID
+			offNonceTimestamp   uint64
+			offSessionSignature string
 		)
-		isRepairMode := req.Options[repairModeOptionName].(bool)
+		var runMode int
+		if isRepairMode := req.Options[repairModeOptionName].(bool); isRepairMode {
+			runMode = repairMode
+		}
+
 		lf := req.Options[leafHashOptionName].(bool)
-		if isRepairMode {
+		if isOfflineSign := req.Options[offlinesignModeOptionName].(bool); isOfflineSign {
+			runMode = offlineSignMode
+		}
+		if runMode == repairMode {
 			if len(req.Arguments) > 3 {
 				blacklistStr := req.Arguments[3]
 				for _, s := range strings.Split(blacklistStr, ",") {
@@ -193,14 +222,45 @@ Use status command to check for completion:
 			if err != nil {
 				return err
 			}
+		} else if runMode == offlineSignMode {
+			if len(req.Arguments) != 4 {
+				return fmt.Errorf("need file hash, offline-peer-id, offline-nounce-timestamp, and session-signature")
+			}
+			hashStr := req.Arguments[0]
+			rootHash, err = cidlib.Parse(hashStr)
+			if err != nil {
+				return err
+			}
+			hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+			if err != nil || len(hashes) == 0 {
+				return fmt.Errorf("invalid hash: %s", err)
+			}
+			// get shard size
+			shardSize, err = getContractSizeFromCid(req.Context, hashes[0], api)
+			if err != nil {
+				return err
+			}
+			for _, h := range hashes {
+				shardHashes = append(shardHashes, h.String())
+			}
+			offPeerId, err = peer.IDB58Decode(req.Arguments[1])
+			if err != nil {
+				return err
+			}
+			offNonceTimestamp, err = strconv.ParseUint(req.Arguments[2], 10, 64)
+			if err != nil {
+				return err
+			} else {
+				if offNonceTimestamp >= math.MaxUint64 {
+					return fmt.Errorf("nounce timestamp should be smaller than max of uint64")
+				}
+			}
+			offSessionSignature = req.Arguments[3]
 		} else if !lf {
 			if len(req.Arguments) != 1 {
 				return fmt.Errorf("need one and only one root file hash")
 			}
-			// get leaf hashes
-			hashStr := req.Arguments[0]
-			// convert to cid
-			rootHash, err = cidlib.Parse(hashStr)
+			rootHash, err = cidlib.Parse(req.Arguments[0])
 			if err != nil {
 				return err
 			}
@@ -238,7 +298,14 @@ Use status command to check for completion:
 		}
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(rootHash)
-		ss.SetStatus(storage.InitStatus)
+		ss.SetRunMode(runMode)
+		if runMode == offlineSignMode {
+			ss.OfflineCB = new(storage.OfflineControlBlock)
+			ss.SetStatus(storage.UninitializedStatus)
+			initOfflineSignChannels(ss)
+		} else {
+			ss.SetStatus(storage.InitStatus)
+		}
 		go controlSessionTimeout(ss, storage.StdSessionStateFlow[0:])
 
 		// get hosts/peers
@@ -321,6 +388,13 @@ Use status command to check for completion:
 		// retry queue need to be reused in proof cmd
 		ss.SetRetryQueue(retryQueue)
 
+		// set offline info items
+		if runMode == offlineSignMode {
+			ss.SetFOfflinePeerID(offPeerId)
+			ss.SetFOfflineNonceTimestamp(offNonceTimestamp)
+			ss.SetFOfflineSessionSignature(offSessionSignature)
+		}
+
 		// add shards into session
 		for shardIndex, shardHash := range shardHashes {
 			_, err := ss.GetOrDefault(shardHash, shardIndex, int64(shardSize), int64(storageLength), "")
@@ -333,7 +407,12 @@ Use status command to check for completion:
 		if req.Options[testOnlyOptionName] != nil {
 			testFlag = req.Options[testOnlyOptionName].(bool)
 		}
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode, renterPid.Pretty())
+
+		if runMode == offlineSignMode {
+			go retryMonitorOffSign(cfg, context.Background(), api, ss, n, ssID, testFlag, runMode, renterPid.Pretty())
+		} else {
+			go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, runMode, renterPid.Pretty())
+		}
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -341,6 +420,29 @@ Use status command to check for completion:
 		return res.Emit(seRes)
 	},
 	Type: UploadRes{},
+}
+
+func getShardInfo(req *cmds.Request, api coreiface.CoreAPI, n *core.IpfsNode, hashStr string) ([]string, uint64, error) {
+	var shardHashes []string
+	var shardSize uint64
+	// convert to cid
+	rootHash, err := cidlib.Parse(hashStr)
+	if err != nil {
+		return nil, 0, err
+	}
+	hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+	if err != nil || len(hashes) == 0 {
+		return nil, 0, fmt.Errorf("invalid hash: %s", err)
+	}
+	// get shard size
+	shardSize, err = getContractSizeFromCid(req.Context, hashes[0], api)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, h := range hashes {
+		shardHashes = append(shardHashes, h.String())
+	}
+	return shardHashes, shardSize, nil
 }
 
 func getContractSizeFromCid(ctx context.Context, hash cidlib.Cid, api coreiface.CoreAPI) (uint64, error) {
@@ -353,14 +455,20 @@ func getContractSizeFromCid(ctx context.Context, hash cidlib.Cid, api coreiface.
 }
 
 func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowControl) {
-	// error is special std flow, will not be counted in here
-	// and complete status don't need to wait for signal coming
-	for curStatus := 0; curStatus < len(stateFlow)-2; {
+	curStatus := 0  // 0 == storage.Uninitialized
+	LOOP:
+	for {
 		select {
 		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {
-				curStatus = sessionState.CurrentStep + 1
+				curStatus = moveToNextSessionStatus(ss.RunMode, curStatus, sessionState)
+				if curStatus > len(stateFlow) {
+					panic("stateFlow array access is not correct")
+				}
 				ss.SetStatus(curStatus)
+				if curStatus == storage.CompleteStatus {
+					break LOOP
+				}
 			} else {
 				if sessionState.Err == nil {
 					sessionState.Err = fmt.Errorf("unknown error, please file a bug report")
@@ -375,8 +483,33 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 	}
 }
 
+func moveToNextSessionStatus(runMode int, currStatus int, sessionState storage.StatusChan) (int) {
+	if runMode != offlineSignMode {
+		// If the current runMode is not offlineSignMode, then
+		// we need to skip offline sign mode related steps from the session status table.
+		// The following switch is doing that task.
+		switch sessionState.CurrentStep {
+		case storage.InitStatus:
+			return storage.SubmitStatus
+		case storage.SubmitStatus:
+			return storage.PayStatus
+		case storage.PayStatus:
+			return storage.GuardStatus
+		case storage.GuardStatus:
+			fmt.Println("complete")
+			return storage.CompleteStatus
+		}
+	}
+	return sessionState.CurrentStep + 1
+}
+
+// retryMonitor creates "retryQueue", and
+// loops over each shard: By preparing signed contracts, and
+// running each anonymous goroutine per Shard/Host to send
+// the contracts and set step status channel (i.e., Shard.RetryChan).
 func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
-	ssID string, test bool, isRepair bool, renterPid string) {
+	ssID string, test bool, runMode int, renterPid string) {
+
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -384,15 +517,15 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	}
 
 	// loop over each shard
-	for shardKey, shardInfo := range ss.ShardInfo {
-		go func(shardKey string, shardInfo *storage.Shard) {
-			shardIndex := shardInfo.ShardIndex
+	for shardKey, shard := range ss.ShardInfo {
+		go func(shardKey string, shard *storage.Shard) {
+			shardIndex := shard.ShardIndex
 			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
 			if err != nil {
 				return
 			}
 
-			shardInfo.SetPrice(candidateHost.Price)
+			shard.SetPrice(candidateHost.Price)
 			cfg, err := n.Repo.Config()
 			if err != nil {
 				return
@@ -403,7 +536,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 			if err != nil {
 				return
 			}
-			escrowContract, err := escrow.NewContract(cfg, shardInfo.ContractID, n, pid, shardInfo.TotalPay)
+			escrowContract, err := escrow.NewContract(cfg, shard.ContractID, n, pid, shard.TotalPay)
 			if err != nil {
 				log.Error("create escrow contract failed. ", err)
 				return
@@ -413,27 +546,27 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				log.Error("sign escrow contract and marshal failed ")
 				return
 			}
-			shardInfo.UpdateShard(pid)
+			shard.UpdateShard(pid)
 			guardContractMeta, err := guard.NewContract(ss, cfg, shardKey, int32(shardIndex), renterPid)
 			if err != nil {
 				log.Error("fail to new contract meta")
 				return
 			}
 			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true,
-				isRepair, renterPid, n.Identity.Pretty())
+				runMode == repairMode, renterPid, n.Identity.Pretty())
 			if err != nil {
 				log.Error("fail to sign guard contract and marshal")
 				return
 			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+			go retryProcess(ctx, n, api, candidateHost, ss, shard,
 				halfSignedEscrowContract, halfSignGuardContract, test)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
 			for curState := 0; curState < len(storage.StdStateFlow); {
 				select {
-				case shardRes := <-shardInfo.RetryChan:
+				case shardRes := <-shard.RetryChan:
 					if !shardRes.Succeed {
 						// receiving session time out signal, directly return
 						if shardRes.SessionTimeOutErr != nil {
@@ -454,7 +587,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+							go retryProcess(ctx, n, api, candidateHost, ss, shard,
 								halfSignedEscrowContract, halfSignGuardContract, test)
 						}
 					} else {
@@ -462,7 +595,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						log.Debug("succeed to pass state ", storage.StdStateFlow[curState].State)
 						curState = shardRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
-							shardInfo.SetState(curState)
+							shard.SetState(curState)
 						}
 					}
 				case <-time.After(storage.StdStateFlow[curState].TimeOut):
@@ -470,12 +603,186 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdStateFlow[curState].State)
 						curState = storage.InitState // reconnect to the host to start over
 						candidateHost.IncrementRetry()
-						go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
+						go retryProcess(ctx, n, api, candidateHost, ss, shard,
 							halfSignedEscrowContract, halfSignGuardContract, test)
 					}
 				}
 			}
-		}(shardKey, shardInfo)
+		}(shardKey, shard)
+	}
+}
+
+type paramsForPrepareContractsForShard struct {
+	ctx       context.Context
+	rq        *storage.RetryQueue
+	api       coreiface.CoreAPI
+	ss        *storage.FileContracts
+	n         *core.IpfsNode
+	test      bool
+	runMode   int
+	renterPid string
+	shardKey  string
+	shard     *storage.Shard
+}
+
+// prepareSignedContractsForShard, for online signing, computes and sets, as OUTPUT,
+// the given "param.shard"s entries: CandidateHost, HalfSignedEscrowContract, HalfSignGuardContract.
+func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard) (error) {
+	shard := param.shard
+	shardIndex := shard.ShardIndex
+	candidateHost, err := getValidHost(param.ctx, param.rq, param.api, param.n, param.test)
+	if err != nil {
+		return err
+	}
+
+	shard.SetPrice(candidateHost.Price)
+	cfg, err := param.n.Repo.Config()
+	if err != nil {
+		return err
+	}
+
+	// init escrow Contract
+	_, pid, err := ParsePeerParam(candidateHost.Identity)
+	if err != nil {
+		return err
+	}
+	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid, shard.TotalPay)
+	if err != nil {
+		log.Error("create escrow contract failed. ", err)
+		return err
+	}
+	halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, param.n.PrivateKey, true)
+	if err != nil {
+		log.Error("sign escrow contract and maorshal failed ")
+		return err
+	}
+	shard.UpdateShard(pid)
+	guardContractMeta, err := guard.NewContract(param.ss, cfg, param.shardKey, int32(shardIndex), param.renterPid)
+	if err != nil {
+		log.Error("fail to new contract meta")
+		return err
+	}
+	halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, param.n.PrivateKey, true,
+		param.runMode == repairMode, param.renterPid, param.n.Identity.Pretty())
+	if err != nil {
+		log.Error("fail to sign guard contract and marshal")
+		return err
+	}
+
+	// Output for this function is set here
+	shard.CandidateHost = candidateHost
+	shard.HalfSignedEscrowContract = halfSignedEscrowContract
+	shard.HalfSignedGuardContract = halfSignGuardContract
+
+	return nil
+}
+
+
+// retryMonitorOffSign creates "retryQueue", and
+// loops over each shard: By preparing unsigned contracts, and
+// running each anonymous goroutine per Shard/Host
+// to do offline signing based on session status with `OfflineSignChan` for communication,
+// and to send the contracts setting step status channel (i.e., Shard.RetryChan).
+// The current implementation covers the scenario that shard to host mapping is changed by retryProcessOffSign(),
+// in other words, host changes for a shard due to an error, for example, connecting to the host or init api fails.
+func retryMonitorOffSign(configuration *config.Config, ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
+	ssID string, test bool, runMode int, renterPid string) {
+
+	if runMode != offlineSignMode {
+		log.Error("Unexpected runMode parameter value.")
+		return
+	}
+
+	retryQueue := ss.GetRetryQueue()
+	if retryQueue == nil {
+		log.Error("retry queue is nil")
+		return
+	}
+
+	// loop over each shard
+	for shardKey, shard := range ss.ShardInfo {
+		go func(shardKey string, shard *storage.Shard) {
+			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
+			if err != nil {
+				return
+			}
+			shard.CandidateHost = candidateHost
+			param := &paramsForPrepareContractsForShard{
+				ctx:       ctx,
+				rq:        retryQueue,
+				api:       api,
+				ss:        ss,
+				n:         n,
+				test:      test,
+				runMode:   runMode,
+				renterPid: renterPid,
+				shardKey:  shardKey,
+				shard: shard,
+			}
+
+			err = prepareSignedContractsForEscrowOffSign(param, false)
+			if err != nil {
+				return
+			}
+
+			err = prepareSignedGuardContractForShardOffSign(ss, shard, n, false)
+			if err != nil {
+				return
+			}
+
+			err = buildSignedGuardContractForShardOffSign(ss, shard, n, runMode, renterPid, false)
+			if err != nil {
+				return
+			}
+
+			// build connection with host, init step, could be error or timeout
+			go retryProcessOffSign(configuration, param, candidateHost)
+
+			// monitor each shard state if error or time out happens, retry
+			for curState := storage.OfflineInitState; curState < len(storage.StdOffStateFlow); {
+				select {
+				case shardRes := <-shard.RetryChan:
+					if !shardRes.Succeed {
+						// receiving session time out signal, directly return
+						if shardRes.SessionTimeOutErr != nil {
+							log.Error(shardRes.SessionTimeOutErr)
+							return
+						}
+						// if client itself has some error, no matter how many times it tries,
+						// it will fail again, in this case, we don't need retry
+						if shardRes.ClientErr != nil {
+							log.Error(shardRes.ClientErr)
+							sendSessionStatusChan(ss.SessionStatusChan, storage.OfflineInitState, false, shardRes.ClientErr)
+							return
+						}
+						// if host error, retry
+						if shardRes.HostErr != nil {
+							log.Error(shardRes.HostErr)
+							// increment current host's retry times
+							candidateHost.IncrementRetry()
+							// if reach retry limit, in retry process will select another host
+							// so in channel receiving should also return to 'init'
+							curState = storage.OfflineInitState
+							go retryProcessOffSign(configuration, param, candidateHost)
+						}
+					} else {
+						// if success with current state, move on to next
+						log.Debug("succeed to pass state ", storage.StdOffStateFlow[curState].State)
+						curState = shardRes.CurrentStep + 1
+						if curState <= storage.OfflineCompleteState {
+							shard.SetState(curState)
+						}
+					}
+				case <-time.After(storage.StdOffStateFlow[curState].TimeOut):
+					{
+						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdOffStateFlow[curState].State)
+						curState = storage.OfflineInitState // reconnect to the host to start over
+						candidateHost.IncrementRetry()
+						go retryProcessOffSign(configuration, param, candidateHost)
+					}
+				}
+			}
+		}(shardKey, shard)
 	}
 }
 
@@ -555,7 +862,109 @@ func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 	}
 }
 
-// find next available host
+// retryProcessOffSign() behaves differently based on whether the host for shard is
+// changed inside this function regarding offline signing shard state transitions: i.e.,
+// it goes back to 0 if changed. Otherwise starts from 5(OfflineInitState).
+// If 0, retryProcessOffSign() performs init-sign.
+// TODO: check the possibility of a race condition like multiple instances for a shard. If yes, shard.Lock()/shard.Unlock()
+func retryProcessOffSign(configuration *config.Config, param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode) {
+	ss := param.ss
+	shard := param.shard
+
+	status := ss.GetCurrentStatus()
+	if status == storage.ErrStatus {
+		return
+	}
+
+	// check if current shard has been contacting and receiving results
+	if param.shard.GetState() >= storage.OfflineContractState {
+		return
+	}
+	// if candidate host passed in is not valid, fetch next valid one
+	var hostChanged bool
+	if candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
+		otherValidHost, err := getValidHost(param.ctx, ss.RetryQueue, param.api, param.n, param.test)
+		// either retry queue is empty or something wrong with retry queue
+		if err != nil {
+			sendStepStateChan(shard.RetryChan, storage.InitState, false, fmt.Errorf("no host available %v", err), nil)
+			return
+		}
+		candidateHost = otherValidHost
+		hostChanged = true
+	}
+
+	// If host is changed for the "shard", move the shard state to 0 and retry
+	if hostChanged  {
+		param.shard.CandidateHost = candidateHost
+
+		sendStepStateChan(shard.RetryChan, storage.OfflineUninitializedState, true, nil, nil)
+
+		// sendStepStateChan(shard.RetryChan, storage.InitState
+		err := prepareSignedContractsForEscrowOffSign(param, true)
+		if err != nil {
+			return
+		}
+
+		err = prepareSignedGuardContractForShardOffSign(ss, shard, param.n, true)
+		if err != nil {
+			return
+		}
+
+		err = buildSignedGuardContractForShardOffSign(ss, shard, param.n, param.runMode, param.renterPid, true)
+		if err != nil {
+			return
+		}
+	}
+
+	// parse candidate host's IP and get connected
+	_, hostPid, err := ParsePeerParam(candidateHost.Identity)
+	if err != nil {
+		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
+		return
+	}
+	// send over contract
+	c := new(guardpb.Contract)
+	err = proto.Unmarshal(shard.HalfSignedGuardContract, c)
+	if err != nil {
+		return
+	}
+	// temporary code
+	/*
+	privKey, err := configuration.Identity.DecodePrivateKey("")
+	if err != nil {
+		return
+	}
+	shard.HalfSignedEscrowContract, err = crypto.Sign(privKey, shard.UnsignedEscrowContract)
+	if err != nil {
+		return
+	}
+	shard.HalfSignedGuardContract, err = crypto.Sign(privKey, shard.UnsignedGuardContract)
+	if err != nil {
+		return
+	}
+	 */
+	_, err = remote.P2PCall(param.ctx, param.n, hostPid, "/storage/upload/init",
+		ss.ID,
+		ss.GetFileHash().String(),
+		shard.ShardHash.String(),
+		strconv.FormatInt(candidateHost.Price, 10),
+		shard.HalfSignedEscrowContract,
+		shard.HalfSignedGuardContract,
+		strconv.FormatInt(shard.StorageLength, 10),
+		strconv.FormatInt(shard.ShardSize, 10),
+		strconv.Itoa(shard.ShardIndex),
+	)
+	// fail to connect with retry
+	if err != nil {
+		sendStepStateChan(shard.RetryChan, storage.InitState, false, nil, err)
+	} else {
+		sendStepStateChan(shard.RetryChan, storage.InitState, true, nil, nil)
+	}
+}
+
+// find next available host in a forever loop.
+// Assumption is that the given retryQueue has enough hosts so as for the caller
+// to get a host everytime.
 func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI, n *core.IpfsNode, test bool) (*storage.HostNode, error) {
 	var candidateHost *storage.HostNode
 	for candidateHost == nil {
@@ -669,7 +1078,6 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		// TODO: For more secure, check if contracts are right or not
 		sendStepStateChan(shard.RetryChan, storage.ContractState, true, nil, nil)
 		guardContract, err := guard.UnmarshalGuardContract(guardContractBytes)
 		if err != nil {
@@ -690,50 +1098,77 @@ var storageUploadRecvContractCmd = &cmds.Command{
 
 		var contractRequest *escrowpb.EscrowContractRequest
 		if ss.GetCompleteContractNum() == len(ss.ShardInfo) {
-			// collecting all signed contracts means init status finished
-			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
-			contracts, totalPrice, err := storage.PrepareContractFromShard(ss.ShardInfo)
-			if err != nil {
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return err
+			if ss.RunMode != offlineSignMode {
+				err := payWithOnlineSign(req, cfg, n, env, ss, contractRequest)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := payWithOfflineSign(req, cfg, n, env, ss, contractRequest)
+				if err != nil {
+					return err
+				}
 			}
-			// check account balance, if not enough for the totalPrice do not submit to escrow
-			balance, err := escrow.Balance(req.Context, cfg)
-			if err != nil {
-				err = fmt.Errorf("get renter account balance failed [%v]", err)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return err
-			}
-			if balance < totalPrice {
-				err = fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return err
-			}
-
-			contractRequest, err = escrow.NewContractRequest(cfg, contracts, totalPrice)
-			if err != nil {
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return err
-			}
-			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
-			if err != nil {
-				err = fmt.Errorf("failed to submit contracts to escrow: [%v]", err)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return err
-			}
-			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
-
-			// get core api
-			api, err := cmdenv.GetApi(env, req)
-			if err != nil {
-				sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
-				return err
-			}
-
-			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
 		}
 		return nil
 	},
+}
+
+func payWithOnlineSign(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,
+	ss *storage.FileContracts, contractRequest *escrowpb.EscrowContractRequest) error {
+	// collecting all signed contracts means init status finished
+	sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
+	stepIdx := 0
+	fmt.Println("step ", stepIdx)
+	stepIdx++
+	contracts, totalPrice, err := storage.PrepareContractFromShard(ss.ShardInfo)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+		return err
+	}
+	fmt.Println("step ", stepIdx)
+	stepIdx++
+	// check account balance, if not enough for the totalPrice do not submit to escrow
+	balance, _ := escrow.Balance(req.Context, cfg)
+	if err != nil {
+		err = fmt.Errorf("get renter account balance failed [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+		return err
+	}
+	if balance < totalPrice {
+		err = fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+		return err
+	}
+	fmt.Println("step ", stepIdx)
+	stepIdx++
+	contractRequest, err = escrow.NewContractRequest(cfg, contracts, totalPrice)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+		return err
+	}
+	fmt.Println("step ", stepIdx)
+	stepIdx++
+	submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
+	if err != nil {
+		err = fmt.Errorf("failed to submit contracts to escrow: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
+		return err
+	}
+	fmt.Println("step ", stepIdx)
+	stepIdx++
+	sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
+
+	// get core api
+	api, err := cmdenv.GetApi(env, req)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
+		return err
+	}
+	fmt.Println("step ", stepIdx)
+	stepIdx++
+	go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
+	return nil
 }
 
 func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
@@ -757,30 +1192,112 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, true, nil)
-
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
 		err = fmt.Errorf("failed to send file meta to guard: [%v]", err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
-
 	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
 	if err != nil {
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
-
 	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
 	if err != nil {
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
-
 	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
 	if err != nil {
 		err = fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
+		return
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, true, nil)
+}
+
+func payWithOfflineSign(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,
+	ss *storage.FileContracts, contractRequest *escrowpb.EscrowContractRequest) error {
+	// collecting all signed contracts means init status finished
+	ss.NewOfflineUnsigned()
+	sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
+	contracts, totalPrice, err := storage.PrepareContractFromShard(ss.ShardInfo)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return err
+	}
+	// check account balance, if not enough for the totalPrice do not submit to escrow
+	balance, err := BalanceWithOffSign(req.Context, cfg, ss)
+	if err != nil {
+		err = fmt.Errorf("get renter account balance failed [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return err
+	}
+	if balance < totalPrice {
+		err = fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return err
+	}
+
+	contractRequest, err = NewContractRequestWithOffSign(cfg, ss, contracts, totalPrice)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return err
+	}
+	submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
+	if err != nil {
+		err = fmt.Errorf("failed to submit contracts to escrow: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return err
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, storage.PayChannelSignProcessStatus, true, nil)
+
+	// get core api
+	api, err := cmdenv.GetApi(env, req)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return err
+	}
+
+	go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
+	return nil
+}
+
+func payFullToEscrowAndSubmitToGuardOffSign(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI,
+	response *escrowpb.SignedSubmitContractResult, cfg *config.Config, ss *storage.FileContracts) {
+	payinRequest, err := NewPayinRequestOffSign(ss, response)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return
+	}
+	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
+	if err != nil {
+		err = fmt.Errorf("failed to pay in to escrow: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return
+	}
+	fsStatus, err := PrepAndUploadFileMetaOffSign(ctx, ss, response, payinRes, cfg)
+	if err != nil {
+		err = fmt.Errorf("failed to send file meta to guard: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, storage.PayReqSignProcessStatus, true, nil)
+	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return
+	}
+	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
+	if err != nil {
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
+		return
+	}
+	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
+	if err != nil {
+		err = fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), false, err)
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, true, nil)
@@ -1269,6 +1786,7 @@ $ btfs storage announce --host-storage-price=1`,
 type StatusRes struct {
 	Status   string
 	Message  string
+	RetrySignStatus string
 	FileHash string
 	Shards   map[string]*ShardStatus
 }
@@ -1310,6 +1828,7 @@ This command print upload and payment status by the time queried.`,
 
 		// get shards info from session
 		status.Status, status.Message = ss.GetStatusAndMessage()
+		status.RetrySignStatus = ss.RetrySignStatus
 		status.FileHash = ss.GetFileHash().String()
 		shards := make(map[string]*ShardStatus)
 		status.Shards = shards
@@ -1325,6 +1844,296 @@ This command print upload and payment status by the time queried.`,
 		return res.Emit(status)
 	},
 	Type: StatusRes{},
+}
+
+type GetContractBatchRes struct {
+	Contracts []*storage.Contract
+}
+
+var storageUploadGetContractBatchCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get all the contracts from the upload session	(From BTFS SDK application's perspective).",
+		ShortDescription: `
+This command (on client) reads the unsigned contracts and returns 
+the contracts to the caller.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
+		cmds.StringArg("session-status", true, false, "Current upload session status."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		batchRes := &GetContractBatchRes{}
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		ssID := req.Arguments[0]
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
+		if err != nil {
+			return err
+		}
+
+		status, _ := ss.GetStatus(ss.GetCurrentStatus())
+		if req.Arguments[4] != status {
+			return errors.New("unexpected session status from SDK during communication in offline signing")
+		}
+
+		// Get relevant contracts from ss and ss.ShardInfo
+		contracts := make([]*storage.Contract, len(ss.ShardInfo))
+		batchRes.Contracts = contracts
+		index := 0
+		for k, info := range ss.ShardInfo {
+			c := &storage.Contract{
+				Key: k,
+			}
+			// Set `c.Contract` according to the session status
+			switch status {
+			case "initSignReadyEscrow":
+				by, err := MarshalForSign(info.UnsignedEscrowContract)
+				if err != nil {
+					return err
+				}
+				c.ContractData = string(by)
+			case "initSignReadyGuard":
+				by, err := MarshalForSign(info.UnsignedGuardContract)
+				if err != nil {
+					return err
+				}
+				c.ContractData = string(by)
+			default:
+				return fmt.Errorf("unexpected session status %s in renter node", status)
+			}
+			contracts[index] = c
+			index++
+		}
+
+		// Change the status to the next to prevent another call of this endponnt by SDK library
+		sendSessionStatusChan(ss.SessionStatusChan, ss.GetCurrentStatus(), true, nil)
+
+		return res.Emit(batchRes)
+	},
+	Type: GetContractBatchRes{},
+}
+
+func MarshalForSign(message proto.Message) ([]byte, error){
+	raw, err := proto.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+var storageUploadSignbatchCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get all the contracts from the upload session	(From BTFS SDK application's perspective).",
+		ShortDescription: `
+This command (on client) reads the unsigned contracts and returns 
+the contracts to the caller.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
+		cmds.StringArg("session-status", true, false, "current upload session status."),
+		cmds.StringArg("signed-data-items", true, false, "signed data items."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		ssID := req.Arguments[0]
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
+		if err != nil {
+			return err
+		}
+		err = verifyReceivedMessage(req, ss)
+		if err != nil {
+			return err
+		}
+
+		// Set all the `shard.SignedBytes` from received signed data items.
+		var signedContracts []storage.Contract
+		receivedItemsString := req.Arguments[5]
+		err = json.Unmarshal([]byte(receivedItemsString), &signedContracts)
+		if err != nil {
+			return err
+		}
+		if len(signedContracts) != len(ss.ShardInfo) {
+			return fmt.Errorf("number of received signed data items %d does not match number of shards %d",
+				len(signedContracts), len(ss.ShardInfo))
+		}
+		for i := 0; i<len(ss.ShardInfo); i++ {
+			k := signedContracts[i].Key
+			shard, found := ss.ShardInfo[k]
+			if !found {
+				return fmt.Errorf("can not find an entry for key %s from ShardInfo map", k)
+			}
+			shard.SignedBytes = []byte(signedContracts[i].ContractData)
+		}
+
+		// Broadcast
+		currentStatus := ss.GetCurrentStatus()
+		switch currentStatus {
+		case storage.InitSignProcessForEscrowStatus:
+			close(ss.OfflineCB.OfflineSignEscrowChan)
+		case storage.InitSignProcessForGuardStatus:
+			close(ss.OfflineCB.OfflineSignGuardChan)
+		default:
+			return fmt.Errorf("unexpected session status %d", currentStatus)
+		}
+
+		return nil
+	},
+}
+
+func verifyReceivedMessage(req *cmds.Request, ss *storage.FileContracts) error {
+	offlinePeerID, err := peer.IDB58Decode(req.Arguments[1])
+	if err != nil {
+		return err
+	}
+	if ss.OfflineCB.OfflinePeerID != offlinePeerID {
+		return errors.New("peerIDs do not match")
+	}
+	offlineNonceTimestamp, err := strconv.ParseUint(req.Arguments[2], 10, 64)
+	if err != nil {
+		return err
+	}
+	if ss.OfflineCB.OfflineNonceTimestamp != offlineNonceTimestamp {
+		return errors.New("Nonce timestamps do not match")
+	}
+	offlineSessionSignature := req.Arguments[3]
+	if ss.OfflineCB.OfflineSessionSignature != offlineSessionSignature {
+		return errors.New("Session signature do not match")
+	}
+	return nil
+}
+
+var storageUploadGetUnsignedCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get all the contracts from the upload session	(From BTFS SDK application's perspective).",
+		ShortDescription: `
+This command (on client) reads the unsigned contracts and returns 
+the contracts to the caller.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
+		cmds.StringArg("session-status", true, false, "current upload session status."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		unsignedRes := &storage.GetUnsignedRes{}
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		ssID := req.Arguments[0]
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
+		if err != nil {
+			return err
+		}
+		err = verifyReceivedMessage(req, ss)
+		if err != nil {
+			return err
+		}
+
+		status, _ := ss.GetStatus(ss.GetCurrentStatus())
+		if req.Arguments[4] != status {
+			return errors.New("unexpected session status from SDK during communication in offline signing")
+		}
+
+		// Change the status to the next to prevent another call of this endponnt by SDK library
+		currentSessionStatus := ss.GetCurrentStatus()
+		sendSessionStatusChan(ss.SessionStatusChan, currentSessionStatus, true, nil)
+
+		return res.Emit(unsignedRes)
+	},
+	Type: storage.GetUnsignedRes{},
+}
+
+var storageUploadSignCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get all the contracts from the upload session	(From BTFS SDK application's perspective).",
+		ShortDescription: `
+This command (on client) reads the unsigned contracts and returns 
+the contracts to the caller.`,
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
+		cmds.StringArg("session-status", true, false, "current upload session status."),
+		cmds.StringArg("signed", true, false, "signed json data."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		ssID := req.Arguments[0]
+		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
+		if err != nil {
+			return err
+		}
+		err = verifyReceivedMessage(req, ss)
+		if err != nil {
+			return err
+		}
+
+		// Set the received `signed`.
+		if ss.OfflineCB == nil {
+			return errors.New("offline control block is nil")
+		}
+		ss.OfflineCB.OfflineSigned = req.Arguments[5]
+
+		// Broadcast
+		close(ss.OfflineCB.OfflinePaySignChan)
+
+		return nil
+	},
 }
 
 var storageChallengeCmd = &cmds.Command{
@@ -1468,4 +2277,358 @@ the challenge request back to the caller.`,
 		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
 	},
 	Type: StorageChallengeRes{},
+}
+
+// prepareSignedContractsForEscrowOffSign gets a valid host and
+// prepares unsigned escrow contract and unsigned quard contract.
+// Moves the session status to `InitSignReadyForEscrowStatus`.
+func prepareSignedContractsForEscrowOffSign(param *paramsForPrepareContractsForShard, retryCalling bool) (error) {
+	ss := param.ss
+	shard := param.shard
+	shardIndex := shard.ShardIndex
+
+
+	shard.SetPrice(shard.CandidateHost.Price)
+	cfg, err := param.n.Repo.Config()
+	if err != nil {
+		return err
+	}
+
+	// init escrow Contract
+	_, pid, err := ParsePeerParam(shard.CandidateHost.Identity)
+	if err != nil {
+		return err
+	}
+	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid, shard.TotalPay)
+	if err != nil {
+		log.Error("create escrow contract failed. ", err)
+		return err
+	}
+	shard.UpdateShard(pid)
+	guardContractMeta, err := guard.NewContract(param.ss, cfg, param.shardKey, int32(shardIndex), param.renterPid)
+	if err != nil {
+		log.Error("fail to new contract meta")
+		return err
+	}
+
+	// Output for this function is set here
+	shard.UnsignedEscrowContract = escrowContract
+	shard.UnsignedGuardContract = guardContractMeta
+
+	if !retryCalling {
+		// Change the session status to `InitSignReadyForEscrowStatus`.
+		ss.IncrementOffSignReadyShards()
+		if ss.GetOffSignReadyShards() == len(ss.ShardInfo) {
+			currentStatus := ss.GetCurrentStatus()
+			if currentStatus != storage.UninitializedStatus {
+				return fmt.Errorf("current status %d does not match expected UninitializedStatus", currentStatus)
+			}
+			// Reset variables for the next offline signing for the session
+			ss.SetOffSignReadyShards(0)
+			sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+		}
+	} else {
+		// Build a Contract and offer to the OffSignQueue
+
+		// Change shard status
+		// TODO: steve Do at the next .. Change offlineSigningStatus to ready
+	}
+
+	return nil
+}
+
+func initOfflineSignChannels(ss *storage.FileContracts) error {
+	if ss.RunMode != offlineSignMode {
+		return errors.New("it is not offline sign mode")
+	}
+	if ss.OfflineCB == nil {
+		return errors.New("offline control block is nil")
+	}
+	offCB := ss.OfflineCB
+	offCB.OfflineSignEscrowChan = nil
+	offCB.OfflineSignEscrowChan = make(chan string)
+	offCB.OfflineSignGuardChan = nil
+	offCB.OfflineSignGuardChan = make(chan string)
+	offCB.OfflineInitSigDoneChan = nil
+	offCB.OfflineInitSigDoneChan = make(chan string)
+	offCB.OfflinePaySignChan = nil
+	offCB.OfflinePaySignChan = make(chan string)
+
+	return nil
+}
+
+func resetPaySignChannel(ss *storage.FileContracts) error {
+	if ss.OfflineCB == nil {
+		return errors.New("offline control block is nil")
+	}
+	ss.OfflineCB.OfflinePaySignChan = nil
+	ss.OfflineCB.OfflinePaySignChan = make(chan string)
+
+	return nil
+}
+
+// prepareSignedGuardContractForShardOffSign waits for broadcast signal and
+// moves the session status to `InitSignReadyForGuardStatus`
+func prepareSignedGuardContractForShardOffSign(ss *storage.FileContracts, shard *storage.Shard, n *core.IpfsNode, retryCalling bool) error {
+	// "/storage/upload/getcontractbatch" and "/storage/upload/signedbatch" handlers perform responses
+	// to SDK application's requests and sets each `shard.HalfSignedEscrowContract` with signed bytes.
+	// The corresponding endpoint for `signedbatch` closes "ss.OfflineSignChan" to broadcast
+	// Here we wait for the broadcast signal.
+	select {
+	case <- ss.OfflineCB.OfflineSignEscrowChan:
+	}
+	var err error
+	shard.HalfSignedEscrowContract, err = escrow.SignContractAndMarshalOffSign(shard.UnsignedEscrowContract, shard.SignedBytes, nil, true)
+	if err != nil {
+		log.Error("sign escrow contract and maorshal failed ")
+		return err
+	}
+
+	// Output for this function is set here
+	//shard.HalfSignedEscrowContract = halfSignedEscrowContract
+	ss.IncrementOffSignReadyShards()
+	// moves the session status to `InitSignReadyForGuardStatus`
+	if ss.GetOffSignReadyShards() == len(ss.ShardInfo) {
+		if err != nil {
+			return err
+		}
+		currentStatus := ss.GetCurrentStatus()
+		if currentStatus != storage.InitSignProcessForEscrowStatus {
+			return fmt.Errorf("current status %d does not match expected InitSignProcessForEscrowStatus", currentStatus)
+		}
+		ss.SetOffSignReadyShards(0)
+		sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+	}
+	return nil
+}
+
+// buildSignedGuardContractForShardOffSign waits for broadcast signal,
+// builds halfSignedEscrowContract and moves the session status to `InitSignStatus`
+// moves the session status to `InitSignStatus`
+func buildSignedGuardContractForShardOffSign(ss *storage.FileContracts,
+	shard *storage.Shard, n *core.IpfsNode, runMode int, renterPid string, retryCalling bool) error {
+	// Wait for the broadcast signal by "/storage/upload/signedbatch" handler.
+	select {
+	case <- ss.OfflineCB.OfflineSignGuardChan:
+	}
+	var err error
+	shard.HalfSignedGuardContract, err =
+		guard.SignedContractAndMarshalOffSign(shard.UnsignedGuardContract, shard.SignedBytes, nil, true, runMode == repairMode, renterPid, n.Identity.Pretty())
+	if err != nil {
+		log.Error("sign guard contract and maorshal failed ")
+		return err
+	}
+
+	// moves the session status to `InitSignStatus`
+	ss.IncrementOffSignReadyShards()
+	if ss.GetOffSignReadyShards() == len(ss.ShardInfo) {
+		currentStatus := ss.GetCurrentStatus()
+		if currentStatus != storage.InitSignProcessForGuardStatus {
+			return fmt.Errorf("current status %d does not match expected InitSignProcessForGuardStatus", currentStatus)
+		}
+		sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+		close(ss.OfflineCB.OfflineInitSigDoneChan)
+	} else {
+		// Wait for the broadcast signal by the last goroutine
+		select {
+		case <- ss.OfflineCB.OfflineInitSigDoneChan:
+		}
+	}
+	return nil
+}
+
+// PerformBalanceOffSign moves the session status to
+// `BalanceSignReadyStatus` and get and return balance signed bytes
+func PerformBalanceOffSign(ss *storage.FileContracts) ([]byte, error) {
+	ss.ResetOfflineUnsigned()
+	ss.OfflineCB.OfflineUnsigned.Opcode = "balance"
+	currentStatus := ss.GetCurrentStatus()
+	if currentStatus != storage.SubmitStatus {
+		return nil, fmt.Errorf("current status %d does not match expected SubmitStatus", currentStatus)
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+	// Wait for the signal that indicates signed bytes are received.
+	select {
+	case <- ss.OfflineCB.OfflinePaySignChan:
+	}
+
+	resetPaySignChannel(ss)
+	return []byte(ss.OfflineCB.OfflineSigned), nil
+}
+
+// PerformPayChannelOffSign set up `ss.OfflineUnsigned`,
+// moves the session status to `PayChannelSignReadyStatus`,
+// and get and return pay channel signed bytes
+func PerformPayChannelOffSign(ss *storage.FileContracts, escrowAddress []byte, totalPrice int64) ([]byte, error) {
+	ss.ResetOfflineUnsigned()
+	ss.OfflineCB.OfflineUnsigned.Opcode = "paychannel"
+	ss.OfflineCB.OfflineUnsigned.Unsigned = string(escrowAddress)
+	ss.OfflineCB.OfflineUnsigned.Price = totalPrice
+	currentStatus := ss.GetCurrentStatus()
+	if currentStatus != storage.BalanceSignProcessStatus {
+		return nil, fmt.Errorf("current status %d does not match expected BalanceSignProcessStatus", currentStatus)
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+	// Wait for the signal that indicates signed bytes are received.
+	select {
+	case <- ss.OfflineCB.OfflinePaySignChan:
+	}
+
+	resetPaySignChannel(ss)
+	return []byte(ss.OfflineCB.OfflineSigned), nil
+}
+
+func PerformPayinRequestOffSign(ss *storage.FileContracts, result *escrowpb.SignedSubmitContractResult) ([]byte, error) {
+	ss.ResetOfflineUnsigned()
+	ss.OfflineCB.OfflineUnsigned.Opcode = "payrequest"
+	b, err := proto.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	ss.OfflineCB.OfflineUnsigned.Unsigned = string(b)
+
+	currentStatus := ss.GetCurrentStatus()
+	if currentStatus != storage.PayStatus {
+		return nil, fmt.Errorf("current status %d does not match expected PayStatus", currentStatus)
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+
+	// Wait for the signal that indicates signed bytes are received.
+	select {
+	case <- ss.OfflineCB.OfflinePaySignChan:
+	}
+
+	resetPaySignChannel(ss)
+	return []byte(ss.OfflineCB.OfflineSigned), nil
+}
+
+func PerformGuardFileMetaOffSign(ss *storage.FileContracts, meta *guardpb.FileStoreMeta) ([]byte, error) {
+	ss.ResetOfflineUnsigned()
+	ss.OfflineCB.OfflineUnsigned.Opcode = "guard"
+	b, err := proto.Marshal(meta)
+	if err != nil {
+		return nil, err
+	}
+	ss.OfflineCB.OfflineUnsigned.Unsigned = string(b)
+
+	currentStatus := ss.GetCurrentStatus()
+	if currentStatus != storage.PayReqSignProcessStatus {
+		return nil, fmt.Errorf("current status %d does not match expected PayReqSignProcessStatus", currentStatus)
+	}
+	sendSessionStatusChan(ss.SessionStatusChan, currentStatus, true, nil)
+
+	// Wait for the signal that indicates signed bytes are received.
+	select {
+	case <- ss.OfflineCB.OfflinePaySignChan:
+	}
+
+	resetPaySignChannel(ss)
+	return []byte(ss.OfflineCB.OfflineSigned), nil
+}
+
+func BalanceWithOffSign(ctx context.Context, configuration *config.Config, ss *storage.FileContracts) (int64, error) {
+	signed, err := PerformBalanceOffSign(ss)
+	if err != nil {
+		return 0, err
+	}
+
+	var lgSignedPubKey ledgerpb.SignedPublicKey
+	err = json.Unmarshal(signed, &lgSignedPubKey)
+	if err != nil {
+		return 0, err
+	}
+
+	var balance int64 = 0
+	err = grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			res, err := client.BalanceOf(ctx, &lgSignedPubKey)
+			if err != nil {
+				return err
+			}
+			err = escrow.VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			if err != nil {
+				return err
+			}
+			balance = res.Result.Balance
+			log.Debug("balanceof account is ", balance)
+			return nil
+		})
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
+}
+
+func NewContractRequestWithOffSign(configuration *config.Config, ss *storage.FileContracts, signedContracts []*escrowpb.SignedEscrowContract, totalPrice int64) (*escrowpb.EscrowContractRequest, error) {
+	escrowAddress, err := escrow.ConvertToAddress(configuration.Services.EscrowPubKeys[0])
+	if err != nil {
+		return nil, err
+	}
+	signed, err := PerformPayChannelOffSign(ss, escrowAddress, totalPrice)
+	if err != nil {
+		return nil, err
+	}
+
+	var signedChanCommit ledgerpb.SignedChannelCommit
+	err = proto.Unmarshal(signed, &signedChanCommit)
+	if err != nil {
+		return nil, err
+	}
+
+	return &escrowpb.EscrowContractRequest{
+		Contract:     signedContracts,
+		BuyerChannel: &signedChanCommit,
+	}, nil
+}
+
+func NewPayinRequestOffSign(ss *storage.FileContracts, result *escrowpb.SignedSubmitContractResult) (*escrowpb.SignedPayinRequest, error) {
+	signed, err := PerformPayinRequestOffSign(ss, result)
+	if err != nil {
+		return nil, err
+	}
+
+	signedPayInRequest := new(escrowpb.SignedPayinRequest)
+	err = proto.Unmarshal(signed, signedPayInRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return signedPayInRequest, nil
+}
+
+func PrepAndUploadFileMetaOffSign(ctx context.Context, ss *storage.FileContracts,
+	escrowResults *escrowpb.SignedSubmitContractResult, payinRes *escrowpb.SignedPayinResult,
+	configuration *config.Config) (*guardpb.FileStoreStatus, error) {
+	// get escrow sig, add them to guard
+	contracts := ss.GetGuardContracts()
+	sig := payinRes.EscrowSignature
+	for _, guardContract := range contracts {
+		guardContract.EscrowSignature = sig
+		guardContract.EscrowSignedTime = payinRes.Result.EscrowSignedTime
+		guardContract.LastModifyTime = time.Now()
+	}
+
+	fileStatus, err := guard.NewFileStatus(ss, contracts, configuration)
+	if err != nil {
+		return nil, err
+	}
+
+	signed, err := PerformGuardFileMetaOffSign(ss, &fileStatus.FileStoreMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	if fileStatus.PreparerPid == fileStatus.RenterPid {
+		fileStatus.RenterSignature = signed
+	} else {
+		fileStatus.RenterSignature = signed
+		fileStatus.PreparerSignature = signed
+	}
+
+	err = guard.SubmitFileStatus(ctx, configuration, fileStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileStatus, nil
 }

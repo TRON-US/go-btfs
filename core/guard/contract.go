@@ -125,6 +125,30 @@ func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract
 	return proto.Marshal(cont)
 }
 
+func SignedContractAndMarshalOffSign(meta *guardPb.ContractMeta, signedBytes []byte, cont *guardPb.Contract,
+	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
+	if cont == nil {
+		cont = &guardPb.Contract{
+			ContractMeta:   *meta,
+			LastModifyTime: time.Now(),
+		}
+	} else {
+		cont.LastModifyTime = time.Now()
+	}
+	if isPayer {
+		cont.RenterPid = renterPid
+		cont.PreparerPid = nodePid
+		if isRepair {
+			cont.PreparerSignature = signedBytes
+		} else {
+			cont.RenterSignature = signedBytes
+		}
+	} else {
+		cont.HostSignature = signedBytes
+	}
+	return proto.Marshal(cont)
+}
+
 func UnmarshalGuardContract(marshaledBody []byte) (*guardPb.Contract, error) {
 	signedContract := &guardPb.Contract{}
 	err := proto.Unmarshal(marshaledBody, signedContract)
@@ -222,7 +246,7 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 		fileStatus.PreparerSignature = sign
 	}
 
-	err = submitFileStatus(ctx, configuration, fileStatus)
+	err = SubmitFileStatus(ctx, configuration, fileStatus)
 	if err != nil {
 		return nil, err
 	}
