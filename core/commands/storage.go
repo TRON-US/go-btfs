@@ -1294,7 +1294,7 @@ This command print upload and payment status by the time queried.`,
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
-		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
+		ss, err := storage.GlobalSession.GetSessionWithoutLock(n, storage.RenterStoragePrefix, ssID)
 		if err != nil {
 			return err
 		}
