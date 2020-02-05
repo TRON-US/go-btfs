@@ -410,7 +410,7 @@ func versionCompare(version1, version2 string) (int, error) {
 			return UPGRADE_FLAG_LATEST, nil
 		}
 	}
-	return 0, nil
+	return UPGRADE_FLAG_LATEST, nil
 }
 
 // Get current program execution path.
