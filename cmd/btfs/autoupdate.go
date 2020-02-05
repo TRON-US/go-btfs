@@ -40,6 +40,13 @@ type Config struct {
 	EndNumber        int    `yaml:"endNumber"`
 }
 
+const (
+	UPGRADE_FLAG_LATEST = iota
+	UPGRADE_FLAG_OUT_OF_DATE
+	UPGRADE_FLAG_SKIP
+	UPGRADE_FLAG_ERR
+)
+
 type Repo struct {
 	url        string
 	compressed bool
@@ -173,13 +180,13 @@ func update(url, hval string) {
 			continue
 		}
 
-		if upgradeFlg == 0 {
+		if upgradeFlg == UPGRADE_FLAG_SKIP {
 			fmt.Println("BTFS will not automatically update.")
 			sleepTimeSeconds = latestConfig.SleepTimeSeconds
 			continue
 		}
 
-		if upgradeFlg == -1 {
+		if upgradeFlg == UPGRADE_FLAG_LATEST {
 			fmt.Println("BTFS is up-to-date.")
 			sleepTimeSeconds = latestConfig.SleepTimeSeconds
 			continue
@@ -359,27 +366,27 @@ func versionCompare(version1, version2 string) (int, error) {
 	s1 := strings.Split(version1, ".")
 	if s1 == nil || len(s1) != 3 {
 		log.Error("String fo version1 has wrong format.")
-		return 0, errors.New("string fo version1 has wrong format")
+		return UPGRADE_FLAG_ERR, errors.New("string fo version1 has wrong format")
 	}
 
 	// Split string of version2.
 	s2 := strings.Split(version2, ".")
 	if s2 == nil || len(s2) != 3 {
 		log.Error("String fo version2 has wrong format.")
-		return 0, errors.New("string fo version2 has wrong format")
+		return UPGRADE_FLAG_ERR, errors.New("string fo version2 has wrong format")
 	}
 
 	// If the current config.yaml contains a dash in the last section
 	// then do not automatic update.
 	if strings.Contains(s2[2], "-") {
 		fmt.Println("BTFS config.yaml shows a dev version.")
-		return 0, nil
+		return UPGRADE_FLAG_SKIP, nil
 	}
 	// If the newly downloaded config.yaml contains a dash in the last section
 	// then do not automatic update.
 	if strings.Contains(s1[2], "-") {
 		fmt.Println("BTFS upgrade config.yaml shows a dev version.")
-		return 0, nil
+		return UPGRADE_FLAG_SKIP, nil
 	}
 
 	for i := 0; i < 3; i++ {
@@ -387,20 +394,20 @@ func versionCompare(version1, version2 string) (int, error) {
 		int1, err := strconv.Atoi(s1[i])
 		if err != nil {
 			log.Errorf("Convert version1 from string to int error, reasons: [%v]", err)
-			return 0, err
+			return UPGRADE_FLAG_ERR, err
 		}
 
 		// Convert version2 from string to int.
 		int2, err := strconv.Atoi(s2[i])
 		if err != nil {
 			log.Errorf("Convert version2 from string to int error, reasons: [%v]", err)
-			return 0, err
+			return UPGRADE_FLAG_ERR, err
 		}
 
 		if int1 > int2 {
-			return 1, nil
+			return UPGRADE_FLAG_OUT_OF_DATE, nil
 		} else if int1 < int2 {
-			return -1, nil
+			return UPGRADE_FLAG_LATEST, nil
 		}
 	}
 	return 0, nil
