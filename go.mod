@@ -9,7 +9,7 @@ require (
 	github.com/TRON-US/go-btfs-api v0.1.0
 	github.com/TRON-US/go-btfs-chunker v0.2.7
 	github.com/TRON-US/go-btfs-cmds v0.1.6
-	github.com/TRON-US/go-btfs-config v0.4.2
+	github.com/TRON-US/go-btfs-config v0.4.3
 	github.com/TRON-US/go-btfs-files v0.1.3
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
