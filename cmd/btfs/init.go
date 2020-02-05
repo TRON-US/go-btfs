@@ -307,7 +307,7 @@ func addDefaultAssets(out io.Writer, repoRoot string) error {
 	err = buildCfg.AnnouncePublicIp()
 	if err != nil {
 		// don't quit here, user can manually add to config later
-		fmt.Fprintf(out, "announce public ip failed.\n")
+		fmt.Fprintf(out, "announce public ip failed: %v\n", err)
 	}
 
 	dkey, err := assets.SeedInitDocs(nd)

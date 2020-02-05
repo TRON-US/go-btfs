@@ -122,17 +122,31 @@ func (cfg *BuildCfg) options(ctx context.Context) (fx.Option, *cfg.Config) {
 	), conf
 }
 
+// AnnouncePublicIp announces swarm address with default (direct) port
 func (bcfg *BuildCfg) AnnouncePublicIp() error {
 	conf, err := bcfg.Repo.Config()
 	if err != nil {
 		return err
 	}
 	address, err := cfg.ExternalIP()
-	if err == nil {
-		if !contains(conf.Addresses.Announce, address) {
-			conf.Addresses.Announce = append(conf.Addresses.Announce, address)
-			bcfg.Repo.SetConfig(conf)
-		}
+	if err == nil && !contains(conf.Addresses.Announce, address) {
+		conf.Addresses.Announce = append(conf.Addresses.Announce, address)
+		return bcfg.Repo.SetConfig(conf)
+	}
+	return err
+}
+
+// AnnouncePublicIpWithPort announces swarm address with external port and
+// performs internal port validation
+func (bcfg *BuildCfg) AnnouncePublicIpWithPort(extPort, intPort int) error {
+	conf, err := bcfg.Repo.Config()
+	if err != nil {
+		return err
+	}
+	address, err := cfg.ExternalIPWithPort(extPort, intPort, conf.Addresses.Swarm)
+	if err == nil && !contains(conf.Addresses.Announce, address) {
+		conf.Addresses.Announce = append(conf.Addresses.Announce, address)
+		return bcfg.Repo.SetConfig(conf)
 	}
 	return err
 }
