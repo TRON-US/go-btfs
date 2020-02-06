@@ -102,12 +102,12 @@ To custom upload and store a file on specific hosts:
     Use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','.
 
     # Upload a file to a set of hosts
-    # Total # of hosts must match # of shards in the first DAG level of root file hash
-    $ btfs storage upload <file-hash> -m=custom -s=<host_address1>,<host_address2>
+    # Total # of hosts (N) must match # of shards in the first DAG level of root file hash
+    $ btfs storage upload <file-hash> -m=custom -s=<host1-peer-id>,<host2-peer-id>,...,<hostN-peer-id>
 
     # Upload specific shards to a set of hosts
-    # Total # of hosts must match # of shards given
-    $ btfs storage upload <shard-hash1> <shard-hash2> -l -m=custom -s=<host_address1>,<host_address2>
+    # Total # of hosts (N) must match # of shards given
+	$ btfs storage upload <shard-hash1> <shard-hash2> ... <shard-hashN> -l -m=custom -s=<host1-peer-id>,<host2-peer-id>,...,<hostN-peer-id>
 
 Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
@@ -118,20 +118,20 @@ Use status command to check for completion:
 		"status":       storageUploadStatusCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "Add hash of file to upload."),
+		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
 		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
-		cmds.StringArg("renter-pid", false, false, "Original renter pid."),
-		cmds.StringArg("blacklist", false, false, "Blacklist of hosts when upload."),
+		cmds.StringArg("renter-pid", false, false, "Original renter peer ID."),
+		cmds.StringArg("blacklist", false, false, "Blacklist of hosts during upload."),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in BTT."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
-		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically."),
+		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
-		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
-		cmds.BoolOption(repairModeOptionName, "repair mode").WithDefault(false),
+		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
+		cmds.BoolOption(repairModeOptionName, "rm", "Enable repair mode.").WithDefault(false),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -1051,7 +1051,7 @@ Each mode ranks hosts based on its criteria and is randomized based on current n
 Mode options include:` + hub.AllModeHelpText,
 	},
 	Options: []cmds.Option{
-		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
+		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode. Default: mode set in config option Experimental.HostsSyncMode."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1062,7 +1062,10 @@ Mode options include:` + hub.AllModeHelpText,
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-		mode, _ := req.Options[hostInfoModeOptionName].(string)
+		mode, ok := req.Options[hostInfoModeOptionName].(string)
+		if !ok {
+			mode = cfg.Experimental.HostsSyncMode
+		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -1093,7 +1096,7 @@ Each mode ranks hosts based on its criteria and is randomized based on current n
 Mode options include:` + hub.AllModeHelpText,
 	},
 	Options: []cmds.Option{
-		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode."),
+		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode. Default: mode set in config option Experimental.HostsSyncMode."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1134,7 +1137,7 @@ This command displays host information synchronized from the BTFS network.
 By default it shows local host node information.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self").EnableStdin(),
+		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
