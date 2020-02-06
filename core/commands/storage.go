@@ -874,6 +874,9 @@ the shard and replies back to client for the next challenge step.`,
 		// TODO: maybe extract code on renter step timeout control and reuse it here
 		go controlSessionTimeout(ss, storage.StdStateFlow[0:])
 		halfSignedGuardContract, err := guard.UnmarshalGuardContract([]byte(halfSignedGuardContBytes))
+		if err != nil {
+			return err
+		}
 		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen), halfSignedGuardContract.ContractId)
 		if err != nil {
 			return err
