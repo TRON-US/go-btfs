@@ -118,10 +118,10 @@ func init() {
 		TimeOut: 30 * time.Second}
 	StdStateFlow[ContractState] = &FlowControl{
 		State:   "contract",
-		TimeOut: 30 * time.Second}
+		TimeOut: 5 * time.Minute}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
-		TimeOut: 30 * time.Second}
+		TimeOut: 1 * time.Minute}
 	// init session status
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
