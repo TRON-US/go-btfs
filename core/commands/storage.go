@@ -133,7 +133,7 @@ Use status command to check for completion:
 		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(repairModeOptionName, "rm", "Enable repair mode.").WithDefault(false),
 	},
-	RunTimeout: 15 * time.Minute,
+	RunTimeout: 25 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// get config settings
 		cfg, err := cmdenv.GetConfig(env)
