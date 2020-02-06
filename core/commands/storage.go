@@ -375,6 +375,65 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 	}
 }
 
+type paramsForPrepareContractsForShard struct {
+	ctx       context.Context
+	rq        *storage.RetryQueue
+	api       coreiface.CoreAPI
+	ss        *storage.FileContracts
+	n         *core.IpfsNode
+	test      bool
+	isRepair  bool
+	renterPid string
+	shardKey  string
+	shard     *storage.Shard
+}
+
+func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode) error {
+	shard := param.shard
+	shardIndex := shard.ShardIndex
+
+	shard.SetPrice(candidateHost.Price)
+	cfg, err := param.n.Repo.Config()
+	if err != nil {
+		return err
+	}
+
+	// init escrow Contract
+	_, pid, err := ParsePeerParam(candidateHost.Identity)
+	if err != nil {
+		return err
+	}
+	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid, shard.TotalPay)
+	if err != nil {
+		log.Error("create escrow contract failed. ", err)
+		return err
+	}
+	halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, param.n.PrivateKey, true)
+	if err != nil {
+		log.Error("sign escrow contract and maorshal failed ")
+		return err
+	}
+	shard.UpdateShard(pid)
+	guardContractMeta, err := guard.NewContract(param.ss, cfg, param.shardKey, int32(shardIndex), param.renterPid)
+	if err != nil {
+		log.Error("fail to new contract meta")
+		return err
+	}
+	halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, param.n.PrivateKey, true,
+		param.isRepair, param.renterPid, param.n.Identity.Pretty())
+	if err != nil {
+		log.Error("fail to sign guard contract and marshal")
+		return err
+	}
+
+	// Set the output of this function.
+	shard.CandidateHost = candidateHost
+	shard.HalfSignedEscrowContract = halfSignedEscrowContract
+	shard.HalfSignedGuardContract = halfSignGuardContract
+
+	return nil
+}
+
 func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
 	ssID string, test bool, isRepair bool, renterPid string) {
 	retryQueue := ss.GetRetryQueue()
@@ -384,56 +443,29 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	}
 
 	// loop over each shard
-	for shardKey, shardInfo := range ss.ShardInfo {
-		go func(shardKey string, shardInfo *storage.Shard) {
-			shardIndex := shardInfo.ShardIndex
-			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
-			if err != nil {
-				return
+	for shardKey, shard := range ss.ShardInfo {
+		go func(shardKey string, shard *storage.Shard) {
+			param := &paramsForPrepareContractsForShard{
+				ctx:       ctx,
+				rq:        retryQueue,
+				api:       api,
+				ss:        ss,
+				n:         n,
+				test:      test,
+				isRepair:  isRepair,
+				renterPid: renterPid,
+				shardKey:  shardKey,
+				shard:     shard,
 			}
 
-			shardInfo.SetPrice(candidateHost.Price)
-			cfg, err := n.Repo.Config()
-			if err != nil {
-				return
-			}
-
-			// init escrow Contract
-			_, pid, err := ParsePeerParam(candidateHost.Identity)
-			if err != nil {
-				return
-			}
-			escrowContract, err := escrow.NewContract(cfg, shardInfo.ContractID, n, pid, shardInfo.TotalPay)
-			if err != nil {
-				log.Error("create escrow contract failed. ", err)
-				return
-			}
-			halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
-			if err != nil {
-				log.Error("sign escrow contract and marshal failed ")
-				return
-			}
-			shardInfo.UpdateShard(pid)
-			guardContractMeta, err := guard.NewContract(ss, cfg, shardKey, int32(shardIndex), renterPid)
-			if err != nil {
-				log.Error("fail to new contract meta")
-				return
-			}
-			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true,
-				isRepair, renterPid, n.Identity.Pretty())
-			if err != nil {
-				log.Error("fail to sign guard contract and marshal")
-				return
-			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
-				halfSignedEscrowContract, halfSignGuardContract, test)
+			go retryProcess(param, nil, true)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
 			for curState := 0; curState < len(storage.StdStateFlow); {
 				select {
-				case shardRes := <-shardInfo.RetryChan:
+				case shardRes := <-shard.RetryChan:
 					if !shardRes.Succeed {
 						// receiving session time out signal, directly return
 						if shardRes.SessionTimeOutErr != nil {
@@ -450,32 +482,41 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						if shardRes.HostErr != nil {
 							log.Error(shardRes.HostErr)
 							// increment current host's retry times
-							candidateHost.IncrementRetry()
+							shard.CandidateHost.IncrementRetry()
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
-								halfSignedEscrowContract, halfSignGuardContract, test)
+							go retryProcess(param, shard.CandidateHost, false)
 						}
 					} else {
 						// if success with current state, move on to next
 						log.Debug("succeed to pass state ", storage.StdStateFlow[curState].State)
 						curState = shardRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
-							shardInfo.SetState(curState)
+							shard.SetState(curState)
 						}
 					}
 				case <-time.After(storage.StdStateFlow[curState].TimeOut):
 					{
-						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdStateFlow[curState].State)
+						log.Errorf("upload timed out with state %s", storage.StdStateFlow[curState].State)
+						if curState == storage.InitState {
+							if shard.CandidateHostTemporary != nil {
+								shard.CandidateHostTemporary.IncrementRetry()
+							} else {
+								if shard.CandidateHost != nil {
+									shard.CandidateHost.IncrementRetry()
+								}
+							}
+						} else {
+							shard.CandidateHost.IncrementRetry()
+						}
 						curState = storage.InitState // reconnect to the host to start over
-						candidateHost.IncrementRetry()
-						go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
-							halfSignedEscrowContract, halfSignGuardContract, test)
+
+						go retryProcess(param, shard.CandidateHost, false)
 					}
 				}
 			}
-		}(shardKey, shardInfo)
+		}(shardKey, shard)
 	}
 }
 
@@ -505,25 +546,38 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 	}
 }
 
-func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, candidateHost *storage.HostNode,
-	ss *storage.FileContracts, shard *storage.Shard,
-	halfSignedEscrowContract, halfSignedGuardContract []byte,
-	test bool) {
+func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode, initial bool) {
+	ss := param.ss
+	shard := param.shard
+
+	// TODO: maybe if current session status is ErrStatus return. but need test
+
 	// check if current shard has been contacting and receiving results
 	if shard.GetState() >= storage.ContractState {
 		return
 	}
+
 	// if candidate host passed in is not valid, fetch next valid one
-	if candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
-		otherValidHost, err := getValidHost(ctx, ss.RetryQueue, api, n, test)
+	var hostChanged bool
+	if initial || candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
+		otherValidHost, err := getValidHost(param.ctx, ss.RetryQueue, param.api, param.n, param.test, shard, initial)
 		// either retry queue is empty or something wrong with retry queue
 		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.InitState, false, fmt.Errorf("no host available %v", err), nil)
 			return
 		}
 		candidateHost = otherValidHost
+		hostChanged = true
 	}
 
+	// if host is changed for the "shard", move the shard state to 0 and retry
+	if hostChanged {
+		err := prepareSignedContractsForShard(param, candidateHost)
+		if err != nil {
+			sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
+			return
+		}
+	}
 	// parse candidate host's IP and get connected
 	_, hostPid, err := ParsePeerParam(candidateHost.Identity)
 	if err != nil {
@@ -532,17 +586,17 @@ func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 	}
 	// send over contract
 	c := new(guardpb.Contract)
-	err = proto.Unmarshal(halfSignedGuardContract, c)
+	err = proto.Unmarshal(shard.HalfSignedGuardContract, c)
 	if err != nil {
 		return
 	}
-	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
+	_, err = remote.P2PCall(param.ctx, param.n, hostPid, "/storage/upload/init",
 		ss.ID,
 		ss.GetFileHash().String(),
 		shard.ShardHash.String(),
 		strconv.FormatInt(candidateHost.Price, 10),
-		halfSignedEscrowContract,
-		halfSignedGuardContract,
+		shard.HalfSignedEscrowContract,
+		shard.HalfSignedGuardContract,
 		strconv.FormatInt(shard.StorageLength, 10),
 		strconv.FormatInt(shard.ShardSize, 10),
 		strconv.Itoa(shard.ShardIndex),
@@ -556,9 +610,12 @@ func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 }
 
 // find next available host
-func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI, n *core.IpfsNode, test bool) (*storage.HostNode, error) {
+func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI,
+	n *core.IpfsNode, test bool, shard *storage.Shard, initial bool) (*storage.HostNode, error) {
+
 	var candidateHost *storage.HostNode
 	for candidateHost == nil {
+		shard.CandidateHostTemporary = nil
 		if retryQueue.Empty() {
 			return nil, fmt.Errorf("retry queue is empty")
 		}
@@ -574,7 +631,9 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				return nil, err
 			}
 		} else {
+			shard.CandidateHostTemporary = nextHost
 			// find peer
+			time.Sleep(10 * time.Minute)
 			pi, err := remote.FindPeer(ctx, n, nextHost.Identity)
 			if err != nil {
 				// it's normal to fail in finding peer,
@@ -616,6 +675,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 			}
 			// if connect successfully, return
 			candidateHost = nextHost
+			shard.CandidateHostTemporary = nil
 		}
 	}
 	return candidateHost, nil
