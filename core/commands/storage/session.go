@@ -82,20 +82,23 @@ type StatusChan struct {
 type Shard struct {
 	sync.Mutex
 
-	ShardHash            cidlib.Cid
-	ShardIndex           int
-	ContractID           string
-	SignedEscrowContract []byte
-	Receiver             peer.ID
-	Price                int64
-	TotalPay             int64
-	State                int
-	ShardSize            int64
-	StorageLength        int64
-	ContractLength       time.Duration
-	StartTime            time.Time
-	Err                  error
-	Challenge            *StorageChallenge
+	ShardHash                cidlib.Cid
+	ShardIndex               int
+	ContractID               string
+	SignedEscrowContract     []byte
+	Receiver                 peer.ID
+	Price                    int64
+	TotalPay                 int64
+	State                    int
+	ShardSize                int64
+	StorageLength            int64
+	ContractLength           time.Duration
+	StartTime                time.Time
+	Err                      error
+	Challenge                *StorageChallenge
+	CandidateHost            *HostNode
+	HalfSignedEscrowContract []byte
+	HalfSignedGuardContract  []byte
 
 	RetryChan chan *StepRetryChan `json:"-"`
 }
