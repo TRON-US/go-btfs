@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -37,22 +36,24 @@ import (
 )
 
 const (
-	leafHashOptionName            = "leaf-hash"
-	uploadPriceOptionName         = "price"
-	replicationFactorOptionName   = "replication-factor"
-	hostSelectModeOptionName      = "host-select-mode"
-	hostSelectionOptionName       = "host-selection"
-	hostInfoModeOptionName        = "host-info-mode"
-	hostSyncModeOptionName        = "host-sync-mode"
-	hostStoragePriceOptionName    = "host-storage-price"
-	hostBandwidthPriceOptionName  = "host-bandwidth-price"
-	hostCollateralPriceOptionName = "host-collateral-price"
-	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
-	hostStorageTimeMinOptionName  = "host-storage-time-min"
-	hostStorageMaxOptionName      = "host-storage-max"
-	testOnlyOptionName            = "host-search-local"
-	storageLengthOptionName       = "storage-length"
-	repairModeOptionName          = "repair-mode"
+	leafHashOptionName               = "leaf-hash"
+	uploadPriceOptionName            = "price"
+	replicationFactorOptionName      = "replication-factor"
+	hostSelectModeOptionName         = "host-select-mode"
+	hostSelectionOptionName          = "host-selection"
+	hostInfoModeOptionName           = "host-info-mode"
+	hostSyncModeOptionName           = "host-sync-mode"
+	hostStoragePriceOptionName       = "host-storage-price"
+	hostBandwidthPriceOptionName     = "host-bandwidth-price"
+	hostCollateralPriceOptionName    = "host-collateral-price"
+	hostBandwidthLimitOptionName     = "host-bandwidth-limit"
+	hostStorageTimeMinOptionName     = "host-storage-time-min"
+	hostStorageMaxOptionName         = "host-storage-max"
+	testOnlyOptionName               = "host-search-local"
+	storageLengthOptionName          = "storage-length"
+	repairModeOptionName             = "repair-mode"
+	customizedPayoutOptionName       = "customize-payout"
+	customizedPayoutPeriodOptionName = "customize-payout-period"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -103,12 +104,12 @@ To custom upload and store a file on specific hosts:
     Use -m with 'custom' mode, and put host identifiers in -s, with multiple hosts separated by ','.
 
     # Upload a file to a set of hosts
-    # Total # of hosts must match # of shards in the first DAG level of root file hash
-    $ btfs storage upload <file-hash> -m=custom -s=<host_address1>,<host_address2>
+    # Total # of hosts (N) must match # of shards in the first DAG level of root file hash
+    $ btfs storage upload <file-hash> -m=custom -s=<host1-peer-id>,<host2-peer-id>,...,<hostN-peer-id>
 
     # Upload specific shards to a set of hosts
-    # Total # of hosts must match # of shards given
-    $ btfs storage upload <shard-hash1> <shard-hash2> -l -m=custom -s=<host_address1>,<host_address2>
+    # Total # of hosts (N) must match # of shards given
+	$ btfs storage upload <shard-hash1> <shard-hash2> ... <shard-hashN> -l -m=custom -s=<host1-peer-id>,<host2-peer-id>,...,<hostN-peer-id>
 
 Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
@@ -119,22 +120,24 @@ Use status command to check for completion:
 		"status":       storageUploadStatusCmd,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "Add hash of file to upload."),
+		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
 		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
-		cmds.StringArg("renter-pid", false, false, "Original renter pid."),
-		cmds.StringArg("blacklist", false, false, "Blacklist of hosts when upload."),
+		cmds.StringArg("renter-pid", false, false, "Original renter peer ID."),
+		cmds.StringArg("blacklist", false, false, "Blacklist of hosts during upload."),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in BTT."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
-		cmds.StringOption(hostSelectModeOptionName, "m", "Based on mode to select the host and upload automatically."),
+		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
-		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test).").WithDefault(true),
-		cmds.IntOption(storageLengthOptionName, "len", "Store file for certain length in days.").WithDefault(defaultStorageLength),
-		cmds.BoolOption(repairModeOptionName, "repair mode").WithDefault(false),
+		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
+		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
+		cmds.BoolOption(repairModeOptionName, "rm", "Enable repair mode.").WithDefault(false),
+		cmds.BoolOption(customizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
+		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
 	},
-	RunTimeout: 5 * time.Minute,
+	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// get config settings
 		cfg, err := cmdenv.GetConfig(env)
@@ -240,7 +243,7 @@ Use status command to check for completion:
 		ss := sm.GetOrDefault(ssID, n.Identity)
 		ss.SetFileHash(rootHash)
 		ss.SetStatus(storage.InitStatus)
-		go controlSessionTimeout(ss)
+		go controlSessionTimeout(ss, storage.StdSessionStateFlow[0:])
 
 		// get hosts/peers
 		var peers []string
@@ -329,8 +332,16 @@ Use status command to check for completion:
 				return err
 			}
 		}
-		testFlag := req.Options[testOnlyOptionName].(bool)
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode, renterPid.Pretty())
+		// set to false if not specified
+		testFlag := false
+		if req.Options[testOnlyOptionName] != nil {
+			testFlag = req.Options[testOnlyOptionName].(bool)
+		}
+		customizedPayout := req.Options[customizedPayoutOptionName].(bool)
+		p := req.Options[customizedPayoutPeriodOptionName].(int)
+
+		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag,
+			isRepairMode, renterPid.Pretty(), customizedPayout, p)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -349,10 +360,10 @@ func getContractSizeFromCid(ctx context.Context, hash cidlib.Cid, api coreiface.
 	return ipldNode.Size()
 }
 
-func controlSessionTimeout(ss *storage.FileContracts) {
+func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowControl) {
 	// error is special std flow, will not be counted in here
 	// and complete status don't need to wait for signal coming
-	for curStatus := 0; curStatus < len(storage.StdSessionStateFlow)-2; {
+	for curStatus := 0; curStatus < len(stateFlow)-2; {
 		select {
 		case sessionState := <-ss.SessionStatusChan:
 			if sessionState.Succeed {
@@ -365,15 +376,73 @@ func controlSessionTimeout(ss *storage.FileContracts) {
 				ss.SetStatusWithError(storage.ErrStatus, sessionState.Err)
 				return
 			}
-		case <-time.After(storage.StdSessionStateFlow[curStatus].TimeOut):
+		case <-time.After(stateFlow[curStatus].TimeOut):
 			ss.SetStatusWithError(storage.ErrStatus, fmt.Errorf("timed out"))
 			return
 		}
 	}
 }
 
+type paramsForPrepareContractsForShard struct {
+	ctx                context.Context
+	rq                 *storage.RetryQueue
+	api                coreiface.CoreAPI
+	ss                 *storage.FileContracts
+	n                  *core.IpfsNode
+	test               bool
+	isRepair           bool
+	renterPid          string
+	shardKey           string
+	shard              *storage.Shard
+	customizedSchedule bool
+	period             int
+}
+
+func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode) error {
+	shard := param.shard
+	shardIndex := shard.ShardIndex
+
+	shard.SetPrice(candidateHost.Price)
+	cfg, err := param.n.Repo.Config()
+	if err != nil {
+		return err
+	}
+
+	// init escrow Contract
+	_, pid, err := ParsePeerParam(candidateHost.Identity)
+	if err != nil {
+		return err
+	}
+	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid,
+		shard.TotalPay, param.customizedSchedule, param.period)
+	if err != nil {
+		return fmt.Errorf("create escrow contract failed: [%v] ", err)
+	}
+	halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, param.n.PrivateKey, true)
+	if err != nil {
+		return fmt.Errorf("sign escrow contract and maorshal failed: [%v] ", err)
+	}
+	shard.UpdateShard(pid)
+	guardContractMeta, err := guard.NewContract(param.ss, cfg, param.shardKey, int32(shardIndex), param.renterPid)
+	if err != nil {
+		return fmt.Errorf("fail to new contract meta: [%v] ", err)
+	}
+	halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, param.n.PrivateKey, true,
+		param.isRepair, param.renterPid, param.n.Identity.Pretty())
+	if err != nil {
+		return fmt.Errorf("fail to sign guard contract and marshal: [%v] ", err)
+	}
+
+	// Set the output of this function.
+	shard.CandidateHost = candidateHost
+	shard.HalfSignedEscrowContract = halfSignedEscrowContract
+	shard.HalfSignedGuardContract = halfSignGuardContract
+
+	return nil
+}
+
 func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
-	ssID string, test bool, isRepair bool, renterPid string) {
+	ssID string, test bool, isRepair bool, renterPid string, customizedSchedule bool, period int) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
@@ -381,56 +450,29 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 	}
 
 	// loop over each shard
-	for shardKey, shardInfo := range ss.ShardInfo {
-		go func(shardKey string, shardInfo *storage.Shard) {
-			shardIndex := shardInfo.ShardIndex
-			candidateHost, err := getValidHost(ctx, retryQueue, api, n, test)
-			if err != nil {
-				return
+	for shardKey, shard := range ss.ShardInfo {
+		go func(shardKey string, shard *storage.Shard) {
+			param := &paramsForPrepareContractsForShard{
+				ctx:       ctx,
+				rq:        retryQueue,
+				api:       api,
+				ss:        ss,
+				n:         n,
+				test:      test,
+				isRepair:  isRepair,
+				renterPid: renterPid,
+				shardKey:  shardKey,
+				shard:     shard,
 			}
 
-			shardInfo.SetPrice(candidateHost.Price)
-			cfg, err := n.Repo.Config()
-			if err != nil {
-				return
-			}
-
-			// init escrow Contract
-			_, pid, err := ParsePeerParam(candidateHost.Identity)
-			if err != nil {
-				return
-			}
-			escrowContract, err := escrow.NewContract(cfg, shardInfo.ContractID, n, pid, shardInfo.TotalPay)
-			if err != nil {
-				log.Error("create escrow contract failed. ", err)
-				return
-			}
-			halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
-			if err != nil {
-				log.Error("sign escrow contract and marshal failed ")
-				return
-			}
-			shardInfo.UpdateShard(pid)
-			guardContractMeta, err := guard.NewContract(ss, cfg, shardKey, int32(shardIndex), renterPid)
-			if err != nil {
-				log.Error("fail to new contract meta")
-				return
-			}
-			halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, n.PrivateKey, true,
-				isRepair, renterPid, n.Identity.Pretty())
-			if err != nil {
-				log.Error("fail to sign guard contract and marshal")
-				return
-			}
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
-				halfSignedEscrowContract, halfSignGuardContract, test)
+			go retryProcess(param, nil, true)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
 			for curState := 0; curState < len(storage.StdStateFlow); {
 				select {
-				case shardRes := <-shardInfo.RetryChan:
+				case shardRes := <-shard.RetryChan:
 					if !shardRes.Succeed {
 						// receiving session time out signal, directly return
 						if shardRes.SessionTimeOutErr != nil {
@@ -440,7 +482,6 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						// if client itself has some error, no matter how many times it tries,
 						// it will fail again, in this case, we don't need retry
 						if shardRes.ClientErr != nil {
-							log.Error(shardRes.ClientErr)
 							sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, false, shardRes.ClientErr)
 							return
 						}
@@ -448,36 +489,40 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						if shardRes.HostErr != nil {
 							log.Error(shardRes.HostErr)
 							// increment current host's retry times
-							candidateHost.IncrementRetry()
+							shard.CandidateHost.IncrementRetry()
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
-								halfSignedEscrowContract, halfSignGuardContract, test)
+							go retryProcess(param, shard.CandidateHost, false)
 						}
 					} else {
 						// if success with current state, move on to next
 						log.Debug("succeed to pass state ", storage.StdStateFlow[curState].State)
 						curState = shardRes.CurrentStep + 1
 						if curState <= storage.CompleteState {
-							shardInfo.SetState(curState)
+							shard.SetState(curState)
 						}
 					}
 				case <-time.After(storage.StdStateFlow[curState].TimeOut):
 					{
-						log.Errorf("upload timed out %s with state %s", shardKey, storage.StdStateFlow[curState].State)
+						log.Errorf("upload timed out with state %s", storage.StdStateFlow[curState].State)
+						if shard.CandidateHost != nil {
+							shard.CandidateHost.IncrementRetry()
+						}
 						curState = storage.InitState // reconnect to the host to start over
-						candidateHost.IncrementRetry()
-						go retryProcess(ctx, n, api, candidateHost, ss, shardInfo,
-							halfSignedEscrowContract, halfSignGuardContract, test)
+
+						go retryProcess(param, shard.CandidateHost, false)
 					}
 				}
 			}
-		}(shardKey, shardInfo)
+		}(shardKey, shard)
 	}
 }
 
 func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed bool, err error) {
+	if err != nil {
+		log.Error("session error:", err)
+	}
 	channel <- storage.StatusChan{
 		CurrentStep: status,
 		Succeed:     succeed,
@@ -486,6 +531,12 @@ func sendSessionStatusChan(channel chan storage.StatusChan, status int, succeed 
 }
 
 func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed bool, clientErr error, hostErr error) {
+	if clientErr != nil {
+		log.Error("renter error:", clientErr)
+	}
+	if hostErr != nil {
+		log.Error("host error:", hostErr)
+	}
 	channel <- &storage.StepRetryChan{
 		CurrentStep: state,
 		Succeed:     succeed,
@@ -494,44 +545,52 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 	}
 }
 
-func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, candidateHost *storage.HostNode,
-	ss *storage.FileContracts, shard *storage.Shard,
-	halfSignedEscrowContract, halfSignedGuardContract []byte,
-	test bool) {
+func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode, initial bool) {
+	ss := param.ss
+	shard := param.shard
+
+	// TODO: maybe if current session status is ErrStatus return. but need test
+
 	// check if current shard has been contacting and receiving results
 	if shard.GetState() >= storage.ContractState {
 		return
 	}
+
 	// if candidate host passed in is not valid, fetch next valid one
-	if candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
-		otherValidHost, err := getValidHost(ctx, ss.RetryQueue, api, n, test)
+	var hostChanged bool
+	if initial || candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
+		otherValidHost, err := getValidHost(param.ctx, ss.RetryQueue, param.api, param.n, param.test)
 		// either retry queue is empty or something wrong with retry queue
 		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.InitState, false, fmt.Errorf("no host available %v", err), nil)
 			return
 		}
 		candidateHost = otherValidHost
+		hostChanged = true
 	}
 
+	// if host is changed for the "shard", move the shard state to 0 and retry
+	if hostChanged {
+		err := prepareSignedContractsForShard(param, candidateHost)
+		if err != nil {
+			sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
+			return
+		}
+	}
 	// parse candidate host's IP and get connected
 	_, hostPid, err := ParsePeerParam(candidateHost.Identity)
 	if err != nil {
 		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
 		return
 	}
-	// send over contract
-	c := new(guardpb.Contract)
-	err = proto.Unmarshal(halfSignedGuardContract, c)
-	if err != nil {
-		return
-	}
-	_, err = remote.P2PCall(ctx, n, hostPid, "/storage/upload/init",
+
+	_, err = remote.P2PCall(param.ctx, param.n, hostPid, "/storage/upload/init",
 		ss.ID,
 		ss.GetFileHash().String(),
 		shard.ShardHash.String(),
 		strconv.FormatInt(candidateHost.Price, 10),
-		halfSignedEscrowContract,
-		halfSignedGuardContract,
+		shard.HalfSignedEscrowContract,
+		shard.HalfSignedGuardContract,
 		strconv.FormatInt(shard.StorageLength, 10),
 		strconv.FormatInt(shard.ShardSize, 10),
 		strconv.Itoa(shard.ShardIndex),
@@ -545,7 +604,9 @@ func retryProcess(ctx context.Context, n *core.IpfsNode, api coreiface.CoreAPI, 
 }
 
 // find next available host
-func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI, n *core.IpfsNode, test bool) (*storage.HostNode, error) {
+func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI,
+	n *core.IpfsNode, test bool) (*storage.HostNode, error) {
+
 	var candidateHost *storage.HostNode
 	for candidateHost == nil {
 		if retryQueue.Empty() {
@@ -576,6 +637,11 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				}
 				continue
 			}
+			addr, err := ma.NewMultiaddr("/p2p-circuit/btfs/" + pi.ID.String())
+			if err != nil {
+				return nil, err
+			}
+			pi.Addrs = append(pi.Addrs, addr)
 			if err := api.Swarm().Connect(ctx, *pi); err != nil {
 				// force connect again
 				if err := api.Swarm().Connect(ctx, *pi); err != nil {
@@ -632,7 +698,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
-		signedContract := []byte(req.Arguments[3])
+		escrowContractBytes := []byte(req.Arguments[3])
 		guardContractBytes := []byte(req.Arguments[4])
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
@@ -660,8 +726,8 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
-		ok, err := ss.IncrementContract(shardHash, shardIndex, signedContract, guardContract)
-		if err != nil || !ok {
+		err = ss.IncrementContract(shard, escrowContractBytes, guardContract)
+		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.CompleteState, false, err, nil)
 			return err
 		}
@@ -678,34 +744,31 @@ var storageUploadRecvContractCmd = &cmds.Command{
 			sendSessionStatusChan(ss.SessionStatusChan, storage.InitStatus, true, nil)
 			contracts, totalPrice, err := storage.PrepareContractFromShard(ss.ShardInfo)
 			if err != nil {
-				log.Error(err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			// check account balance, if not enough for the totalPrice do not submit to escrow
 			balance, err := escrow.Balance(req.Context, cfg)
 			if err != nil {
-				log.Error("get renter account balance failed, ", err)
+				err = fmt.Errorf("get renter account balance failed [%v]", err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			if balance < totalPrice {
-				log.Error("not enough balance to submit contract, current balance is ", balance)
+				err = fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
-				return errors.New("not enough balance to submit contract")
+				return err
 			}
 
 			contractRequest, err = escrow.NewContractRequest(cfg, contracts, totalPrice)
 			if err != nil {
-				log.Error(err)
 				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			submitContractRes, err := escrow.SubmitContractToEscrow(req.Context, cfg, contractRequest)
 			if err != nil {
-				log.Error(err)
-				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false,
-					fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
+				err = fmt.Errorf("failed to submit contracts to escrow: [%v]", err)
+				sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, false, err)
 				return err
 			}
 			sendSessionStatusChan(ss.SessionStatusChan, storage.SubmitStatus, true, nil)
@@ -728,53 +791,46 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	privKeyStr := cfg.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
 		return
 	}
 	payerPubKey := payerPrivKey.GetPublic()
 	payinRequest, err := escrow.NewPayinRequest(response, payerPubKey, payerPrivKey)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
 		return
 	}
 	payinRes, err := escrow.PayInToEscrow(ctx, cfg, payinRequest)
 	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false,
-			fmt.Errorf("failed to pay in to escrow: [%v]", err))
+		err = fmt.Errorf("failed to pay in to escrow: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, false, err)
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.PayStatus, true, nil)
 
 	fsStatus, err := guard.PrepAndUploadFileMeta(ctx, ss, response, payinRes, payerPrivKey, cfg)
 	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
-			fmt.Errorf("failed to send file meta to guard: [%v]", err))
+		err = fmt.Errorf("failed to send file meta to guard: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	err = storage.PersistFileMetaToDatastore(n, storage.RenterStoragePrefix, ss.ID)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
 	if err != nil {
-		log.Error(err)
 		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 
 	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
 	if err != nil {
-		log.Error(err)
-		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false,
-			fmt.Errorf("failed to send challenge questions to guard: [%v]", err))
+		err = fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
+		sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, false, err)
 		return
 	}
 	sendSessionStatusChan(ss.SessionStatusChan, storage.GuardStatus, true, nil)
@@ -866,8 +922,11 @@ the shard and replies back to client for the next challenge step.`,
 		ss.SetFileHash(fileHash)
 		// TODO: set host shard state in the following steps
 		// TODO: maybe extract code on renter step timeout control and reuse it here
-		go controlSessionTimeout(ss)
+		go controlSessionTimeout(ss, storage.StdStateFlow[0:])
 		halfSignedGuardContract, err := guard.UnmarshalGuardContract([]byte(halfSignedGuardContBytes))
+		if err != nil {
+			return err
+		}
 		shardInfo, err := ss.GetOrDefault(shardHash, shardIndex, shardSize, int64(storeLen), halfSignedGuardContract.ContractId)
 		if err != nil {
 			return err
@@ -920,12 +979,12 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 	escrowContract := escrowSignedContract.GetContract()
 	guardContractMeta := guardSignedContract.ContractMeta
 	// Sign on the contract
-	marshaledSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
+	signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, escrowSignedContract, n.PrivateKey, false)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	marshaledSignedGuardContract, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
+	signedGuardContractBytes, err := guard.SignedContractAndMarshal(&guardContractMeta, guardSignedContract,
 		n.PrivateKey, false, false, pid.Pretty(), pid.Pretty())
 	if err != nil {
 		log.Error(err)
@@ -936,9 +995,16 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		ss.ID,
 		shardInfo.ShardHash.String(),
 		strconv.Itoa(shardInfo.ShardIndex),
-		marshaledSignedEscrowContract,
-		marshaledSignedGuardContract,
+		signedEscrowContractBytes,
+		signedGuardContractBytes,
 	)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// set contracts since renter has received contracts
+	err = ss.IncrementContract(shardInfo, signedEscrowContractBytes, guardSignedContract)
 	if err != nil {
 		log.Error(err)
 		return
@@ -966,7 +1032,7 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 		return
 	}
 
-	downloadShardFromClient(n, api, ss, shardInfo)
+	downloadShardFromClient(n, api, ss, guardSignedContract, shardInfo)
 }
 
 // call escrow service to check if payment is received or not
@@ -1004,14 +1070,8 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *e
 }
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
-	shardInfo *storage.Shard) {
-	contracts := ss.GetGuardContracts()
-	if len(contracts) == 0 {
-		log.Error("No guard contract available")
-		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
-		return
-	}
-	expir := uint64(contracts[0].RentEnd.Unix())
+	guardContract *guardpb.Contract, shardInfo *storage.Shard) {
+	expir := uint64(guardContract.RentEnd.Unix())
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
@@ -1044,7 +1104,7 @@ Each mode ranks hosts based on its criteria and is randomized based on current n
 Mode options include:` + hub.AllModeHelpText,
 	},
 	Options: []cmds.Option{
-		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode.").WithDefault(hub.HubModeAll),
+		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode. Default: mode set in config option Experimental.HostsSyncMode."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1055,7 +1115,10 @@ Mode options include:` + hub.AllModeHelpText,
 			return fmt.Errorf("storage client api not enabled")
 		}
 
-		mode, _ := req.Options[hostInfoModeOptionName].(string)
+		mode, ok := req.Options[hostInfoModeOptionName].(string)
+		if !ok {
+			mode = cfg.Experimental.HostsSyncMode
+		}
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -1086,7 +1149,7 @@ Each mode ranks hosts based on its criteria and is randomized based on current n
 Mode options include:` + hub.AllModeHelpText,
 	},
 	Options: []cmds.Option{
-		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode."),
+		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode. Default: mode set in config option Experimental.HostsSyncMode."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1127,7 +1190,7 @@ This command displays host information synchronized from the BTFS network.
 By default it shows local host node information.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self").EnableStdin(),
+		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -1287,7 +1350,7 @@ This command print upload and payment status by the time queried.`,
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]
 		n, err := cmdenv.GetNode(env)
-		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
+		ss, err := storage.GlobalSession.GetSessionWithoutLock(n, storage.RenterStoragePrefix, ssID)
 		if err != nil {
 			return err
 		}
@@ -1297,7 +1360,7 @@ This command print upload and payment status by the time queried.`,
 		if err != nil {
 			return err
 		}
-		if !cfg.Experimental.StorageClientEnabled || !cfg.Experimental.StorageHostEnabled {
+		if !cfg.Experimental.StorageClientEnabled && !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage client/host api not enabled")
 		}
 

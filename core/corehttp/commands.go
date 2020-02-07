@@ -38,6 +38,12 @@ cli arguments:
 // APIPath is the path at which the API is mounted.
 const APIPath = "/api/" + shell.API_VERSION
 
+// redirectPaths contain the paths to be redirectd to the current APIPath
+var redirectPaths = []string{
+	"/api/v0",
+	"/api/latest",
+}
+
 var defaultLocalhostOrigins = []string{
 	"http://127.0.0.1:<port>",
 	"https://127.0.0.1:<port>",
@@ -124,6 +130,7 @@ func commandsOption(cctx oldcmds.Context, command *cmds.Command) ServeOption {
 		cfg := cmdsHttp.NewServerConfig()
 		cfg.SetAllowedMethods("GET", "POST", "PUT")
 		cfg.APIPath = APIPath
+		cfg.RedirectPaths = redirectPaths
 		rcfg, err := n.Repo.Config()
 		if err != nil {
 			return nil, err
@@ -136,6 +143,9 @@ func commandsOption(cctx oldcmds.Context, command *cmds.Command) ServeOption {
 
 		cmdHandler := cmdsHttp.NewHandler(&cctx, command, cfg)
 		mux.Handle(APIPath+"/", cmdHandler)
+		for _, rp := range redirectPaths {
+			mux.Handle(rp+"/", cmdHandler)
+		}
 		return mux, nil
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -65,6 +66,7 @@ const (
 	hValueKwd                 = "hval"
 	enableDataCollection      = "dc"
 	enableStartupTest         = "enable-startup-test"
+	swarmPortKwd              = "swarm-port"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -187,6 +189,7 @@ Headers.
 		cmds.StringOption(hValueKwd, "H-value identifies the BitTorrent client this daemon is started by. None if not started by a BitTorrent client."),
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
+		cmds.StringOption(swarmPortKwd, "Override existing announced swarm address with external port in the format of [WAN:LAN]."),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
@@ -340,6 +343,27 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 			"mplex":  mplex,
 		},
 		//TODO(Kubuxu): refactor Online vs Offline by adding Permanent vs Ephemeral
+	}
+
+	// Check if swarm port is overriden
+	// Continue with default setup on error
+	swarmPort, ok := req.Options[swarmPortKwd].(string)
+	if ok {
+		sp := strings.Split(swarmPort, ":")
+		if len(sp) != 2 {
+			log.Errorf("Invalid swarm-port: %v", swarmPort)
+		} else {
+			wanPort, err1 := strconv.Atoi(sp[0])
+			lanPort, err2 := strconv.Atoi(sp[1])
+			if err1 != nil || err2 != nil {
+				log.Errorf("Invalid swarm-port: %v", swarmPort)
+			} else {
+				err = ncfg.AnnouncePublicIpWithPort(wanPort, lanPort)
+				if err != nil {
+					log.Errorf("Failed to announce new swarm address: %v", err)
+				}
+			}
+		}
 	}
 
 	routingOption, _ := req.Options[routingOptionKwd].(string)
@@ -612,7 +636,6 @@ func printSwarmAddrs(node *core.IpfsNode) {
 	for _, addr := range addrs {
 		fmt.Printf("Swarm announcing %s\n", addr)
 	}
-
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests

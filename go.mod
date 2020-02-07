@@ -8,12 +8,12 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/TRON-US/go-btfs-api v0.1.0
 	github.com/TRON-US/go-btfs-chunker v0.2.7
-	github.com/TRON-US/go-btfs-cmds v0.1.5
-	github.com/TRON-US/go-btfs-config v0.4.0-beta3
+	github.com/TRON-US/go-btfs-cmds v0.1.6
+	github.com/TRON-US/go-btfs-config v0.4.5
 	github.com/TRON-US/go-btfs-files v0.1.3
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
-	github.com/TRON-US/go-unixfs v0.5.4
+	github.com/TRON-US/go-unixfs v0.5.5
 	github.com/TRON-US/interface-go-btfs-core v0.5.4
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
@@ -121,7 +121,7 @@ require (
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tron-us/go-btfs-common v0.2.11
+	github.com/tron-us/go-btfs-common v0.2.17
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0

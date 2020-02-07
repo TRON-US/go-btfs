@@ -31,8 +31,10 @@ func CheckValidMode(mode string, local bool) (hubpb.HostsReq_Mode, string, error
 	if mode == HubModeAll && local {
 		return -1, "", nil
 	}
-	if m, ok := hubpb.HostsReq_Mode_value[strings.ToUpper(mode)]; ok {
-		return hubpb.HostsReq_Mode(m), mode, nil
+	// Consistent with grpc consts
+	modeKey := strings.ToUpper(mode)
+	if m, ok := hubpb.HostsReq_Mode_value[modeKey]; ok {
+		return hubpb.HostsReq_Mode(m), modeKey, nil
 	}
 	return -1, "", fmt.Errorf("Invalid Hub query mode: %s", mode)
 }

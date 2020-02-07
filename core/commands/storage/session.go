@@ -82,20 +82,23 @@ type StatusChan struct {
 type Shard struct {
 	sync.Mutex
 
-	ShardHash            cidlib.Cid
-	ShardIndex           int
-	ContractID           string
-	SignedEscrowContract []byte
-	Receiver             peer.ID
-	Price                int64
-	TotalPay             int64
-	State                int
-	ShardSize            int64
-	StorageLength        int64
-	ContractLength       time.Duration
-	StartTime            time.Time
-	Err                  error
-	Challenge            *StorageChallenge
+	ShardHash                cidlib.Cid
+	ShardIndex               int
+	ContractID               string
+	SignedEscrowContract     []byte
+	Receiver                 peer.ID
+	Price                    int64
+	TotalPay                 int64
+	State                    int
+	ShardSize                int64
+	StorageLength            int64
+	ContractLength           time.Duration
+	StartTime                time.Time
+	Err                      error
+	Challenge                *StorageChallenge
+	CandidateHost            *HostNode
+	HalfSignedEscrowContract []byte
+	HalfSignedGuardContract  []byte
 
 	RetryChan chan *StepRetryChan `json:"-"`
 }
@@ -115,13 +118,13 @@ func init() {
 	// init chunk state
 	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 30 * time.Second}
 	StdStateFlow[ContractState] = &FlowControl{
 		State:   "contract",
 		TimeOut: 5 * time.Minute}
 	StdStateFlow[CompleteState] = &FlowControl{
 		State:   "complete",
-		TimeOut: time.Minute}
+		TimeOut: 1 * time.Minute}
 	// init session status
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
@@ -152,10 +155,11 @@ func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
 	sm.Map[ssID] = ss
 }
 
-func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
-	sm.Lock()
-	defer sm.Unlock()
+func (sm *SessionMap) GetSessionWithoutLock(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
+	return sm.doGetSession(node, prefix, ssID)
+}
 
+func (sm *SessionMap) doGetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
 	if sm.Map[ssID] == nil {
 		f, err := GetFileMetaFromDatastore(node, prefix, ssID)
 		if err != nil {
@@ -167,6 +171,12 @@ func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*Fil
 		return f, nil
 	}
 	return sm.Map[ssID], nil
+}
+
+func (sm *SessionMap) GetSession(node *core.IpfsNode, prefix, ssID string) (*FileContracts, error) {
+	sm.Lock()
+	defer sm.Unlock()
+	return sm.doGetSession(node, prefix, ssID)
 }
 
 func (sm *SessionMap) GetOrDefault(ssID string, pid peer.ID) *FileContracts {
@@ -328,7 +338,6 @@ func (ss *FileContracts) GetCompleteShards() int {
 }
 
 func (ss *FileContracts) SetFileHash(fileHash cidlib.Cid) {
-
 	ss.Lock()
 	defer ss.Unlock()
 
@@ -336,34 +345,28 @@ func (ss *FileContracts) SetFileHash(fileHash cidlib.Cid) {
 }
 
 func (ss *FileContracts) GetFileHash() cidlib.Cid {
-
-	ss.Lock()
-	defer ss.Unlock()
-
 	return ss.FileHash
 }
 
-func (ss *FileContracts) IncrementContract(shardHash string, shardIndex int,
-	contracts []byte, guardContract *guardpb.Contract) (bool, error) {
+func (ss *FileContracts) IncrementContract(shard *Shard, signedEscrowContract []byte,
+	guardContract *guardpb.Contract) error {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if ss.GuardContracts == nil {
-		ss.GuardContracts = make([]*guardpb.Contract, len(ss.ShardInfo))
+	// expand guard contracts storage according to number of shards
+	if shard.ShardIndex >= len(ss.GuardContracts) {
+		gcs := make([]*guardpb.Contract, shard.ShardIndex+1)
+		copy(gcs, ss.GuardContracts)
+		ss.GuardContracts = gcs
 	}
 	// insert contract according to shard order
-	ss.GuardContracts[shardIndex] = guardContract
+	ss.GuardContracts[shard.ShardIndex] = guardContract
 
-	shardKey := GetShardKey(shardHash, shardIndex)
-	shard, ok := ss.ShardInfo[shardKey]
-	if !ok {
-		return false, fmt.Errorf("shard key does not exist: %s", shardKey)
-	}
-	if shard.SetSignedContract(contracts) {
+	if shard.SetSignedEscrowContract(signedEscrowContract) {
 		ss.CompleteContracts++
-		return true, nil
+		return nil
 	}
-	return false, nil
+	return fmt.Errorf("escrow contract is already set")
 }
 
 func (ss *FileContracts) GetGuardContracts() []*guardpb.Contract {
@@ -396,9 +399,6 @@ func (ss *FileContracts) SetStatusWithError(status int, err error) {
 }
 
 func (ss *FileContracts) GetStatusAndMessage() (string, string) {
-	ss.Lock()
-	defer ss.Unlock()
-
 	return ss.Status, ss.StatusMessage
 }
 
@@ -497,7 +497,7 @@ func (c *Shard) UpdateShard(recvPid peer.ID) {
 	c.StartTime = time.Now()
 }
 
-func (c *Shard) SetSignedContract(contract []byte) bool {
+func (c *Shard) SetSignedEscrowContract(contract []byte) bool {
 	c.Lock()
 	defer c.Unlock()
 
@@ -548,16 +548,10 @@ func (c *Shard) SetState(state int) {
 }
 
 func (c *Shard) GetStateStr() string {
-	c.Lock()
-	defer c.Unlock()
-
 	return StdStateFlow[c.State].State
 }
 
 func (c *Shard) GetState() int {
-	c.Lock()
-	defer c.Unlock()
-
 	return c.State
 }
 

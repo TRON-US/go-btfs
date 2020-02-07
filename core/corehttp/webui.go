@@ -1,6 +1,6 @@
 package corehttp
 
-const WebUIPath = "/btfs/QmPCfG86C3e4UgxFm8hWq8ccQVJDwntLfvCrs3yT3kdKsy"
+const WebUIPath = "/btfs/QmVc2xjpt1xbBDu98QdDnPNS7nwyAgMvPbNpegJ9YyeLTd"
 
 // this is a list of all past webUI paths.
 var WebUIPaths = []string{

@@ -34,7 +34,8 @@ var RmCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		api, err := cmdenv.GetApi(env, req)
+		// do not perform online operations for local delete
+		api, err := cmdenv.GetApi(env, req, options.Api.Offline(true), options.Api.FetchBlocks(false))
 		if err != nil {
 			return err
 		}
@@ -63,7 +64,7 @@ var RmCmd = &cmds.Command{
 			}
 
 			// Rm all child links
-			err = rmAllDags(req.Context, api, node, &results)
+			err = rmAllDags(req.Context, api, node, &results, map[string]bool{})
 			if err != nil {
 				return err
 			}
@@ -77,14 +78,20 @@ var RmCmd = &cmds.Command{
 	},
 }
 
-func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *stringList) error {
+func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *stringList,
+	removed map[string]bool) error {
 	for _, nl := range node.Links() {
+		// Skipped just removed nodes
+		if _, ok := removed[nl.Cid.String()]; ok {
+			continue
+		}
 		// Resolve, recurse, then finally remove
 		rn, err := api.ResolveNode(ctx, path.IpfsPath(nl.Cid))
 		if err != nil {
+			res.Strings = append(res.Strings, fmt.Sprintf("Error resolving object %s", nl.Cid))
 			return err
 		}
-		if err := rmAllDags(ctx, api, rn, res); err != nil {
+		if err := rmAllDags(ctx, api, rn, res, removed); err != nil {
 			return err
 		}
 	}
@@ -94,6 +101,7 @@ func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *
 		return err
 	} else {
 		res.Strings = append(res.Strings, fmt.Sprintf("Removed %s", ncid))
+		removed[ncid.String()] = true
 	}
 	return nil
 }

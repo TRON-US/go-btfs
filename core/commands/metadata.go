@@ -53,8 +53,8 @@ This command returns a new file-hash for the file.`,
 		cmds.StringArg("metadata", true, false, "Token metadata to append in JSON string."),
 	},
 	Options: []cmds.Option{
-		cmds.BoolOption(metaOverwriteOptionName, "Pin this object when adding.").WithDefault(true),
-		cmds.BoolOption(metaPinOptionName, "Overwrite metadata when there are existing key-value pairs.").WithDefault(false),
+		cmds.BoolOption(metaPinOptionName, "Pin this object when adding.").WithDefault(true),
+		cmds.BoolOption(metaOverwriteOptionName, "Overwrite metadata when there are existing key-value pairs.").WithDefault(false),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
