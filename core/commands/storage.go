@@ -36,22 +36,24 @@ import (
 )
 
 const (
-	leafHashOptionName            = "leaf-hash"
-	uploadPriceOptionName         = "price"
-	replicationFactorOptionName   = "replication-factor"
-	hostSelectModeOptionName      = "host-select-mode"
-	hostSelectionOptionName       = "host-selection"
-	hostInfoModeOptionName        = "host-info-mode"
-	hostSyncModeOptionName        = "host-sync-mode"
-	hostStoragePriceOptionName    = "host-storage-price"
-	hostBandwidthPriceOptionName  = "host-bandwidth-price"
-	hostCollateralPriceOptionName = "host-collateral-price"
-	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
-	hostStorageTimeMinOptionName  = "host-storage-time-min"
-	hostStorageMaxOptionName      = "host-storage-max"
-	testOnlyOptionName            = "host-search-local"
-	storageLengthOptionName       = "storage-length"
-	repairModeOptionName          = "repair-mode"
+	leafHashOptionName               = "leaf-hash"
+	uploadPriceOptionName            = "price"
+	replicationFactorOptionName      = "replication-factor"
+	hostSelectModeOptionName         = "host-select-mode"
+	hostSelectionOptionName          = "host-selection"
+	hostInfoModeOptionName           = "host-info-mode"
+	hostSyncModeOptionName           = "host-sync-mode"
+	hostStoragePriceOptionName       = "host-storage-price"
+	hostBandwidthPriceOptionName     = "host-bandwidth-price"
+	hostCollateralPriceOptionName    = "host-collateral-price"
+	hostBandwidthLimitOptionName     = "host-bandwidth-limit"
+	hostStorageTimeMinOptionName     = "host-storage-time-min"
+	hostStorageMaxOptionName         = "host-storage-max"
+	testOnlyOptionName               = "host-search-local"
+	storageLengthOptionName          = "storage-length"
+	repairModeOptionName             = "repair-mode"
+	customizedPayoutOptionName       = "customize-payout"
+	customizedPayoutPeriodOptionName = "customize-payout-period"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -132,6 +134,8 @@ Use status command to check for completion:
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
 		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(repairModeOptionName, "rm", "Enable repair mode.").WithDefault(false),
+		cmds.BoolOption(customizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
+		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -333,7 +337,11 @@ Use status command to check for completion:
 		if req.Options[testOnlyOptionName] != nil {
 			testFlag = req.Options[testOnlyOptionName].(bool)
 		}
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag, isRepairMode, renterPid.Pretty())
+		customizedPayout := req.Options[customizedPayoutOptionName].(bool)
+		p := req.Options[customizedPayoutPeriodOptionName].(int)
+
+		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag,
+			isRepairMode, renterPid.Pretty(), customizedPayout, p)
 
 		seRes := &UploadRes{
 			ID: ssID,
@@ -376,16 +384,18 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 }
 
 type paramsForPrepareContractsForShard struct {
-	ctx       context.Context
-	rq        *storage.RetryQueue
-	api       coreiface.CoreAPI
-	ss        *storage.FileContracts
-	n         *core.IpfsNode
-	test      bool
-	isRepair  bool
-	renterPid string
-	shardKey  string
-	shard     *storage.Shard
+	ctx                context.Context
+	rq                 *storage.RetryQueue
+	api                coreiface.CoreAPI
+	ss                 *storage.FileContracts
+	n                  *core.IpfsNode
+	test               bool
+	isRepair           bool
+	renterPid          string
+	shardKey           string
+	shard              *storage.Shard
+	customizedSchedule bool
+	period             int
 }
 
 func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode) error {
@@ -403,7 +413,8 @@ func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, ca
 	if err != nil {
 		return err
 	}
-	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid, shard.TotalPay)
+	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid,
+		shard.TotalPay, param.customizedSchedule, param.period)
 	if err != nil {
 		return fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
@@ -431,7 +442,7 @@ func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, ca
 }
 
 func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
-	ssID string, test bool, isRepair bool, renterPid string) {
+	ssID string, test bool, isRepair bool, renterPid string, customizedSchedule bool, period int) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
 		log.Error("retry queue is nil")
