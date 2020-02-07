@@ -405,24 +405,24 @@ func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, ca
 	}
 	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid, shard.TotalPay)
 	if err != nil {
-		log.Error("create escrow contract failed. ", err)
+		fmt.Errorf("create escrow contract failed: [%v] ", err)
 		return err
 	}
 	halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, param.n.PrivateKey, true)
 	if err != nil {
-		log.Error("sign escrow contract and maorshal failed ")
+		fmt.Errorf("sign escrow contract and maorshal failed: [%v] ", err)
 		return err
 	}
 	shard.UpdateShard(pid)
 	guardContractMeta, err := guard.NewContract(param.ss, cfg, param.shardKey, int32(shardIndex), param.renterPid)
 	if err != nil {
-		log.Error("fail to new contract meta")
+		fmt.Errorf("fail to new contract meta: [%v] ", err)
 		return err
 	}
 	halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, param.n.PrivateKey, true,
 		param.isRepair, param.renterPid, param.n.Identity.Pretty())
 	if err != nil {
-		log.Error("fail to sign guard contract and marshal")
+		fmt.Errorf("fail to sign guard contract and marshal: [%v] ", err)
 		return err
 	}
 
@@ -576,12 +576,7 @@ func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *stora
 		sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
 		return
 	}
-	// send over contract
-	c := new(guardpb.Contract)
-	err = proto.Unmarshal(shard.HalfSignedGuardContract, c)
-	if err != nil {
-		return
-	}
+
 	_, err = remote.P2PCall(param.ctx, param.n, hostPid, "/storage/upload/init",
 		ss.ID,
 		ss.GetFileHash().String(),
