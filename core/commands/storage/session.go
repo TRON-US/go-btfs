@@ -97,7 +97,6 @@ type Shard struct {
 	Err                      error
 	Challenge                *StorageChallenge
 	CandidateHost            *HostNode
-	CandidateHostTemporary   *HostNode
 	HalfSignedEscrowContract []byte
 	HalfSignedGuardContract  []byte
 

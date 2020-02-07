@@ -499,15 +499,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 				case <-time.After(storage.StdStateFlow[curState].TimeOut):
 					{
 						log.Errorf("upload timed out with state %s", storage.StdStateFlow[curState].State)
-						if curState == storage.InitState {
-							if shard.CandidateHostTemporary != nil {
-								shard.CandidateHostTemporary.IncrementRetry()
-							} else {
-								if shard.CandidateHost != nil {
-									shard.CandidateHost.IncrementRetry()
-								}
-							}
-						} else {
+						if shard.CandidateHost != nil {
 							shard.CandidateHost.IncrementRetry()
 						}
 						curState = storage.InitState // reconnect to the host to start over
@@ -560,7 +552,7 @@ func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *stora
 	// if candidate host passed in is not valid, fetch next valid one
 	var hostChanged bool
 	if initial || candidateHost == nil || candidateHost.FailTimes >= FailLimit || candidateHost.RetryTimes >= RetryLimit {
-		otherValidHost, err := getValidHost(param.ctx, ss.RetryQueue, param.api, param.n, param.test, shard, initial)
+		otherValidHost, err := getValidHost(param.ctx, ss.RetryQueue, param.api, param.n, param.test)
 		// either retry queue is empty or something wrong with retry queue
 		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.InitState, false, fmt.Errorf("no host available %v", err), nil)
@@ -611,11 +603,10 @@ func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *stora
 
 // find next available host
 func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api coreiface.CoreAPI,
-	n *core.IpfsNode, test bool, shard *storage.Shard, initial bool) (*storage.HostNode, error) {
+	n *core.IpfsNode, test bool) (*storage.HostNode, error) {
 
 	var candidateHost *storage.HostNode
 	for candidateHost == nil {
-		shard.CandidateHostTemporary = nil
 		if retryQueue.Empty() {
 			return nil, fmt.Errorf("retry queue is empty")
 		}
@@ -631,9 +622,7 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				return nil, err
 			}
 		} else {
-			shard.CandidateHostTemporary = nextHost
 			// find peer
-			time.Sleep(10 * time.Minute)
 			pi, err := remote.FindPeer(ctx, n, nextHost.Identity)
 			if err != nil {
 				// it's normal to fail in finding peer,
@@ -675,7 +664,6 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 			}
 			// if connect successfully, return
 			candidateHost = nextHost
-			shard.CandidateHostTemporary = nil
 		}
 	}
 	return candidateHost, nil
