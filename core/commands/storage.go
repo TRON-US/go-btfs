@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -136,7 +135,7 @@ Use status command to check for completion:
 		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(repairModeOptionName, "rm", "Enable repair mode.").WithDefault(false),
 		cmds.BoolOption(customizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
-		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule."),
+		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -338,14 +337,8 @@ Use status command to check for completion:
 		if req.Options[testOnlyOptionName] != nil {
 			testFlag = req.Options[testOnlyOptionName].(bool)
 		}
-		p := 1
-		customizedPayout, ok := req.Options[customizedPayoutOptionName].(bool)
-		if customizedPayout {
-			p, ok = req.Options[customizedPayoutPeriodOptionName].(int)
-			if !ok {
-				return errors.New("invalid customized payout period")
-			}
-		}
+		customizedPayout := req.Options[customizedPayoutOptionName].(bool)
+		p := req.Options[customizedPayoutPeriodOptionName].(int)
 
 		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag,
 			isRepairMode, renterPid.Pretty(), customizedPayout, p)
@@ -391,20 +384,21 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 }
 
 type paramsForPrepareContractsForShard struct {
-	ctx       context.Context
-	rq        *storage.RetryQueue
-	api       coreiface.CoreAPI
-	ss        *storage.FileContracts
-	n         *core.IpfsNode
-	test      bool
-	isRepair  bool
-	renterPid string
-	shardKey  string
-	shard     *storage.Shard
+	ctx                context.Context
+	rq                 *storage.RetryQueue
+	api                coreiface.CoreAPI
+	ss                 *storage.FileContracts
+	n                  *core.IpfsNode
+	test               bool
+	isRepair           bool
+	renterPid          string
+	shardKey           string
+	shard              *storage.Shard
+	customizedSchedule bool
+	period             int
 }
 
-func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode,
-	n *core.IpfsNode, customizedSchedule bool, period int) error {
+func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode) error {
 	shard := param.shard
 	shardIndex := shard.ShardIndex
 
@@ -419,8 +413,8 @@ func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, ca
 	if err != nil {
 		return err
 	}
-	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, n, pid,
-		shard.TotalPay, customizedSchedule, period)
+	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid,
+		shard.TotalPay, param.customizedSchedule, param.period)
 	if err != nil {
 		return fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
@@ -472,7 +466,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 			}
 
 			// build connection with host, init step, could be error or timeout
-			go retryProcess(param, nil, true, n, customizedSchedule, period)
+			go retryProcess(param, nil, true)
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
@@ -499,7 +493,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 							// if reach retry limit, in retry process will select another host
 							// so in channel receiving should also return to 'init'
 							curState = storage.InitState
-							go retryProcess(param, shard.CandidateHost, false, n, customizedSchedule, period)
+							go retryProcess(param, shard.CandidateHost, false)
 						}
 					} else {
 						// if success with current state, move on to next
@@ -517,7 +511,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 						}
 						curState = storage.InitState // reconnect to the host to start over
 
-						go retryProcess(param, shard.CandidateHost, false, n, customizedSchedule, period)
+						go retryProcess(param, shard.CandidateHost, false)
 					}
 				}
 			}
@@ -551,8 +545,7 @@ func sendStepStateChan(channel chan *storage.StepRetryChan, state int, succeed b
 	}
 }
 
-func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode, initial bool,
-	n *core.IpfsNode, customizedSchedule bool, period int) {
+func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *storage.HostNode, initial bool) {
 	ss := param.ss
 	shard := param.shard
 
@@ -578,7 +571,7 @@ func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *stora
 
 	// if host is changed for the "shard", move the shard state to 0 and retry
 	if hostChanged {
-		err := prepareSignedContractsForShard(param, candidateHost, n, customizedSchedule, period)
+		err := prepareSignedContractsForShard(param, candidateHost)
 		if err != nil {
 			sendStepStateChan(shard.RetryChan, storage.InitState, false, err, nil)
 			return
