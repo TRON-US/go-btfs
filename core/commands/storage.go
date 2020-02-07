@@ -338,7 +338,7 @@ Use status command to check for completion:
 		if req.Options[testOnlyOptionName] != nil {
 			testFlag = req.Options[testOnlyOptionName].(bool)
 		}
-		p := 0
+		p := 1
 		customizedPayout, ok := req.Options[customizedPayoutOptionName].(bool)
 		if customizedPayout {
 			p, ok = req.Options[customizedPayoutPeriodOptionName].(int)
