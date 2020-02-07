@@ -345,9 +345,6 @@ func (ss *FileContracts) SetFileHash(fileHash cidlib.Cid) {
 }
 
 func (ss *FileContracts) GetFileHash() cidlib.Cid {
-	ss.Lock()
-	defer ss.Unlock()
-
 	return ss.FileHash
 }
 
@@ -402,9 +399,6 @@ func (ss *FileContracts) SetStatusWithError(status int, err error) {
 }
 
 func (ss *FileContracts) GetStatusAndMessage() (string, string) {
-	ss.Lock()
-	defer ss.Unlock()
-
 	return ss.Status, ss.StatusMessage
 }
 
@@ -554,16 +548,10 @@ func (c *Shard) SetState(state int) {
 }
 
 func (c *Shard) GetStateStr() string {
-	c.Lock()
-	defer c.Unlock()
-
 	return StdStateFlow[c.State].State
 }
 
 func (c *Shard) GetState() int {
-	c.Lock()
-	defer c.Unlock()
-
 	return c.State
 }
 
