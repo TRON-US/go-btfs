@@ -405,25 +405,21 @@ func prepareSignedContractsForShard(param *paramsForPrepareContractsForShard, ca
 	}
 	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, pid, shard.TotalPay)
 	if err != nil {
-		fmt.Errorf("create escrow contract failed: [%v] ", err)
-		return err
+		return fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
 	halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, param.n.PrivateKey, true)
 	if err != nil {
-		fmt.Errorf("sign escrow contract and maorshal failed: [%v] ", err)
-		return err
+		return fmt.Errorf("sign escrow contract and maorshal failed: [%v] ", err)
 	}
 	shard.UpdateShard(pid)
 	guardContractMeta, err := guard.NewContract(param.ss, cfg, param.shardKey, int32(shardIndex), param.renterPid)
 	if err != nil {
-		fmt.Errorf("fail to new contract meta: [%v] ", err)
-		return err
+		return fmt.Errorf("fail to new contract meta: [%v] ", err)
 	}
 	halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, param.n.PrivateKey, true,
 		param.isRepair, param.renterPid, param.n.Identity.Pretty())
 	if err != nil {
-		fmt.Errorf("fail to sign guard contract and marshal: [%v] ", err)
-		return err
+		return fmt.Errorf("fail to sign guard contract and marshal: [%v] ", err)
 	}
 
 	// Set the output of this function.
