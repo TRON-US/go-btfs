@@ -22,7 +22,7 @@ import (
 var log = logging.Logger("core/escrow")
 
 func NewContract(configuration *config.Config, id string, n *core.IpfsNode, pid peer.ID,
-	price int64) (*escrowpb.EscrowContract, error) {
+	price int64, customizedSchedule bool, period int) (*escrowpb.EscrowContract, error) {
 	payerPubKey := n.PrivateKey.GetPublic()
 	payerAddr, err := payerPubKey.Raw()
 	if err != nil {
@@ -43,17 +43,24 @@ func NewContract(configuration *config.Config, id string, n *core.IpfsNode, pid 
 	if err != nil {
 		return nil, err
 	}
+	ps := escrowpb.Schedule_MONTHLY
+	p := 0
+	if customizedSchedule {
+		ps = escrowpb.Schedule_CUSTOMIZED
+		p = period
+	}
 	return &escrowpb.EscrowContract{
-		ContractId:       id,
-		BuyerAddress:     payerAddr,
-		SellerAddress:    hostAddr,
-		AuthAddress:      authAddress,
-		Amount:           price,
-		CollateralAmount: 0,
-		WithholdAmount:   0,
-		TokenType:        escrowpb.TokenType_BTT,
-		PayoutSchedule:   0,
-		NumPayouts:       1,
+		ContractId:            id,
+		BuyerAddress:          payerAddr,
+		SellerAddress:         hostAddr,
+		AuthAddress:           authAddress,
+		Amount:                price,
+		CollateralAmount:      0,
+		WithholdAmount:        0,
+		TokenType:             escrowpb.TokenType_BTT,
+		PayoutSchedule:        ps,
+		NumPayouts:            1,
+		CustomizePayoutPeriod: int32(p),
 	}, nil
 }
 
