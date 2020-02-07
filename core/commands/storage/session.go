@@ -118,7 +118,7 @@ func init() {
 	// init chunk state
 	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
-		TimeOut: 10 * time.Second}
+		TimeOut: 30 * time.Second}
 	StdStateFlow[ContractState] = &FlowControl{
 		State:   "contract",
 		TimeOut: 5 * time.Minute}
