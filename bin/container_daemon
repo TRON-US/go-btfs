@@ -41,6 +41,10 @@ else
   fi
   btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
   btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+  btfs config Services.EscrowDomain escrow-service:50051
+  btfs config Services.GuardDomain guard-interceptor-service:50051
+  btfs config Services.HubDomain query-service:50051
+  btfs config Services.StatusServerDomain status-grpc-service:50051
 fi
 
 exec btfs "$@"
