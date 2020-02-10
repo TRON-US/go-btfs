@@ -81,6 +81,8 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
 		"challenge": storageChallengeCmd,
+		"stats":     storageStatsCmd,
+		"contracts": storageContractsCmd,
 	},
 }
 
@@ -1525,3 +1527,62 @@ the challenge request back to the caller.`,
 	},
 	Type: StorageChallengeRes{},
 }
+
+// Storage Stats
+//
+// Includes sub-commands: info, sync
+var storageStatsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get node storage stats in the network.",
+		ShortDescription: `
+btfs storage stats sync <>
+btfs storage stats info <>`,
+	},
+	Subcommands: map[string]*cmds.Command{
+		"sync": storageStatsSyncCmd,
+		"info": storageStatsInfoCmd,
+	},
+}
+
+var storageStatsSyncCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Synchronize node stats.",
+		ShortDescription: `
+This command synchronize node stats from network(hub) to local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 3 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		return nil
+	},
+}
+
+var storageStatsInfoCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get node stats.",
+		ShortDescription: `
+Get node stats in the network from the local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 3 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// return mock -- static dummy
+		data := []interface{}{
+			map[string]interface{}{
+				"HostStats": map[string]interface{}{
+					"Online":      true,
+					"Uptime":      86400,
+					"Score":       6.5,
+					"StorageUsed": 1024,
+					"StorageCap":  102400,
+				},
+				"RenterStats": map[string]interface{}{
+					"Reserved": "Reserved",
+				},
+			},
+		}
+		return cmds.EmitOnce(res, data)
+	},
+	Type: nodepb.StorageStat{},
+}
+
