@@ -25,6 +25,4 @@ COPY . $SRC_DIR
 RUN git init && git add .
 
 # by default lets run the go fmt, tidy and unit tests
-# FIXME:
-#CMD make test_go_fmt test_go_mod test_go_test build
-CMD make test_go_fmt test_go_mod build
+CMD make test_go_fmt test_go_mod test_go_test build
