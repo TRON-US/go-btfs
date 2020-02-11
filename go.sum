@@ -45,8 +45,6 @@ github.com/TRON-US/go-ipld-format v0.1.0 h1:/JlZFthx4haJJMW456sNiupIGH717f0/7Po4
 github.com/TRON-US/go-ipld-format v0.1.0/go.mod h1:2Wr3LYadP0zd+8lHcwbUZ5zBvemRmWj10e5gwo0xEl8=
 github.com/TRON-US/go-libp2p-core v0.4.0 h1:tF/sxyQDLP/WW6w566MGs5P20XeMR97M0lfdBkhJNfc=
 github.com/TRON-US/go-libp2p-core v0.4.0/go.mod h1:B9V1MQtCLGp+jUXNdKJzNllFSsVSMuex1+5/fyWgYl0=
-github.com/TRON-US/go-libp2p-netutil v0.1.1 h1:qKqdJlWG5NQx8FsuapXRkGo8S5Kls4qsiF1OMt5mhig=
-github.com/TRON-US/go-libp2p-netutil v0.1.1/go.mod h1:pkG3JaBNMxcN/n02/C/iCX6Z3pZ5kECzKCto098Ymyg=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
 github.com/TRON-US/go-mfs v0.2.2/go.mod h1:NduHl3CtI8J81aY4aV/Si/9XZbZ/+hHzPZUHC9Ho3WQ=
 github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
@@ -525,6 +523,9 @@ github.com/libp2p/go-libp2p-nat v0.0.4 h1:+KXK324yaY701On8a0aGjTnw8467kW3ExKcqW2
 github.com/libp2p/go-libp2p-nat v0.0.4/go.mod h1:N9Js/zVtAXqaeT99cXgTV9e75KpnWCvVOiGzlcHmBbY=
 github.com/libp2p/go-libp2p-net v0.0.1/go.mod h1:Yt3zgmlsHOgUWSXmt5V/Jpz9upuJBE8EgNU9DrCcR8c=
 github.com/libp2p/go-libp2p-net v0.0.2/go.mod h1:Yt3zgmlsHOgUWSXmt5V/Jpz9upuJBE8EgNU9DrCcR8c=
+github.com/libp2p/go-libp2p-netutil v0.0.1/go.mod h1:GdusFvujWZI9Vt0X5BKqwWWmZFxecf9Gt03cKxm2f/Q=
+github.com/libp2p/go-libp2p-netutil v0.1.0 h1:zscYDNVEcGxyUpMd0JReUZTrpMfia8PmLKcKF72EAMQ=
+github.com/libp2p/go-libp2p-netutil v0.1.0/go.mod h1:3Qv/aDqtMLTUyQeundkKsA+YCThNdbQD54k3TqjpbFU=
 github.com/libp2p/go-libp2p-peer v0.0.1/go.mod h1:nXQvOBbwVqoP+T5Y5nCjeH4sP9IX/J0AMzcDUVruVoo=
 github.com/libp2p/go-libp2p-peer v0.1.1/go.mod h1:jkF12jGB4Gk/IOo+yomm+7oLWxF278F7UnrYUQ1Q8es=
 github.com/libp2p/go-libp2p-peer v0.2.0 h1:EQ8kMjaCUwt/Y5uLgjT8iY2qg0mGUT0N1zUjer50DsY=
