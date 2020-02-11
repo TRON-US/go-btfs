@@ -292,7 +292,11 @@ Use status command to check for completion:
 			if !ok {
 				mode = cfg.Experimental.HostsSyncMode
 			}
-			hosts, err := storage.GetHostsFromDatastore(req.Context, n, mode, len(shardHashes))
+			hosts := make([]string, 0)
+			for i := 0; i < 100; i++ {
+				hosts = append(hosts, "16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX")
+			}
+			//hosts, err := storage.GetHostsFromDatastore(req.Context, n, mode, len(shardHashes))
 			if err != nil {
 				return err
 			}
@@ -301,12 +305,12 @@ Use status command to check for completion:
 					continue
 				}
 				// use host askingPrice instead if provided
-				if int64(ni.StoragePriceAsk) > HostPriceLowBoundary {
-					price = int64(ni.StoragePriceAsk)
-				}
+				//if int64(ni.StoragePriceAsk) > HostPriceLowBoundary {
+				//	price = int64(ni.StoragePriceAsk)
+				//}
 				// add host to retry queue
 				host := &storage.HostNode{
-					Identity:   ni.NodeId,
+					Identity:   ni,
 					RetryTimes: 0,
 					FailTimes:  0,
 					Price:      price,

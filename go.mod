@@ -106,11 +106,11 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mr-tron/base58 v1.1.2
-	github.com/multiformats/go-multiaddr v0.0.4
+	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/multiformats/go-multiaddr-dns v0.0.3
 	github.com/multiformats/go-multiaddr-net v0.0.1
 	github.com/multiformats/go-multibase v0.0.1
-	github.com/multiformats/go-multihash v0.0.5
+	github.com/multiformats/go-multihash v0.0.8
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/nwaples/rardecode v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
@@ -150,3 +150,5 @@ replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1
 replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.1.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.4.0
+
+replace github.com/libp2p/go-libp2p-netutil => github.com/TRON-US/go-libp2p-netutil v0.1.1
