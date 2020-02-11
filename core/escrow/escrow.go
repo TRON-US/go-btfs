@@ -8,7 +8,6 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 
 	config "github.com/TRON-US/go-btfs-config"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
@@ -17,6 +16,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 var log = logging.Logger("core/escrow")
