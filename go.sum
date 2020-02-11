@@ -43,6 +43,8 @@ github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElA
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-ipld-format v0.1.0 h1:/JlZFthx4haJJMW456sNiupIGH717f0/7Po4hALVI9I=
 github.com/TRON-US/go-ipld-format v0.1.0/go.mod h1:2Wr3LYadP0zd+8lHcwbUZ5zBvemRmWj10e5gwo0xEl8=
+github.com/TRON-US/go-libp2p-core v0.4.0 h1:tF/sxyQDLP/WW6w566MGs5P20XeMR97M0lfdBkhJNfc=
+github.com/TRON-US/go-libp2p-core v0.4.0/go.mod h1:B9V1MQtCLGp+jUXNdKJzNllFSsVSMuex1+5/fyWgYl0=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=
 github.com/TRON-US/go-mfs v0.2.2/go.mod h1:NduHl3CtI8J81aY4aV/Si/9XZbZ/+hHzPZUHC9Ho3WQ=
 github.com/TRON-US/go-unixfs v0.4.4/go.mod h1:VBRlISp23R6JoJQ2t+O/VkIswnPo9PBVCh5blMpN0GI=
@@ -824,6 +826,7 @@ github.com/tron-us/go-btfs-common v0.2.11 h1:hxc7oUQHPViKzdaTZLHuS2vyYU1e6/IToZI
 github.com/tron-us/go-btfs-common v0.2.11/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
 github.com/tron-us/go-btfs-common v0.2.17 h1:krwTTcMNvBuXOFBm5UdbrLQvKhOoVKJQC6onXH4y1gg=
 github.com/tron-us/go-btfs-common v0.2.17/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
+github.com/tron-us/go-btfs-common v0.2.19/go.mod h1:4EQJFeCHS7zi5v/S9vn3ZU5fJjxyzJoMfBh0zE75GOA=
 github.com/tron-us/go-common/v2 v2.0.5 h1:LiGEmOd0FVVRisFyg3AJWDWMXlM537M3JZ+gh75sBlw=
 github.com/tron-us/go-common/v2 v2.0.5/go.mod h1:GiKX9noBLHotkZAU+7ET4h7N0DYWnm3OcGHOFJg1Q68=
 github.com/tron-us/protobuf v1.3.4 h1:oqokl6jMAfe1fb/B6t1UMllbw/KtfdJcCn8plxPkHM8=

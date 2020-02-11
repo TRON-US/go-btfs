@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"time"
+	"github.com/tron-us/go-btfs-common/ledger"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
@@ -24,22 +23,11 @@ var log = logging.Logger("core/escrow")
 func NewContract(configuration *config.Config, id string, n *core.IpfsNode, pid peer.ID,
 	price int64, customizedSchedule bool, period int) (*escrowpb.EscrowContract, error) {
 	payerPubKey := n.PrivateKey.GetPublic()
-	payerAddr, err := payerPubKey.Raw()
-	if err != nil {
-		return nil, err
-	}
 	hostPubKey, err := pid.ExtractPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	hostAddr, err := hostPubKey.Raw()
-	if err != nil {
-		return nil, err
-	}
 	if len(configuration.Services.GuardPubKeys) == 0 {
 		return nil, fmt.Errorf("No Services.GuardPubKeys are set in config")
 	}
-	authAddress, err := ConvertToAddress(configuration.Services.GuardPubKeys[0])
+	authPubKey, err := ConvertToPubKey(configuration.Services.GuardPubKeys[0])
 	if err != nil {
 		return nil, err
 	}
@@ -49,19 +37,7 @@ func NewContract(configuration *config.Config, id string, n *core.IpfsNode, pid 
 		ps = escrowpb.Schedule_CUSTOMIZED
 		p = period
 	}
-	return &escrowpb.EscrowContract{
-		ContractId:            id,
-		BuyerAddress:          payerAddr,
-		SellerAddress:         hostAddr,
-		AuthAddress:           authAddress,
-		Amount:                price,
-		CollateralAmount:      0,
-		WithholdAmount:        0,
-		TokenType:             escrowpb.TokenType_BTT,
-		PayoutSchedule:        ps,
-		NumPayouts:            1,
-		CustomizePayoutPeriod: int32(p),
-	}, nil
+	return ledger.NewEscrowContract(id, payerPubKey, hostPubKey, authPubKey, price, ps, int32(p))
 }
 
 func ConvertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {
@@ -72,12 +48,12 @@ func ConvertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {
 	return ic.UnmarshalPublicKey(raw)
 }
 
-func ConvertToAddress(pubKeyStr string) ([]byte, error) {
+func ConvertToPubKey(pubKeyStr string) (ic.PubKey, error) {
 	pubKey, err := ConvertPubKeyFromString(pubKeyStr)
 	if err != nil {
 		return nil, err
 	}
-	return pubKey.Raw()
+	return pubKey, nil
 }
 
 func NewSignedContract(contract *escrowpb.EscrowContract) *escrowpb.SignedEscrowContract {
@@ -92,36 +68,24 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 	if err != nil {
 		return nil, err
 	}
-	buyerPubKey := buyerPrivKey.GetPublic()
-	buyerAddr, err := buyerPubKey.Raw()
-	if err != nil {
-		return nil, err
-	}
 	if len(configuration.Services.EscrowPubKeys) == 0 {
 		return nil, fmt.Errorf("No Services.EscrowPubKeys are set in config")
 	}
-	escrowAddress, err := ConvertToAddress(configuration.Services.EscrowPubKeys[0])
+	escrowPubKey, err := ConvertToPubKey(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return nil, err
 	}
-	chanCommit := &ledgerpb.ChannelCommit{
-		Payer:     &ledgerpb.PublicKey{Key: buyerAddr},
-		Recipient: &ledgerpb.PublicKey{Key: escrowAddress},
-		Amount:    totalPrice, // total amount in the contract request
-		PayerId:   time.Now().UnixNano(),
+	chanCommit, err := ledger.NewChannelCommit(buyerPrivKey.GetPublic(), escrowPubKey, totalPrice)
+	if err != nil {
+		return nil, err
 	}
 	buyerChanSig, err := crypto.Sign(buyerPrivKey, chanCommit)
 	if err != nil {
 		return nil, err
 	}
-
-	signedChanCommit := &ledgerpb.SignedChannelCommit{
-		Channel:   chanCommit,
-		Signature: buyerChanSig,
-	}
 	return &escrowpb.EscrowContractRequest{
 		Contract:     signedContracts,
-		BuyerChannel: signedChanCommit,
+		BuyerChannel: ledger.NewSignedChannelCommit(chanCommit, buyerChanSig),
 	}, nil
 }
 
@@ -169,23 +133,15 @@ func NewPayinRequest(result *escrowpb.SignedSubmitContractResult, payerPubKey ic
 		return nil, err
 	}
 	chanState.FromSignature = sig
-	payerAddr, err := payerPubKey.Raw()
+	payinReq, err := ledger.NewPayinRequest(result.Result.PayinId, payerPubKey, chanState)
 	if err != nil {
 		return nil, err
-	}
-	payinReq := &escrowpb.PayinRequest{
-		PayinId:           result.Result.PayinId,
-		BuyerAddress:      payerAddr,
-		BuyerChannelState: chanState,
 	}
 	payinSig, err := crypto.Sign(payerPrivKey, payinReq)
 	if err != nil {
 		return nil, err
 	}
-	return &escrowpb.SignedPayinRequest{
-		Request:        payinReq,
-		BuyerSignature: payinSig,
-	}, nil
+	return ledger.NewSignedPayinRequest(payinReq, payinSig), nil
 }
 
 func PayInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRequest) (*escrowpb.SignedPayinResult, error) {
@@ -242,25 +198,16 @@ func UnmarshalEscrowContract(marshaledBody []byte) (*escrowpb.SignedEscrowContra
 }
 
 func SignContractID(id string, privKey ic.PrivKey) (*escrowpb.SignedContractID, error) {
-	pubKeyRaw, err := privKey.GetPublic().Raw()
+	contractID, err := ledger.NewContractID(id, privKey.GetPublic())
 	if err != nil {
 		return nil, err
-	}
-
-	contractID := &escrowpb.ContractID{
-		ContractId: id,
-		Address:    pubKeyRaw,
 	}
 	// sign contractID
 	sig, err := crypto.Sign(privKey, contractID)
 	if err != nil {
 		return nil, err
 	}
-
-	return &escrowpb.SignedContractID{
-		Data:      contractID,
-		Signature: sig,
-	}, nil
+	return ledger.NewSingedContractID(contractID, sig), nil
 }
 
 func IsPaidin(ctx context.Context, configuration *config.Config, contractID *escrowpb.SignedContractID) (bool, error) {
@@ -289,23 +236,10 @@ func Balance(ctx context.Context, configuration *config.Config) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	pubKeyRaw, err := privKey.GetPublic().Raw()
+	lgSignedPubKey, err := ledger.NewSignedPublicKey(privKey, privKey.GetPublic())
 	if err != nil {
 		return 0, err
 	}
-
-	lgPubKey := &ledgerpb.PublicKey{
-		Key: pubKeyRaw,
-	}
-	sig, err := crypto.Sign(privKey, lgPubKey)
-	if err != nil {
-		return 0, err
-	}
-	lgSignedPubKey := &ledgerpb.SignedPublicKey{
-		Key:       lgPubKey,
-		Signature: sig,
-	}
-
 	var balance int64 = 0
 	err = grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
