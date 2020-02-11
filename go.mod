@@ -151,4 +151,4 @@ replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.1.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.4.0
 
-replace github.com/libp2p/go-libp2p-netutil => github.com/TRON-US/go-libp2p-netutil v0.1.1
+replace github.com/libp2p/go-libp2p-netutil => github.com/TRON-US/go-libp2p-netutil v0.1.2
