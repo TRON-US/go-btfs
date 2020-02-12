@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"reflect"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -197,6 +199,24 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 			return nil, err
 		}
 		rsfileAdder.IsDir = true
+
+		if api.nd.IsDaemon {
+			dir, ok := node.(files.Directory)
+			if !ok {
+				return nil, errors.New("expected files.Directory type")
+			}
+			it := dir.Entries()
+			path, err := it.AbsRootPath()
+			if err != nil {
+				return nil, err
+			}
+			if path != "" {
+				node, err = newSerialFileNode(path, false)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 		nd, err = rsfileAdder.AddAllAndPin(node)
 	} else {
 		nd, err = fileAdder.AddAllAndPin(node)
@@ -204,12 +224,24 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	if err != nil {
 		return nil, err
 	}
+	if nd == nil {
+		return nil, errors.New("unexpected nil value for ipld.Node")
+	}
 
 	if err := api.provider.Provide(nd.Cid()); err != nil {
 		return nil, err
 	}
 
 	return path.IpfsPath(nd.Cid()), nil
+}
+
+func newSerialFileNode(fpath string, hidden bool) (files.Node, error) {
+	stat, err := os.Lstat(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	return files.NewSerialFile(fpath, hidden, stat)
 }
 
 func notSupport(f interface{}) error {
