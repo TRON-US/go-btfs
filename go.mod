@@ -10,10 +10,10 @@ require (
 	github.com/TRON-US/go-btfs-chunker v0.2.7
 	github.com/TRON-US/go-btfs-cmds v0.1.6
 	github.com/TRON-US/go-btfs-config v0.4.5
-	github.com/TRON-US/go-btfs-files v0.1.3
+	github.com/TRON-US/go-btfs-files v0.1.4
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
-	github.com/TRON-US/go-unixfs v0.5.5
+	github.com/TRON-US/go-unixfs v0.5.6
 	github.com/TRON-US/interface-go-btfs-core v0.5.4
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
