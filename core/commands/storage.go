@@ -637,31 +637,21 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				}
 				continue
 			}
-			addr, err := ma.NewMultiaddr("/p2p-circuit/btfs/" + pi.ID.String())
-			if err != nil {
-				return nil, err
-			}
-			pi.Addrs = append(pi.Addrs, addr)
 			if err := api.Swarm().Connect(ctx, *pi); err != nil {
-				// force connect again
-				if err := api.Swarm().Connect(ctx, *pi); err != nil {
-					var errTest error
-					// in test mode, change the ip to 0.0.0.0
-					if test {
-						if errTest = changeAddress(pi); errTest == nil {
-							errTest = api.Swarm().Connect(ctx, *pi)
-						}
+				// in test mode, change the ip to 0.0.0.0
+				if test {
+					if err = changeAddress(pi); err == nil {
+						err = api.Swarm().Connect(ctx, *pi)
 					}
-					// err can be from change address in test mode or connect again in test mode
-					if errTest != nil {
-						log.Error(errTest)
-						nextHost.IncrementFail()
-						err = retryQueue.Offer(nextHost)
-						if err != nil {
-							return nil, err
-						}
-						continue
+				}
+				if err != nil {
+					log.Error(err)
+					nextHost.IncrementFail()
+					err = retryQueue.Offer(nextHost)
+					if err != nil {
+						return nil, err
 					}
+					continue
 				}
 			}
 			// if connect successfully, return
