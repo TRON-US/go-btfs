@@ -128,7 +128,7 @@ func init() {
 	// init session status
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
-		TimeOut: 10 * time.Second}
+		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[SubmitStatus] = &FlowControl{
 		State:   "submit",
 		TimeOut: 5 * time.Minute}
