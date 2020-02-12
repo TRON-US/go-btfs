@@ -4,6 +4,8 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/cenkalti/backoff"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -310,6 +312,21 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if err != nil {
 		return err
 	}
+
+	// init ledger account and get balance
+	go func() {
+		bo := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+		err := backoff.Retry(func() error {
+			balance, err := escrow.Balance(req.Context, cfg)
+			if err == nil {
+				fmt.Println("banlance:", balance)
+			}
+			return err
+		}, bo)
+		if err != nil {
+			log.Error("Get balance failed.")
+		}
+	}()
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
