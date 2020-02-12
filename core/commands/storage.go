@@ -81,7 +81,7 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
 		"challenge": storageChallengeCmd,
-		"stats":     storageStatsCmd,
+		"stat":     storageStatsCmd,
 		"contracts": storageContractsCmd,
 	},
 }
@@ -1536,10 +1536,10 @@ the challenge request back to the caller.`,
 // Includes sub-commands: info, sync
 var storageStatsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Get node storage stats in the network.",
+		Tagline: "Get node storage stat in the network.",
 		ShortDescription: `
-btfs storage stats sync <>
-btfs storage stats info <>`,
+btfs storage stat sync <>
+btfs storage stat info <>`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"sync": storageStatsSyncCmd,
@@ -1547,12 +1547,12 @@ btfs storage stats info <>`,
 	},
 }
 
-// sub-commands: btfs storage stats sync
+// sub-commands: btfs storage stat sync
 var storageStatsSyncCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Synchronize node stats.",
+		Tagline: "Synchronize node stat.",
 		ShortDescription: `
-This command synchronize node stats from network(hub) to local node data store.`,
+This command synchronize node stat from network(hub) to local node data store.`,
 	},
 	Arguments:  []cmds.Argument{},
 	RunTimeout: 3 * time.Second,
@@ -1561,12 +1561,12 @@ This command synchronize node stats from network(hub) to local node data store.`
 	},
 }
 
-// sub-commands: btfs storage stats info
+// sub-commands: btfs storage stat info
 var storageStatsInfoCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Get node stats.",
+		Tagline: "Get node stat.",
 		ShortDescription: `
-Get node stats in the network from the local node data store.`,
+Get node stat in the network from the local node data store.`,
 	},
 	Arguments:  []cmds.Argument{},
 	RunTimeout: 3 * time.Second,
