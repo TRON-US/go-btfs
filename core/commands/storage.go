@@ -81,7 +81,7 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
 		"challenge": storageChallengeCmd,
-		"stat":     storageStatsCmd,
+		"stat":      storageStatsCmd,
 		"contracts": storageContractsCmd,
 	},
 }
