@@ -139,9 +139,12 @@ func init() {
 		State:   "guard",
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[CompleteStatus] = &FlowControl{
-		State: "complete"}
+		State: "complete",
+		// end, no timeout
+	}
 	StdSessionStateFlow[ErrStatus] = &FlowControl{
 		State: "error",
+		// end, no timeout
 	}
 }
 
@@ -307,6 +310,11 @@ func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) boo
 		ss.Status = StdSessionStateFlow[targetStatus].State
 		return true
 	}
+}
+
+func (ss *FileContracts) SessionEnded() bool {
+	return StdSessionStateFlow[CompleteStatus].State == ss.Status ||
+		StdSessionStateFlow[ErrStatus].State == ss.Status
 }
 
 func (ss *FileContracts) SetRetryQueue(q *RetryQueue) {

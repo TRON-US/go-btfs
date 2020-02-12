@@ -549,7 +549,10 @@ func retryProcess(param *paramsForPrepareContractsForShard, candidateHost *stora
 	ss := param.ss
 	shard := param.shard
 
-	// TODO: maybe if current session status is ErrStatus return. but need test
+	// if current session has completed or errored out
+	if ss.SessionEnded() {
+		return
+	}
 
 	// check if current shard has been contacting and receiving results
 	if shard.GetState() >= storage.ContractState {
