@@ -400,7 +400,9 @@ func (p *pinner) isPinnedWithType(c cid.Cid, mode Mode) (string, bool, error) {
 		}
 		has, err := hasChild(p.internal, rc, c, visitedSet.Visit)
 		if err != nil {
-			return "", false, err
+			// Do not return error and skip bad children and continue the search
+			log.Debug("unable to check pin on child [%s]: %v", rc.String(), err)
+			continue
 		}
 		if has {
 			return rc.String(), true, nil
@@ -736,7 +738,9 @@ func (p *pinner) HasExpiration(c cid.Cid) (bool, error) {
 		}
 		has, err := hasChild(p.internal, k, c, visitedSet.Visit)
 		if err != nil {
-			return false, err
+			// Do not return error and skip bad children and continue the search
+			log.Debug("unable to check expiration on child [%s]: %v", k.String(), err)
+			continue
 		}
 		if has {
 			return true, nil
