@@ -474,7 +474,7 @@ func TestUpdateMetadata(t *testing.T) {
 	}
 
 	// Append token metadata to the BTFS file.
-	p, err := addMetadata(node, path, `{"price":23.56,"number":4356,"NewItem":"justSave"}`, true)
+	p, err := addMetadata(node, path, `{"price":23.56,"number":4356,"NewItem":"justSave"}`, false)
 	if err != nil {
 		t.Fatal(err)
 	}
