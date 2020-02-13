@@ -365,6 +365,7 @@ func TestAddFileWithMetadata(t *testing.T) {
 		t.Fatalf("expected %s, got %s", "/btfs/QmXeTzZ1jRaYcXpyQmYajLw91XQCssWz6hCj5WLxduB8YV", path.String())
 	}
 }
+
 /*
 func TestAppendMetadata(t *testing.T) {
 	// Create repo.
@@ -451,7 +452,7 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 	}
 }
 
- */
+*/
 /*
 func TestUpdateMetadata(t *testing.T) {
 	// Create repo.
@@ -547,7 +548,7 @@ func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillB
 	}
 	return ipath.IpfsPath(modifiedFileHash), nil
 }
- */
+*/
 /*
 func TestRemoveMetadata(t *testing.T) {
 	// Create repo.
