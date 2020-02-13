@@ -1030,10 +1030,10 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 
 // call escrow service to check if payment is received or not
 func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowpb.SignedContractID, configuration *config.Config) {
-	timeout := 120 * time.Second
+	timeout := 5 * time.Minute
 	newCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	paid := false
 	var err error
 
