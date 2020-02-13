@@ -81,6 +81,8 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
 		"challenge": storageChallengeCmd,
+		"stats":     storageStatsCmd,
+		"contracts": storageContractsCmd,
 	},
 }
 
@@ -1520,4 +1522,163 @@ the challenge request back to the caller.`,
 		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
 	},
 	Type: StorageChallengeRes{},
+}
+
+// Storage Stats
+//
+// Includes sub-commands: info, sync
+var storageStatsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get node storage stats.",
+		ShortDescription: `
+This command get node storage stats in the network.`,
+	},
+	Subcommands: map[string]*cmds.Command{
+		"sync": storageStatsSyncCmd,
+		"info": storageStatsInfoCmd,
+	},
+}
+
+// sub-commands: btfs storage stats sync
+var storageStatsSyncCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Synchronize node stats.",
+		ShortDescription: `
+This command synchronize node stats from network(hub) to local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 3 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		return nil
+	},
+}
+
+// sub-commands: btfs storage stats info
+var storageStatsInfoCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get node stats.",
+		ShortDescription: `
+This command get node stats in the network from the local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 3 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// return mock -- static dummy
+		data := map[string]interface{}{
+			"HostStats": map[string]interface{}{
+				"Online":      true,
+				"Uptime":      86400,
+				"Score":       6.5,
+				"StorageUsed": 1024,
+				"StorageCap":  102400,
+			},
+			"RenterStats": map[string]interface{}{
+				"Reserved": "Reserved",
+			},
+		}
+		return cmds.EmitOnce(res, data)
+	},
+	Type: nodepb.StorageStat{},
+}
+
+// Storage Contracts
+//
+// Includes sub-commands: sync, stat, list
+var storageContractsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get node storage contracts info.",
+		ShortDescription: `
+This command get node storage contracts info respect to different roles.`,
+	},
+	Subcommands: map[string]*cmds.Command{
+		"sync": storageContractsSyncCmd,
+		"stat": storageContractsStatCmd,
+		"list": storageContractsListCmd,
+	},
+}
+
+// sub-commands: btfs storage contracts sync
+var storageContractsSyncCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Synchronize contracts stats based on role.",
+		ShortDescription: `
+This command contracts stats based on role from network(hub) to local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 30 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		return nil
+	},
+}
+
+// sub-commands: btfs storage contracts stat
+var storageContractsStatCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get contracts stats based on role.",
+		ShortDescription: `
+This command get contracts stats based on role from the local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 3 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// return mock -- static dummy
+		data := map[string]interface{}{
+			"ActiveContractNum":       10,
+			"CompensationPaid":        20000,
+			"CompensationOutstanding": 80000,
+			"FirstContractStart":      "2020-01-22T23:57:13.163372Z",
+			"LastContractEnd":         "2020-03-22T23:57:13.163372Z",
+			"Role":                    "Host",
+		}
+		return cmds.EmitOnce(res, data)
+	},
+	Type: nodepb.ContractStat{},
+}
+
+// sub-commands: btfs storage contracts list
+var storageContractsListCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get contracts list based on role.",
+		ShortDescription: `
+This command get contracts list based on role from the local node data store.`,
+	},
+	Arguments:  []cmds.Argument{},
+	RunTimeout: 3 * time.Second,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		// return mock -- static dummy
+		data := []interface{}{
+			map[string]interface{}{
+				"ContractId":              "737b6d38-5af1-4023-b219-196aadf4d3f0",
+				"HostId":                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
+				"RenterId":                "16Uiu2HAmCknnNaWa44X4kLRCq33B3zvBevRTLdo27qMhsszCwqdF",
+				"Status":                  "init",
+				"StartTime":               "2020-01-22T23:57:13.163372Z",
+				"EndTime":                 "2020-03-22T23:57:13.163372Z",
+				"NextEscrowTime":          "2020-02-22T23:57:13.163372Z",
+				"CompensationPaid":        0,
+				"CompensationOutstanding": 15000,
+				"UnitPrice":               10,
+				"ShardSize":               500,
+				"ShardHash":               "QmUX3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYmp",
+				"FileHash":                "QmAA3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm1",
+			},
+			map[string]interface{}{
+				"ContractId":              "869675ac-c966-4808-83d7-1901d0449fb6",
+				"HostId":                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
+				"RenterId":                "16Uiu2HAmR6h5aamvwYDKYdp2Z3imCfHLRJnjB7VAYeab23AaZxSY",
+				"Status":                  "complete",
+				"StartTime":               "2020-01-23T23:57:13.163372Z",
+				"EndTime":                 "2020-02-12T23:57:13.163372Z",
+				"NextEscrowTime":          "2020-02-23T23:57:13.163372Z",
+				"CompensationPaid":        100,
+				"CompensationOutstanding": 300,
+				"UnitPrice":               10,
+				"ShardSize":               40,
+				"ShardHash":               "QmTT3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm2",
+				"FileHash":                "QmXx3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm3",
+			},
+		}
+		return cmds.EmitOnce(res, data)
+	},
+	Type: nodepb.Contracts{},
 }

@@ -817,8 +817,8 @@ github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e/go.mod h1:Qimiff
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tron-us/go-btfs-common v0.2.11 h1:hxc7oUQHPViKzdaTZLHuS2vyYU1e6/IToZI7UY1p2Tk=
 github.com/tron-us/go-btfs-common v0.2.11/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
-github.com/tron-us/go-btfs-common v0.2.20 h1:IlYnFFGG8ACtKsnILranAIvLYTOGc9AuOJZsG2878go=
-github.com/tron-us/go-btfs-common v0.2.20/go.mod h1:Hph+eVvKK66rJZFjfiBzGkZKgPkKPTn7B8JsBIpW77Q=
+github.com/tron-us/go-btfs-common v0.2.21 h1:Sqziol5tuQsLy+sZU4BtS/+uqcARjLKtXPeghI0bdTI=
+github.com/tron-us/go-btfs-common v0.2.21/go.mod h1:FbYoo6ZrtnJH3TKdyJTGQrUP2rbwNVATQpxplwaYQ/c=
 github.com/tron-us/go-common/v2 v2.0.5 h1:LiGEmOd0FVVRisFyg3AJWDWMXlM537M3JZ+gh75sBlw=
 github.com/tron-us/go-common/v2 v2.0.5/go.mod h1:GiKX9noBLHotkZAU+7ET4h7N0DYWnm3OcGHOFJg1Q68=
 github.com/tron-us/protobuf v1.3.4 h1:oqokl6jMAfe1fb/B6t1UMllbw/KtfdJcCn8plxPkHM8=
