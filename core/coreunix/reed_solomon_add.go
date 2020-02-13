@@ -69,22 +69,30 @@ func (rsadder *ReedSolomonAdder) AddAllAndPin(file files.Node) (ipld.Node, error
 		return nil, errors.New("unexpected node type")
 	}
 
-	var reader io.Reader = io.MultiReader(rsadder.InfileReaders...)
-	if rsadder.Progress {
-		reader = &progressReader{file: reader, path: "", out: rsadder.Out}
-	}
+	var nd ipld.Node
+	if n.Path() == "" && n.NodeSize() == 0 {
+		nd, err = rsadder.addToMfs(file)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var reader io.Reader = io.MultiReader(rsadder.InfileReaders...)
+		if rsadder.Progress {
+			reader = &progressReader{file: reader, path: "", out: rsadder.Out}
+		}
 
-	// Create a DAG with the above directory tree as metadata and
-	// the data from the given `file` directory or file.
-	nd, err := rsadder.add(reader, byts)
-	if err != nil {
-		return nil, err
-	}
+		// Create a DAG with the above directory tree as metadata and
+		// the data from the given `file` directory or file.
+		nd, err = rsadder.add(reader, byts)
+		if err != nil {
+			return nil, err
+		}
 
-	// output directory and file events
-	err = rsadder.outputDirs("", nd)
-	if err != nil {
-		return nil, err
+		// output directory and file events
+		err = rsadder.outputDirs("", nd)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Pin the newly created DAG.
