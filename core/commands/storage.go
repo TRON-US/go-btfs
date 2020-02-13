@@ -81,7 +81,7 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
 		"challenge": storageChallengeCmd,
-		"stat":      storageStatsCmd,
+		"stats":     storageStatsCmd,
 		"contracts": storageContractsCmd,
 	},
 }
@@ -1536,10 +1536,9 @@ the challenge request back to the caller.`,
 // Includes sub-commands: info, sync
 var storageStatsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Get node storage stat in the network.",
+		Tagline: "Get node storage stats.",
 		ShortDescription: `
-btfs storage stat sync <>
-btfs storage stat info <>`,
+This command get node storage stats in the network.`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"sync": storageStatsSyncCmd,
@@ -1547,12 +1546,12 @@ btfs storage stat info <>`,
 	},
 }
 
-// sub-commands: btfs storage stat sync
+// sub-commands: btfs storage stats sync
 var storageStatsSyncCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Synchronize node stat.",
+		Tagline: "Synchronize node stats.",
 		ShortDescription: `
-This command synchronize node stat from network(hub) to local node data store.`,
+This command synchronize node stats from network(hub) to local node data store.`,
 	},
 	Arguments:  []cmds.Argument{},
 	RunTimeout: 3 * time.Second,
@@ -1561,12 +1560,12 @@ This command synchronize node stat from network(hub) to local node data store.`,
 	},
 }
 
-// sub-commands: btfs storage stat info
+// sub-commands: btfs storage stats info
 var storageStatsInfoCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Get node stat.",
+		Tagline: "Get node stats.",
 		ShortDescription: `
-Get node stat in the network from the local node data store.`,
+This command get node stats in the network from the local node data store.`,
 	},
 	Arguments:  []cmds.Argument{},
 	RunTimeout: 3 * time.Second,
@@ -1596,9 +1595,7 @@ var storageContractsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Get node storage contracts info.",
 		ShortDescription: `
-btfs storage conntracts sync <>
-btfs storage conntracts stat <>
-btfs storage conntracts list <>`,
+This command get node storage contracts info respect to different roles.`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"sync": storageContractsSyncCmd,
