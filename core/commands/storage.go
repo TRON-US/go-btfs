@@ -481,7 +481,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
-			for curState := 0; curState < storage.CompleteState && !ss.SessionEnded(); {
+			for curState := 0; curState <= storage.CompleteState && !ss.SessionEnded(); {
 				select {
 				case shardRes := <-shard.RetryChan:
 					if !shardRes.Succeed {
