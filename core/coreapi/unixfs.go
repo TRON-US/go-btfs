@@ -206,6 +206,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 				return nil, errors.New("expected files.Directory type")
 			}
 			it := dir.Entries()
+			it.SetReedSolomon()
 			path, err := it.AbsRootPath()
 			if err != nil {
 				return nil, err
