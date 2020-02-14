@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
+	"github.com/cenkalti/backoff/v3"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -64,6 +66,15 @@ const (
 
 	bttTotalSupply uint64 = 990_000_000_000
 )
+
+var bo = func() *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 10 * time.Second
+	bo.MaxElapsedTime = 5 * time.Minute
+	bo.Multiplier = 1.5
+	bo.MaxInterval = 60 * time.Second
+	return bo
+}()
 
 // TODO: get/set the value from/in go-btfs-common
 var HostPriceLowBoundary = int64(10)
@@ -472,7 +483,7 @@ func retryMonitor(ctx context.Context, api coreiface.CoreAPI, ss *storage.FileCo
 
 			// monitor each steps if error or time out happens, retry
 			// TODO: Change steps
-			for curState := 0; curState < len(storage.StdStateFlow); {
+			for curState := 0; curState <= storage.CompleteState && !ss.SessionEnded(); {
 				select {
 				case shardRes := <-shard.RetryChan:
 					if !shardRes.Succeed {
@@ -1031,36 +1042,24 @@ func signContractAndCheckPayment(ctx context.Context, n *core.IpfsNode, api core
 }
 
 // call escrow service to check if payment is received or not
-func checkPaymentFromClient(ctx context.Context, paidIn chan bool, contractID *escrowpb.SignedContractID, configuration *config.Config) {
-	timeout := 5 * time.Minute
-	newCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	ticker := time.NewTicker(5 * time.Second)
-	paid := false
+func checkPaymentFromClient(ctx context.Context, paidIn chan bool,
+	contractID *escrowpb.SignedContractID, configuration *config.Config) {
 	var err error
-
-	for {
-		select {
-		case t := <-ticker.C:
-			log.Debug("Check escrow IsPaidin, tick at", t.UTC())
-			paid, err = escrow.IsPaidin(ctx, configuration, contractID)
-			if err != nil {
-				// too verbose on errors, only err log the last err
-				log.Debug("Check escrow IsPaidin error", err)
-			}
-			if paid {
-				paidIn <- true
-				return
-			}
-		case <-newCtx.Done():
-			log.Debug("Check escrow IsPaidin timeout, tick stopped at", time.Now().UTC())
-			if err != nil {
-				log.Error("Check escrow IsPaidin failed", err)
-			}
-			ticker.Stop()
-			paidIn <- paid
-			return
+	paid := false
+	err = backoff.Retry(func() error {
+		paid, err = escrow.IsPaidin(ctx, configuration, contractID)
+		if err != nil {
+			return err
 		}
+		if paid {
+			paidIn <- true
+			return nil
+		}
+		return errors.New("reach max retry times")
+	}, bo)
+	if err != nil {
+		log.Error("Check escrow IsPaidin failed", err)
+		paidIn <- paid
 	}
 }
 
