@@ -328,6 +328,7 @@ func update(url, hval string) {
 			log.Error(err)
 			continue
 		}
+		time.Sleep(time.Hour*24)
 		fmt.Println("Process will exit now and restart after the update completes.")
 		os.Exit(0)
 	}
