@@ -19,15 +19,18 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
+	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/cenkalti/backoff/v3 v3.1.1
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
+	github.com/ethereum/go-ethereum v1.9.10
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.0.0
@@ -101,7 +104,6 @@ require (
 	github.com/libp2p/go-libp2p-yamux v0.2.1
 	github.com/libp2p/go-maddr-filter v0.0.5
 	github.com/libp2p/go-testutil v0.1.0
-	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
@@ -124,7 +126,7 @@ require (
 	github.com/tron-us/go-btfs-common v0.2.22
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
-	github.com/tyler-smith/go-bip39 v1.0.0
+	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-sysinfo v0.0.0-20190219211824-4a357d4b90b1
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
