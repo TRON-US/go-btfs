@@ -61,8 +61,8 @@ const (
 	defaultStorageLength = 30
 
 	// retry limit
-	RetryLimit = 3
-	FailLimit  = 3
+	RetryLimit = 1
+	FailLimit  = 1
 
 	bttTotalSupply uint64 = 990_000_000_000
 )
@@ -640,35 +640,18 @@ func getValidHost(ctx context.Context, retryQueue *storage.RetryQueue, api corei
 				return nil, err
 			}
 		} else {
-			// find peer
-			pi, err := remote.FindPeer(ctx, n, nextHost.Identity)
+			id, err := peer.IDB58Decode(nextHost.Identity)
 			if err != nil {
-				// it's normal to fail in finding peer,
-				// would give host another chance
+				return nil, err
+			}
+			if err := api.Swarm().Connect(ctx, peer.AddrInfo{ID: id}); err != nil {
 				nextHost.IncrementFail()
-				log.Error(err, "host", nextHost.Identity)
+				log.Error("host connect failed", nextHost.Identity, err.Error())
 				err = retryQueue.Offer(nextHost)
 				if err != nil {
 					return nil, err
 				}
 				continue
-			}
-			if err := api.Swarm().Connect(ctx, *pi); err != nil {
-				// in test mode, change the ip to 0.0.0.0
-				if test {
-					if err = changeAddress(pi); err == nil {
-						err = api.Swarm().Connect(ctx, *pi)
-					}
-				}
-				if err != nil {
-					log.Error(err)
-					nextHost.IncrementFail()
-					err = retryQueue.Offer(nextHost)
-					if err != nil {
-						return nil, err
-					}
-					continue
-				}
 			}
 			// if connect successfully, return
 			candidateHost = nextHost
