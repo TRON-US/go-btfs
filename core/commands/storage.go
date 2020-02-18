@@ -2272,7 +2272,7 @@ func bytesToString(data []byte, encoding int) (string, error) {
 	case Base64:
 		return base64.StdEncoding.EncodeToString(data), nil
 	default:
-		return "", fmt.Errorf(`unexpected parameter [%s] is given, either "text" or "base64" should be used`, encoding)
+		return "", fmt.Errorf(`unexpected parameter [%d] is given, either "text" or "base64" should be used`, encoding)
 	}
 }
 
