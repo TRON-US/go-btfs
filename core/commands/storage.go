@@ -1610,8 +1610,8 @@ This command (on client) reads the unsigned contracts and returns
 the contracts to the caller.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
 		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
 		cmds.StringArg("session-status", true, false, "Current upload session status."),
@@ -1700,8 +1700,8 @@ This command (on client) reads the unsigned contracts and returns
 the contracts to the caller.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
 		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
 		cmds.StringArg("session-status", true, false, "current upload session status."),
@@ -1800,8 +1800,8 @@ This command (on client) reads the unsigned contracts and returns
 the contracts to the caller.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
 		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
 		cmds.StringArg("session-status", true, false, "current upload session status."),
@@ -1855,8 +1855,8 @@ This command (on client) reads the unsigned contracts and returns
 the contracts to the caller.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
-		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client.").EnableStdin(),
+		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
+		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
 		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nounce-timestamp"),
 		cmds.StringArg("session-status", true, false, "current upload session status."),
