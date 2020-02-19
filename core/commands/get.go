@@ -10,6 +10,7 @@ import (
 	gopath "path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/e"
@@ -75,6 +76,7 @@ If '--meta' or '-m' is enabled, this option is ignored.
 		_, err := getCompressOptions(req)
 		return err
 	},
+	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cmplvl, err := getCompressOptions(req)
 		if err != nil {

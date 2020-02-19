@@ -137,7 +137,7 @@ func init() {
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[GuardStatus] = &FlowControl{
 		State:   "guard",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 15 * time.Minute}
 	StdSessionStateFlow[CompleteStatus] = &FlowControl{
 		State: "complete",
 		// end, no timeout
