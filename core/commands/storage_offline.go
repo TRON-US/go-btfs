@@ -435,11 +435,8 @@ func prepareSignedGuardContractForShardOffSign(ctx context.Context, ss *storage.
 	// Here we wait for the broadcast signal.
 	select {
 	case <-ss.OfflineCB.OfflineSignEscrowChan:
-		/*
-			case <-ctx.Done():
-				return ctx.Err()
-
-		*/
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 	var err error
 	shard.HalfSignedEscrowContract, err = escrow.SignContractAndMarshalOffSign(shard.UnsignedEscrowContract, shard.SignedBytes, nil, true)
@@ -473,11 +470,8 @@ func buildSignedGuardContractForShardOffSign(ctx context.Context, ss *storage.Fi
 	// Wait for the broadcast signal by "/storage/upload/signedbatch" handler.
 	select {
 	case <-ss.OfflineCB.OfflineSignGuardChan:
-		/*
-			case <-ctx.Done():
-				return ctx.Err()
-
-		*/
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 	var err error
 	shard.HalfSignedGuardContract, err =
@@ -517,7 +511,6 @@ func buildSignedGuardContractForShardOffSign(ctx context.Context, ss *storage.Fi
 func PerformBalanceOffSign(ctx context.Context, ss *storage.FileContracts) (string, error) {
 	ss.ResetOfflineUnsigned()
 	ss.OfflineCB.OfflineUnsigned.Opcode = BalanceOffSignOperation
-	fmt.Println("inside PerformBalanceOffSign")
 	currentStatus := ss.GetCurrentStatus()
 	if currentStatus != storage.SubmitStatus {
 		return "", fmt.Errorf("current status %d does not match expected SubmitStatus", currentStatus)
@@ -526,11 +519,8 @@ func PerformBalanceOffSign(ctx context.Context, ss *storage.FileContracts) (stri
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
-		/*
-			case <-ctx.Done():
-				return "", ctx.Err()
-
-		*/
+	case <-ctx.Done():
+		return "", ctx.Err()
 	}
 
 	resetPaySignChannel(ss)
@@ -557,11 +547,8 @@ func PerformPayChannelOffSign(ctx context.Context, ss *storage.FileContracts, es
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
-		/*
-			case <-ctx.Done():
-				return "", ctx.Err()
-
-		*/
+	case <-ctx.Done():
+		return "", ctx.Err()
 	}
 
 	resetPaySignChannel(ss)
@@ -586,11 +573,8 @@ func PerformPayinRequestOffSign(ctx context.Context, ss *storage.FileContracts, 
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
-		/*
-			case <-ctx.Done():
-				return nil, ctx.Err()
-
-		*/
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 
 	resetPaySignChannel(ss)
@@ -615,11 +599,8 @@ func PerformGuardFileMetaOffSign(ctx context.Context, ss *storage.FileContracts,
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
-		/*
-			case <-ctx.Done():
-				return nil, ctx.Err()
-
-		*/
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 
 	resetPaySignChannel(ss)

@@ -623,10 +623,12 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 					sessionStateMessage.Err = fmt.Errorf("unknown error, please file a bug report")
 				}
 				ss.SetStatusWithError(storage.ErrStatus, sessionStateMessage.Err)
+				// TODO: maybe we need to cancel the retryMonitor context here to terminate the session.
 				return
 			}
 		case <-time.After(stateFlow[curStatus].TimeOut):
 			ss.SetStatusWithError(storage.ErrStatus, fmt.Errorf("timed out"))
+			// TODO: The same as the above
 			return
 		}
 	}
