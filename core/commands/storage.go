@@ -617,7 +617,7 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 		select {
 		case sessionStateMessage := <-ss.SessionStatusChan:
 			if sessionStateMessage.Succeed {
-				ss.MoveToNextSessionStatus(sessionStateMessage)
+				curStatus = ss.MoveToNextSessionStatus(sessionStateMessage)
 			} else {
 				if sessionStateMessage.Err == nil {
 					sessionStateMessage.Err = fmt.Errorf("unknown error, please file a bug report")

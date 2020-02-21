@@ -503,7 +503,7 @@ func (ss *FileContracts) initOfflineSignChannels() error {
 	return nil
 }
 
-func (ss *FileContracts) MoveToNextSessionStatus(sessionState StatusChanMessage) {
+func (ss *FileContracts) MoveToNextSessionStatus(sessionState StatusChanMessage) int {
 	currentSessionStatus := sessionState.CurrentStep
 	if ss.RunMode != OfflineSignMode {
 		// If the current runMode is not OfflineSignMode, then
@@ -523,6 +523,7 @@ func (ss *FileContracts) MoveToNextSessionStatus(sessionState StatusChanMessage)
 		currentSessionStatus += 1
 	}
 	ss.SetStatus(currentSessionStatus)
+	return currentSessionStatus
 }
 
 func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) bool {
@@ -535,6 +536,7 @@ func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) boo
 		return false
 	} else {
 		ss.Status = StdSessionStateFlow[targetStatus].State
+		ss.StatusIndex = targetStatus
 		return true
 	}
 }
