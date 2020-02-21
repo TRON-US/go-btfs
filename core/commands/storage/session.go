@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
+	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -33,9 +34,14 @@ const (
 const (
 	// session mode
 	RegularMode = iota
-	CustomMode
 	RepairMode
 	OfflineSignMode
+)
+
+const (
+	// host sync mode
+	NonCustomMode = iota
+	CustomMode
 )
 
 const (
@@ -81,6 +87,8 @@ const (
 	OfflineRetrySignReady
 	OfflineRetrySignProcess
 )
+
+var log = logging.Logger("core/commands/storage")
 
 var GlobalSession *SessionMap
 
@@ -140,6 +148,7 @@ type FileContracts struct {
 
 	RetryQueue        *RetryQueue            `json:"-"`
 	SessionStatusChan chan StatusChanMessage `json:"-"`
+	RetryMonitorCtx   context.Context
 
 	RunMode         int
 	RetrySignStatus string
@@ -199,10 +208,10 @@ type Shard struct {
 	HalfSignedEscrowContract []byte
 	HalfSignedGuardContract  []byte
 
-	RetryChan chan *StepRetryChan `json:"-"`
+	RetryChan chan *StepRetryChanMessage `json:"-"`
 }
 
-type StepRetryChan struct {
+type StepRetryChanMessage struct {
 	CurrentStep       int
 	Succeed           bool
 	ClientErr         error
@@ -217,19 +226,19 @@ func init() {
 	// uninitialized shard state
 	StdStateFlow[UninitializedState] = &FlowControl{
 		State:   "uninitialized",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdStateFlow[SignReadyEscrowState] = &FlowControl{
 		State:   "signReadyEscrow",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdStateFlow[SignProcessEscrowState] = &FlowControl{
 		State:   "signProcessEscrow",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdStateFlow[SignReadyGuardState] = &FlowControl{
 		State:   "signReadyGuard",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdStateFlow[SignProcessGaurdState] = &FlowControl{
 		State:   "signProcessGuard",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	// init shard state
 	StdStateFlow[InitState] = &FlowControl{
 		State:   "init",
@@ -241,24 +250,21 @@ func init() {
 		State:   "complete",
 		TimeOut: 1 * time.Minute}
 	// uninitialized session status
+	// Note that "init"'s Timeout should be larger than the total of
+	// each StdStatFlow state * RetryLimit.
 	StdSessionStateFlow[UninitializedStatus] = &FlowControl{
-		State:   "uninitialized",
-		TimeOut: 5 * time.Minute}
+		State: "uninitialized"}
 	StdSessionStateFlow[InitSignReadyForEscrowStatus] = &FlowControl{
-		State:   "initSignReadyEscrow",
-		TimeOut: 5 * time.Minute}
+		State: "initSignReadyEscrow"}
 	StdSessionStateFlow[InitSignProcessForEscrowStatus] = &FlowControl{
-		State:   "initSignProcessEscrow",
-		TimeOut: 5 * time.Minute}
+		State: "initSignProcessEscrow"}
 	StdSessionStateFlow[InitSignReadyForGuardStatus] = &FlowControl{
-		State:   "initSignReadyGuard",
-		TimeOut: 5 * time.Minute}
+		State: "initSignReadyGuard"}
 	StdSessionStateFlow[InitSignProcessForGuardStatus] = &FlowControl{
-		State:   "initSignProcessGuard",
-		TimeOut: 5 * time.Minute}
+		State: "initSignProcessGuard"}
 	StdSessionStateFlow[InitStatus] = &FlowControl{
 		State:   "init",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdSessionStateFlow[SubmitStatus] = &FlowControl{
 		State:   "submit",
 		TimeOut: 5 * time.Minute}
@@ -302,19 +308,13 @@ func init() {
 	}
 	StdRetrySignStateFlow[OfflineRetrySignUninitialized] = &FlowControl{
 		State:   "retrySignUninitialized",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdRetrySignStateFlow[OfflineRetrySignReady] = &FlowControl{
 		State:   "retrySignReady",
-		TimeOut: 5 * time.Minute}
+		TimeOut: 3 * time.Minute}
 	StdRetrySignStateFlow[OfflineRetrySignProcess] = &FlowControl{
 		State:   "retrySignProcess",
-		TimeOut: 5 * time.Minute}
-	const (
-		// offline signing status
-		OfflineRetrySignUninitialized = iota
-		OfflineRetrySignReady
-		OfflineRetrySignProcess
-	)
+		TimeOut: 3 * time.Minute}
 }
 
 func (sm *SessionMap) PutSession(ssID string, ss *FileContracts) {
@@ -468,6 +468,63 @@ func NewFileContracts(id string, pid peer.ID) *FileContracts {
 	}
 }
 
+func (ss *FileContracts) Initialize(rootHash cidlib.Cid, runMode int) int {
+	ss.SetFileHash(rootHash)
+	ss.SetRunMode(runMode)
+	initSessionStatus := InitStatus
+	if ss.IsOffSignRunmode() {
+		// Note that we are updating the "init" status timeout for offline signing.
+		StdSessionStateFlow[InitState].TimeOut = 15 * time.Minute
+		ss.OfflineCB = new(OfflineControlBlock)
+		initSessionStatus = UninitializedStatus
+		ss.initOfflineSignChannels()
+	}
+	ss.SetStatus(initSessionStatus)
+	return initSessionStatus
+}
+
+func (ss *FileContracts) initOfflineSignChannels() error {
+	if !ss.IsOffSignRunmode() {
+		return errors.New("it is not offline sign mode")
+	}
+	if ss.OfflineCB == nil {
+		return errors.New("offline control block is nil")
+	}
+	offCB := ss.OfflineCB
+	offCB.OfflineSignEscrowChan = nil
+	offCB.OfflineSignEscrowChan = make(chan string)
+	offCB.OfflineSignGuardChan = nil
+	offCB.OfflineSignGuardChan = make(chan string)
+	offCB.OfflineInitSigDoneChan = nil
+	offCB.OfflineInitSigDoneChan = make(chan string)
+	offCB.OfflinePaySignChan = nil
+	offCB.OfflinePaySignChan = make(chan string)
+
+	return nil
+}
+
+func (ss *FileContracts) MoveToNextSessionStatus(sessionState StatusChanMessage) {
+	currentSessionStatus := sessionState.CurrentStep
+	if ss.RunMode != OfflineSignMode {
+		// If the current runMode is not OfflineSignMode, then
+		// we need to skip offline sign mode related steps from the session status table.
+		// The following switch is doing that task.
+		switch currentSessionStatus {
+		case InitStatus:
+			currentSessionStatus = SubmitStatus
+		case SubmitStatus:
+			currentSessionStatus = PayStatus
+		case PayStatus:
+			currentSessionStatus = GuardStatus
+		case GuardStatus:
+			currentSessionStatus = CompleteStatus
+		}
+	} else {
+		currentSessionStatus += 1
+	}
+	ss.SetStatus(currentSessionStatus)
+}
+
 func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) bool {
 	ss.Lock()
 	defer ss.Unlock()
@@ -545,6 +602,30 @@ func (ss *FileContracts) IncrementContract(shard *Shard, signedEscrowContract []
 		return nil
 	}
 	return fmt.Errorf("escrow contract is already set")
+}
+
+func (ss *FileContracts) IncrementAndCompareContract(last int, shard *Shard, signedEscrowContract []byte,
+	guardContract *guardpb.Contract) (bool, error) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	// expand guard contracts storage according to number of shards
+	if shard.ShardIndex >= len(ss.GuardContracts) {
+		gcs := make([]*guardpb.Contract, shard.ShardIndex+1)
+		copy(gcs, ss.GuardContracts)
+		ss.GuardContracts = gcs
+	}
+	// insert contract according to shard order
+	ss.GuardContracts[shard.ShardIndex] = guardContract
+
+	if shard.SetSignedEscrowContract(signedEscrowContract) {
+		ss.CompleteContracts++
+		if ss.CompleteContracts == last {
+			return true, nil
+		}
+		return false, nil
+	}
+	return false, fmt.Errorf("escrow contract is already set")
 }
 
 func (ss *FileContracts) GetGuardContracts() []*guardpb.Contract {
@@ -658,7 +739,7 @@ func (ss *FileContracts) GetOrDefault(shardHash string, shardIndex int,
 		}
 		c.ShardHash = sh
 		c.ShardIndex = shardIndex
-		c.RetryChan = make(chan *StepRetryChan)
+		c.RetryChan = make(chan *StepRetryChanMessage)
 		c.StartTime = time.Now()
 		c.State = InitState
 		c.ShardSize = shardSize
@@ -759,9 +840,6 @@ func (ss *FileContracts) IncrementAndCompareOffSignReadyShards(last int) (bool, 
 	if ss.OfflineCB.OffSignReadyShards >= last {
 		return false, fmt.Errorf("the current value is already range end: [%d]", last)
 	}
-	if DEBUG {
-		fmt.Println("IncrementAndCompare: ", ss.OfflineCB.OffSignReadyShards, "status:", ss.Status)
-	}
 	ss.OfflineCB.OffSignReadyShards++
 	if ss.OfflineCB.OffSignReadyShards == last {
 		return true, nil
@@ -777,6 +855,47 @@ func (ss *FileContracts) ResetOfflineUnsigned() {
 	ss.OfflineCB.OfflineUnsigned.Opcode = ""
 	ss.OfflineCB.OfflineUnsigned.Unsigned = ""
 	ss.OfflineCB.OfflineUnsigned.Price = 0
+}
+
+func (ss *FileContracts) UpdateSessionStatus(status int, succeed bool, err error) {
+	if err != nil {
+		log.Error("session error:", err)
+	}
+	if succeed {
+		ss.MoveToNextSessionStatus(StatusChanMessage{
+			CurrentStep: status,
+			Succeed:     succeed,
+			Err:         err,
+		})
+	} else {
+		ss.SetStatusWithError(ErrStatus, err)
+	}
+}
+
+func (ss *FileContracts) SendSessionStatusChan(status int, succeed bool, err error) {
+	if err != nil {
+		log.Error("session error:", err)
+	}
+	ss.SessionStatusChan <- StatusChanMessage{
+		CurrentStep: status,
+		Succeed:     succeed,
+		Err:         err,
+	}
+}
+
+func (c *Shard) SendStepStateChan(state int, succeed bool, clientErr error, hostErr error) {
+	if clientErr != nil {
+		log.Error("renter error:", clientErr)
+	}
+	if hostErr != nil {
+		log.Error("host error:", hostErr)
+	}
+	c.RetryChan <- &StepRetryChanMessage{
+		CurrentStep: state,
+		Succeed:     succeed,
+		ClientErr:   clientErr,
+		HostErr:     hostErr,
+	}
 }
 
 func (c *Shard) SetPrice(price int64) {

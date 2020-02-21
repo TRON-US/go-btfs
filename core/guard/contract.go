@@ -97,36 +97,19 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 	}, nil
 }
 
-func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey,
+func SignedContractAndMarshal(meta *guardPb.ContractMeta, offlineSignedBytes []byte, cont *guardPb.Contract, privKey ic.PrivKey,
 	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
-	sig, err := crypto.Sign(privKey, meta)
-	if err != nil {
-		return nil, err
-	}
-	if cont == nil {
-		cont = &guardPb.Contract{
-			ContractMeta:   *meta,
-			LastModifyTime: time.Now(),
+	var signedBytes []byte
+	var err error
+	if offlineSignedBytes == nil {
+		signedBytes, err = crypto.Sign(privKey, meta)
+		if err != nil {
+			return nil, err
 		}
 	} else {
-		cont.LastModifyTime = time.Now()
+		signedBytes = offlineSignedBytes
 	}
-	if isPayer {
-		cont.RenterPid = renterPid
-		cont.PreparerPid = nodePid
-		if isRepair {
-			cont.PreparerSignature = sig
-		} else {
-			cont.RenterSignature = sig
-		}
-	} else {
-		cont.HostSignature = sig
-	}
-	return proto.Marshal(cont)
-}
 
-func SignedContractAndMarshalOffSign(meta *guardPb.ContractMeta, signedBytes []byte, cont *guardPb.Contract,
-	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
 	if cont == nil {
 		cont = &guardPb.Contract{
 			ContractMeta:   *meta,

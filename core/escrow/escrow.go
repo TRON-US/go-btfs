@@ -75,18 +75,6 @@ func NewSignedContract(contract *escrowpb.EscrowContract) *escrowpb.SignedEscrow
 	}
 }
 
-func NewContractRequestHelper(configuration *config.Config) (ic.PubKey, error) {
-	// prepare channel commit
-	if len(configuration.Services.EscrowPubKeys) == 0 {
-		return nil, fmt.Errorf("No Services.EscrowPubKeys are set in config")
-	}
-	var escrowPubKey ic.PubKey
-	escrowPubKey, err := ConvertToPubKey(configuration.Services.EscrowPubKeys[0])
-	if err != nil {
-		return nil, err
-	}
-	return escrowPubKey, nil
-}
 func NewContractRequest(configuration *config.Config, signedContracts []*escrowpb.SignedEscrowContract,
 	totalPrice int64) (*escrowpb.EscrowContractRequest, error) {
 	// prepare channel commit
@@ -114,6 +102,19 @@ func NewContractRequest(configuration *config.Config, signedContracts []*escrowp
 		Contract:     signedContracts,
 		BuyerChannel: ledger.NewSignedChannelCommit(chanCommit, buyerChanSig),
 	}, nil
+}
+
+func NewContractRequestHelper(configuration *config.Config) (ic.PubKey, error) {
+	// prepare channel commit
+	if len(configuration.Services.EscrowPubKeys) == 0 {
+		return nil, fmt.Errorf("No Services.EscrowPubKeys are set in config")
+	}
+	var escrowPubKey ic.PubKey
+	escrowPubKey, err := ConvertToPubKey(configuration.Services.EscrowPubKeys[0])
+	if err != nil {
+		return nil, err
+	}
+	return escrowPubKey, nil
 }
 
 func SubmitContractToEscrow(ctx context.Context, configuration *config.Config,
@@ -285,8 +286,22 @@ func Balance(ctx context.Context, configuration *config.Config) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	return BalanceHelper(ctx, configuration, false, nil, lgSignedPubKey)
+}
+
+func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bool, signedBytes []byte, lgSignedPubKey *ledgerpb.SignedPublicKey) (int64, error) {
+	if offsign {
+		var ledgerSignedPubKey ledgerpb.SignedPublicKey
+		err := proto.Unmarshal(signedBytes, &ledgerSignedPubKey)
+		if err != nil {
+			return 0, err
+		}
+		lgSignedPubKey = &ledgerSignedPubKey
+	}
+
 	var balance int64 = 0
-	err = grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
+	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			res, err := client.BalanceOf(ctx, lgSignedPubKey)
 			if err != nil {
