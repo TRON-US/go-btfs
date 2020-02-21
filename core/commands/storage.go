@@ -232,7 +232,7 @@ Use status command to check for completion:
 			return err
 		}
 
-		go retryMonitor(output.ss.RetryMonitorCtx, api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(context.Background(), api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
 
 		seRes := &UploadRes{
