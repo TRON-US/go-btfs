@@ -353,7 +353,7 @@ Use status command to check for completion:
 		customizedPayout := req.Options[customizedPayoutOptionName].(bool)
 		p := req.Options[customizedPayoutPeriodOptionName].(int)
 
-		go retryMonitor(context.Background(), api, ss, n, ssID, testFlag,
+		go retryMonitor(storage.NewGoContext(req.Context), api, ss, n, ssID, testFlag,
 			isRepairMode, renterPid.Pretty(), customizedPayout, p)
 
 		seRes := &UploadRes{
@@ -685,6 +685,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 		cmds.StringArg("escrow-contract", true, false, "Signed Escrow contract."),
 		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
 	},
+	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// receive contracts
 		escrowContractBytes := []byte(req.Arguments[3])
@@ -769,7 +770,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 				return err
 			}
 
-			go payFullToEscrowAndSubmitToGuard(context.Background(), n, api, submitContractRes, cfg, ss)
+			go payFullToEscrowAndSubmitToGuard(storage.NewGoContext(req.Context), n, api, submitContractRes, cfg, ss)
 		}
 		return nil
 	},
@@ -848,7 +849,7 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("shard-size", true, false, "Size of each shard received in bytes."),
 		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
 	},
-	RunTimeout: 5 * time.Second,
+	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// check flags
 		cfg, err := cmdenv.GetConfig(env)
@@ -956,7 +957,7 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
-		go signContractAndCheckPayment(context.Background(), n, api, cfg, ss, shardInfo, pid,
+		go signContractAndCheckPayment(storage.NewGoContext(req.Context), n, api, cfg, ss, shardInfo, pid,
 			halfSignedEscrowContract, halfSignedGuardContract)
 		return nil
 	},
@@ -1048,13 +1049,25 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool,
 
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storage.FileContracts,
 	guardContract *guardpb.Contract, shardInfo *storage.Shard) {
+	// Need to compute a time that's fair for small vs large files
+	// TODO: use backoff to achieve pause/resume cases for host downloads
+	low := 30 * time.Second
+	high := 5 * time.Minute
+	scaled := time.Duration(float64(guardContract.ShardFileSize) / float64(units.GiB) * float64(high))
+	if scaled < low {
+		scaled = low
+	} else if scaled > high {
+		scaled = high
+	}
+	ctx, _ := context.WithTimeout(context.Background(), scaled)
 	expir := uint64(guardContract.RentEnd.Unix())
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
 	// file root dag + shard root dag + metadata full dag + only this shard dag
-	_, err := shardInfo.GetChallengeResponseOrNew(context.Background(), n, api, ss.FileHash, true, expir)
+	_, err := shardInfo.GetChallengeResponseOrNew(ctx, n, api, ss.FileHash, true, expir)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("failed to download shard %s from file %s with contract id %s: [%v]",
+			guardContract.ShardHash, guardContract.FileHash, guardContract.ContractId, err)
 		storage.GlobalSession.Remove(ss.ID, shardInfo.ShardHash.String())
 		return
 	}
