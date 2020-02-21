@@ -232,7 +232,7 @@ Use status command to check for completion:
 			return err
 		}
 
-		go retryMonitor(context.Background(), api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(storage.NewGoContext(req.Context), api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
 
 		seRes := &UploadRes{
@@ -328,7 +328,7 @@ This command repairs the given shards of a file.`,
 			return err
 		}
 
-		go retryMonitor(output.ss.RetryMonitorCtx, api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(storage.NewGoContext(req.Context), api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
