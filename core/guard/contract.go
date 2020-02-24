@@ -97,12 +97,19 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 	}, nil
 }
 
-func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey,
+func SignedContractAndMarshal(meta *guardPb.ContractMeta, offlineSignedBytes []byte, cont *guardPb.Contract, privKey ic.PrivKey,
 	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
-	sig, err := crypto.Sign(privKey, meta)
-	if err != nil {
-		return nil, err
+	var signedBytes []byte
+	var err error
+	if offlineSignedBytes == nil {
+		signedBytes, err = crypto.Sign(privKey, meta)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		signedBytes = offlineSignedBytes
 	}
+
 	if cont == nil {
 		cont = &guardPb.Contract{
 			ContractMeta:   *meta,
@@ -115,12 +122,12 @@ func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract
 		cont.RenterPid = renterPid
 		cont.PreparerPid = nodePid
 		if isRepair {
-			cont.PreparerSignature = sig
+			cont.PreparerSignature = signedBytes
 		} else {
-			cont.RenterSignature = sig
+			cont.RenterSignature = signedBytes
 		}
 	} else {
-		cont.HostSignature = sig
+		cont.HostSignature = signedBytes
 	}
 	return proto.Marshal(cont)
 }
@@ -222,7 +229,7 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 		fileStatus.PreparerSignature = sign
 	}
 
-	err = submitFileStatus(ctx, configuration, fileStatus)
+	err = SubmitFileStatus(ctx, configuration, fileStatus)
 	if err != nil {
 		return nil, err
 	}

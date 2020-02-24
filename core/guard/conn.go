@@ -33,7 +33,7 @@ func sendChallengeQuestions(ctx context.Context, cfg *config.Config,
 }
 
 // submitFileStatus opens a grpc connection, sends the file meta, and closes (short) connection
-func submitFileStatus(ctx context.Context, cfg *config.Config,
+func SubmitFileStatus(ctx context.Context, cfg *config.Config,
 	fileStatus *guardpb.FileStoreStatus) error {
 	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
 	cb.Timeout(guardTimeout)
