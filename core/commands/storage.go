@@ -232,7 +232,7 @@ Use status command to check for completion:
 			return err
 		}
 
-		go retryMonitor(output.ss.RetryMonitorCtx , api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
 
 		seRes := &UploadRes{
@@ -328,7 +328,7 @@ This command repairs the given shards of a file.`,
 			return err
 		}
 
-		go retryMonitor(storage.NewGoContext(req.Context), api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
@@ -431,7 +431,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 			return err
 		}
 
-		go retryMonitor(storage.NewGoContext(req.Context), api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
@@ -716,7 +716,7 @@ func buildContractsForShard(param *paramsForPrepareContractsForShard,
 	return escrowContract, guardContractMeta, nil
 }
 
-func retryMonitor(monitorCtx context.Context, api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
+func retryMonitor(api coreiface.CoreAPI, ss *storage.FileContracts, n *core.IpfsNode,
 	ssID string, test bool, runMode int, renterPid string, customizedSchedule bool, period int) {
 	retryQueue := ss.GetRetryQueue()
 	if retryQueue == nil {
@@ -728,7 +728,7 @@ func retryMonitor(monitorCtx context.Context, api coreiface.CoreAPI, ss *storage
 	for shardKey, shard := range ss.ShardInfo {
 		go func(shardKey string, shard *storage.Shard) {
 			param := &paramsForPrepareContractsForShard{
-				ctx:       monitorCtx,
+				ctx:       ss.RetryMonitorCtx,
 				rq:        retryQueue,
 				api:       api,
 				ss:        ss,
