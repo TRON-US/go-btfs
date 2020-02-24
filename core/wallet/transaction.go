@@ -219,10 +219,10 @@ func Withdraw(ledgerAddr, externalAddr []byte, amount int64, privateKey *ecdsa.P
 	log.Debug(fmt.Sprintf("Prepare withdraw success, id: [%d]", prepareResponse.GetId()))
 
 	channelCommit := &ledgerPb.ChannelCommit{
-		Payer:    &ledgerPb.PublicKey{Key: ledgerAddr},
-		Receiver: &ledgerPb.PublicKey{Key: prepareResponse.GetLedgerExchangeAddress()},
-		Amount:   amount,
-		PayerId:  time.Now().UnixNano() + prepareResponse.GetId(),
+		Payer:     &ledgerPb.PublicKey{Key: ledgerAddr},
+		Recipient: &ledgerPb.PublicKey{Key: prepareResponse.GetLedgerExchangeAddress()},
+		Amount:    amount,
+		PayerId:   time.Now().UnixNano() + prepareResponse.GetId(),
 	}
 	//Sign channel commit.
 	signature, err := Sign(channelCommit, privateKey)
