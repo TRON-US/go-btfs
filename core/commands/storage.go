@@ -30,6 +30,7 @@ import (
 	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
@@ -121,7 +122,7 @@ To custom upload and store a file on specific hosts:
 
     # Upload specific shards to a set of hosts
     # Total # of hosts (N) must match # of shards given
-	$ btfs storage upload <shard-hash1> <shard-hash2> ... <shard-hashN> -l -m=custom -s=<host1-peer-id>,<host2-peer-id>,...,<hostN-peer-id>
+    $ btfs storage upload <shard-hash1> <shard-hash2> ... <shard-hashN> -l -m=custom -s=<host1-peer-id>,<host2-peer-id>,...,<hostN-peer-id>
 
 Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
@@ -1175,6 +1176,30 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
+
+		// Check existing storage has enough left
+		cfgRoot, err := cmdenv.GetConfigRoot(env)
+		if err != nil {
+			return err
+		}
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		max, err := storage.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, nil, true)
+		if err != nil {
+			return err
+		}
+		su, err := n.Repo.GetStorageUsage()
+		if err != nil {
+			return err
+		}
+		actualLeft := max - su
+		if uint64(shardSize) > actualLeft {
+			return fmt.Errorf("storage not enough: needs %s but only %s left",
+				humanize.Bytes(uint64(shardSize)), humanize.Bytes(actualLeft))
+		}
+
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
@@ -1185,10 +1210,6 @@ the shard and replies back to client for the next challenge step.`,
 		halfSignedEscrowContBytes = []byte(halfSignedEscrowContString)
 		halfSignedGuardContBytes = []byte(halfSignedGuardContString)
 
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
 		settings, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, n.Identity.Pretty(), n.Repo.Datastore())
 		if err != nil {
 			return err
