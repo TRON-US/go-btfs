@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -26,6 +24,8 @@ import (
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 
 	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
@@ -232,7 +232,7 @@ Use status command to check for completion:
 			return err
 		}
 
-		go retryMonitor(storage.NewGoContext(req.Context), api, output.ss, n, output.ssID, output.testFlag,
+		go retryMonitor(output.ss.RetryMonitorCtx , api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
 
 		seRes := &UploadRes{
@@ -251,9 +251,9 @@ This command repairs the given shards of a file.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
-		cmds.StringArg("repair-shards", false, false, "Shard hashes to repair."),
-		cmds.StringArg("renter-pid", false, false, "Original renter peer ID."),
-		cmds.StringArg("blacklist", false, false, "Blacklist of hosts during upload."),
+		cmds.StringArg("repair-shards", true, false, "Shard hashes to repair."),
+		cmds.StringArg("renter-pid", true, false, "Original renter peer ID."),
+		cmds.StringArg("blacklist", true, false, "Blacklist of hosts during upload."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		// get config settings
@@ -348,9 +348,9 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
-		cmds.StringArg("offline-peer-id", false, false, "Peer id when offline upload."),
-		cmds.StringArg("offline-nounce-ts", false, false, "Nounce timestamp when offline upload."),
-		cmds.StringArg("offline-signature", false, false, "Session signature when offline upload."),
+		cmds.StringArg("offline-peer-id", true, false, "Peer id when offline upload."),
+		cmds.StringArg("offline-nonce-ts", true, false, "Nounce timestamp when offline upload."),
+		cmds.StringArg("offline-signature", true, false, "Session signature when offline upload."),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -385,7 +385,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 		runMode := storage.OfflineSignMode
 
 		if len(req.Arguments) != 4 {
-			return fmt.Errorf("need file hash, offline-peer-id, offline-nounce-timestamp, and session-signature")
+			return fmt.Errorf("need file hash, offline-peer-id, offline-nonce-timestamp, and session-signature")
 		}
 		hashStr := req.Arguments[0]
 		rootHash, err = cidlib.Parse(hashStr)
@@ -588,7 +588,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	p := req.Options[customizedPayoutPeriodOptionName].(int)
 
 	// create main session context
-	ss.RetryMonitorCtx = context.Background()
+	ss.RetryMonitorCtx = storage.NewGoContext(param.ctx)
 
 	return &outputOfOpenSession{
 		ss:                 ss,
