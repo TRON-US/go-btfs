@@ -313,7 +313,7 @@ This command obtains the offline signing input data for from the upload session
 
 		// Change the status to the next to prevent another call of this endponnt by SDK library
 		currentSessionStatus := ss.GetCurrentStatus()
-		ss.SendSessionStatusChanPerMode(currentSessionStatus, true, nil, ss.RetryMonitorCtx)
+		ss.SendSessionStatusChanPerMode(currentSessionStatus, true, nil)
 
 		return res.Emit(unsignedRes)
 	},
@@ -514,7 +514,7 @@ func PerformBalanceOffSign(ctx context.Context, ss *storage.FileContracts) (stri
 	if currentStatus != storage.SubmitStatus {
 		return "", fmt.Errorf("current status %d does not match expected SubmitStatus", currentStatus)
 	}
-	ss.SendSessionStatusChanPerMode(currentStatus, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
@@ -542,7 +542,7 @@ func PerformPayChannelOffSign(ctx context.Context, ss *storage.FileContracts, es
 	if currentStatus != storage.BalanceSignProcessStatus {
 		return "", fmt.Errorf("current status %d does not match expected BalanceSignProcessStatus", currentStatus)
 	}
-	ss.SendSessionStatusChanPerMode(currentStatus, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
@@ -570,7 +570,7 @@ func PerformPayinRequestOffSign(ctx context.Context, ss *storage.FileContracts, 
 	if currentStatus != storage.PayChannelStatus {
 		return nil, fmt.Errorf("current status %d does not match expected PayChannelStatus", currentStatus)
 	}
-	ss.SendSessionStatusChanPerMode(currentStatus, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 
 	return waitAndGetOfflineSigned(ss, ctx)
 }
@@ -591,7 +591,7 @@ func PerformGuardFileMetaOffSign(ctx context.Context, ss *storage.FileContracts,
 	if currentStatus != storage.PayStatus {
 		return nil, fmt.Errorf("current status %d does not match expected PayStatus", currentStatus)
 	}
-	ss.SendSessionStatusChanPerMode(currentStatus, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 
 	return waitAndGetOfflineSigned(ss, ctx)
 }

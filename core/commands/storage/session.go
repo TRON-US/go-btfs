@@ -893,22 +893,22 @@ func (ss *FileContracts) UpdateSessionStatus(status int, succeed bool, err error
 }
 
 func (ss *FileContracts) SendSessionStatusChan(status int, succeed bool, err error) {
-	ss.sendSessionStatusChan(status, succeed, err, false, context.TODO())
+	ss.sendSessionStatusChan(status, succeed, err, false)
 }
 
-func (ss *FileContracts) SendSessionStatusChanPerMode(status int, succeed bool, err error, ctx context.Context) {
+func (ss *FileContracts) SendSessionStatusChanPerMode(status int, succeed bool, err error) {
 	if ss.RunMode == OfflineSignMode {
-		ss.sendSessionStatusChan(status, succeed, err, true, ctx)
+		ss.sendSessionStatusChan(status, succeed, err, true)
 	} else {
-		ss.sendSessionStatusChan(status, succeed, err, false, ctx)
+		ss.sendSessionStatusChan(status, succeed, err, false)
 	}
 }
 
 func (ss *FileContracts) SendSessionStatusChanSafely(status int, succeed bool, err error, ctx context.Context) {
-	ss.sendSessionStatusChan(status, succeed, err, true, ctx)
+	ss.sendSessionStatusChan(status, succeed, err, true)
 }
 
-func (ss *FileContracts) sendSessionStatusChan(status int, succeed bool, err error, syncMode bool, ctx context.Context) {
+func (ss *FileContracts) sendSessionStatusChan(status int, succeed bool, err error, syncMode bool) {
 	if err != nil {
 		log.Error("session error:", err)
 	}
@@ -919,6 +919,7 @@ func (ss *FileContracts) sendSessionStatusChan(status int, succeed bool, err err
 		SyncMode:    syncMode,
 	}
 	if syncMode {
+		ctx := ss.RetryMonitorCtx
 		select {
 		case <-ss.SessionStatusReplyChan:
 		case <-ctx.Done():

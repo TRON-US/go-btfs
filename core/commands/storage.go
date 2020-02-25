@@ -999,7 +999,7 @@ func payWithSigning(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env
 	ss *storage.FileContracts, contractRequest *escrowpb.EscrowContractRequest) error {
 	// collecting all signed contracts means init status finished
 	ctx := ss.RetryMonitorCtx
-	ss.SendSessionStatusChanPerMode(storage.InitStatus, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(storage.InitStatus, true, nil)
 
 	if ss.IsOffSignRunmode() {
 		ss.NewOfflineUnsigned()
@@ -1046,7 +1046,7 @@ func payWithSigning(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env
 	if ss.IsOffSignRunmode() {
 		status = storage.PayChannelSignProcessStatus
 	}
-	ss.SendSessionStatusChanPerMode(status, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(status, true, nil)
 
 	// get core api
 	api, err := cmdenv.GetApi(env, req)
@@ -1095,7 +1095,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 	if ss.IsOffSignRunmode() {
 		status = storage.PayReqSignProcessStatus
 	}
-	ss.SendSessionStatusChanPerMode(status, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(status, true, nil)
 
 	var fsStatus *guardpb.FileStoreStatus
 	if !ss.IsOffSignRunmode() {
@@ -1125,7 +1125,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		ss.SendSessionStatusChan(ss.GetCurrentStatus(), false, err)
 		return
 	}
-	ss.SendSessionStatusChanPerMode(storage.GuardStatus, true, nil, ctx)
+	ss.SendSessionStatusChanPerMode(storage.GuardStatus, true, nil)
 }
 
 type UploadRes struct {
