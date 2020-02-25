@@ -623,6 +623,9 @@ func controlSessionTimeout(ss *storage.FileContracts, stateFlow []*storage.FlowC
 		case sessionStateMessage := <-ss.SessionStatusChan:
 			if sessionStateMessage.Succeed {
 				curStatus = ss.MoveToNextSessionStatus(sessionStateMessage)
+				if sessionStateMessage.SyncMode {
+					ss.SyncToSessionStatusMessage()
+				}
 			} else {
 				if sessionStateMessage.Err == nil {
 					sessionStateMessage.Err = fmt.Errorf("unknown error, please file a bug report")
@@ -995,7 +998,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 func payWithSigning(ctx context.Context, req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,
 	ss *storage.FileContracts, contractRequest *escrowpb.EscrowContractRequest) error {
 	// collecting all signed contracts means init status finished
-	ss.SendSessionStatusChan(storage.InitStatus, true, nil)
+	ss.SendSessionStatusChanPerMode(storage.InitStatus, true, nil, ctx)
 
 	if ss.IsOffSignRunmode() {
 		ss.NewOfflineUnsigned()
@@ -1042,7 +1045,7 @@ func payWithSigning(ctx context.Context, req *cmds.Request, cfg *config.Config, 
 	if ss.IsOffSignRunmode() {
 		status = storage.PayChannelSignProcessStatus
 	}
-	ss.SendSessionStatusChan(status, true, nil)
+	ss.SendSessionStatusChanPerMode(status, true, nil, ctx)
 
 	// get core api
 	api, err := cmdenv.GetApi(env, req)
@@ -1087,11 +1090,11 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		ss.SendSessionStatusChan(ss.GetCurrentStatus(), false, err)
 		return
 	}
-	status := storage.PayStatus
+	status := storage.PayChannelStatus
 	if ss.IsOffSignRunmode() {
 		status = storage.PayReqSignProcessStatus
 	}
-	ss.SendSessionStatusChan(status, true, nil)
+	ss.SendSessionStatusChanPerMode(status, true, nil, ctx)
 
 	var fsStatus *guardpb.FileStoreStatus
 	if !ss.IsOffSignRunmode() {
@@ -1121,7 +1124,7 @@ func payFullToEscrowAndSubmitToGuard(ctx context.Context, n *core.IpfsNode, api 
 		ss.SendSessionStatusChan(ss.GetCurrentStatus(), false, err)
 		return
 	}
-	ss.SendSessionStatusChan(storage.GuardStatus, true, nil)
+	ss.SendSessionStatusChanPerMode(storage.GuardStatus, true, nil, ctx)
 }
 
 type UploadRes struct {
