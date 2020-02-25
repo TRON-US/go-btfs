@@ -900,7 +900,7 @@ func (ss *FileContracts) SendSessionStatusChanPerMode(status int, succeed bool, 
 	if ss.RunMode == OfflineSignMode {
 		ss.sendSessionStatusChan(status, succeed, err, true, ctx)
 	} else {
-		ss.sendSessionStatusChan(status, succeed, err, false, context.TODO())
+		ss.sendSessionStatusChan(status, succeed, err, false, ctx)
 	}
 }
 

@@ -986,7 +986,7 @@ var storageUploadRecvContractCmd = &cmds.Command{
 
 		var contractRequest *escrowpb.EscrowContractRequest
 		if isLast {
-			err := payWithSigning(ss.RetryMonitorCtx, req, cfg, n, env, ss, contractRequest)
+			err := payWithSigning(req, cfg, n, env, ss, contractRequest)
 			if err != nil {
 				return err
 			}
@@ -995,9 +995,10 @@ var storageUploadRecvContractCmd = &cmds.Command{
 	},
 }
 
-func payWithSigning(ctx context.Context, req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,
+func payWithSigning(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,
 	ss *storage.FileContracts, contractRequest *escrowpb.EscrowContractRequest) error {
 	// collecting all signed contracts means init status finished
+	ctx := ss.RetryMonitorCtx
 	ss.SendSessionStatusChanPerMode(storage.InitStatus, true, nil, ctx)
 
 	if ss.IsOffSignRunmode() {
