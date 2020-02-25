@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
@@ -15,7 +14,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/escrow"
-	"github.com/TRON-US/go-btfs/core/guard"
+	guard "github.com/TRON-US/go-btfs/core/guard"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
@@ -314,7 +313,7 @@ This command obtains the offline signing input data for from the upload session
 
 		// Change the status to the next to prevent another call of this endponnt by SDK library
 		currentSessionStatus := ss.GetCurrentStatus()
-		ss.UpdateSessionStatus(currentSessionStatus, true, nil)
+		ss.SendSessionStatusChanPerMode(currentSessionStatus, true, nil)
 
 		return res.Emit(unsignedRes)
 	},
@@ -404,7 +403,7 @@ func prepareSignedContractsForEscrowOffSign(param *paramsForPrepareContractsForS
 			}
 			// Reset variables for the next offline signing for the session
 			ss.SetOffSignReadyShards(0)
-			ss.UpdateSessionStatus(currentStatus, true, nil)
+			ss.UpdateSessionStatus(currentStatus, true, nil) // call this since the current session status is before "initStatus"
 		}
 	} else {
 		// Build a Contract and offer to the OffSignQueue
@@ -457,7 +456,7 @@ func prepareSignedGuardContractForShardOffSign(ctx context.Context, ss *storage.
 		if currentStatus != storage.InitSignProcessForEscrowStatus {
 			return fmt.Errorf("current status %d does not match expected InitSignProcessForEscrowStatus", currentStatus)
 		}
-		ss.UpdateSessionStatus(currentStatus, true, nil)
+		ss.UpdateSessionStatus(currentStatus, true, nil) // call this instead of SendSessionStatusChan() as it is before "initStatus"
 	}
 	return nil
 }
@@ -493,7 +492,7 @@ func buildSignedGuardContractForShardOffSign(ctx context.Context, ss *storage.Fi
 		if currentStatus != storage.InitSignProcessForGuardStatus {
 			return fmt.Errorf("current status %d does not match expected InitSignProcessForGuardStatus", currentStatus)
 		}
-		ss.UpdateSessionStatus(currentStatus, true, nil)
+		ss.UpdateSessionStatus(currentStatus, true, nil) // call this instead of SendSessinStatusChan() as it is before "initStatus"
 		close(ss.OfflineCB.OfflineInitSigDoneChan)
 	} else {
 		// Wait for the broadcast signal by the last goroutine
@@ -515,7 +514,7 @@ func PerformBalanceOffSign(ctx context.Context, ss *storage.FileContracts) (stri
 	if currentStatus != storage.SubmitStatus {
 		return "", fmt.Errorf("current status %d does not match expected SubmitStatus", currentStatus)
 	}
-	ss.UpdateSessionStatus(currentStatus, true, nil)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
@@ -543,7 +542,7 @@ func PerformPayChannelOffSign(ctx context.Context, ss *storage.FileContracts, es
 	if currentStatus != storage.BalanceSignProcessStatus {
 		return "", fmt.Errorf("current status %d does not match expected BalanceSignProcessStatus", currentStatus)
 	}
-	ss.UpdateSessionStatus(currentStatus, true, nil)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
@@ -562,23 +561,18 @@ func PerformPayinRequestOffSign(ctx context.Context, ss *storage.FileContracts, 
 	if err != nil {
 		return nil, err
 	}
-	ss.OfflineCB.OfflineUnsigned.Unsigned = string(b)
+	ss.OfflineCB.OfflineUnsigned.Unsigned, err = bytesToString(b, Base64)
+	if err != nil {
+		return nil, err
+	}
 
 	currentStatus := ss.GetCurrentStatus()
-	if currentStatus != storage.PayStatus {
-		return nil, fmt.Errorf("current status %d does not match expected PayStatus", currentStatus)
+	if currentStatus != storage.PayChannelStatus {
+		return nil, fmt.Errorf("current status %d does not match expected PayChannelStatus", currentStatus)
 	}
-	ss.UpdateSessionStatus(currentStatus, true, nil)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 
-	// Wait for the signal that indicates signed bytes are received.
-	select {
-	case <-ss.OfflineCB.OfflinePaySignChan:
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-
-	resetPaySignChannel(ss)
-	return []byte(ss.OfflineCB.OfflineSigned), nil
+	return waitAndGetOfflineSigned(ss, ctx)
 }
 
 func PerformGuardFileMetaOffSign(ctx context.Context, ss *storage.FileContracts, meta *guardpb.FileStoreMeta) ([]byte, error) {
@@ -588,14 +582,21 @@ func PerformGuardFileMetaOffSign(ctx context.Context, ss *storage.FileContracts,
 	if err != nil {
 		return nil, err
 	}
-	ss.OfflineCB.OfflineUnsigned.Unsigned = string(b)
+	ss.OfflineCB.OfflineUnsigned.Unsigned, err = bytesToString(b, Base64)
+	if err != nil {
+		return nil, err
+	}
 
 	currentStatus := ss.GetCurrentStatus()
-	if currentStatus != storage.PayReqSignProcessStatus {
-		return nil, fmt.Errorf("current status %d does not match expected PayReqSignProcessStatus", currentStatus)
+	if currentStatus != storage.PayStatus {
+		return nil, fmt.Errorf("current status %d does not match expected PayStatus", currentStatus)
 	}
-	ss.UpdateSessionStatus(currentStatus, true, nil)
+	ss.SendSessionStatusChanPerMode(currentStatus, true, nil)
 
+	return waitAndGetOfflineSigned(ss, ctx)
+}
+
+func waitAndGetOfflineSigned(ss *storage.FileContracts, ctx context.Context) ([]byte, error) {
 	// Wait for the signal that indicates signed bytes are received.
 	select {
 	case <-ss.OfflineCB.OfflinePaySignChan:
@@ -604,7 +605,11 @@ func PerformGuardFileMetaOffSign(ctx context.Context, ss *storage.FileContracts,
 	}
 
 	resetPaySignChannel(ss)
-	return []byte(ss.OfflineCB.OfflineSigned), nil
+	by, err := stringToBytes(ss.OfflineCB.OfflineSigned, Base64)
+	if err != nil {
+		return nil, err
+	}
+	return by, nil
 }
 
 func NewContractRequestOffSign(ctx context.Context, configuration *config.Config, ss *storage.FileContracts,
@@ -639,7 +644,8 @@ func NewContractRequestOffSign(ctx context.Context, configuration *config.Config
 	}, nil
 }
 
-func NewPayinRequestOffSign(ctx context.Context, ss *storage.FileContracts, result *escrowpb.SignedSubmitContractResult) (*escrowpb.SignedPayinRequest, error) {
+func NewPayinRequestOffSign(ctx context.Context, ss *storage.FileContracts,
+	result *escrowpb.SignedSubmitContractResult) (*escrowpb.SignedPayinRequest, error) {
 	signed, err := PerformPayinRequestOffSign(ctx, ss, result)
 	if err != nil {
 		return nil, err
@@ -657,16 +663,7 @@ func NewPayinRequestOffSign(ctx context.Context, ss *storage.FileContracts, resu
 func PrepAndUploadFileMetaOffSign(ctx context.Context, ss *storage.FileContracts,
 	escrowResults *escrowpb.SignedSubmitContractResult, payinRes *escrowpb.SignedPayinResult,
 	configuration *config.Config) (*guardpb.FileStoreStatus, error) {
-	// get escrow sig, add them to guard
-	contracts := ss.GetGuardContracts()
-	sig := payinRes.EscrowSignature
-	for _, guardContract := range contracts {
-		guardContract.EscrowSignature = sig
-		guardContract.EscrowSignedTime = payinRes.Result.EscrowSignedTime
-		guardContract.LastModifyTime = time.Now()
-	}
-
-	fileStatus, err := guard.NewFileStatus(ss, contracts, configuration)
+	fileStatus, err := guard.PrepareFileMetaHelper(ss, payinRes, configuration)
 	if err != nil {
 		return nil, err
 	}
@@ -676,19 +673,7 @@ func PrepAndUploadFileMetaOffSign(ctx context.Context, ss *storage.FileContracts
 		return nil, err
 	}
 
-	if fileStatus.PreparerPid == fileStatus.RenterPid {
-		fileStatus.RenterSignature = signed
-	} else {
-		fileStatus.RenterSignature = signed
-		fileStatus.PreparerSignature = signed
-	}
-
-	err = guard.SubmitFileStatus(ctx, configuration, fileStatus)
-	if err != nil {
-		return nil, err
-	}
-
-	return fileStatus, nil
+	return guard.SubmitFileMetaHelper(ctx, configuration, fileStatus, signed)
 }
 
 func bytesToString(data []byte, encoding int) (string, error) {

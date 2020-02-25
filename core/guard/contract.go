@@ -204,6 +204,21 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 	escrowResults *escrowPb.SignedSubmitContractResult, payinRes *escrowPb.SignedPayinResult,
 	payerPriKey ic.PrivKey, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 	// TODO: talk with Jin for doing signature for every contract
+	fileStatus, err := PrepareFileMetaHelper(ss, payinRes, configuration)
+	if err != nil {
+		return nil, err
+	}
+
+	sign, err := crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	return SubmitFileMetaHelper(ctx, configuration, fileStatus, sign)
+}
+
+func PrepareFileMetaHelper(ss *storage.FileContracts,
+	payinRes *escrowPb.SignedPayinResult, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
 	// get escrow sig, add them to guard
 	contracts := ss.GetGuardContracts()
 	sig := payinRes.EscrowSignature
@@ -217,11 +232,11 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 	if err != nil {
 		return nil, err
 	}
+	return fileStatus, nil
+}
 
-	sign, err := crypto.Sign(payerPriKey, &fileStatus.FileStoreMeta)
-	if err != nil {
-		return nil, err
-	}
+func SubmitFileMetaHelper(ctx context.Context, configuration *config.Config,
+	fileStatus *guardPb.FileStoreStatus, sign []byte) (*guardPb.FileStoreStatus, error) {
 	if fileStatus.PreparerPid == fileStatus.RenterPid {
 		fileStatus.RenterSignature = sign
 	} else {
@@ -229,7 +244,7 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 		fileStatus.PreparerSignature = sign
 	}
 
-	err = SubmitFileStatus(ctx, configuration, fileStatus)
+	err := SubmitFileStatus(ctx, configuration, fileStatus)
 	if err != nil {
 		return nil, err
 	}

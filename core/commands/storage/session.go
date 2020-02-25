@@ -71,9 +71,10 @@ const (
 	BalanceSignProcessStatus
 	PayChannelSignReadyStatus
 	PayChannelSignProcessStatus
-	PayStatus
+	PayChannelStatus
 	PayReqSignReadyStatus
 	PayReqSignProcessStatus
+	PayStatus
 	GuardSignReadyStatus
 	GuardSignProcessStatus
 	GuardStatus
@@ -108,6 +109,7 @@ var helpTextMap = map[int]string{
 	BalanceSignProcessStatus:       "Balance-sign for Escrow is in process",
 	PayChannelSignReadyStatus:      "Pay-channel-sign for Escrow is done",
 	PayChannelSignProcessStatus:    "Pay-channel-sign for Escrow is in process",
+	PayChannelStatus:               "Pay-channel-sign for Escrow is done",
 	PayReqSignReadyStatus:          "Pay-request-sign for Escrow is done",
 	PayReqSignProcessStatus:        "Pay-request-sign for Escrow is in process",
 	PayStatus:                      "Pay-sign for Escrow is done",
@@ -146,9 +148,10 @@ type FileContracts struct {
 	CompleteChunks    int
 	CompleteContracts int
 
-	RetryQueue        *RetryQueue            `json:"-"`
-	SessionStatusChan chan StatusChanMessage `json:"-"`
-	RetryMonitorCtx   context.Context
+	RetryQueue             *RetryQueue            `json:"-"`
+	SessionStatusChan      chan StatusChanMessage `json:"-"`
+	SessionStatusReplyChan chan int               `json:"-"`
+	RetryMonitorCtx        context.Context
 
 	RunMode         int
 	RetrySignStatus string
@@ -182,6 +185,7 @@ type StatusChanMessage struct {
 	CurrentStep int
 	Succeed     bool
 	Err         error
+	SyncMode    bool
 }
 
 type Shard struct {
@@ -279,6 +283,9 @@ func init() {
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[PayChannelSignProcessStatus] = &FlowControl{
 		State:   "payChannelSignProcess",
+		TimeOut: 5 * time.Minute}
+	StdSessionStateFlow[PayChannelStatus] = &FlowControl{
+		State:   "paychannel",
 		TimeOut: 5 * time.Minute}
 	StdSessionStateFlow[PayReqSignReadyStatus] = &FlowControl{
 		State:   "payRequestSignReady",
@@ -458,19 +465,23 @@ func PersistFileMetaToDatastore(node *core.IpfsNode, prefix string, ssID string)
 
 func NewFileContracts(id string, pid peer.ID) *FileContracts {
 	return &FileContracts{
-		ID:                id,
-		Renter:            pid,
-		Time:              time.Now(),
-		StatusIndex:       0,
-		Status:            "init",
-		ShardInfo:         make(map[string]*Shard),
-		SessionStatusChan: make(chan StatusChanMessage),
+		ID:                     id,
+		Renter:                 pid,
+		Time:                   time.Now(),
+		StatusIndex:            0,
+		Status:                 "init",
+		ShardInfo:              make(map[string]*Shard),
+		SessionStatusChan:      make(chan StatusChanMessage),
+		SessionStatusReplyChan: make(chan int),
 	}
 }
 
 func (ss *FileContracts) Initialize(rootHash cidlib.Cid, runMode int) int {
-	ss.SetFileHash(rootHash)
-	ss.SetRunMode(runMode)
+	ss.Lock()
+	defer ss.Unlock()
+
+	ss.FileHash = rootHash
+	ss.RunMode = runMode
 	initSessionStatus := InitStatus
 	if ss.IsOffSignRunmode() {
 		// Note that we are updating the "init" status timeout for offline signing.
@@ -479,7 +490,10 @@ func (ss *FileContracts) Initialize(rootHash cidlib.Cid, runMode int) int {
 		initSessionStatus = UninitializedStatus
 		ss.initOfflineSignChannels()
 	}
-	ss.SetStatus(initSessionStatus)
+	ss.StatusIndex = initSessionStatus
+	ss.Status = StdSessionStateFlow[initSessionStatus].State
+	ss.StatusMessage = helpTextMap[initSessionStatus]
+
 	return initSessionStatus
 }
 
@@ -539,6 +553,10 @@ func (ss *FileContracts) CompareAndSwap(desiredStatus int, targetStatus int) boo
 		ss.StatusIndex = targetStatus
 		return true
 	}
+}
+
+func (ss *FileContracts) SyncToSessionStatusMessage() {
+	ss.SessionStatusReplyChan <- 1
 }
 
 func (ss *FileContracts) SessionEnded() bool {
@@ -875,6 +893,22 @@ func (ss *FileContracts) UpdateSessionStatus(status int, succeed bool, err error
 }
 
 func (ss *FileContracts) SendSessionStatusChan(status int, succeed bool, err error) {
+	ss.sendSessionStatusChan(status, succeed, err, false)
+}
+
+func (ss *FileContracts) SendSessionStatusChanPerMode(status int, succeed bool, err error) {
+	if ss.RunMode == OfflineSignMode {
+		ss.sendSessionStatusChan(status, succeed, err, true)
+	} else {
+		ss.sendSessionStatusChan(status, succeed, err, false)
+	}
+}
+
+func (ss *FileContracts) SendSessionStatusChanSafely(status int, succeed bool, err error, ctx context.Context) {
+	ss.sendSessionStatusChan(status, succeed, err, true)
+}
+
+func (ss *FileContracts) sendSessionStatusChan(status int, succeed bool, err error, syncMode bool) {
 	if err != nil {
 		log.Error("session error:", err)
 	}
@@ -882,6 +916,15 @@ func (ss *FileContracts) SendSessionStatusChan(status int, succeed bool, err err
 		CurrentStep: status,
 		Succeed:     succeed,
 		Err:         err,
+		SyncMode:    syncMode,
+	}
+	if syncMode {
+		ctx := ss.RetryMonitorCtx
+		select {
+		case <-ss.SessionStatusReplyChan:
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
