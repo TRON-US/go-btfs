@@ -52,6 +52,7 @@ const (
 	hostBandwidthLimitOptionName     = "host-bandwidth-limit"
 	hostStorageTimeMinOptionName     = "host-storage-time-min"
 	hostStorageMaxOptionName         = "host-storage-max"
+	hostStorageEnableOptionName      = "enable-host-mode"
 	testOnlyOptionName               = "host-search-local"
 	storageLengthOptionName          = "storage-length"
 	customizedPayoutOptionName       = "customize-payout"
@@ -1577,12 +1578,35 @@ $ btfs storage announce --host-storage-price=1`,
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
+		cmds.BoolOption(hostStorageEnableOptionName, "hm", "Enable/disable host storage mode. By default no mode change is made. When specified, toggles between enable/disable host mode."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
 		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		hm, hmFound := req.Options[hostStorageEnableOptionName].(bool)
+		if hmFound {
+			// New value is different from stored, then
+			if hm != cfg.Experimental.StorageHostEnabled {
+				cfg.Experimental.StorageHostEnabled = hm
+				err = n.Repo.SetConfig(cfg)
+				if err != nil {
+					return err
+				}
+			}
+			// turned off, do nothing
+			if !hm {
+				return nil
+			}
+		}
+
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
@@ -1596,11 +1620,6 @@ $ btfs storage announce --host-storage-price=1`,
 
 		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
 		}
 
 		rds := n.Repo.Datastore()
