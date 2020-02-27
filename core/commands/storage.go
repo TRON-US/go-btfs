@@ -1232,7 +1232,7 @@ the shard and replies back to client for the next challenge step.`,
 		runMode = storage.RegularMode
 		var offlinePeerIdStr string
 		if len(req.Arguments) >= 10 {
-			offlinePeerIdStr := req.Arguments[9]
+			offlinePeerIdStr = req.Arguments[9]
 		}
 		if offlinePeerIdStr == "" {
 			renterPid = requestPid
