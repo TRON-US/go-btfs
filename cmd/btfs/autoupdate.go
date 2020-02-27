@@ -87,7 +87,7 @@ func update(url, hval string) {
 		if runtime.GOOS == "windows" {
 			ext = ".exe"
 			sep = "\\"
-			compressedExt = ".exe.zip"
+			compressedExt = ".zip"
 		}
 
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
