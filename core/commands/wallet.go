@@ -37,6 +37,7 @@ var walletInitCmd = &cmds.Command{
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
+			fmt.Println("get config failed")
 			return err
 		}
 
@@ -63,14 +64,19 @@ var walletDepositCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+
 		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
 		if err != nil {
 			return err
 		}
 
-		err = wallet.HostWallet().Deposit(amount)
+		err = wallet.WalletDeposit(cfg, amount)
 		if err != nil {
-			log.Error("wallet deposit failed, err ", err)
+			log.Error("wallet deposit failed, ERR: ", err)
 			return err
 		}
 		s := fmt.Sprintf("BTFS wallet deposit submitted. Please wait one minute for the transaction to confirm.")
@@ -106,9 +112,9 @@ var walletWithdrawCmd = &cmds.Command{
 			return err
 		}
 
-		err = wallet.HostWallet().Withdraw(amount, cfg)
+		err = wallet.WalletWithdraw(cfg, amount)
 		if err != nil {
-			log.Error("wallet deposit failed, err ", err)
+			log.Error("wallet withdraw failed, ERR: ", err)
 			return err
 		}
 
@@ -138,9 +144,9 @@ var walletBalanceCmd = &cmds.Command{
 			return err
 		}
 
-		tronBalance, lederBalance, err := wallet.HostWallet().GetBalance(cfg)
+		tronBalance, lederBalance, err := wallet.GetBalance(cfg)
 		if err != nil {
-			log.Error("wallet deposit failed, err ", err)
+			log.Error("wallet get balance failed, ERR: ", err)
 			return err
 		}
 		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, lederBalance)
