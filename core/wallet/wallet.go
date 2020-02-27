@@ -3,10 +3,10 @@ package wallet
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core/escrow"
@@ -22,10 +22,11 @@ var log = logging.Logger("core/wallet")
 
 var (
 	WithdrawMinAmount int64  = 1
-	WithdrawMaxAmount int64  = 10000
+	WithdrawMaxAmount int64  = 1000000000000
 	DepositMinAmount  int64  = 1
-	DepositMaxAmount  int64  = 10000
+	DepositMaxAmount  int64  = 1000000000000
 	TokenId           string = "1002000"
+	TokenIdDev        string = "1002508"
 	hostWallet        Wallet
 
 	escrowService   string
@@ -41,8 +42,13 @@ type Wallet struct {
 }
 
 // withdraw from ledger to tron
-func (wallet *Wallet) Withdraw(amount int64, configuration *config.Config) error {
-	if wallet.privateKey == nil {
+func WalletWithdraw(configuration *config.Config, amount int64) error {
+	err := Init(configuration)
+	if err != nil {
+		return err
+	}
+
+	if hostWallet.privateKey == nil {
 		log.Error("wallet is not initialized")
 		return errors.New("wallet is not initialized")
 	}
@@ -64,18 +70,23 @@ func (wallet *Wallet) Withdraw(amount int64, configuration *config.Config) error
 	}
 
 	// Doing withdraw request.
-	channelId, id, err := Withdraw(wallet.ledgerAddress, wallet.tronAddress, amount, wallet.privateKey)
+	channelId, id, err := Withdraw(hostWallet.ledgerAddress, hostWallet.tronAddress, amount, hostWallet.privateKey)
 	if err != nil {
 		log.Error("Failed to Withdraw, ERR[%v]\n", err)
 		return err
 	}
 
-	log.Info("Withdraw submitted! ChannelId: [%d], id [%d]\n", channelId, id)
+	fmt.Println(fmt.Sprintf("Withdraw submitted! ChannelId: [%d], id [%d]\n", channelId, id))
 	return nil
 }
 
-func (wallet *Wallet) Deposit(amount int64) error {
-	if wallet.privateKey == nil {
+func WalletDeposit(configuration *config.Config, amount int64) error {
+	err := Init(configuration)
+	if err != nil {
+		return err
+	}
+
+	if hostWallet.privateKey == nil {
 		log.Error("wallet is not initialized")
 		return errors.New("wallet is not initialized")
 	}
@@ -84,30 +95,43 @@ func (wallet *Wallet) Deposit(amount int64) error {
 		return errors.New(fmt.Sprintf("deposit amount should between %d ~ %d", DepositMinAmount, DepositMaxAmount))
 	}
 
-	prepareResponse, err := Deposit(wallet.ledgerAddress, amount, wallet.privateKey)
+	prepareResponse, err := Deposit(hostWallet.ledgerAddress, amount, hostWallet.privateKey)
 	if err != nil {
 		log.Error("Failed to Deposit, ERR[%v]\n", err)
 		return err
 	}
 
-	log.Info("Deposit Submitted: Id [%d]\n", prepareResponse.GetId())
+	fmt.Println(fmt.Sprintf("Deposit Submitted: Id [%d]\n", prepareResponse.GetId()))
 	return nil
 }
 
 //GetBalance both on ledger and Tron.
-func (wallet *Wallet) GetBalance(configuration *config.Config) (int64, int64, error) {
-	if wallet.ledgerAddress == nil || len(wallet.ledgerAddress) == 0 {
+func GetBalance(configuration *config.Config) (int64, int64, error) {
+	err := Init(configuration)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if hostWallet.privateKey == nil {
 		log.Error("wallet is not initialized")
 		return 0, 0, errors.New("wallet is not initialized")
 	}
 
 	ctx := context.Background()
 	// get tron balance
-	tronBalance, err := GetTokenBalance(wallet.tronAddress, TokenId)
+	tokenId := TokenId
+	if strings.Contains(configuration.Services.EscrowDomain, "dev") ||
+		strings.Contains(configuration.Services.EscrowDomain, "staging") {
+		tokenId = TokenIdDev
+	}
+	fmt.Println("token id:", tokenId)
+
+	tronBalance, err := GetTokenBalance(hostWallet.tronAddress, tokenId)
 	if err != nil {
 		return 0, 0,
 			errors.New(fmt.Sprintf("Failed to get exchange tron balance, reason: %v", err))
 	}
+
 	log.Info(fmt.Sprintf("Get exchange tron account success, balance: [%d]", tronBalance))
 
 	// get ledger balance from escrow
@@ -116,6 +140,7 @@ func (wallet *Wallet) GetBalance(configuration *config.Config) (int64, int64, er
 		return 0, 0,
 			errors.New(fmt.Sprintf("Failed to get ledger balance, reason: %v", err))
 	}
+
 	log.Info(fmt.Sprintf("Get ledger account success, balance: [%d]", ledgerBalance))
 
 	return tronBalance, ledgerBalance, nil
@@ -123,21 +148,26 @@ func (wallet *Wallet) GetBalance(configuration *config.Config) (int64, int64, er
 
 // activate account on tron block chain
 // using wallet tronAddress 41***
-func (wallet *Wallet) ActivateAccount() error {
-	if wallet.tronAddress == nil {
+func ActivateAccount(configuration *config.Config) error {
+	err := Init(configuration)
+	if err != nil {
+		return err
+	}
+
+	if hostWallet.tronAddress == nil {
 		log.Error("wallet is not initialized")
 		return errors.New("wallet is not initialized")
 	}
 
 	ctx := context.Background()
-	err := grpc.ExchangeClient(exchangeService).WithContext(ctx,
+	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
 		func(ctx context.Context, client exPb.ExchangeClient) error {
 			response, err := client.ActivateAccountOnChain(ctx,
-				&exPb.ActivateAccountRequest{Address: wallet.tronAddress})
+				&exPb.ActivateAccountRequest{Address: hostWallet.tronAddress})
 			if err != nil {
 				return err
 			}
-			log.Info("wallet activate account succeed: ", response)
+			fmt.Println("wallet activate account succeed: ", response)
 			return nil
 		})
 	if err != nil {
@@ -147,10 +177,11 @@ func (wallet *Wallet) ActivateAccount() error {
 	return nil
 }
 
-func Init(configuration *config.Config) {
+func Init(configuration *config.Config) error {
 	if configuration == nil {
+		fmt.Println("Init wallet, configuration is nil")
 		log.Error("init wallet failed, input nil configuration")
-		return
+		return errors.New("init wallet failed")
 	}
 
 	// get service name
@@ -162,27 +193,28 @@ func Init(configuration *config.Config) {
 	privKeyIC, err := configuration.Identity.DecodePrivateKey("")
 	if err != nil {
 		log.Error("wallet get private key failed")
-		return
+		return err
 	}
 	// base64 key
 	privKeyRaw, err := privKeyIC.Raw()
 	if err != nil {
 		log.Error("wallet get private key raw failed")
-		return
+		return err
 	}
 	// hex key
 	hexPrivKey := hex.EncodeToString(privKeyRaw)
 	log.Debug("wallet private key (hex) is:", hexPrivKey)
+	fmt.Println("wallet private key (hex) is:", hexPrivKey)
 
 	// hex key to ecdsa
 	privateKey, err := eth.HexToECDSA(hexPrivKey)
 	if err != nil {
 		log.Error("error when convent private key to edca, ERR[%v]\n", err)
-		return
+		return err
 	}
 	if privateKey == nil {
 		log.Error("wallet get private key ecdsa failed")
-		return
+		return err
 	}
 	hostWallet.privateKey = privateKey
 
@@ -190,15 +222,21 @@ func Init(configuration *config.Config) {
 	addr, err := PublicKeyToAddress(privateKey.PublicKey)
 	if err != nil {
 		log.Error("wallet get tron address failed, ERR[%v]\n ", err)
-		return
+		return err
 	}
 	addBytes := addr.Bytes()
 	hostWallet.tronAddress = addBytes
-	hostWallet.ledgerAddress = elliptic.Marshal(elliptic.P256(), privateKey.PublicKey.X, privateKey.PublicKey.Y)
-	log.Info("wallet ledger address: [%s]\n", hex.EncodeToString(hostWallet.ledgerAddress))
-	log.Info("wallet tron address: [%s]\n", hex.EncodeToString(hostWallet.tronAddress))
-}
 
-func HostWallet() *Wallet {
-	return &hostWallet
+	ledgerAddress, err := ic.RawFull(privKeyIC.GetPublic())
+	if err != nil {
+		fmt.Println("get ledger address failed, ERR: \n", err)
+		return err
+	}
+
+	hostWallet.ledgerAddress = ledgerAddress
+	//elliptic.Marshal(elliptic.P256(), privateKey.PublicKey.X, privateKey.PublicKey.Y)
+	fmt.Println("wallet ledger address:\n", hex.EncodeToString(hostWallet.ledgerAddress))
+	fmt.Println("wallet tron address:\n", hex.EncodeToString(hostWallet.tronAddress))
+
+	return nil
 }
