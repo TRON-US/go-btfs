@@ -1230,7 +1230,10 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 		runMode = storage.RegularMode
-		offlinePeerIdStr := req.Arguments[9]
+		var offlinePeerIdStr string
+		if len(req.Arguments) >= 10 {
+			offlinePeerIdStr = req.Arguments[9]
+		}
 		if offlinePeerIdStr == "" {
 			renterPid = requestPid
 		} else {
