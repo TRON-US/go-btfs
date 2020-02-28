@@ -203,9 +203,6 @@ func Init(configuration *config.Config) error {
 	}
 	// hex key
 	hexPrivKey := hex.EncodeToString(privKeyRaw)
-	log.Debug("wallet private key (hex) is:", hexPrivKey)
-	fmt.Println("wallet private key (hex) is:", hexPrivKey)
-
 	// hex key to ecdsa
 	privateKey, err := eth.HexToECDSA(hexPrivKey)
 	if err != nil {
