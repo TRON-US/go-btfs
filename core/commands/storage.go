@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -79,9 +78,6 @@ var bo = func() *backoff.ExponentialBackOff {
 	bo.MaxInterval = 60 * time.Second
 	return bo
 }()
-
-// TODO: get/set the value from/in go-btfs-common
-var HostPriceLowBoundary = int64(10)
 
 var StorageCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -495,18 +491,12 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	// init retry queue
 	retryQueue := storage.NewRetryQueue(int64(len(peers)))
 	// set price limit, the price is default when host doesn't provide price
-	price, found := req.Options[uploadPriceOptionName].(int64)
-	if found && price < HostPriceLowBoundary {
-		return nil, fmt.Errorf("price is smaller than minimum setting price")
-	}
-	if found && price >= math.MaxInt64 {
-		return nil, fmt.Errorf("price should be smaller than max int64")
-	}
 	ns, err := hub.GetSettings(param.ctx, cfg.Services.HubDomain,
 		n.Identity.String(), n.Repo.Datastore())
 	if err != nil {
 		return nil, err
 	}
+	price, found := req.Options[uploadPriceOptionName].(int64)
 	if !found {
 		price = int64(ns.StoragePriceAsk)
 	}
@@ -546,8 +536,8 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 				continue
 			}
 			// use host askingPrice instead if provided
-			if int64(ni.StoragePriceAsk) > HostPriceLowBoundary {
-				price = int64(ni.StoragePriceAsk)
+			if int64(ni.StoragePriceAsk) > price {
+				continue
 			}
 			// add host to retry queue
 			host := &storage.HostNode{
