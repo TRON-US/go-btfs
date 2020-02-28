@@ -252,6 +252,11 @@ func TestCommands(t *testing.T) {
 		"/guard",
 		"/guard/test",
 		"/guard/test/send-challenges",
+		"/wallet",
+		"/wallet/init",
+		"/wallet/balance",
+		"/wallet/withdraw",
+		"/wallet/deposit",
 	}
 
 	cmdSet := make(map[string]struct{})
