@@ -84,7 +84,7 @@ to the guard service.`,
 		if err != nil {
 			return err
 		}
-		shardHashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+		shardHashes, _, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 		if err != nil {
 			return err
 		}

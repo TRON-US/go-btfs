@@ -17,39 +17,39 @@ import (
 // CheckAndGetReedSolomonShardHashes checks to see if a root hash is a reed solomon file,
 // if ok, returns the list of shard hashes.
 func CheckAndGetReedSolomonShardHashes(ctx context.Context, node *core.IpfsNode,
-	api coreiface.CoreAPI, rootHash cid.Cid) ([]cid.Cid, error) {
+	api coreiface.CoreAPI, rootHash cid.Cid) ([]cid.Cid, int64, error) {
 	rootPath := path.IpfsPath(rootHash)
 	// check to see if a replicated file using reed-solomon
 	mbytes, err := api.Unixfs().GetMetadata(ctx, rootPath)
 	if err != nil {
-		return nil, fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
+		return nil, 0, fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
 	}
 	var rsMeta chunker.RsMetaMap
 	err = json.Unmarshal(mbytes, &rsMeta)
 	if err != nil {
-		return nil, fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
+		return nil, 0, fmt.Errorf("file must be reed-solomon encoded: %s", err.Error())
 	}
 	if rsMeta.NumData == 0 || rsMeta.NumParity == 0 || rsMeta.FileSize == 0 {
-		return nil, fmt.Errorf("file must be reed-solomon encoded: metadata not valid")
+		return nil, 0, fmt.Errorf("file must be reed-solomon encoded: metadata not valid")
 	}
 	// use unixfs layer helper to grab the raw leaves under the data root node
 	// higher level helpers resolve the enrtire DAG instead of resolving the root
 	// node as it is required here
 	rn, err := api.ResolveNode(ctx, rootPath)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	nodes, err := unixfs.GetChildrenForDagWithMeta(ctx, rn, api.Dag())
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	links := nodes.DataNode.Links()
 	if len(links) != int(rsMeta.NumData+rsMeta.NumParity) {
-		return nil, fmt.Errorf("file must be reed-solomon encoded: encoding scheme mismatch")
+		return nil, 0, fmt.Errorf("file must be reed-solomon encoded: encoding scheme mismatch")
 	}
 	var hashes []cid.Cid
 	for _, link := range links {
 		hashes = append(hashes, link.Cid)
 	}
-	return hashes, nil
+	return hashes, int64(rsMeta.FileSize), nil
 }

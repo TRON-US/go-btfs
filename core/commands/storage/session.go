@@ -141,6 +141,7 @@ type FileContracts struct {
 	GuardContracts    []*guardpb.Contract
 	Renter            peer.ID
 	FileHash          cidlib.Cid
+	FileSize          int64
 	StatusIndex       int
 	Status            string
 	StatusMessage     string            // most likely error or notice
@@ -926,6 +927,18 @@ func (ss *FileContracts) sendSessionStatusChan(status int, succeed bool, err err
 			return
 		}
 	}
+}
+
+func (ss *FileContracts) SetFileSize(fileSize int64) {
+	ss.Lock()
+	defer ss.Unlock()
+	ss.FileSize = fileSize
+}
+
+func (ss *FileContracts) GetFileSize() int64 {
+	ss.Lock()
+	defer ss.Unlock()
+	return ss.FileSize
 }
 
 func (c *Shard) SendStepStateChan(state int, succeed bool, clientErr error, hostErr error) {

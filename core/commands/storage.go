@@ -182,6 +182,7 @@ Use status command to check for completion:
 		runMode := storage.RegularMode
 
 		lf := req.Options[leafHashOptionName].(bool)
+		var fileSize int64
 		if !lf {
 			if len(req.Arguments) != 1 {
 				return fmt.Errorf("need one and only one root file hash")
@@ -193,10 +194,11 @@ Use status command to check for completion:
 			if err != nil {
 				return err
 			}
-			hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+			hashes, tmp, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 			if err != nil || len(hashes) == 0 {
 				return fmt.Errorf("invalid hash: %s", err)
 			}
+			fileSize = tmp
 			// get shard size
 			shardSize, err = getContractSizeFromCid(req.Context, hashes[0], api)
 			if err != nil {
@@ -212,6 +214,7 @@ Use status command to check for completion:
 			if err != nil {
 				return err
 			}
+			fileSize = -1 // we don't need file size in this case
 			shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
 			if err != nil {
 				return err
@@ -233,6 +236,7 @@ Use status command to check for completion:
 			return err
 		}
 
+		output.ss.SetFileSize(fileSize)
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
 
@@ -393,7 +397,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 		if err != nil {
 			return err
 		}
-		hashes, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+		hashes, _, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 		if err != nil || len(hashes) == 0 {
 			return fmt.Errorf("invalid hash: %s", err)
 		}

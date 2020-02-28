@@ -45,7 +45,7 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 	fileStoreMeta := guardPb.FileStoreMeta{
 		RenterPid:        renterPid,
 		FileHash:         session.FileHash.String(), //TODO need to check
-		FileSize:         10000,                     //TODO need to revise later
+		FileSize:         session.GetFileSize(),     //TODO need to revise later
 		RentStart:        rentStart,                 //TODO need to revise later
 		RentEnd:          rentEnd,                   //TODO need to revise later
 		CheckFrequency:   0,
