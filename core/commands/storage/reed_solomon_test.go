@@ -15,7 +15,7 @@ import (
 
 func TestReedSolomonCheckGet(t *testing.T) {
 	node, api, root, full := unixtest.HelpTestAddWithReedSolomonMetadata(t)
-	hashes, err := CheckAndGetReedSolomonShardHashes(context.Background(), node, api, root)
+	hashes, _, err := CheckAndGetReedSolomonShardHashes(context.Background(), node, api, root)
 	if err != nil {
 		t.Fatal(err)
 	}
