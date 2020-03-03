@@ -92,8 +92,8 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
 		"challenge": storageChallengeCmd,
-		"stats":     storageStatsCmd,
-		"contracts": storageContractsCmd,
+		//"stats":     storageStatsCmd,
+		//"contracts": storageContractsCmd,
 	},
 }
 
