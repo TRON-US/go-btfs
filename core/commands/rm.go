@@ -89,10 +89,10 @@ func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *
 		rn, err := api.ResolveNode(ctx, path.IpfsPath(nl.Cid))
 		if err != nil {
 			res.Strings = append(res.Strings, fmt.Sprintf("Error resolving object %s", nl.Cid))
-			return err
+			continue // continue with other nodes
 		}
 		if err := rmAllDags(ctx, api, rn, res, removed); err != nil {
-			return err
+			continue // continue with other nodes
 		}
 	}
 	ncid := node.Cid()

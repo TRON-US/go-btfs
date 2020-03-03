@@ -10,6 +10,7 @@ import (
 	gopath "path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/e"
@@ -69,11 +70,13 @@ If '--meta' or '-m' is enabled, this option is ignored.
 		cmds.BoolOption(decryptName, "d", "Decrypt the file."),
 		cmds.StringOption(privateKeyName, "pk", "The private key to decrypt file."),
 		cmds.StringOption(repairShardsName, "rs", "Repair the list of shards. Multihashes separated by ','."),
+		cmds.BoolOption(quietOptionName, "q", "Quiet mode: perform get operation without writing to anywhere. Same as using -o /dev/null."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		_, err := getCompressOptions(req)
 		return err
 	},
+	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cmplvl, err := getCompressOptions(req)
 		if err != nil {
@@ -114,6 +117,11 @@ If '--meta' or '-m' is enabled, this option is ignored.
 			return err
 		}
 
+		quiet, _ := req.Options[quietOptionName].(bool)
+		if quiet {
+			return res.Emit(nil)
+		}
+
 		size, err := file.Size()
 		if err != nil {
 			return err
@@ -136,6 +144,11 @@ If '--meta' or '-m' is enabled, this option is ignored.
 			v, err := res.Next()
 			if err != nil {
 				return err
+			}
+
+			// quiet mode return
+			if v == nil {
+				return nil
 			}
 
 			outReader, ok := v.(io.Reader)

@@ -45,9 +45,9 @@ for ARCH in ${ARCH_VALUE[@]}; do
     cd windows/"$ARCH"
     wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/btfs-windows-"$ARCH".zip
     unzip -q btfs-windows-"$ARCH".zip
-    wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/update-windows-"$ARCH".exe.zip
-    unzip -q update-windows-"$ARCH".exe.zip
-    rm update-windows-"$ARCH".exe.zip
+    wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/update-windows-"$ARCH".zip
+    unzip -q update-windows-"$ARCH".zip
+    rm update-windows-"$ARCH".zip
 
     cd ../..
 done
