@@ -192,31 +192,21 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	// if chunker is reed-solomon and the given `node` is directory,
 	// create ReedSolomonAdder. Otherwise use Adder.
 	var nd ipld.Node
-	_, ok := node.(files.Directory)
+	dir, ok := node.(files.Directory)
 	if ok && chunker.IsReedSolomon(settings.Chunker) {
 		rsfileAdder, err := coreunix.NewReedSolomonAdder(fileAdder)
 		if err != nil {
 			return nil, err
 		}
 		rsfileAdder.IsDir = true
-
-		if api.nd.IsDaemon {
-			dir, ok := node.(files.Directory)
-			if !ok {
-				return nil, errors.New("expected files.Directory type")
-			}
-			it := dir.Entries()
-			it.SetReedSolomon()
-			path, err := it.AbsRootPath()
-			if err != nil {
-				return nil, err
-			}
-			if path != "" {
-				node, err = newSerialFileNode(path, false)
-				if err != nil {
-					return nil, err
-				}
-			}
+ 		if files.IsMultiPartDirectory(dir) {
+ 			rsfileAdder.FileType = coreunix.MultipartFile
+		} else if files.IsMapDirectory(dir) {
+			rsfileAdder.FileType = coreunix.SliceFile
+		} else if files.IsSerialFileDirectory(dir){
+			rsfileAdder.FileType = coreunix.SerialFile
+		} else {
+			return nil, fmt.Errorf("unexpected files.Directory type [%T]", dir)
 		}
 		nd, err = rsfileAdder.AddAllAndPin(node)
 	} else {

@@ -1,8 +1,10 @@
 package coreunix
 
 import (
+	"bytes"
 	"errors"
 	"io"
+	"io/ioutil"
 	gopath "path"
 
 	"container/list"
@@ -14,8 +16,15 @@ import (
 	dag "github.com/ipfs/go-merkledag"
 )
 
+const (
+	SerialFile = iota + 1
+	MultipartFile
+	SliceFile
+)
+
 type ReedSolomonAdder struct {
 	Adder
+	FileType      int
 	InfileReaders []io.Reader
 	IsDir         bool
 	CurrentOffset uint64
@@ -78,7 +87,12 @@ func (rsadder *ReedSolomonAdder) AddAllAndPin(file files.Node) (ipld.Node, error
 	} else {
 		var reader io.Reader = io.MultiReader(rsadder.InfileReaders...)
 		if rsadder.Progress {
-			reader = &progressReader{file: reader, path: "", out: rsadder.Out}
+			rdr := &progressReader{file: reader, path: "", out: rsadder.Out}
+			if file, ok := file.(files.Node); ok {
+				reader = &progressReader3{rdr, file}
+			} else {
+				reader = rdr
+			}
 		}
 
 		// Create a DAG with the above directory tree as metadata and
@@ -113,7 +127,6 @@ func (rsadder *ReedSolomonAdder) addFileNode(path string, file files.Node, fList
 	defer func() {
 		fList.PushFront(file)
 	}()
-
 	err := rsadder.maybePauseForGC()
 	if err != nil {
 		return nil, err
@@ -162,7 +175,12 @@ func (rsadder *ReedSolomonAdder) addDir(path string, dir files.Directory, fList 
 		size += uint64(child.NodeSize())
 	}
 	node.Siz = size
-
+	if toplevel && rsadder.FileType == MultipartFile {
+		err := dir.SetSize(int64(size))
+		if err != nil {
+			return nil, err
+		}
+	}
 	return node, it.Err()
 }
 
@@ -179,23 +197,57 @@ func (rsadder *ReedSolomonAdder) addSymlink(path string, l *files.Symlink) (uio.
 	}, nil
 }
 
+func getReader(r io.Reader) (io.Reader, int64, error) {
+	buf, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	fSize := int64(len(buf))
+	r = bytes.NewReader(buf)
+	return r, fSize, nil
+}
+
 func (rsadder *ReedSolomonAdder) addFile(path string, file files.File) (uio.Node, error) {
 	_, dstName := gopath.Split(path)
+	var (
+		reader io.Reader = file
+		fSize int64
+		err error
+	)
 
-	var reader io.Reader = file
-	rsadder.InfileReaders = append(rsadder.InfileReaders, reader)
-	size, err := file.Size()
-	if err != nil {
-		return nil, err
+	switch rsadder.FileType {
+	case MultipartFile:
+		rf, ok := file.(*files.ReaderFile)
+		if !ok {
+			return nil, errors.New("expected multipartFile file type")
+		}
+
+		reader, fSize, err = getReader(rf.Reader())
+		if err != nil {
+			return nil, err
+		}
+	case SerialFile:
+		fSize, err = file.Size()
+		if err != nil {
+			return nil, err
+		}
+	case SliceFile:
+		return nil, errors.New("SliceFile type is not supported")
+	default:
+		return nil, errors.New("unsupported file type")
 	}
+
+	rsadder.InfileReaders = append(rsadder.InfileReaders, reader)
 	currentOffset := rsadder.CurrentOffset
-	rsadder.CurrentOffset += uint64(size)
+	rsadder.CurrentOffset += uint64(fSize)
+
 	node := &uio.FileNode{
 		BaseNode: uio.BaseNode{
 			NodeType:    uio.FileNodeType,
 			NodePath:    path,
 			NodeName:    dstName,
-			Siz:         uint64(size),
+			Siz:         uint64(fSize),
 			StartOffset: currentOffset,
 		},
 		// Kept the following line for the same reason as DirNode.
