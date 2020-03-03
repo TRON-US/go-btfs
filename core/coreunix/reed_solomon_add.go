@@ -212,8 +212,8 @@ func (rsadder *ReedSolomonAdder) addFile(path string, file files.File) (uio.Node
 	_, dstName := gopath.Split(path)
 	var (
 		reader io.Reader = file
-		fSize int64
-		err error
+		fSize  int64
+		err    error
 	)
 
 	switch rsadder.FileType {

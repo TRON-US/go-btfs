@@ -199,11 +199,11 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 			return nil, err
 		}
 		rsfileAdder.IsDir = true
- 		if files.IsMultiPartDirectory(dir) {
- 			rsfileAdder.FileType = coreunix.MultipartFile
+		if files.IsMultiPartDirectory(dir) {
+			rsfileAdder.FileType = coreunix.MultipartFile
 		} else if files.IsMapDirectory(dir) {
 			rsfileAdder.FileType = coreunix.SliceFile
-		} else if files.IsSerialFileDirectory(dir){
+		} else if files.IsSerialFileDirectory(dir) {
 			rsfileAdder.FileType = coreunix.SerialFile
 		} else {
 			return nil, fmt.Errorf("unexpected files.Directory type [%T]", dir)
