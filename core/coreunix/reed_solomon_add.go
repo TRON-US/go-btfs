@@ -227,13 +227,11 @@ func (rsadder *ReedSolomonAdder) addFile(path string, file files.File) (uio.Node
 		if err != nil {
 			return nil, err
 		}
-	case SerialFile:
+	case SerialFile, SliceFile:
 		fSize, err = file.Size()
 		if err != nil {
 			return nil, err
 		}
-	case SliceFile:
-		return nil, errors.New("SliceFile type is not supported")
 	default:
 		return nil, errors.New("unsupported file type")
 	}
