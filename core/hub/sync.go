@@ -39,9 +39,9 @@ func CheckValidMode(mode string, local bool) (hubpb.HostsReq_Mode, string, error
 	return -1, "", fmt.Errorf("Invalid Hub query mode: %s", mode)
 }
 
-// QueryHub queries the BTFS-Hub to retrieve the latest list of hosts info
+// QueryHosts queries the BTFS-Hub to retrieve the latest list of hosts info
 // according to a certain mode.
-func QueryHub(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
+func QueryHosts(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
 	hrm, _, err := CheckValidMode(mode, false)
 	if err != nil {
 		return nil, err
@@ -66,8 +66,35 @@ func QueryHub(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.H
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query BTFS-Hub service: %v", err)
+		return nil, fmt.Errorf("Failed to query hosts from Hub service: %v", err)
 	}
 
 	return resp.Hosts.Hosts, nil
+}
+
+// QueryStats queries the BTFS-Hub to retrieve the latest storage stats on this host.
+func QueryStats(ctx context.Context, node *core.IpfsNode) (*hubpb.StatsResp, error) {
+	config, err := node.Repo.Config()
+	if err != nil {
+		return nil, err
+	}
+	var resp *hubpb.StatsResp
+	err = grpc.HubQueryClient(config.Services.HubDomain).WithContext(ctx, func(ctx context.Context,
+		client hubpb.HubQueryServiceClient) error {
+		resp, err = client.GetStats(ctx, &hubpb.StatsReq{
+			Id: node.Identity.Pretty(),
+		})
+		if err != nil {
+			return err
+		}
+		if resp.Code != hubpb.ResponseCode_SUCCESS {
+			return fmt.Errorf(resp.Message)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query stats from Hub service: %v", err)
+	}
+
+	return resp, nil
 }
