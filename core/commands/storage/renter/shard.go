@@ -7,6 +7,7 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	"github.com/orcaman/concurrent-map"
+	"github.com/tron-us/go-btfs-common/protos/guard"
 	shardpb "github.com/tron-us/go-btfs-common/protos/storage/shard"
 	"github.com/tron-us/protobuf/proto"
 )
@@ -76,7 +77,7 @@ func (s *Shard) enterState(e *fsm.Event) {
 	case "contract":
 		s.doContract(e.Args[0].(*shardpb.Contracts))
 	case "complete":
-		s.doComplete(e.Args[0].([]byte))
+		s.doComplete(e.Args[0].([]byte), e.Args[1].(*guard.Contract))
 	case "error":
 		s.doError(e.Args[0].(error))
 	}
@@ -90,8 +91,8 @@ func (s *Shard) ToContract(sc *shardpb.Contracts) error {
 	return s.fsm.Event("toContract", sc)
 }
 
-func (s *Shard) ToComplete(escrowContractBytes []byte) error {
-	return s.fsm.Event("toComplete", escrowContractBytes)
+func (s *Shard) ToComplete(escrowContractBytes []byte, guardContract *guard.Contract) error {
+	return s.fsm.Event("toComplete", escrowContractBytes, guardContract)
 }
 
 func (s *Shard) ToError(err error) error {
@@ -130,7 +131,7 @@ func (s *Shard) doContract(sc *shardpb.Contracts) error {
 	return ds.Batch(s.ds, ks, vs)
 }
 
-func (s *Shard) doComplete(signedEscrowContractBytes []byte) error {
+func (s *Shard) doComplete(signedEscrowContractBytes []byte, gc *guard.Contract) error {
 	status := &shardpb.Status{
 		Status:  "complete",
 		Message: "",
@@ -143,6 +144,7 @@ func (s *Shard) doComplete(signedEscrowContractBytes []byte) error {
 		status,
 		&shardpb.SingedContracts{
 			SignedEscrowContract: signedEscrowContractBytes,
+			GuardContract:        gc,
 		},
 	}
 	return ds.Batch(s.ds, ks, vs)

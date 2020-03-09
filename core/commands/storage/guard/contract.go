@@ -11,6 +11,8 @@ import (
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/go-btfs-common/protos/storage/shard"
+	"github.com/tron-us/protobuf/proto"
 	"time"
 )
 
@@ -130,4 +132,64 @@ func pidFromString(key string) (peer.ID, error) {
 		return "", err
 	}
 	return peer.IDFromPublicKey(pubKey)
+}
+
+func SignedContractAndMarshal(meta *guardPb.ContractMeta, cont *guardPb.Contract, privKey ic.PrivKey,
+	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
+	sig, err := crypto.Sign(privKey, meta)
+	if err != nil {
+		return nil, err
+	}
+	if cont == nil {
+		cont = &guardPb.Contract{
+			ContractMeta:   *meta,
+			LastModifyTime: time.Now(),
+		}
+	} else {
+		cont.LastModifyTime = time.Now()
+	}
+	if isPayer {
+		cont.RenterPid = renterPid
+		cont.PreparerPid = nodePid
+		if isRepair {
+			cont.PreparerSignature = sig
+		} else {
+			cont.RenterSignature = sig
+		}
+	} else {
+		cont.HostSignature = sig
+	}
+	return proto.Marshal(cont)
+}
+
+func UnmarshalGuardContract(marshaledBody []byte) (*guardPb.Contract, error) {
+	signedContract := &guardPb.Contract{}
+	err := proto.Unmarshal(marshaledBody, signedContract)
+	if err != nil {
+		return nil, err
+	}
+	return signedContract, nil
+}
+
+func NewContract(md *shard.Metadata, shardHash string, configuration *config.Config,
+	renterPid string) (*guardPb.ContractMeta, error) {
+	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
+	if err != nil {
+		return nil, err
+	}
+	return &guardPb.ContractMeta{
+		ContractId:    md.ContractId,
+		RenterPid:     renterPid,
+		HostPid:       md.Receiver,
+		ShardHash:     shardHash,
+		ShardIndex:    md.Index,
+		ShardFileSize: md.ShardFileSize,
+		FileHash:      md.FileHash,
+		RentStart:     md.StartTime,
+		RentEnd:       md.StartTime.Add(md.ContractLength),
+		GuardPid:      guardPid.Pretty(),
+		EscrowPid:     escrowPid.Pretty(),
+		Price:         md.Price,
+		Amount:        md.TotalPay, // TODO: CHANGE and aLL other optional fields
+	}, nil
 }

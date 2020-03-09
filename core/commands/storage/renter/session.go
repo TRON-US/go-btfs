@@ -4,12 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	config "github.com/TRON-US/go-btfs-config"
+	"github.com/ipfs/go-cid"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage/ds"
+	"github.com/TRON-US/go-btfs/core/commands/storage/guard"
 	"github.com/TRON-US/go-btfs/core/escrow"
-	"github.com/TRON-US/go-btfs/core/guard"
+
+	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/tron-us/go-btfs-common/crypto"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	sessionpb "github.com/tron-us/go-btfs-common/protos/storage/session"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
+	"github.com/tron-us/protobuf/proto"
+
 	"github.com/cenkalti/backoff/v3"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/google/uuid"
@@ -17,13 +28,6 @@ import (
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
-	"github.com/tron-us/go-btfs-common/crypto"
-	sessionpb "github.com/tron-us/go-btfs-common/protos/storage/session"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
-	"github.com/tron-us/protobuf/proto"
-	"time"
 )
 
 var (
@@ -217,42 +221,30 @@ func (f *Session) onSubmit() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(2)
 	bs, t, err := f.PrepareContractFromShard()
 	if err != nil {
 		return err
 	}
-	fmt.Println(3)
 	// check account balance, if not enough for the totalPrice do not submit to escrow
 	balance, err := escrow.Balance(f.ctx, f.cfg)
 	if err != nil {
-		fmt.Println("err", err)
 		return err
 	}
-	fmt.Println(4)
 	if balance < t {
-		fmt.Println("balance", balance, "t", t)
-		err = fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
-		return err
+		return fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance)
 	}
-	fmt.Println(5)
 	req, err := escrow.NewContractRequest(f.cfg, bs, t)
 	if err != nil {
 		return err
 	}
-	fmt.Println(6)
 	var amount int64 = 0
 	for _, c := range req.Contract {
 		amount += c.Contract.Amount
 	}
-	fmt.Println("amount:", amount, "channel amount:", req.BuyerChannel.Channel.Amount)
-	fmt.Println("req.buyerChannel", req.BuyerChannel)
 	submitContractRes, err := escrow.SubmitContractToEscrow(f.ctx, f.cfg, req)
 	if err != nil {
-		fmt.Println("escrow submit err", err)
 		return fmt.Errorf("failed to submit contracts to escrow: [%v]", err)
 	}
-	fmt.Println(7)
 	go func() {
 		f.ToPay(submitContractRes)
 	}()
@@ -290,33 +282,46 @@ func (f *Session) onPay(response *escrowpb.SignedSubmitContractResult) error {
 }
 
 func (f *Session) onGuard(payinRes *escrowpb.SignedPayinResult, payerPriKey ic.PrivKey) error {
-	fmt.Println("on guard...")
 	status := &sessionpb.Status{
 		Status:  "guard",
 		Message: "",
 	}
 	err := ds.Save(f.ds, fmt.Sprintf(session_status_key, f.peerId, f.Id), status)
-	fmt.Println("on guard err", err)
 	if err != nil {
 		return err
 	}
 	md, err := f.GetMetadata()
-	fmt.Println("on guard get md err", err)
 	if err != nil {
 		return err
 	}
-	fmt.Println("md", md)
-	fsStatus, err := guard.PrepAndUploadFileMeta2(f.ctx, ss, payinRes, payerPriKey, f.cfg)
+
+	cts := make([]*guardpb.Contract, 0)
+	for _, h := range md.ShardHashes {
+		shard, err := GetShard(f.ctx, f.ds, f.peerId, f.Id, h)
+		if err != nil {
+			return err
+		}
+		contracts, err := shard.SignedCongtracts()
+		if err != nil {
+			return err
+		}
+		cts = append(cts, contracts.GuardContract)
+	}
+	fsStatus, err := guard.PrepAndUploadFileMeta(f.ctx, cts, payinRes, payerPriKey, f.cfg, f.peerId, md.FileHash)
 	if err != nil {
 		return fmt.Errorf("failed to send file meta to guard: [%v]", err)
 	}
 
-	qs, err := guard.PrepFileChallengeQuestions(ctx, n, api, ss, fsStatus)
+	qs, err := guard.PrepFileChallengeQuestions(f.ctx, f.n, f.api, fsStatus, md.FileHash, f.peerId, f.Id)
 	if err != nil {
 		return err
 	}
 
-	err = guard.SendChallengeQuestions(ctx, cfg, ss.FileHash, qs)
+	cid, err := cid.Parse(md.FileHash)
+	if err != nil {
+		return err
+	}
+	err = guard.SendChallengeQuestions(f.ctx, f.cfg, cid, qs)
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
