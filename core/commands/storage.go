@@ -13,11 +13,11 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/corerepo"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
+
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -26,6 +26,8 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
@@ -1509,7 +1511,7 @@ Mode options include:` + hub.AllModeHelpText,
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHub(ctx, node, mode)
+	nodes, err := hub.QueryHosts(ctx, node, mode)
 	if err != nil {
 		return err
 	}
@@ -1903,11 +1905,42 @@ var storageStatsSyncCmd = &cmds.Command{
 		ShortDescription: `
 This command synchronize node stats from network(hub) to local node data store.`,
 	},
-	Arguments:  []cmds.Argument{},
-	RunTimeout: 3 * time.Second,
+	Arguments: []cmds.Argument{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		return nil
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		return SyncStats(req.Context, cfg, n)
 	},
+}
+
+func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode) error {
+	sr, err := hub.QueryStats(ctx, node)
+	if err != nil {
+		return err
+	}
+	stat, err := corerepo.RepoStat(ctx, node)
+	if err != nil {
+		return err
+	}
+	hs := &nodepb.StorageStat_Host{
+		Online:      cfg.Experimental.StorageHostEnabled,
+		Uptime:      sr.Uptime,
+		Score:       sr.Score,
+		StorageUsed: int64(stat.RepoSize),
+		StorageCap:  int64(stat.StorageMax),
+	}
+	return storage.SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
 }
 
 // sub-commands: btfs storage stats info
@@ -1920,20 +1953,28 @@ This command get node stats in the network from the local node data store.`,
 	Arguments:  []cmds.Argument{},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		// return mock -- static dummy
-		data := map[string]interface{}{
-			"HostStats": map[string]interface{}{
-				"Online":      true,
-				"Uptime":      86400,
-				"Score":       6.5,
-				"StorageUsed": 1024,
-				"StorageCap":  102400,
-			},
-			"RenterStats": map[string]interface{}{
-				"Reserved": "Reserved",
-			},
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
 		}
-		return cmds.EmitOnce(res, data)
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		hs, err := storage.GetHostStatsFromDatastore(req.Context, n, n.Identity.Pretty())
+		if err != nil {
+			return err
+		}
+
+		// Only host stats for now
+		return cmds.EmitOnce(res, &nodepb.StorageStat{
+			HostStats: *hs,
+		})
 	},
 	Type: nodepb.StorageStat{},
 }
