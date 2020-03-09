@@ -9,7 +9,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage/ds"
-	"github.com/TRON-US/go-btfs/core/commands/storage/guard"
+	"github.com/TRON-US/go-btfs/core/commands/storage/renter/guard"
 	"github.com/TRON-US/go-btfs/core/escrow"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -312,7 +312,7 @@ func (f *Session) onGuard(payinRes *escrowpb.SignedPayinResult, payerPriKey ic.P
 		return fmt.Errorf("failed to send file meta to guard: [%v]", err)
 	}
 
-	qs, err := guard.PrepFileChallengeQuestions(f.ctx, f.n, f.api, fsStatus, md.FileHash, f.peerId, f.Id)
+	qs, err := PrepFileChallengeQuestions(f.ctx, f.n, f.api, fsStatus, md.FileHash, f.peerId, f.Id)
 	if err != nil {
 		return err
 	}
@@ -321,7 +321,7 @@ func (f *Session) onGuard(payinRes *escrowpb.SignedPayinResult, payerPriKey ic.P
 	if err != nil {
 		return err
 	}
-	err = guard.SendChallengeQuestions(f.ctx, f.cfg, cid, qs)
+	err = SendChallengeQuestions(f.ctx, f.cfg, cid, qs)
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}

@@ -3,17 +3,20 @@ package guard
 import (
 	"context"
 	"fmt"
-	config "github.com/TRON-US/go-btfs-config"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/escrow"
-	"github.com/ethereum/go-ethereum/log"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/protos/storage/shard"
 	"github.com/tron-us/protobuf/proto"
-	"time"
+
+	"github.com/ethereum/go-ethereum/log"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func PrepAndUploadFileMeta(ctx context.Context, contracts []*guardPb.Contract, payinRes *escrowPb.SignedPayinResult,

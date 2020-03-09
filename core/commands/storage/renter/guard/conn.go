@@ -16,7 +16,7 @@ const (
 )
 
 // sendChallengeQuestions opens a grpc connection, sends questions, and closes (short) connection
-func sendChallengeQuestions(ctx context.Context, cfg *config.Config,
+func SendChallengeQuestions(ctx context.Context, cfg *config.Config,
 	req *guardpb.FileChallengeQuestions) error {
 	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
 	cb.Timeout(guardTimeout)

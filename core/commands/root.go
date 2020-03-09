@@ -2,6 +2,8 @@ package commands
 
 import (
 	"errors"
+	"github.com/TRON-US/go-btfs/core/commands/storage/host"
+	"github.com/TRON-US/go-btfs/core/commands/storage/renter"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
@@ -217,8 +219,8 @@ var rootRemoteSubcommands = map[string]*cmds.Command{
 			},
 			"upload": &cmds.Command{
 				Subcommands: map[string]*cmds.Command{
-					"init":         storageUploadInitCmd,
-					"recvcontract": storageUploadRecvContractCmd,
+					"init":         host.StorageUploadInitCmd,
+					"recvcontract": renter.StorageUploadRecvContractCmd,
 				},
 			},
 		},

@@ -1,7 +1,6 @@
 package ds
 
 import (
-	"fmt"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
 	"github.com/tron-us/protobuf/proto"
@@ -10,8 +9,6 @@ import (
 func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {
 	batch := ds.NewBasicBatch(d)
 	for i, k := range keys {
-		fmt.Println("key:", k)
-		fmt.Println("val:", vals[i])
 		bytes, err := proto.Marshal(vals[i])
 		if err != nil {
 			return err
@@ -22,7 +19,6 @@ func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {
 }
 
 func Save(d ds.Datastore, key string, val proto.Message) error {
-	fmt.Println("val:", val)
 	bytes, err := proto.Marshal(val)
 	if err != nil {
 		return err

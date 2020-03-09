@@ -1,21 +1,24 @@
-package guard
+package renter
 
 import (
 	"context"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/storage/renter"
 	"time"
 
-	core "github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/renter/guard"
+
+	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	cc "github.com/tron-us/go-btfs-common/config"
 	ccrypto "github.com/tron-us/go-btfs-common/crypto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
-	config "github.com/TRON-US/go-btfs-config"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/ipfs/go-cid"
 )
+
+//FIXME: import cycle
 
 // PrepShardChallengeQuestions checks and prepares an amount of random challenge questions
 // and returns the necessary guard proto struct
@@ -26,7 +29,7 @@ func PrepShardChallengeQuestions(ctx context.Context, node *core.IpfsNode, api c
 	var sc *storage.StorageChallenge
 	var err error
 
-	//FIXME:
+	//FIXME: cache challange info
 	//if shardInfo != nil {
 	//	sc, err = shardInfo.GetChallengeOrNew(ctx, node, api, fileHash)
 	//	if err != nil {
@@ -115,7 +118,7 @@ func PrepCustomFileChallengeQuestions(ctx context.Context, n *core.IpfsNode, api
 	questions := make([]*guardpb.ShardChallengeQuestions, len(shardHashes))
 	qc := make(chan questionRes)
 	for i, sh := range shardHashes {
-		shard, err := renter.GetShard(ctx, n.Repo.Datastore(), peerId, sessionId, sh.String())
+		shard, err := GetShard(ctx, n.Repo.Datastore(), peerId, sessionId, sh.String())
 		if err != nil {
 			return nil, err
 		}
@@ -150,5 +153,5 @@ func SendChallengeQuestions(ctx context.Context, cfg *config.Config, fileHash ci
 		FileHash:       fileHash.String(),
 		ShardQuestions: questions,
 	}
-	return sendChallengeQuestions(ctx, cfg, fileQuestions)
+	return guard.SendChallengeQuestions(ctx, cfg, fileQuestions)
 }

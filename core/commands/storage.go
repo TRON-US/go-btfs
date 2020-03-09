@@ -12,6 +12,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/renter"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/corerepo"
 	"github.com/TRON-US/go-btfs/core/escrow"
@@ -89,7 +90,7 @@ Storage services include client upload operations, host storage operations,
 host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"upload":    storageUploadCmd,
+		"upload":    renter.StorageUploadCmd,
 		"hosts":     storageHostsCmd,
 		"info":      storageInfoCmd,
 		"announce":  storageAnnounceCmd,
