@@ -1570,7 +1570,7 @@ This command updates host information and broadcasts to the BTFS network.
 Examples
 
 To set the min price per GiB to 1000000 JUST (1 BTT):
-$ btfs storage announce --host-storage-price=1`,
+$ btfs storage announce --host-storage-price=1000000`,
 	},
 	Options: []cmds.Option{
 		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Min price per GiB of storage per day in JUST."),
