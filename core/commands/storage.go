@@ -145,7 +145,7 @@ Use status command to check for completion:
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
-		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in BTT."),
+		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in JUST."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
@@ -1571,13 +1571,13 @@ This command updates host information and broadcasts to the BTFS network.
 
 Examples
 
-To set the max price per GiB to 1 BTT:
-$ btfs storage announce --host-storage-price=1`,
+To set the min price per GiB to 1000000 JUST (1 BTT):
+$ btfs storage announce --host-storage-price=1000000`,
 	},
 	Options: []cmds.Option{
-		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage per day in BTT."),
-		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MiB of bandwidth in BTT."),
-		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in BTT."),
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Min price per GiB of storage per day in JUST."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Min price per MiB of bandwidth in JUST."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in JUST."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
