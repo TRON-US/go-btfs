@@ -1,4 +1,4 @@
-package ipfs
+package btfs
 
 // CurrentCommit is the current git commit, this is set as a ldflag in the Makefile
 var CurrentCommit string
