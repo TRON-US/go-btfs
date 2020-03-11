@@ -174,28 +174,89 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		var (
-			shardHashes []string
-			rootHash    cidlib.Cid
-			shardSize   uint64
-			renterPid   = n.Identity
-		)
 
 		runMode := storage.RegularMode
 
-		lf := req.Options[leafHashOptionName].(bool)
-		var fileSize int64
-		if !lf {
-			if len(req.Arguments) != 1 {
-				return fmt.Errorf("need one and only one root file hash")
+		output, err := openSession(&paramsForOpenSession{
+			req:     req,
+			n:       n,
+			api:     api,
+			cfg:     cfg,
+			ctx:     req.Context,
+			runMode: runMode,
+		})
+		if err != nil {
+			return err
+		}
+
+		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
+			runMode, output.renterPid.Pretty(), output.customizedSchedule, output.period)
+
+		seRes := &UploadRes{
+			ID: output.ssID,
+		}
+		return res.Emit(seRes)
+	},
+	Type: UploadRes{},
+}
+
+func parseRequest(param *paramsForOpenSession) error {
+	req := param.req
+	n := param.n
+	api := param.api
+	runMode := param.runMode
+	var (
+		err         error
+		shardHashes []string
+		rootHash    cidlib.Cid
+		shardSize   uint64
+		renterPid   = n.Identity
+		fileSize    int64
+		// Next element is only for storage.RepairMode
+		blacklist = set.New()
+		// Next elements are only for storage.OfflineSignMode
+		offPeerId           peer.ID
+		offNonceTimestamp   uint64
+		offSessionSignature string
+	)
+
+	lf := req.Options[leafHashOptionName].(bool)
+	if lf {
+		rootHash = cidlib.Undef
+		shardHashes = req.Arguments
+		shardCid, err := cidlib.Parse(shardHashes[0])
+		if err != nil {
+			return err
+		}
+		fileSize = -1 // we don't need file size in this case
+		shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
+		if err != nil {
+			return err
+		}
+	} else {
+
+		if runMode == storage.RegularMode && len(req.Arguments) != 1 {
+			return fmt.Errorf("need one and only one root file hash")
+		} else if runMode == storage.OfflineSignMode && len(req.Arguments) != 4 {
+			return fmt.Errorf("need file hash, offline-peer-id, offline-nonce-timestamp, and session-signature")
+		}
+		if runMode == storage.RegularMode && len(req.Arguments) > 3 {
+			blacklistStr := req.Arguments[3]
+			for _, s := range strings.Split(blacklistStr, ",") {
+				blacklist.Add(s)
 			}
-			// get leaf hashes
-			hashStr := req.Arguments[0]
-			// convert to cid
-			rootHash, err = cidlib.Parse(hashStr)
-			if err != nil {
-				return err
-			}
+			param.blacklist = blacklist
+		}
+
+		// get root hash
+		hashStr := req.Arguments[0]
+		// convert to cid
+		rootHash, err = cidlib.Parse(hashStr)
+		if err != nil {
+			return err
+		}
+
+		if runMode == storage.RegularMode || runMode == storage.OfflineSignMode {
 			hashes, tmp, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 			if err != nil || len(hashes) == 0 {
 				return fmt.Errorf("invalid hash: %s", err)
@@ -209,45 +270,56 @@ Use status command to check for completion:
 			for _, h := range hashes {
 				shardHashes = append(shardHashes, h.String())
 			}
-		} else {
-			rootHash = cidlib.Undef
-			shardHashes = req.Arguments
+
+			if runMode == storage.OfflineSignMode {
+				offPeerId, err = peer.IDB58Decode(req.Arguments[1])
+				if err != nil {
+					return err
+				}
+				offNonceTimestamp, err = strconv.ParseUint(req.Arguments[2], 10, 64)
+				if err != nil {
+					return err
+				}
+				offSessionSignature = req.Arguments[3]
+
+				param.offPeerId = offPeerId
+				param.offNonceTimestamp = offNonceTimestamp
+				param.offSessionSignature = offSessionSignature
+			}
+		} else if runMode == storage.RepairMode {
+			renterPid, err = peer.IDB58Decode(req.Arguments[2])
+			if err != nil {
+				return err
+			}
+			shardHashes = strings.Split(req.Arguments[1], ",")
+			for _, h := range shardHashes {
+				_, err := cidlib.Parse(h)
+				if err != nil {
+					return err
+				}
+			}
 			shardCid, err := cidlib.Parse(shardHashes[0])
 			if err != nil {
 				return err
 			}
-			fileSize = -1 // we don't need file size in this case
 			shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
 			if err != nil {
 				return err
 			}
+			param.renterPid = renterPid
+		} else {
+			return fmt.Errorf("unexpected runMode [%d]", runMode)
 		}
+	}
 
-		output, err := openSession(&paramsForOpenSession{
-			req:         req,
-			n:           n,
-			cfg:         cfg,
-			ctx:         req.Context,
-			rootHash:    rootHash,
-			runMode:     runMode,
-			shardHashes: shardHashes,
-			blacklist:   set.New(),
-			shardSize:   shardSize,
-		})
-		if err != nil {
-			return err
-		}
+	// Set common output items
+	param.shardHashes = shardHashes
+	param.rootHash = rootHash
+	param.shardSize = shardSize
+	param.fileSize = fileSize
+	param.renterPid = renterPid
 
-		output.ss.SetFileSize(fileSize)
-		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
-			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
-
-		seRes := &UploadRes{
-			ID: output.ssID,
-		}
-		return res.Emit(seRes)
-	},
-	Type: UploadRes{},
+	return nil
 }
 
 var storageUploadRepairCmd = &cmds.Command{
@@ -281,62 +353,23 @@ This command repairs the given shards of a file.`,
 		if err != nil {
 			return err
 		}
-		var (
-			shardHashes []string
-			rootHash    cidlib.Cid
-			shardSize   uint64
-			blacklist   = set.New()
-			renterPid   = n.Identity
-		)
+
 		runMode := storage.RepairMode
 
-		if len(req.Arguments) > 3 {
-			blacklistStr := req.Arguments[3]
-			for _, s := range strings.Split(blacklistStr, ",") {
-				blacklist.Add(s)
-			}
-		}
-		rootHash, err = cidlib.Parse(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		renterPid, err = peer.IDB58Decode(req.Arguments[2])
-		if err != nil {
-			return err
-		}
-		shardHashes = strings.Split(req.Arguments[1], ",")
-		for _, h := range shardHashes {
-			_, err := cidlib.Parse(h)
-			if err != nil {
-				return err
-			}
-		}
-		shardCid, err := cidlib.Parse(shardHashes[0])
-		if err != nil {
-			return err
-		}
-		shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
-		if err != nil {
-			return err
-		}
-
 		output, err := openSession(&paramsForOpenSession{
-			req:         req,
-			n:           n,
-			cfg:         cfg,
-			ctx:         req.Context,
-			rootHash:    rootHash,
-			runMode:     runMode,
-			shardHashes: shardHashes,
-			blacklist:   set.New(),
-			shardSize:   shardSize,
+			req:     req,
+			n:       n,
+			api:     api,
+			cfg:     cfg,
+			ctx:     req.Context,
+			runMode: runMode,
 		})
 		if err != nil {
 			return err
 		}
 
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
-			runMode, renterPid.Pretty(), false, 1)
+			runMode, output.renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
 			ID: output.ssID,
@@ -379,91 +412,52 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 		if err != nil {
 			return err
 		}
-		// check file hash
-		var (
-			shardHashes         []string
-			rootHash            cidlib.Cid
-			shardSize           uint64
-			renterPid           = n.Identity
-			offPeerId           peer.ID
-			offNonceTimestamp   uint64
-			offSessionSignature string
-		)
 		runMode := storage.OfflineSignMode
 
-		if len(req.Arguments) != 4 {
-			return fmt.Errorf("need file hash, offline-peer-id, offline-nonce-timestamp, and session-signature")
-		}
-		hashStr := req.Arguments[0]
-		rootHash, err = cidlib.Parse(hashStr)
-		if err != nil {
-			return err
-		}
-		hashes, fileSize, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
-		if err != nil || len(hashes) == 0 {
-			return fmt.Errorf("invalid hash: %s", err)
-		}
-		// get shard size
-		shardSize, err = getContractSizeFromCid(req.Context, hashes[0], api)
-		if err != nil {
-			return err
-		}
-		for _, h := range hashes {
-			shardHashes = append(shardHashes, h.String())
-		}
-		offPeerId, err = peer.IDB58Decode(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-		offNonceTimestamp, err = strconv.ParseUint(req.Arguments[2], 10, 64)
-		if err != nil {
-			return err
-		}
-		offSessionSignature = req.Arguments[3]
-
 		output, err := openSession(&paramsForOpenSession{
-			req:                 req,
-			n:                   n,
-			cfg:                 cfg,
-			ctx:                 req.Context,
-			rootHash:            rootHash,
-			runMode:             runMode,
-			shardHashes:         shardHashes,
-			offPeerId:           offPeerId,
-			offNonceTimestamp:   offNonceTimestamp,
-			offSessionSignature: offSessionSignature,
-			shardSize:           shardSize,
+			req:     req,
+			n:       n,
+			api:     api,
+			cfg:     cfg,
+			ctx:     req.Context,
+			runMode: runMode,
 		})
 		if err != nil {
 			return err
 		}
 
-		output.ss.SetFileSize(fileSize) // set session file size
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
-			runMode, renterPid.Pretty(), false, 1)
+			runMode, output.renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
 			ID: output.ssID,
 		}
 		return res.Emit(seRes)
-
 	},
 	Type: UploadRes{},
 }
 
 type paramsForOpenSession struct {
-	req                 *cmds.Request
-	n                   *core.IpfsNode
-	cfg                 *config.Config
-	ctx                 context.Context
-	rootHash            cidlib.Cid
-	runMode             int
-	shardHashes         []string
-	blacklist           *set.Set
-	offPeerId           peer.ID
-	offNonceTimestamp   uint64
-	offSessionSignature string
-	shardSize           uint64
+	req     *cmds.Request
+	n       *core.IpfsNode
+	api     coreiface.CoreAPI
+	cfg     *config.Config
+	ctx     context.Context
+	runMode int
+
+	// The rest of the fields to the end are
+	// set from parseRequest() and output to openSession()
+	shardHashes []string
+	rootHash    cidlib.Cid
+	shardSize   uint64
+	renterPid   peer.ID
+	fileSize    int64
+
+	blacklist *set.Set // only for storage.RepairMode
+
+	offPeerId           peer.ID // only for storage.OfflineMode
+	offNonceTimestamp   uint64  // only for storage.OfflineMode
+	offSessionSignature string  // only for storage.OfflineMode
 }
 
 type outputOfOpenSession struct {
@@ -472,13 +466,20 @@ type outputOfOpenSession struct {
 	testFlag           bool
 	customizedSchedule bool
 	period             int
+	renterPid          peer.ID
 }
 
 func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
-	// TODO: Genereate session ID on new
 	req := param.req
 	n := param.n
 	cfg := param.cfg
+	runMode := param.runMode
+
+	// Parse
+	err := parseRequest(param)
+	if err != nil {
+		return nil, err
+	}
 
 	// create a new session
 	sm := storage.GlobalSession
@@ -489,7 +490,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	ss := sm.GetOrDefault(ssID, param.n.Identity)
 
 	// initialize the session
-	ss.Initialize(param.rootHash, param.runMode)
+	ss.Initialize(param.rootHash, runMode)
 
 	go controlSessionTimeout(ss, storage.StdSessionStateFlow[0:])
 
@@ -592,12 +593,16 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	// create main session context
 	ss.RetryMonitorCtx = storage.NewGoContext(param.ctx)
 
+	// Set upload session file size.
+	ss.SetFileSize(param.fileSize)
+
 	return &outputOfOpenSession{
 		ss:                 ss,
 		ssID:               ssID,
 		testFlag:           testFlag,
 		customizedSchedule: customizedPayout,
 		period:             p,
+		renterPid:          param.renterPid,
 	}, nil
 }
 
