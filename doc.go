@@ -1,4 +1,4 @@
 /*
 BTFS is a global, versioned, peer-to-peer filesystem
 */
-package ipfs
+package btfs
