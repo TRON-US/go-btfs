@@ -438,7 +438,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 			return err
 		}
 
-		output.ss.SetFileSize(fileSize)
+		output.ss.SetFileSize(fileSize) // set session file size
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), false, 1)
 
