@@ -399,7 +399,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 		if err != nil {
 			return err
 		}
-		hashes, _, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+		hashes, fileSize, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 		if err != nil || len(hashes) == 0 {
 			return fmt.Errorf("invalid hash: %s", err)
 		}
@@ -438,6 +438,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 			return err
 		}
 
+		output.ss.SetFileSize(fileSize)
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
 			runMode, renterPid.Pretty(), false, 1)
 
