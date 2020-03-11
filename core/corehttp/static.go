@@ -11,7 +11,7 @@ import (
 
 func StaticOption(path, dir string) ServeOption {
 	return func(n *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
-		mux.Handle("/"+path+"/", http.FileServer(pkger.Dir(dir)))
+		mux.Handle("/"+path+"/", http.StripPrefix(dir, http.FileServer(pkger.Dir(dir))))
 		return mux, nil
 	}
 }
