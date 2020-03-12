@@ -24,7 +24,7 @@ var (
 )
 
 // Do the deposit action, integrate exchange's PrepareDeposit and Deposit API.
-func Deposit(ledgerAddr []byte, amount int64, privateKey *ecdsa.PrivateKey) (*exPb.PrepareDepositResponse, error) {
+func Deposit(ledgerAddr []byte, amount int64, privateKey *ecdsa.PrivateKey, runDaemon bool) (*exPb.PrepareDepositResponse, error) {
 	log.Debug("Deposit begin!")
 	//PrepareDeposit
 	prepareResponse, err := PrepareDeposit(ledgerAddr, amount)
@@ -50,10 +50,14 @@ func Deposit(ledgerAddr []byte, amount int64, privateKey *ecdsa.PrivateKey) (*ex
 	}
 	log.Debug(fmt.Sprintf("Call Deposit API success, id: [%d]", prepareResponse.GetId()))
 
-	// Doing confirm deposit.
-	go func() {
+	if runDaemon {
+		go func() {
+			ConfirmDepositProcess(prepareResponse, privateKey)
+		}()
+	} else {
 		ConfirmDepositProcess(prepareResponse, privateKey)
-	}()
+	}
+	// Doing confirm deposit.
 
 	log.Debug("Deposit end!")
 	return prepareResponse, nil

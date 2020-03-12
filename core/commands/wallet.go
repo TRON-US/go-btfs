@@ -74,12 +74,22 @@ var walletDepositCmd = &cmds.Command{
 			return err
 		}
 
-		err = wallet.WalletDeposit(cfg, amount)
+		runDaemon := false
+		currentNode, err := cmdenv.GetNode(env)
+		if err != nil {
+			log.Error("wrong while get current Node, continue the program ", err)
+		}
+		runDaemon = currentNode.IsDaemon
+
+		err = wallet.WalletDeposit(cfg, amount, runDaemon)
 		if err != nil {
 			log.Error("wallet deposit failed, ERR: ", err)
 			return err
 		}
 		s := fmt.Sprintf("BTFS wallet deposit submitted. Please wait one minute for the transaction to confirm.")
+		if !runDaemon {
+			s = fmt.Sprintf("BTFS wallet deposit Done.")
+		}
 		return cmds.EmitOnce(res, &MessageOutput{s})
 	},
 	Encoders: cmds.EncoderMap{
