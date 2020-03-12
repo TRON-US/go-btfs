@@ -80,7 +80,7 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 	return nil
 }
 
-func WalletDeposit(configuration *config.Config, amount int64) error {
+func WalletDeposit(configuration *config.Config, amount int64, runDaemon bool) error {
 	err := Init(configuration)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func WalletDeposit(configuration *config.Config, amount int64) error {
 		return errors.New(fmt.Sprintf("deposit amount should between %d ~ %d", DepositMinAmount, DepositMaxAmount))
 	}
 
-	prepareResponse, err := Deposit(hostWallet.ledgerAddress, amount, hostWallet.privateKey)
+	prepareResponse, err := Deposit(hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon)
 	if err != nil {
 		log.Error("Failed to Deposit, ERR[%v]\n", err)
 		return err
