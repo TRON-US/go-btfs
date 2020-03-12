@@ -77,7 +77,8 @@ var walletDepositCmd = &cmds.Command{
 		runDaemon := false
 		currentNode, err := cmdenv.GetNode(env)
 		if err != nil {
-			log.Error("wrong while get current Node, continue the program ", err)
+			log.Error("Wrong while get current Node information", err)
+			return err
 		}
 		runDaemon = currentNode.IsDaemon
 

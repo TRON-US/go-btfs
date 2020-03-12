@@ -51,9 +51,7 @@ func Deposit(ledgerAddr []byte, amount int64, privateKey *ecdsa.PrivateKey, runD
 	log.Debug(fmt.Sprintf("Call Deposit API success, id: [%d]", prepareResponse.GetId()))
 
 	if runDaemon {
-		go func() {
-			ConfirmDepositProcess(prepareResponse, privateKey)
-		}()
+		go ConfirmDepositProcess(prepareResponse, privateKey)
 	} else {
 		ConfirmDepositProcess(prepareResponse, privateKey)
 	}
