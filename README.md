@@ -164,9 +164,9 @@ $ docker container run --publish 5001:8080 --detach --name btfs1 btfs_docker
 
 The CLI flags are as such:
 
-`--publish` asks Docker to forward traffic incoming on the host’s port 5001, to the container’s port 8080. 
-`--detach` asks Docker to run this container in the background.
-`--name` specifies a name with which you can refer to your container in subsequent commands, in this case btfs1.
+* `--publish` asks Docker to forward traffic incoming on the host’s port 5001, to the container’s port 8080. 
+* `--detach` asks Docker to run this container in the background.
+* `--name` specifies a name with which you can refer to your container in subsequent commands, in this case btfs1.
 
 Execute commands within the docker container:
 ```
