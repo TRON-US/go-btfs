@@ -540,7 +540,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 			return nil, err
 		}
 		for _, ni := range hosts {
-			if param.blacklist == nil || param.blacklist.Exists(ni) {
+			if param.blacklist != nil && param.blacklist.Exists(ni) {
 				continue
 			}
 			// use host askingPrice instead if provided
