@@ -13,6 +13,10 @@ contracts.
 
 - [Install](#install)
   - [System Requirements](#system-requirements)
+- [Build from Source](#build-from-source)
+  - [MacOS](#macos)
+  - [Linux VM](#linux-vm)
+  - [Docker](#docker)
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
@@ -54,6 +58,119 @@ to get started, enter:
 Start the BTFS Daemon
 ```
 $ btfs daemon
+```
+
+## Build from Source
+
+### MacOS
+
+Clone the go-btfs repository
+```
+$ git clone https://github.com/TRON-US/go-btfs
+```
+
+Navigate to the go-btfs directory and run `make install`.
+```
+$ cd go-btfs
+$ make install
+```
+
+A successful make install outputs something like:
+```
+$ make install
+go: downloading github.com/tron-us/go-btfs-common v0.2.28
+go: extracting github.com/tron-us/go-btfs-common v0.2.28
+go: finding github.com/tron-us/go-btfs-common v0.2.28
+go version go1.13.1 darwin/amd64
+bin/check_go_version 1.13
+bash patching.sh
+go install  "-asmflags=all='-trimpath='" "-gcflags=all='-trimpath='" -ldflags="-X "github.com/TRON-US/go-btfs".CurrentCommit=e4848946d" ./cmd/btfs
+```
+
+Afterwards, run `btfs init` and `btfs daemon` to initialize and start the daemon. 
+
+### Linux VM
+
+Developers wishing to run a BTFS daemon on a Linux VM should first set up the environment. On an AWS EC2 Linux machine for example, it would be helpful to first install the following tools and dependencies:
+```
+$ sudo yum update          // Installs general updates for Linux
+$ sudo yum install git     // Lets you git clone the go-btfs repository
+$ sudo yum install patch   // Required for building from source
+$ sudo yum install gcc     // Required for building from source
+```
+
+Building BTFS from source requires Go 1.13 or higher. To install from the terminal:
+```
+$ cd /tmp
+$ GO_PACKAGE=go1.13.linux-amd64.tar.gz
+$ wget https://golang.org/dl/$GO_PACKAGE
+$ sudo tar -xvf $GO_PACKAGE
+$ sudo mv go /usr/local
+$ sudo rm $GO_PACKAGE
+```
+
+Navigate back to root directory and set the Go Path in the environment variables: 
+```
+$ export GOPATH=${HOME}/go
+$ export PATH=$PATH:/usr/local/go/bin
+$ export PATH=$PATH:$GOPATH/bin
+$ export GO111MODULE=on
+```
+
+Verify the Go version is 1.13 or higher:
+```
+$ go version
+```
+
+Navigate to the go-btfs directory and run `make install`.
+```
+$ cd go-btfs
+$ make install
+```
+
+Afterwards, run `btfs init` and `btfs daemon` to initialize and start the daemon. To re-initialize a new pair of keys, you can shut down the daemon first via `btfs shutdown`. Then run `rm -r .btfs` and `btfs init` again. 
+
+### Docker
+
+Developers also have the option to build a BTFS daemon within a Docker container. After cloning the go-btfs repository, navigate into the go-btfs directory. This is where the Dockerfile is located. Build the docker image:
+```
+$ cd go-btfs
+$ docker image build -t btfs_docker .   // Builds the docker image and tags "btfs_docker" as the name 
+```
+
+A successful build should have an output like:
+```
+Sending build context to Docker daemon  2.789MB
+Step 1/37 : FROM golang:1.13-stretch
+ ---> 4fe257ac564c
+Step 2/37 : MAINTAINER TRON-US <support@tron.network>
+ ---> Using cache
+ ---> 02409001f528
+
+...
+
+Step 37/37 : CMD ["daemon", "--migrate=true"]
+ ---> Running in 3660f91dce94
+Removing intermediate container 3660f91dce94
+ ---> b4e1523cf264
+Successfully built b4e1523cf264
+Successfully tagged btfs_docker:latest
+```
+
+Start the container based on the new image. Starting the container also initializes and starts the BTFS daemon.
+```
+$ docker container run --publish 5001:8080 --detach --name btfs1 btfs_docker
+```
+
+The CLI flags are as such:
+
+`--publish` asks Docker to forward traffic incoming on the host’s port 5001, to the container’s port 8080. 
+`--detach` asks Docker to run this container in the background.
+`--name` specifies a name with which you can refer to your container in subsequent commands, in this case btfs1.
+
+Execute commands within the docker container:
+```
+docker exec CONTAINER btfs add chunker=reed-solomon FILE
 ```
 
 ## Usage
