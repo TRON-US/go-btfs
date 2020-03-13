@@ -44,7 +44,7 @@ func VerifySessionSignature(offSignRenterPid peer.ID, data string, sessionSigStr
 	}
 	ok, err := pubKey.Verify([]byte(data), sigBytes)
 	if !ok || err != nil {
-		return fmt.Errorf("can't verify session signature: %v", err)
+		return fmt.Errorf("cannot verify session signature: %v", err)
 	}
 	return nil
 }
