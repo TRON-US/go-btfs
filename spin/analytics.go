@@ -2,7 +2,6 @@ package spin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 
 	config "github.com/TRON-US/go-btfs-config"
-	"github.com/tron-us/go-btfs-common/info"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
@@ -129,9 +127,9 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 		res = append(res, fmt.Errorf("cannot get selfKey: %s", err.Error()))
 	}
 
-	var ns info.NodeStorage
+	var ns nodepb.Node_Settings
 	if err == nil {
-		err = json.Unmarshal(b, &ns)
+		err = ns.Unmarshal(b)
 		if err != nil {
 			res = append(res, fmt.Errorf("cannot parse nodestorage config: %s", err.Error()))
 		} else {
