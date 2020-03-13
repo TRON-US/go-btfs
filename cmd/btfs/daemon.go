@@ -329,7 +329,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// Btfs auto update.
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
-	go update(url, hValue)
+
+	if !cfg.Experimental.DisableAutoUpdate {
+		go update(url, hValue)
+	}
 
 	// Start assembling node config
 	ncfg := &core.BuildCfg{
