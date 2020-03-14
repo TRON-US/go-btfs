@@ -19,7 +19,6 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
-	ds "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"github.com/shirou/gopsutil/cpu"
@@ -119,26 +118,20 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	var res []error
 
-	var m runtime.MemStats
+	var (
+		m  runtime.MemStats
+		ns nodepb.Node_Settings
+	)
 	runtime.ReadMemStats(&m)
-	rds := node.Repo.Datastore()
-	b, err := rds.Get(storage.GetHostStorageKey(node.Identity.Pretty()))
-	if err != nil && err != ds.ErrNotFound {
-		res = append(res, fmt.Errorf("cannot get selfKey: %s", err.Error()))
-	}
-
-	var ns nodepb.Node_Settings
-	if err == nil {
-		err = ns.Unmarshal(b)
-		if err != nil {
-			res = append(res, fmt.Errorf("cannot parse nodestorage config: %s", err.Error()))
-		} else {
-			dc.pn.StoragePriceAsk = ns.StoragePriceAsk
-			dc.pn.BandwidthPriceAsk = ns.BandwidthPriceAsk
-			dc.pn.StorageTimeMin = ns.StorageTimeMin
-			dc.pn.BandwidthLimit = ns.BandwidthLimit
-			dc.pn.CollateralStake = ns.CollateralStake
-		}
+	ns, err := storage.GetHostStorageConfig(node)
+	if err != nil {
+		res = append(res, fmt.Errorf("failed to get node storage config: %s", err.Error()))
+	} else {
+		dc.pn.StoragePriceAsk = ns.StoragePriceAsk
+		dc.pn.BandwidthPriceAsk = ns.BandwidthPriceAsk
+		dc.pn.StorageTimeMin = ns.StorageTimeMin
+		dc.pn.BandwidthLimit = ns.BandwidthLimit
+		dc.pn.CollateralStake = ns.CollateralStake
 	}
 
 	dc.pn.UpTime = durationToSeconds(time.Since(dc.pn.TimeCreated))
