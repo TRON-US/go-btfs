@@ -10,6 +10,7 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
@@ -61,6 +62,17 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 		return nil, fmt.Errorf("there are not enough locally stored hosts")
 	}
 	return hosts, nil
+}
+
+func GetHostStorageConfig(node *core.IpfsNode) (*nodepb.Node_Settings, error) {
+	var ns nodepb.Node_Settings
+	rds := node.Repo.Datastore()
+	b, err := rds.Get(GetHostStorageKey(node.Identity.Pretty()))
+	if err != nil && err != ds.ErrNotFound {
+		return nil, fmt.Errorf("cannot get selfKey: %s", err.Error())
+	}
+	err = ns.Unmarshal(b)
+	return &ns, err
 }
 
 func GetHostStorageKey(pid string) ds.Key {
