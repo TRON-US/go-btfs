@@ -272,16 +272,25 @@ func parseRequest(param *paramsForOpenSession) error {
 			}
 
 			if runMode == storage.OfflineSignMode {
-				offPeerId, err = peer.IDB58Decode(req.Arguments[1])
+				offPeerIdStr := req.Arguments[1]
+				offPeerId, err = peer.IDB58Decode(offPeerIdStr)
 				if err != nil {
 					return err
 				}
-				offNonceTimestamp, err = strconv.ParseUint(req.Arguments[2], 10, 64)
+				offNTStr := req.Arguments[2]
+				offNonceTimestamp, err = strconv.ParseUint(offNTStr, 10, 64)
 				if err != nil {
 					return err
 				}
 				offSessionSignature = req.Arguments[3]
 
+				// Verify the given session signature
+				inputDataStr := fmt.Sprintf("%s%s%s", hashStr, offPeerIdStr, offNTStr)
+
+				err = VerifySessionSignature(offPeerId, inputDataStr, offSessionSignature)
+				if err != nil {
+					return err
+				}
 				param.offPeerId = offPeerId
 				param.offNonceTimestamp = offNonceTimestamp
 				param.offSessionSignature = offSessionSignature
