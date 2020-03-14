@@ -42,6 +42,9 @@ const (
 
 	// Expotentially delayed retries will be capped at this total time
 	maxRetryTotal = 10 * time.Minute
+
+	// Timeout to retrieve settings/config
+	updateTimeout = 30 * time.Second
 )
 
 //Go doesn't have a built in Max function? simple function to not have negatives values
@@ -123,7 +126,9 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 		ns *nodepb.Node_Settings
 	)
 	runtime.ReadMemStats(&m)
-	ns, err := storage.GetHostStorageConfig(node)
+	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)
+	defer cancel()
+	ns, err := storage.GetHostStorageConfig(ctx, node)
 	if err != nil {
 		res = append(res, fmt.Errorf("failed to get node storage config: %s", err.Error()))
 	} else {

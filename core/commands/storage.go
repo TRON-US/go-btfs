@@ -32,7 +32,6 @@ import (
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
 	humanize "github.com/dustin/go-humanize"
-	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -508,8 +507,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	// init retry queue
 	retryQueue := storage.NewRetryQueue(int64(len(peers)))
 	// set price limit, the price is default when host doesn't provide price
-	ns, err := hub.GetSettings(param.ctx, cfg.Services.HubDomain,
-		n.Identity.String(), n.Repo.Datastore())
+	ns, err := storage.GetHostStorageConfig(param.ctx, n)
 	if err != nil {
 		return nil, err
 	}
@@ -1229,7 +1227,7 @@ the shard and replies back to client for the next challenge step.`,
 		halfSignedEscrowContBytes = []byte(halfSignedEscrowContString)
 		halfSignedGuardContBytes = []byte(halfSignedGuardContString)
 
-		settings, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, n.Identity.Pretty(), n.Repo.Datastore())
+		settings, err := storage.GetHostStorageConfig(req.Context, n)
 		if err != nil {
 			return err
 		}
@@ -1562,14 +1560,14 @@ By default it shows local host node information.`,
 		}
 
 		// Default to self
+		var data *nodepb.Node_Settings
 		var peerID string
 		if len(req.Arguments) > 0 {
 			peerID = req.Arguments[0]
+			data, err = storage.GetHostStorageConfigForPeer(n, peerID)
 		} else {
-			peerID = n.Identity.Pretty()
+			data, err = storage.GetHostStorageConfig(req.Context, n)
 		}
-
-		data, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, peerID, n.Repo.Datastore())
 		if err != nil {
 			return err
 		}
@@ -1640,10 +1638,7 @@ $ btfs storage announce --host-storage-price=1000000`,
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
 		}
 
-		rds := n.Repo.Datastore()
-		peerId := n.Identity.Pretty()
-
-		ns, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds)
+		ns, err := storage.GetHostStorageConfig(req.Context, n)
 		if err != nil {
 			return err
 		}
@@ -1677,12 +1672,7 @@ $ btfs storage announce --host-storage-price=1000000`,
 			}
 		}
 
-		nb, err := proto.Marshal(ns)
-		if err != nil {
-			return err
-		}
-
-		err = rds.Put(storage.GetHostStorageKey(peerId), nb)
+		err = storage.PutHostStorageConfig(n, ns)
 		if err != nil {
 			return err
 		}
