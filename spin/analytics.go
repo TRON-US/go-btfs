@@ -120,7 +120,7 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 
 	var (
 		m  runtime.MemStats
-		ns nodepb.Node_Settings
+		ns *nodepb.Node_Settings
 	)
 	runtime.ReadMemStats(&m)
 	ns, err := storage.GetHostStorageConfig(node)

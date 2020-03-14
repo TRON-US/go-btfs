@@ -64,15 +64,15 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 	return hosts, nil
 }
 
-func GetHostStorageConfig(node *core.IpfsNode) (nodepb.Node_Settings, error) {
+func GetHostStorageConfig(node *core.IpfsNode) (*nodepb.Node_Settings, error) {
 	var ns nodepb.Node_Settings
 	rds := node.Repo.Datastore()
 	b, err := rds.Get(GetHostStorageKey(node.Identity.Pretty()))
 	if err != nil && err != ds.ErrNotFound {
-		return ns, fmt.Errorf("cannot get selfKey: %s", err.Error())
+		return nil, fmt.Errorf("cannot get selfKey: %s", err.Error())
 	}
 	err = ns.Unmarshal(b)
-	return ns, err
+	return &ns, err
 }
 
 func GetHostStorageKey(pid string) ds.Key {
