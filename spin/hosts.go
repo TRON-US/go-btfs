@@ -7,7 +7,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands"
-	"github.com/TRON-US/go-btfs/core/hub"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
 )
 
 const (
@@ -41,8 +41,7 @@ func Hosts(node *core.IpfsNode) {
 		fmt.Println("Current host settings will be synced")
 		go periodicHostSync(hostSettingsSyncPeriod, hostSyncTimeout, "host settings",
 			func(ctx context.Context) error {
-				_, err = hub.GetSettings(ctx, cfg.Services.HubDomain, node.Identity.Pretty(),
-					node.Repo.Datastore())
+				_, err = storage.GetHostStorageConfig(ctx, node)
 				return err
 			})
 	}

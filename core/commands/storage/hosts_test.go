@@ -11,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/alecthomas/units"
@@ -48,6 +49,37 @@ func TestHostsSaveGet(t *testing.T) {
 				t.Fatal("stored nodes do not match saved nodes")
 			}
 		}
+	}
+}
+
+func TestHostStorageConfigPutGet(t *testing.T) {
+	node := unixtest.HelpTestMockRepo(t, nil)
+
+	ns := &nodepb.Node_Settings{
+		StoragePriceAsk:   111111,
+		BandwidthPriceAsk: 111,
+		StorageTimeMin:    15,
+		BandwidthLimit:    999,
+		CollateralStake:   1000,
+	}
+	err := PutHostStorageConfig(node, ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := GetHostStorageConfig(context.Background(), node)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs1, err := proto.Marshal(ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs2, err := proto.Marshal(stored)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Compare(bs1, bs2) != 0 {
+		t.Fatal("stored settings do not match saved settings")
 	}
 }
 
