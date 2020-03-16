@@ -94,7 +94,7 @@ func run(ipfsPath, watchPath string) error {
 		var opts = []corehttp.ServeOption{
 			corehttp.GatewayOption(true, "/btfs", "/btns"),
 			corehttp.WebUIOption,
-			corehttp.HostUIOption,
+			//corehttp.HostUIOption,
 			corehttp.CommandsOption(cmdCtx(node, ipfsPath)),
 		}
 		proc.Go(func(p process.Process) {
