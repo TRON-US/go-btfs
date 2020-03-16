@@ -2,19 +2,20 @@ package hub
 
 import (
 	"context"
-	"fmt"
+	"reflect"
 	"testing"
 
-	"github.com/ipfs/go-datastore"
-	syncds "github.com/ipfs/go-datastore/sync"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
 func TestGetSettings(t *testing.T) {
-	d := syncds.MutexWrap(datastore.NewMapDatastore())
-	ns, err := GetSettings(context.Background(), "https://hub-dev.btfs.io",
-		"16Uiu2HAm9P1cur6Nhd542y7pM2EoXgVvGeNqdUCSLFAMooBeQqWy", d)
+	ns, err := GetHostSettings(context.Background(), "https://hub-staging.btfs.io",
+		"16Uiu2HAm9P1cur6Nhd542y7pM2EoXgVvGeNqdUCSLFAMooBeQqWy")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("settings", ns)
+	defNs := &nodepb.Node_Settings{StoragePriceAsk: 250000, StorageTimeMin: 30}
+	if !reflect.DeepEqual(ns, defNs) {
+		t.Fatal("default settings not equal")
+	}
 }

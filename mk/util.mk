@@ -38,6 +38,10 @@ join-with=$(subst $(space),$1,$(strip $2))
 print-%:
 	@echo $*=$($*)
 
+# generate static host ui
+hostui:
+	pkger -include /hostui
+
 # phony target that will mean that recipe is always exectued
 ALWAYS:
-.PHONY: ALWAYS
+.PHONY: ALWAYS hostui

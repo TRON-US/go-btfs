@@ -10,6 +10,7 @@ import (
 	"github.com/TRON-US/go-btfs/repo"
 
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
@@ -61,6 +62,57 @@ func GetHostsFromDatastore(ctx context.Context, node *core.IpfsNode, mode string
 		return nil, fmt.Errorf("there are not enough locally stored hosts")
 	}
 	return hosts, nil
+}
+
+// GetHostStorageConfigForPeer retrieves locally saved info about peer (including self)
+func GetHostStorageConfigForPeer(node *core.IpfsNode, peerID string) (*nodepb.Node_Settings, error) {
+	rds := node.Repo.Datastore()
+	b, err := rds.Get(GetHostStorageKey(peerID))
+	if err != nil {
+		return nil, err
+	}
+	ns := new(nodepb.Node_Settings)
+	err = ns.Unmarshal(b)
+	if err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+// GetHostStorageConfig checks if locally is storing a config, if yes, returns it,
+// otherwise, queries hub to retrieve the latest default config.
+func GetHostStorageConfig(ctx context.Context, node *core.IpfsNode) (*nodepb.Node_Settings, error) {
+	ns, err := GetHostStorageConfigForPeer(node, node.Identity.Pretty())
+	if err != nil && err != ds.ErrNotFound {
+		return nil, fmt.Errorf("cannot get current host storage settings: %s", err.Error())
+	}
+	// Exists
+	if err == nil {
+		return ns, nil
+	}
+	cfg, err := node.Repo.Config()
+	if err != nil {
+		return nil, err
+	}
+	ns, err = hub.GetHostSettings(ctx, cfg.Services.HubDomain, node.Identity.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	err = PutHostStorageConfig(node, ns)
+	if err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+// PutHostStorageConfig saves an updated storage storage config.
+func PutHostStorageConfig(node *core.IpfsNode, ns *nodepb.Node_Settings) error {
+	rds := node.Repo.Datastore()
+	b, err := ns.Marshal()
+	if err != nil {
+		return fmt.Errorf("cannot put current host storage settings: %s", err.Error())
+	}
+	return rds.Put(GetHostStorageKey(node.Identity.Pretty()), b)
 }
 
 func GetHostStorageKey(pid string) ds.Key {

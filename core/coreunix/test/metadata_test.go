@@ -212,6 +212,15 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, r
 			return nil, err
 		}
 		rsfileAdder.IsDir = true
+		if files.IsMultiPartDirectory(dir) {
+			rsfileAdder.FileType = coreunix.MultipartFile
+		} else if files.IsMapDirectory(dir) {
+			rsfileAdder.FileType = coreunix.SliceFile
+		} else if files.IsSerialFileDirectory(dir) {
+			rsfileAdder.FileType = coreunix.SerialFile
+		} else {
+			return nil, fmt.Errorf("unexpected files.Directory type [%T]", dir)
+		}
 	}
 	go func() {
 		defer close(output)
