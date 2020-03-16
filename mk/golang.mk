@@ -46,7 +46,7 @@ $(GOCC) build $(go-flags-with-tags) -o /dev/null "$(call go-pkg-name,$<)"
 endef
 
 test_go_test: $$(DEPS_GO)
-	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
+	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) -v ./...
 .PHONY: test_go_test
 
 test_go_build: $$(TEST_GO_BUILD)
