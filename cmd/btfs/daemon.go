@@ -332,6 +332,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	if !cfg.Experimental.DisableAutoUpdate {
 		go update(url, hValue)
+	} else {
+		fmt.Println("Auto-update was disabled as config Experimental.DisableAutoUpdate was set as True")
 	}
 
 	// Start assembling node config
