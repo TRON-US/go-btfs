@@ -498,7 +498,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// Spin jobs in the background
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node)
-	spin.Settings(node)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
@@ -550,6 +549,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		apiMaddr = apiLis.Multiaddr()
 		fmt.Printf("API server listening on %s\n", apiMaddr)
 		fmt.Printf("WebUI: http://%s/webui\n", apiLis.Addr())
+		fmt.Printf("HostUI: http://%s/hostui\n", apiLis.Addr())
 		listeners = append(listeners, apiLis)
 	}
 
@@ -568,6 +568,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		corehttp.CheckVersionOption(),
 		corehttp.CommandsOption(*cctx),
 		corehttp.WebUIOption,
+		corehttp.HostUIOption,
 		gatewayOpt,
 		corehttp.VersionOption(),
 		defaultMux("/debug/vars"),

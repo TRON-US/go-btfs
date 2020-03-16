@@ -668,3 +668,12 @@ type progressReader2 struct {
 func (i *progressReader2) Read(p []byte) (int, error) {
 	return i.progressReader.Read(p)
 }
+
+type progressReader3 struct {
+	*progressReader
+	files.Node
+}
+
+func (i *progressReader3) Read(p []byte) (int, error) {
+	return i.progressReader.Read(p)
+}

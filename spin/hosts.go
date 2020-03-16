@@ -7,35 +7,56 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
 )
 
 const (
-	syncPeriod = 60 * time.Minute
+	hostSyncPeriod         = 60 * time.Minute
+	hostStatsSyncPeriod    = 30 * time.Minute
+	hostSettingsSyncPeriod = 60 * time.Minute
+	hostSyncTimeout        = 30 * time.Second
 )
 
 func Hosts(node *core.IpfsNode) {
-	configuration, err := node.Repo.Config()
+	cfg, err := node.Repo.Config()
 	if err != nil {
 		log.Errorf("Failed to get configuration %s", err)
 		return
 	}
 
-	if configuration.Experimental.HostsSyncEnabled {
-		m := configuration.Experimental.HostsSyncMode
-		fmt.Printf("Hosts info will be synced at [%s] mode\n", m)
-
-		go periodicSyncHosts(node, m)
+	if cfg.Experimental.HostsSyncEnabled {
+		m := cfg.Experimental.HostsSyncMode
+		fmt.Printf("Storage host info will be synced at [%s] mode\n", m)
+		go periodicHostSync(hostSyncPeriod, hostSyncTimeout, "hosts",
+			func(ctx context.Context) error {
+				return commands.SyncHosts(ctx, node, m)
+			})
+	}
+	if cfg.Experimental.StorageHostEnabled {
+		fmt.Println("Current host stats will be synced")
+		go periodicHostSync(hostStatsSyncPeriod, hostSyncTimeout, "host stats",
+			func(ctx context.Context) error {
+				return commands.SyncStats(ctx, cfg, node)
+			})
+		fmt.Println("Current host settings will be synced")
+		go periodicHostSync(hostSettingsSyncPeriod, hostSyncTimeout, "host settings",
+			func(ctx context.Context) error {
+				_, err = storage.GetHostStorageConfig(ctx, node)
+				return err
+			})
 	}
 }
 
-func periodicSyncHosts(node *core.IpfsNode, mode string) {
-	tick := time.NewTicker(syncPeriod)
+func periodicHostSync(period, timeout time.Duration, msg string, syncFunc func(context.Context) error) {
+	tick := time.NewTicker(period)
 	defer tick.Stop()
 	// Force tick on immediate start
 	for ; true; <-tick.C {
-		err := commands.SyncHosts(context.Background(), node, mode)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := syncFunc(ctx)
 		if err != nil {
-			log.Errorf("Failed to sync hosts: %s", err)
+			log.Errorf("Failed to sync %s: %s", msg, err)
 		}
 	}
 }

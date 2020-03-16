@@ -31,6 +31,24 @@ const (
 	GuardOffSignOperation      = "guard"
 )
 
+func VerifySessionSignature(offSignRenterPid peer.ID, data string, sessionSigStr string) error {
+	// get renter's public key
+	pubKey, err := offSignRenterPid.ExtractPublicKey()
+	if err != nil {
+		return err
+	}
+
+	sigBytes, err := stringToBytes(sessionSigStr, Base64)
+	if err != nil {
+		return err
+	}
+	ok, err := pubKey.Verify([]byte(data), sigBytes)
+	if !ok || err != nil {
+		return fmt.Errorf("cannot verify session signature: %v", err)
+	}
+	return nil
+}
+
 func prepareSignedContractsForShardOffSign(param *paramsForPrepareContractsForShard,
 	candidateHost *storage.HostNode, initialCall bool) error {
 	shard := param.shard

@@ -13,11 +13,11 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/corerepo"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 	"github.com/TRON-US/go-btfs/core/hub"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
+
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -26,11 +26,12 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
 	humanize "github.com/dustin/go-humanize"
-	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -143,7 +144,7 @@ Use status command to check for completion:
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(leafHashOptionName, "l", "Flag to specify given hash(es) is leaf hash(es).").WithDefault(false),
-		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in BTT."),
+		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in JUST."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
@@ -172,28 +173,89 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		var (
-			shardHashes []string
-			rootHash    cidlib.Cid
-			shardSize   uint64
-			renterPid   = n.Identity
-		)
 
 		runMode := storage.RegularMode
 
-		lf := req.Options[leafHashOptionName].(bool)
-		var fileSize int64
-		if !lf {
-			if len(req.Arguments) != 1 {
-				return fmt.Errorf("need one and only one root file hash")
+		output, err := openSession(&paramsForOpenSession{
+			req:     req,
+			n:       n,
+			api:     api,
+			cfg:     cfg,
+			ctx:     req.Context,
+			runMode: runMode,
+		})
+		if err != nil {
+			return err
+		}
+
+		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
+			runMode, output.renterPid.Pretty(), output.customizedSchedule, output.period)
+
+		seRes := &UploadRes{
+			ID: output.ssID,
+		}
+		return res.Emit(seRes)
+	},
+	Type: UploadRes{},
+}
+
+func parseRequest(param *paramsForOpenSession) error {
+	req := param.req
+	n := param.n
+	api := param.api
+	runMode := param.runMode
+	var (
+		err         error
+		shardHashes []string
+		rootHash    cidlib.Cid
+		shardSize   uint64
+		renterPid   = n.Identity
+		fileSize    int64
+		// Next element is only for storage.RepairMode
+		blacklist = set.New()
+		// Next elements are only for storage.OfflineSignMode
+		offPeerId           peer.ID
+		offNonceTimestamp   uint64
+		offSessionSignature string
+	)
+
+	lf := req.Options[leafHashOptionName].(bool)
+	if lf {
+		rootHash = cidlib.Undef
+		shardHashes = req.Arguments
+		shardCid, err := cidlib.Parse(shardHashes[0])
+		if err != nil {
+			return err
+		}
+		fileSize = -1 // we don't need file size in this case
+		shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
+		if err != nil {
+			return err
+		}
+	} else {
+
+		if runMode == storage.RegularMode && len(req.Arguments) != 1 {
+			return fmt.Errorf("need one and only one root file hash")
+		} else if runMode == storage.OfflineSignMode && len(req.Arguments) != 4 {
+			return fmt.Errorf("need file hash, offline-peer-id, offline-nonce-timestamp, and session-signature")
+		}
+		if runMode == storage.RegularMode && len(req.Arguments) > 3 {
+			blacklistStr := req.Arguments[3]
+			for _, s := range strings.Split(blacklistStr, ",") {
+				blacklist.Add(s)
 			}
-			// get leaf hashes
-			hashStr := req.Arguments[0]
-			// convert to cid
-			rootHash, err = cidlib.Parse(hashStr)
-			if err != nil {
-				return err
-			}
+			param.blacklist = blacklist
+		}
+
+		// get root hash
+		hashStr := req.Arguments[0]
+		// convert to cid
+		rootHash, err = cidlib.Parse(hashStr)
+		if err != nil {
+			return err
+		}
+
+		if runMode == storage.RegularMode || runMode == storage.OfflineSignMode {
 			hashes, tmp, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 			if err != nil || len(hashes) == 0 {
 				return fmt.Errorf("invalid hash: %s", err)
@@ -207,45 +269,65 @@ Use status command to check for completion:
 			for _, h := range hashes {
 				shardHashes = append(shardHashes, h.String())
 			}
-		} else {
-			rootHash = cidlib.Undef
-			shardHashes = req.Arguments
+
+			if runMode == storage.OfflineSignMode {
+				offPeerIdStr := req.Arguments[1]
+				offPeerId, err = peer.IDB58Decode(offPeerIdStr)
+				if err != nil {
+					return err
+				}
+				offNTStr := req.Arguments[2]
+				offNonceTimestamp, err = strconv.ParseUint(offNTStr, 10, 64)
+				if err != nil {
+					return err
+				}
+				offSessionSignature = req.Arguments[3]
+
+				// Verify the given session signature
+				inputDataStr := fmt.Sprintf("%s%s%s", hashStr, offPeerIdStr, offNTStr)
+
+				err = VerifySessionSignature(offPeerId, inputDataStr, offSessionSignature)
+				if err != nil {
+					return err
+				}
+				param.offPeerId = offPeerId
+				param.offNonceTimestamp = offNonceTimestamp
+				param.offSessionSignature = offSessionSignature
+			}
+		} else if runMode == storage.RepairMode {
+			renterPid, err = peer.IDB58Decode(req.Arguments[2])
+			if err != nil {
+				return err
+			}
+			shardHashes = strings.Split(req.Arguments[1], ",")
+			for _, h := range shardHashes {
+				_, err := cidlib.Parse(h)
+				if err != nil {
+					return err
+				}
+			}
 			shardCid, err := cidlib.Parse(shardHashes[0])
 			if err != nil {
 				return err
 			}
-			fileSize = -1 // we don't need file size in this case
 			shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
 			if err != nil {
 				return err
 			}
+			param.renterPid = renterPid
+		} else {
+			return fmt.Errorf("unexpected runMode [%d]", runMode)
 		}
+	}
 
-		output, err := openSession(&paramsForOpenSession{
-			req:         req,
-			n:           n,
-			cfg:         cfg,
-			ctx:         req.Context,
-			rootHash:    rootHash,
-			runMode:     runMode,
-			shardHashes: shardHashes,
-			blacklist:   set.New(),
-			shardSize:   shardSize,
-		})
-		if err != nil {
-			return err
-		}
+	// Set common output items
+	param.shardHashes = shardHashes
+	param.rootHash = rootHash
+	param.shardSize = shardSize
+	param.fileSize = fileSize
+	param.renterPid = renterPid
 
-		output.ss.SetFileSize(fileSize)
-		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
-			runMode, renterPid.Pretty(), output.customizedSchedule, output.period)
-
-		seRes := &UploadRes{
-			ID: output.ssID,
-		}
-		return res.Emit(seRes)
-	},
-	Type: UploadRes{},
+	return nil
 }
 
 var storageUploadRepairCmd = &cmds.Command{
@@ -279,62 +361,23 @@ This command repairs the given shards of a file.`,
 		if err != nil {
 			return err
 		}
-		var (
-			shardHashes []string
-			rootHash    cidlib.Cid
-			shardSize   uint64
-			blacklist   = set.New()
-			renterPid   = n.Identity
-		)
+
 		runMode := storage.RepairMode
 
-		if len(req.Arguments) > 3 {
-			blacklistStr := req.Arguments[3]
-			for _, s := range strings.Split(blacklistStr, ",") {
-				blacklist.Add(s)
-			}
-		}
-		rootHash, err = cidlib.Parse(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		renterPid, err = peer.IDB58Decode(req.Arguments[2])
-		if err != nil {
-			return err
-		}
-		shardHashes = strings.Split(req.Arguments[1], ",")
-		for _, h := range shardHashes {
-			_, err := cidlib.Parse(h)
-			if err != nil {
-				return err
-			}
-		}
-		shardCid, err := cidlib.Parse(shardHashes[0])
-		if err != nil {
-			return err
-		}
-		shardSize, err = getContractSizeFromCid(req.Context, shardCid, api)
-		if err != nil {
-			return err
-		}
-
 		output, err := openSession(&paramsForOpenSession{
-			req:         req,
-			n:           n,
-			cfg:         cfg,
-			ctx:         req.Context,
-			rootHash:    rootHash,
-			runMode:     runMode,
-			shardHashes: shardHashes,
-			blacklist:   set.New(),
-			shardSize:   shardSize,
+			req:     req,
+			n:       n,
+			api:     api,
+			cfg:     cfg,
+			ctx:     req.Context,
+			runMode: runMode,
 		})
 		if err != nil {
 			return err
 		}
 
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
-			runMode, renterPid.Pretty(), false, 1)
+			runMode, output.renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
 			ID: output.ssID,
@@ -377,90 +420,52 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 		if err != nil {
 			return err
 		}
-		// check file hash
-		var (
-			shardHashes         []string
-			rootHash            cidlib.Cid
-			shardSize           uint64
-			renterPid           = n.Identity
-			offPeerId           peer.ID
-			offNonceTimestamp   uint64
-			offSessionSignature string
-		)
 		runMode := storage.OfflineSignMode
 
-		if len(req.Arguments) != 4 {
-			return fmt.Errorf("need file hash, offline-peer-id, offline-nonce-timestamp, and session-signature")
-		}
-		hashStr := req.Arguments[0]
-		rootHash, err = cidlib.Parse(hashStr)
-		if err != nil {
-			return err
-		}
-		hashes, _, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
-		if err != nil || len(hashes) == 0 {
-			return fmt.Errorf("invalid hash: %s", err)
-		}
-		// get shard size
-		shardSize, err = getContractSizeFromCid(req.Context, hashes[0], api)
-		if err != nil {
-			return err
-		}
-		for _, h := range hashes {
-			shardHashes = append(shardHashes, h.String())
-		}
-		offPeerId, err = peer.IDB58Decode(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-		offNonceTimestamp, err = strconv.ParseUint(req.Arguments[2], 10, 64)
-		if err != nil {
-			return err
-		}
-		offSessionSignature = req.Arguments[3]
-
 		output, err := openSession(&paramsForOpenSession{
-			req:                 req,
-			n:                   n,
-			cfg:                 cfg,
-			ctx:                 req.Context,
-			rootHash:            rootHash,
-			runMode:             runMode,
-			shardHashes:         shardHashes,
-			offPeerId:           offPeerId,
-			offNonceTimestamp:   offNonceTimestamp,
-			offSessionSignature: offSessionSignature,
-			shardSize:           shardSize,
+			req:     req,
+			n:       n,
+			api:     api,
+			cfg:     cfg,
+			ctx:     req.Context,
+			runMode: runMode,
 		})
 		if err != nil {
 			return err
 		}
 
 		go retryMonitor(api, output.ss, n, output.ssID, output.testFlag,
-			runMode, renterPid.Pretty(), false, 1)
+			runMode, output.renterPid.Pretty(), false, 1)
 
 		seRes := &UploadRes{
 			ID: output.ssID,
 		}
 		return res.Emit(seRes)
-
 	},
 	Type: UploadRes{},
 }
 
 type paramsForOpenSession struct {
-	req                 *cmds.Request
-	n                   *core.IpfsNode
-	cfg                 *config.Config
-	ctx                 context.Context
-	rootHash            cidlib.Cid
-	runMode             int
-	shardHashes         []string
-	blacklist           *set.Set
-	offPeerId           peer.ID
-	offNonceTimestamp   uint64
-	offSessionSignature string
-	shardSize           uint64
+	req     *cmds.Request
+	n       *core.IpfsNode
+	api     coreiface.CoreAPI
+	cfg     *config.Config
+	ctx     context.Context
+	runMode int
+
+	// The rest of the fields to the end are
+	// set from parseRequest() and output to openSession()
+	shardHashes []string
+	rootHash    cidlib.Cid
+	shardSize   uint64
+	renterPid   peer.ID
+	fileSize    int64
+
+	blacklist *set.Set // only for storage.RepairMode
+
+	offPeerId           peer.ID // only for storage.OfflineMode
+	offNonceTimestamp   uint64  // only for storage.OfflineMode
+	offSessionSignature string  // only for storage.OfflineMode
 }
 
 type outputOfOpenSession struct {
@@ -469,13 +474,20 @@ type outputOfOpenSession struct {
 	testFlag           bool
 	customizedSchedule bool
 	period             int
+	renterPid          peer.ID
 }
 
 func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
-	// TODO: Genereate session ID on new
 	req := param.req
 	n := param.n
 	cfg := param.cfg
+	runMode := param.runMode
+
+	// Parse
+	err := parseRequest(param)
+	if err != nil {
+		return nil, err
+	}
 
 	// create a new session
 	sm := storage.GlobalSession
@@ -486,7 +498,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	ss := sm.GetOrDefault(ssID, param.n.Identity)
 
 	// initialize the session
-	ss.Initialize(param.rootHash, param.runMode)
+	ss.Initialize(param.rootHash, runMode)
 
 	go controlSessionTimeout(ss, storage.StdSessionStateFlow[0:])
 
@@ -495,8 +507,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	// init retry queue
 	retryQueue := storage.NewRetryQueue(int64(len(peers)))
 	// set price limit, the price is default when host doesn't provide price
-	ns, err := hub.GetSettings(param.ctx, cfg.Services.HubDomain,
-		n.Identity.String(), n.Repo.Datastore())
+	ns, err := storage.GetHostStorageConfig(param.ctx, n)
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +547,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 			return nil, err
 		}
 		for _, ni := range hosts {
-			if param.blacklist == nil || param.blacklist.Exists(ni) {
+			if param.blacklist != nil && param.blacklist.Exists(ni) {
 				continue
 			}
 			// use host askingPrice instead if provided
@@ -589,12 +600,16 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	// create main session context
 	ss.RetryMonitorCtx = storage.NewGoContext(param.ctx)
 
+	// Set upload session file size.
+	ss.SetFileSize(param.fileSize)
+
 	return &outputOfOpenSession{
 		ss:                 ss,
 		ssID:               ssID,
 		testFlag:           testFlag,
 		customizedSchedule: customizedPayout,
 		period:             p,
+		renterPid:          param.renterPid,
 	}, nil
 }
 
@@ -1212,7 +1227,7 @@ the shard and replies back to client for the next challenge step.`,
 		halfSignedEscrowContBytes = []byte(halfSignedEscrowContString)
 		halfSignedGuardContBytes = []byte(halfSignedGuardContString)
 
-		settings, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, n.Identity.Pretty(), n.Repo.Datastore())
+		settings, err := storage.GetHostStorageConfig(req.Context, n)
 		if err != nil {
 			return err
 		}
@@ -1509,7 +1524,7 @@ Mode options include:` + hub.AllModeHelpText,
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHub(ctx, node, mode)
+	nodes, err := hub.QueryHosts(ctx, node, mode)
 	if err != nil {
 		return err
 	}
@@ -1545,14 +1560,14 @@ By default it shows local host node information.`,
 		}
 
 		// Default to self
+		var data *nodepb.Node_Settings
 		var peerID string
 		if len(req.Arguments) > 0 {
 			peerID = req.Arguments[0]
+			data, err = storage.GetHostStorageConfigForPeer(n, peerID)
 		} else {
-			peerID = n.Identity.Pretty()
+			data, err = storage.GetHostStorageConfig(req.Context, n)
 		}
-
-		data, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, peerID, n.Repo.Datastore())
 		if err != nil {
 			return err
 		}
@@ -1569,13 +1584,13 @@ This command updates host information and broadcasts to the BTFS network.
 
 Examples
 
-To set the max price per GiB to 1 BTT:
-$ btfs storage announce --host-storage-price=1`,
+To set the min price per GiB to 1000000 JUST (1 BTT):
+$ btfs storage announce --host-storage-price=1000000`,
 	},
 	Options: []cmds.Option{
-		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Max price per GiB of storage per day in BTT."),
-		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Max price per MiB of bandwidth in BTT."),
-		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in BTT."),
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Min price per GiB of storage per day in JUST."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Min price per MiB of bandwidth in JUST."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in JUST."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
@@ -1623,10 +1638,7 @@ $ btfs storage announce --host-storage-price=1`,
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
 		}
 
-		rds := n.Repo.Datastore()
-		peerId := n.Identity.Pretty()
-
-		ns, err := hub.GetSettings(req.Context, cfg.Services.HubDomain, peerId, rds)
+		ns, err := storage.GetHostStorageConfig(req.Context, n)
 		if err != nil {
 			return err
 		}
@@ -1660,12 +1672,7 @@ $ btfs storage announce --host-storage-price=1`,
 			}
 		}
 
-		nb, err := proto.Marshal(ns)
-		if err != nil {
-			return err
-		}
-
-		err = rds.Put(storage.GetHostStorageKey(peerId), nb)
+		err = storage.PutHostStorageConfig(n, ns)
 		if err != nil {
 			return err
 		}
@@ -1903,11 +1910,42 @@ var storageStatsSyncCmd = &cmds.Command{
 		ShortDescription: `
 This command synchronize node stats from network(hub) to local node data store.`,
 	},
-	Arguments:  []cmds.Argument{},
-	RunTimeout: 3 * time.Second,
+	Arguments: []cmds.Argument{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		return nil
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		return SyncStats(req.Context, cfg, n)
 	},
+}
+
+func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode) error {
+	sr, err := hub.QueryStats(ctx, node)
+	if err != nil {
+		return err
+	}
+	stat, err := corerepo.RepoStat(ctx, node)
+	if err != nil {
+		return err
+	}
+	hs := &nodepb.StorageStat_Host{
+		Online:      cfg.Experimental.StorageHostEnabled,
+		Uptime:      sr.Uptime,
+		Score:       sr.Score,
+		StorageUsed: int64(stat.RepoSize),
+		StorageCap:  int64(stat.StorageMax),
+	}
+	return storage.SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
 }
 
 // sub-commands: btfs storage stats info
@@ -1920,20 +1958,28 @@ This command get node stats in the network from the local node data store.`,
 	Arguments:  []cmds.Argument{},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		// return mock -- static dummy
-		data := map[string]interface{}{
-			"HostStats": map[string]interface{}{
-				"Online":      true,
-				"Uptime":      86400,
-				"Score":       6.5,
-				"StorageUsed": 1024,
-				"StorageCap":  102400,
-			},
-			"RenterStats": map[string]interface{}{
-				"Reserved": "Reserved",
-			},
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
 		}
-		return cmds.EmitOnce(res, data)
+		if !cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		hs, err := storage.GetHostStatsFromDatastore(req.Context, n, n.Identity.Pretty())
+		if err != nil {
+			return err
+		}
+
+		// Only host stats for now
+		return cmds.EmitOnce(res, &nodepb.StorageStat{
+			HostStats: *hs,
+		})
 	},
 	Type: nodepb.StorageStat{},
 }
