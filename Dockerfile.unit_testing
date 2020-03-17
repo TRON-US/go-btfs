@@ -8,7 +8,7 @@ ENV TEST_NO_FUSE 1
 ENV PATH="/usr/local/go/bin:${PATH}"
 
 #set timeout value for unit tests
-ENV GOTFLAGS -timeout 3m
+ENV GOTFLAGS -timeout 6m
 
 # Install patch
 RUN apt-get update && apt-get install -y patch
