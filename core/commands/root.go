@@ -152,7 +152,7 @@ var rootSubcommands = map[string]*cmds.Command{
 	"shutdown":  daemonShutdownCmd,
 	"cid":       CidCmd,
 	"rm":        RmCmd,
-	"storage":   StorageCmd,
+	"storage":   store.StorageCmd,
 	"metadata":  MetadataCmd,
 	"guard":     GuardCmd,
 	"wallet":    WalletCmd,
