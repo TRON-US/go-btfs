@@ -375,7 +375,6 @@ func TestAddFileWithMetadata(t *testing.T) {
 	}
 }
 
-/*
 func TestAppendMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -413,8 +412,7 @@ func TestAppendMetadata(t *testing.T) {
 		t.Fatalf("expected %s, got %s", "/btfs/QmTeHFgkjCqcBbUfcWcU2FKhshoAbaicgtPkkjT7q2P3u5", p.String())
 	}
 }
-*/
-/*
+
 // TestAddMetadataToFileWithoutMeta tests the functionality
 // to add metadata items to an existing BTFS file without metadata.
 func TestAddMetadataToFileWithoutMeta(t *testing.T) {
@@ -461,8 +459,6 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 	}
 }
 
-*/
-/*
 func TestUpdateMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -500,8 +496,7 @@ func TestUpdateMetadata(t *testing.T) {
 		t.Fatalf("expected %s, got %s", "/btfs/QmdmxXzfb95DiPjDZn6vGjt8ejVxbt1ifjLi27N8jk2zAp", p.String())
 	}
 }
-*/
-/*
+
 // removeMetadata removes the metadata items for the key values from the given `meta` string.
 // `meta` will have a format of key list. E.g., "price,nodeId".
 func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillBeUnpinned bool) (ipath.Path, error) {
@@ -557,8 +552,7 @@ func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillB
 	}
 	return ipath.IpfsPath(modifiedFileHash), nil
 }
-*/
-/*
+
 func TestRemoveMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -596,7 +590,7 @@ func TestRemoveMetadata(t *testing.T) {
 		t.Fatalf("expected %s, got %s", "/btfs/QmdFTTBrDPB57r3FyqzSKiJmjJEptpHsUxTDUiQ3gkdiwE", p.String())
 	}
 }
-*/
+
 // metaDataSize returns the size of the metadata sub-DAG of
 // the DAG of the given `p`.
 func metaDataSize(node *core.IpfsNode, p ipath.Path) (int, error) {
