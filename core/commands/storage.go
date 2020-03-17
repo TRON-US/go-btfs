@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 	"strconv"
 	"strings"
 	"time"
@@ -70,13 +71,7 @@ Storage services include client upload operations, host storage operations,
 host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"upload":    storageUploadCmd,
-		"hosts":     storageHostsCmd,
-		"info":      storageInfoCmd,
-		"announce":  storageAnnounceCmd,
-		"challenge": storageChallengeCmd,
-		"stats":     storageStatsCmd,
-		"contracts": storageContractsCmd,
+		"upload": storageUploadCmd,
 	},
 }
 
@@ -112,8 +107,8 @@ Use status command to check for completion:
 	},
 	Subcommands: map[string]*cmds.Command{
 		"init":              storageUploadInitCmd,
-		"recvcontract":      storageUploadRecvContractCmd,
-		"status":            storageUploadStatusCmd,
+		"recvcontract":      upload.StorageUploadRecvContractCmd,
+		"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
 		"offline":           storageUploadOfflineCmd,
 		"getcontractbatch":  storageUploadGetContractBatchCmd,
@@ -917,73 +912,6 @@ func changeAddress(pinfo *peer.AddrInfo) error {
 	newMa := ma.Join(parts[0], parts[1])
 	pinfo.Addrs[0] = newMa
 	return nil
-}
-
-// for client to receive all the half signed contracts
-var storageUploadRecvContractCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "For renter client to receive half signed contracts.",
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "Session ID which renter uses to store all shards information."),
-		cmds.StringArg("shard-hash", true, false, "Shard the storage node should fetch."),
-		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
-		cmds.StringArg("escrow-contract", true, false, "Signed Escrow contract."),
-		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
-	},
-	RunTimeout: 15 * time.Minute,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		// receive contracts
-		escrowContractBytes := []byte(req.Arguments[3])
-		guardContractBytes := []byte(req.Arguments[4])
-		ssID := req.Arguments[0]
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
-		if err != nil {
-			return err
-		}
-		shardHash := req.Arguments[1]
-		sidx := req.Arguments[2]
-		shardIndex, err := strconv.Atoi(sidx)
-		if err != nil {
-			return err
-		}
-		shard, err := ss.GetShard(shardHash, shardIndex)
-		if err != nil {
-			return err
-		}
-		// TODO: For more secure, check if contracts are right or not
-		shard.SendStepStateChan(storage.ContractState, true, nil, nil)
-		guardContract, err := guard.UnmarshalGuardContract(guardContractBytes)
-		if err != nil {
-			shard.SendStepStateChan(storage.CompleteState, false, err, nil)
-			return err
-		}
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			shard.SendStepStateChan(storage.CompleteState, false, err, nil)
-			return err
-		}
-		isLast, err := ss.IncrementAndCompareContract(len(ss.ShardInfo), shard, escrowContractBytes, guardContract)
-		if err != nil {
-			shard.SendStepStateChan(storage.CompleteState, false, err, nil)
-			return err
-		}
-
-		shard.SendStepStateChan(storage.CompleteState, true, nil, nil)
-
-		var contractRequest *escrowpb.EscrowContractRequest
-		if isLast {
-			err := payWithSigning(req, cfg, n, env, ss, contractRequest)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	},
 }
 
 func payWithSigning(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,

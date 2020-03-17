@@ -2,6 +2,9 @@ package commands
 
 import (
 	"errors"
+	"github.com/TRON-US/go-btfs/core/commands/store"
+	"github.com/TRON-US/go-btfs/core/commands/store/challenge"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
@@ -212,13 +215,13 @@ var rootRemoteSubcommands = map[string]*cmds.Command{
 		Subcommands: map[string]*cmds.Command{
 			"challenge": &cmds.Command{
 				Subcommands: map[string]*cmds.Command{
-					"response": storageChallengeResponseCmd,
+					"response": challenge.StorageChallengeResponseCmd,
 				},
 			},
 			"upload": &cmds.Command{
 				Subcommands: map[string]*cmds.Command{
 					"init":         storageUploadInitCmd,
-					"recvcontract": storageUploadRecvContractCmd,
+					"recvcontract": upload.StorageUploadRecvContractCmd,
 				},
 			},
 		},
