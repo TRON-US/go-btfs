@@ -7,8 +7,8 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	sessionpb "github.com/TRON-US/go-btfs/core/commands/store/upload/ds/session"
 	"github.com/TRON-US/go-btfs/core/escrow"
+	sessionpb "github.com/TRON-US/go-btfs/protos/session"
 
 	config "github.com/TRON-US/go-btfs-config"
 	iface "github.com/TRON-US/interface-go-btfs-core"

@@ -1,11 +1,13 @@
 package ds
 
 import (
-	sessionpb "github.com/TRON-US/go-btfs/core/commands/store/upload/pb/session"
-	coremock "github.com/TRON-US/go-btfs/core/mock"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	coremock "github.com/TRON-US/go-btfs/core/mock"
+	sessionpb "github.com/TRON-US/go-btfs/protos/session"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSaveGet(t *testing.T) {

@@ -2,11 +2,13 @@ package upload
 
 import (
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
-	shardpb "github.com/TRON-US/go-btfs/core/commands/store/upload/ds/shard"
 	"github.com/TRON-US/go-btfs/core/guard"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var StorageUploadRecvContractCmd = &cmds.Command{

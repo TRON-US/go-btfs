@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/libp2p/go-libp2p-core/peer"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
-	"sync"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (

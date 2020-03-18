@@ -2,9 +2,11 @@ package upload
 
 import (
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var StorageUploadStatusCmd = &cmds.Command{

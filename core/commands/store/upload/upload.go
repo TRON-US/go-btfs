@@ -4,12 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/tron-us/go-btfs-common/crypto"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
@@ -23,10 +17,16 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/tron-us/go-btfs-common/crypto"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff"
+	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 

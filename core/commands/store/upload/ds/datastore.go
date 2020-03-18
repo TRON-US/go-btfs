@@ -1,9 +1,10 @@
 package ds
 
 import (
+	"github.com/tron-us/protobuf/proto"
+
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"
-	"github.com/tron-us/protobuf/proto"
 )
 
 func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {

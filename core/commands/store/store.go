@@ -1,7 +1,6 @@
 package store
 
 import (
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/store/announce"
 	"github.com/TRON-US/go-btfs/core/commands/store/challenge"
 	"github.com/TRON-US/go-btfs/core/commands/store/contracts"
@@ -9,6 +8,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/store/info"
 	"github.com/TRON-US/go-btfs/core/commands/store/stats"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var StorageCmd = &cmds.Command{

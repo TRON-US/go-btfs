@@ -3,15 +3,16 @@ package ds
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/common/log"
-	"github.com/tron-us/protobuf/proto"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	shardpb "github.com/TRON-US/go-btfs/core/commands/store/upload/ds/shard"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+
+	"github.com/tron-us/protobuf/proto"
 
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
+	"github.com/prometheus/common/log"
 )
 
 const (
