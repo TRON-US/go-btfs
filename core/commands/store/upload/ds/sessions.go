@@ -46,6 +46,7 @@ type Session struct {
 	PeerId    string
 	Datastore datastore.Datastore
 	Context   context.Context
+	cancel    context.CancelFunc
 	Config    *config.Config
 	N         *core.IpfsNode
 	Api       iface.CoreAPI
@@ -78,11 +79,13 @@ func GetSession(sessionId string, peerId string, params *SessionInitParams) (*Se
 		}
 		s.fsm.SetState(status.Status)
 	} else {
-		ctx := storage.NewGoContext(params.Context)
+		ctx, cancel := storage.NewCancelableGoContext(params.Context)
+
 		s = &Session{
 			Id:        sessionId,
 			PeerId:    peerId,
 			Context:   ctx,
+			cancel:    cancel,
 			N:         params.N,
 			Api:       params.Api,
 			Config:    params.Config,
@@ -148,8 +151,13 @@ func (f *Session) enterState(e *fsm.Event) {
 	case "error":
 		msg = e.Args[0].(error).Error()
 		log.Error(msg)
+		f.onError()
 	}
 	f.setStatus(e.Dst, msg)
+}
+
+func (f *Session) onError() {
+	f.cancel()
 }
 
 func (f *Session) Submit() {

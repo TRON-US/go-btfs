@@ -15,6 +15,7 @@ func GetHostSettings(ctx context.Context, addr, peerId string) (*nodepb.Node_Set
 	err := grpc.HubQueryClient(addr).WithContext(ctx, func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
 		req := new(hubpb.SettingsReq)
 		req.Id = peerId
+		req.RespSize = 200
 		resp, err := client.GetSettings(ctx, req)
 		if err != nil {
 			return err

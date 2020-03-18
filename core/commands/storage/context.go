@@ -22,3 +22,10 @@ func NewGoContext(reqCtx context.Context) context.Context {
 	ctx, _ := context.WithTimeout(context.Background(), DefaultStorageTimeout)
 	return ctx
 }
+
+func NewCancelableGoContext(reqCtx context.Context) (context.Context, context.CancelFunc) {
+	if dl, ok := reqCtx.Deadline(); ok {
+		return context.WithDeadline(context.Background(), dl)
+	}
+	return context.WithTimeout(context.Background(), DefaultStorageTimeout)
+}

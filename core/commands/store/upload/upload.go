@@ -33,9 +33,9 @@ import (
 var bo = func() *backoff.ExponentialBackOff {
 	bo := backoff.NewExponentialBackOff()
 	bo.InitialInterval = 1 * time.Second
-	bo.MaxElapsedTime = 5 * time.Minute
+	bo.MaxElapsedTime = 300 * time.Second
 	bo.Multiplier = 1
-	bo.MaxInterval = 10 * time.Second
+	bo.MaxInterval = 1 * time.Second
 	return bo
 }()
 
@@ -183,9 +183,14 @@ Use status command to check for completion:
 		for shardIndex, shardHash := range shardHashes {
 			go func(i int, h string, f *ds.Session) {
 				backoff.Retry(func() error {
+					select {
+					case <-f.Context.Done():
+						return nil
+					default:
+						break
+					}
 					host, err := hp.NextValidHost(price)
 					if err != nil {
-						fmt.Println("next host error", err)
 						f.Error(err)
 						return err
 					}
@@ -393,6 +398,11 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 		return
 	}
 	err = backoff.Retry(func() error {
+		select {
+		case <-f.Context.Done():
+			return nil
+		default:
+		}
 		err := grpc.GuardClient(f.Config.Services.GuardDomain).WithContext(f.Context,
 			func(ctx context.Context, client guardpb.GuardServiceClient) error {
 				req := &guardpb.CheckFileStoreMetaRequest{

@@ -55,22 +55,20 @@ func (p *HostProvider) init() (err error) {
 }
 
 func (p *HostProvider) AddIndex() (int, error) {
-	fmt.Println("p.current a")
 	p.Lock()
 	defer p.Unlock()
-	fmt.Println("p.current b")
-	fmt.Println("p.current", p.current, len(p.hosts))
 	if p.current >= len(p.hosts) {
 		return -1, errors.New("Index exceeds array bounds.")
 	}
 	p.current++
+	fmt.Println("current", p.current)
 	return p.current, nil
 }
 
 func (p *HostProvider) NextValidHost(price int64) (string, error) {
 	for true {
 		if index, err := p.AddIndex(); err == nil {
-			host := p.hosts[index]
+			host := p.hosts[index-1]
 			id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				fmt.Println("err", err, "host.StoragePriceAsk", host.StoragePriceAsk)
@@ -79,9 +77,9 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
+			fmt.Println("host.NodeId", host.NodeId)
 			return host.NodeId, nil
 		} else {
-			fmt.Println("abcabc")
 			break
 		}
 	}

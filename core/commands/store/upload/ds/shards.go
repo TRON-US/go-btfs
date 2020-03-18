@@ -110,7 +110,6 @@ func (s *Shard) Complete() {
 }
 
 func (s *Shard) doContract(sc *shardpb.SingedContracts) error {
-	fmt.Println("do contract", "sc", sc.GuardContract.Amount)
 	ks := []string{
 		fmt.Sprintf(shardStatusKey, s.peerId, s.sessionId, s.shardHash),
 		fmt.Sprintf(shardSignedContractsKey, s.peerId, s.sessionId, s.shardHash),
