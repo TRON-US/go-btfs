@@ -3,7 +3,6 @@ package helper
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -61,7 +60,6 @@ func (p *HostProvider) AddIndex() (int, error) {
 		return -1, errors.New("Index exceeds array bounds.")
 	}
 	p.current++
-	fmt.Println("current", p.current)
 	return p.current, nil
 }
 
@@ -71,13 +69,11 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 			host := p.hosts[index-1]
 			id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
-				fmt.Println("err", err, "host.StoragePriceAsk", host.StoragePriceAsk)
 				continue
 			}
 			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
-			fmt.Println("host.NodeId", host.NodeId)
 			return host.NodeId, nil
 		} else {
 			break

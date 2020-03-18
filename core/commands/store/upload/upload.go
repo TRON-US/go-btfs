@@ -179,14 +179,11 @@ Use status command to check for completion:
 		}
 
 		hp := helper.GetHostProvider(req.Context, n, cfg.Experimental.HostsSyncMode, api)
-		//TODO: retry when receive error in recvcontractcmd.
 		for shardIndex, shardHash := range shardHashes {
 			go func(i int, h string, f *ds.Session) {
 				backoff.Retry(func() error {
-					fmt.Println("h", h, "retry", time.Now().Unix())
 					select {
 					case <-f.Context.Done():
-						fmt.Println("<-f.Context.Done()")
 						return nil
 					default:
 						break
@@ -250,7 +247,6 @@ Use status command to check for completion:
 					if err != nil {
 						return err
 					}
-					fmt.Println("h", h, "success")
 					return nil
 				}, bo)
 			}(shardIndex, shardHash, ss)
