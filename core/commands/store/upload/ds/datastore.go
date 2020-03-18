@@ -37,8 +37,7 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 
 func List(d ds.Datastore, prefix string) {
 	d.Query(query.Query{
-		Prefix: prefix,
-		Filters: []query.Filter{
-		},
+		Prefix:  prefix,
+		Filters: []query.Filter{},
 	})
 }
