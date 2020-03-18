@@ -68,6 +68,7 @@ func GetShard(peerId string, sessionId string, shardHash string, params *ShardIn
 			fsm.Callbacks{
 				"enter_state": s.enterState,
 			})
+		s.Init()
 		shardsInMem.Set(k, s)
 	}
 	return s, nil

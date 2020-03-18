@@ -12,7 +12,7 @@ import (
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/query"

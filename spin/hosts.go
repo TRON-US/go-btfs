@@ -3,12 +3,12 @@ package spin
 import (
 	"context"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/store/hosts"
-	"github.com/TRON-US/go-btfs/core/commands/store/stats"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/store/hosts"
+	"github.com/TRON-US/go-btfs/core/commands/store/stats"
 )
 
 const (

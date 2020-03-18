@@ -31,16 +31,23 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 			return err
 		}
 		shardHash := req.Arguments[1]
+		fmt.Println("do recv...", "h", shardHash)
 		ss, err := ds.GetSession(ssID, n.Identity.Pretty(), nil)
 		if err != nil {
+			fmt.Println("do recv err1", err)
 			return err
 		}
 		s, err := ds.GetShard(n.Identity.Pretty(), ssID, shardHash, &ds.ShardInitParams{
 			Context:   ss.Context,
 			Datastore: n.Repo.Datastore(),
 		})
+		if err != nil {
+			fmt.Println("do recv err2", err)
+			return err
+		}
 		guardContract, err := guard.UnmarshalGuardContract(guardContractBytes)
 		if err != nil {
+			fmt.Println("do recv err3", err)
 			return err
 		}
 		s.Contract(&shardpb.SingedContracts{
