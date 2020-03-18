@@ -69,7 +69,7 @@ func GetSession(sessionId string, peerId string, params *SessionInitParams) (*Se
 	if sessionId == "" {
 		sessionId = uuid.New().String()
 	}
-	k := fmt.Sprintf(sessionInMemKey, peerId, peerId, sessionId)
+	k := fmt.Sprintf(sessionInMemKey, peerId, sessionId)
 	var s *Session
 	if tmp, ok := sessionsInMem.Get(k); ok {
 		s = tmp.(*Session)
