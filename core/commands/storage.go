@@ -75,6 +75,12 @@ host information sync/display operations, and BTT payment-related routines.`,
 	},
 }
 
+func init() {
+	for k, v := range storageUploadCmd.Subcommands {
+		upload.StorageUploadCmd.Subcommands[k] = v
+	}
+}
+
 var storageUploadCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
