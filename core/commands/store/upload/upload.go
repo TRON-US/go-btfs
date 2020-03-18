@@ -30,7 +30,16 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-var bo = func() *backoff.ExponentialBackOff {
+var waitUploadBo = func() *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 1 * time.Second
+	bo.MaxElapsedTime = 24 * time.Hour
+	bo.Multiplier = 1.5
+	bo.MaxInterval = 5 * time.Minute
+	return bo
+}()
+
+var handleShardBo = func() *backoff.ExponentialBackOff {
 	bo := backoff.NewExponentialBackOff()
 	bo.InitialInterval = 1 * time.Second
 	bo.MaxElapsedTime = 300 * time.Second
@@ -248,7 +257,7 @@ Use status command to check for completion:
 						return err
 					}
 					return nil
-				}, bo)
+				}, handleShardBo)
 			}(shardIndex, shardHash, ss)
 		}
 
@@ -426,7 +435,7 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 				return errors.New("uploading")
 			})
 		return err
-	}, bo)
+	}, waitUploadBo)
 	if err != nil {
 		f.Error(err)
 		return
