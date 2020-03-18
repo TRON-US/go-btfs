@@ -112,7 +112,7 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":              storageUploadInitCmd,
+		"init":              upload.StorageUploadInitCmd,
 		"recvcontract":      upload.StorageUploadRecvContractCmd,
 		"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
@@ -1201,9 +1201,6 @@ the shard and replies back to client for the next challenge step.`,
 
 		// review contract and send back to client
 		halfSignedEscrowContract, err := escrow.UnmarshalEscrowContract(halfSignedEscrowContBytes)
-		if err != nil {
-			return err
-		}
 		if err != nil {
 			return err
 		}

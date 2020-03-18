@@ -19,7 +19,6 @@ This command print upload and payment status by the time queried.`,
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session.").EnableStdin(),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		fmt.Println("status....")
 		status := &StatusRes{}
 		// check and get session info from sessionMap
 		ssID := req.Arguments[0]

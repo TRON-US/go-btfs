@@ -256,6 +256,7 @@ Use status command to check for completion:
 					if err != nil {
 						return err
 					}
+					//TODO: retry when recv contract timeout
 					return nil
 				}, handleShardBo)
 			}(shardIndex, shardHash, ss)
