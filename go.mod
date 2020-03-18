@@ -128,7 +128,7 @@ require (
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	github.com/tron-us/go-btfs-common v0.2.28
+	github.com/tron-us/go-btfs-common v0.3.1
 	github.com/tron-us/go-common/v2 v2.0.5
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
@@ -158,5 +158,3 @@ replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1
 replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.1.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.4.1
-
-replace github.com/tron-us/go-btfs-common => ../go/src/github.com/TRON-US/go-btfs-common
