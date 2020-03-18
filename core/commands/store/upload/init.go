@@ -216,6 +216,7 @@ the shard and replies back to client for the next challenge step.`,
 			func(ctx context.Context, client guardPb.GuardServiceClient) error {
 				challenge, err := client.ReadyForChallenge(ctx, in)
 				if err != nil {
+					fmt.Println("ready challenge error", err)
 					return err
 				}
 				fmt.Println("code", challenge.Code, "msg", challenge.Message)
