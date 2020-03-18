@@ -210,12 +210,13 @@ Use status command to check for completion:
 					if err != nil {
 						return err
 					}
-					escrowContract, err := escrow.NewContract(cfg, uuid.New().String(), n, hostPid, totalPay, false, 0, "")
+					contractId := uuid.New().String()
+					escrowContract, err := escrow.NewContract(cfg, contractId, n, hostPid, totalPay, false, 0, "")
 					if err != nil {
 						return fmt.Errorf("create escrow contract failed: [%v] ", err)
 					}
 					guardContractMeta, err := helper.NewContract(cfg, &helper.ContractParams{
-						ContractId:    ss.Id,
+						ContractId:    contractId,
 						RenterPid:     n.Identity.Pretty(),
 						HostPid:       host,
 						ShardIndex:    int32(i),
