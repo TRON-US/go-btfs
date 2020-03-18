@@ -254,6 +254,7 @@ Use status command to check for completion:
 						n.Identity.Pretty(), //TODO: offline
 					)
 					if err != nil {
+						fmt.Println("init err", err)
 						return err
 					}
 					//TODO: retry when recv contract timeout

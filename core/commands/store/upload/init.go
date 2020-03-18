@@ -66,7 +66,6 @@ the shard and replies back to client for the next challenge step.`,
 
 		var (
 			requestPid peer.ID
-			renterPid  peer.ID
 			ok         bool
 		)
 
@@ -149,7 +148,7 @@ the shard and replies back to client for the next challenge step.`,
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
 		// get renter's public key
-		payerPubKey, err := renterPid.ExtractPublicKey()
+		payerPubKey, err := requestPid.ExtractPublicKey()
 		if err != nil {
 			return err
 		}
