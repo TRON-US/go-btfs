@@ -4,7 +4,6 @@ import (
 	"github.com/tron-us/protobuf/proto"
 
 	ds "github.com/ipfs/go-datastore"
-	"github.com/ipfs/go-datastore/query"
 )
 
 func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {
@@ -34,11 +33,4 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 	}
 	err = proto.Unmarshal(bytes, m)
 	return err
-}
-
-func List(d ds.Datastore, prefix string) {
-	d.Query(query.Query{
-		Prefix:  prefix,
-		Filters: []query.Filter{},
-	})
 }

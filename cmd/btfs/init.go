@@ -12,15 +12,16 @@ import (
 	"strconv"
 	"strings"
 
-	assets "github.com/TRON-US/go-btfs/assets"
+	"github.com/TRON-US/go-btfs/assets"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
-	core "github.com/TRON-US/go-btfs/core"
-	namesys "github.com/TRON-US/go-btfs/namesys"
-	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/namesys"
+	"github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	files "github.com/TRON-US/go-btfs-files"
+
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )

@@ -581,7 +581,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	p := req.Options[customizedPayoutPeriodOptionName].(int)
 
 	// create main session context
-	ss.RetryMonitorCtx = storage.NewGoContext(param.ctx)
+	ss.RetryMonitorCtx, _ = storage.NewGoContext(param.ctx)
 
 	// Set upload session file size.
 	ss.SetFileSize(param.fileSize)

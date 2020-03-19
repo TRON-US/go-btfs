@@ -68,7 +68,6 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index-1]
 			id, err := peer.IDB58Decode(host.NodeId)
-			//id, err := peer.IDB58Decode("16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX")
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				continue
 			}
@@ -76,10 +75,9 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 				continue
 			}
 			return host.NodeId, nil
-			//return "16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX", nil
 		} else {
 			break
 		}
 	}
-	return "", errors.New("failed to find more valid hosts")
+	return "", errors.New("failed to find more valid hosts, please try again later")
 }

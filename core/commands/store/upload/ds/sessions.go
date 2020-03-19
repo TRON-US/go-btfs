@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	sessionKeyPrefix   = "/btfs/%s/v0.0.1/renter/sessions/%s/"
+	sessionKeyPrefix   = "/btfs/%s/renter/sessions/%s/"
 	sessionInMemKey    = sessionKeyPrefix
 	sessionMetadataKey = sessionKeyPrefix + "metadata"
 	session_status_key = sessionKeyPrefix + "status"
@@ -79,8 +79,7 @@ func GetSession(sessionId string, peerId string, params *SessionInitParams) (*Se
 		}
 		s.fsm.SetState(status.Status)
 	} else {
-		ctx, cancel := storage.NewCancelableGoContext(params.Context)
-
+		ctx, cancel := storage.NewGoContext(params.Context)
 		s = &Session{
 			Id:        sessionId,
 			PeerId:    peerId,

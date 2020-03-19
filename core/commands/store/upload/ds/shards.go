@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	shardKeyPrefix          = "/btfs/%s/v0.0.1/renter/sessions/%s/shards/%s/"
+	shardKeyPrefix          = "/btfs/%s/renter/sessions/%s/shards/%s/"
 	shardInMemKey           = shardKeyPrefix
 	shardStatusKey          = shardKeyPrefix + "status"
 	shardSignedContractsKey = shardKeyPrefix + "signed-contracts"
@@ -55,7 +55,7 @@ func GetShard(peerId string, sessionId string, shardHash string, params *ShardIn
 		}
 		s.fsm.SetState(status.Status)
 	} else {
-		ctx := storage.NewGoContext(params.Context)
+		ctx, _ := storage.NewGoContext(params.Context)
 		s = &Shard{
 			ctx:       ctx,
 			ds:        params.Datastore,

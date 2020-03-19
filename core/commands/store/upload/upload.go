@@ -17,13 +17,13 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/cenkalti/backoff/v3"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
-	"github.com/cenkalti/backoff"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
@@ -140,8 +140,7 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		//TODO: handle filesize
-		cids, _, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, fileCid)
+		cids, fileSize, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, fileCid)
 		if err != nil || len(cids) == 0 {
 			return fmt.Errorf("invalid hash: %s", err)
 		}
@@ -216,7 +215,7 @@ Use status command to check for completion:
 						return fmt.Errorf("create escrow contract failed: [%v] ", err)
 					}
 					guardContractMeta, err := helper.NewContract(cfg, &helper.ContractParams{
-						ContractId:    contractId,
+						ContractId:    ss.Id,
 						RenterPid:     n.Identity.Pretty(),
 						HostPid:       host,
 						ShardIndex:    int32(i),
@@ -275,7 +274,7 @@ Use status command to check for completion:
 						continue
 					}
 					if completeNum == numShards {
-						doSubmit(f)
+						doSubmit(f, fileSize)
 						return
 					} else if errorNum > 0 {
 						f.Error(errors.New("there are error shards"))
@@ -295,7 +294,7 @@ Use status command to check for completion:
 	Type: UploadRes{},
 }
 
-func doSubmit(f *ds.Session) {
+func doSubmit(f *ds.Session, fileSize int64) {
 	f.Submit()
 	bs, t, err := f.PrepareContractFromShard()
 	if err != nil {
@@ -326,11 +325,11 @@ func doSubmit(f *ds.Session) {
 		f.Error(fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
 		return
 	}
-	doPay(f, submitContractRes)
+	doPay(f, submitContractRes, fileSize)
 	return
 }
 
-func doPay(f *ds.Session, response *escrowpb.SignedSubmitContractResult) {
+func doPay(f *ds.Session, response *escrowpb.SignedSubmitContractResult, fileSize int64) {
 	f.Pay()
 	privKeyStr := f.Config.Identity.PrivKey
 	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
@@ -349,10 +348,10 @@ func doPay(f *ds.Session, response *escrowpb.SignedSubmitContractResult) {
 		f.Error(fmt.Errorf("failed to pay in to escrow: [%v]", err))
 		return
 	}
-	doGuard(f, payinRes, payerPrivKey)
+	doGuard(f, payinRes, payerPrivKey, fileSize)
 }
 
-func doGuard(f *ds.Session, res *escrowpb.SignedPayinResult, payerPriKey ic.PrivKey) {
+func doGuard(f *ds.Session, res *escrowpb.SignedPayinResult, payerPriKey ic.PrivKey, fileSize int64) {
 	f.Guard()
 	md, err := f.GetMetadata()
 	if err != nil {
@@ -376,7 +375,8 @@ func doGuard(f *ds.Session, res *escrowpb.SignedPayinResult, payerPriKey ic.Priv
 		}
 		cts = append(cts, contracts.GuardContract)
 	}
-	fsStatus, err := helper.PrepAndUploadFileMeta(f.Context, cts, res, payerPriKey, f.Config, f.PeerId, md.FileHash)
+	fsStatus, err := helper.PrepAndUploadFileMeta(f.Context, cts, res, payerPriKey, f.Config, f.PeerId, md.FileHash,
+		fileSize)
 	if err != nil {
 		f.Error(fmt.Errorf("failed to send file meta to guard: [%v]", err))
 		return

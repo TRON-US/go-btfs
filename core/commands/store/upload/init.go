@@ -4,27 +4,30 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
+	"strconv"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
+	"github.com/tron-us/go-btfs-common/crypto"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
+
 	"github.com/cenkalti/backoff/v3"
 	"github.com/dustin/go-humanize"
 	cidlib "github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/common/log"
-	"github.com/tron-us/go-btfs-common/crypto"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
-	"strconv"
-	"time"
 )
 
-var bo = func() *backoff.ExponentialBackOff {
+var checkPaymentBo = func() *backoff.ExponentialBackOff {
 	bo := backoff.NewExponentialBackOff()
 	bo.InitialInterval = 10 * time.Second
 	bo.MaxElapsedTime = 5 * time.Minute
@@ -240,7 +243,7 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool,
 			return nil
 		}
 		return errors.New("reach max retry times")
-	}, bo)
+	}, checkPaymentBo)
 	if err != nil {
 		log.Error("Check escrow IsPaidin failed", err)
 		paidIn <- paid

@@ -94,7 +94,8 @@ const (
 )
 
 func PrepAndUploadFileMeta(ctx context.Context, contracts []*guardPb.Contract, payinRes *escrowPb.SignedPayinResult,
-	payerPriKey ic.PrivKey, configuration *config.Config, renterId string, fileHash string) (*guardPb.FileStoreStatus,
+	payerPriKey ic.PrivKey, configuration *config.Config, renterId string, fileHash string,
+	fileSize int64) (*guardPb.FileStoreStatus,
 	error) {
 	sig := payinRes.EscrowSignature
 	for _, guardContract := range contracts {
@@ -103,7 +104,7 @@ func PrepAndUploadFileMeta(ctx context.Context, contracts []*guardPb.Contract, p
 		guardContract.LastModifyTime = time.Now()
 	}
 
-	fileStatus, err := NewFileStatus(contracts, configuration, renterId, fileHash)
+	fileStatus, err := NewFileStatus(contracts, configuration, renterId, fileHash, fileSize)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func PrepAndUploadFileMeta(ctx context.Context, contracts []*guardPb.Contract, p
 }
 
 func NewFileStatus(contracts []*guardPb.Contract, configuration *config.Config,
-	renterId string, fileHash string) (*guardPb.FileStoreStatus, error) {
+	renterId string, fileHash string, fileSize int64) (*guardPb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
 		return nil, err
@@ -152,8 +153,8 @@ func NewFileStatus(contracts []*guardPb.Contract, configuration *config.Config,
 
 	fileStoreMeta := guardPb.FileStoreMeta{
 		RenterPid:        renterPid,
-		FileHash:         fileHash,  //TODO need to check
-		FileSize:         10000,     //TODO need to revise later
+		FileHash:         fileHash, //TODO need to check
+		FileSize:         fileSize,
 		RentStart:        rentStart, //TODO need to revise later
 		RentEnd:          rentEnd,   //TODO need to revise later
 		CheckFrequency:   0,
