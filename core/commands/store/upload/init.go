@@ -22,7 +22,6 @@ import (
 
 	"github.com/cenkalti/backoff/v3"
 	"github.com/dustin/go-humanize"
-	cidlib "github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/common/log"
 )
@@ -73,11 +72,6 @@ the shard and replies back to client for the next challenge step.`,
 		)
 
 		ssID := req.Arguments[0]
-		fileHash, err := cidlib.Parse(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-		fmt.Println("fileHash", fileHash)
 		shardHash := req.Arguments[2]
 		shardIndex, err := strconv.Atoi(req.Arguments[8])
 		if err != nil {
@@ -169,7 +163,7 @@ the shard and replies back to client for the next challenge step.`,
 		}
 
 		// Sign on the contract
-		signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, false)
+		signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
 		if err != nil {
 			return err
 		}

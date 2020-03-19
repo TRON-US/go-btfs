@@ -36,7 +36,7 @@ func GetHostProvider(ctx context.Context, node *core.IpfsNode, mode string,
 		node:    node,
 		mode:    mode,
 		api:     api,
-		current: 0,
+		current: -1,
 		filter: func() bool {
 			return false
 		},
@@ -66,15 +66,17 @@ func (p *HostProvider) AddIndex() (int, error) {
 func (p *HostProvider) NextValidHost(price int64) (string, error) {
 	for true {
 		if index, err := p.AddIndex(); err == nil {
-			host := p.hosts[index-1]
-			id, err := peer.IDB58Decode(host.NodeId)
+			host := p.hosts[index]
+			//id, err := peer.IDB58Decode(host.NodeId)
+			id, err := peer.IDB58Decode("16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX")
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				continue
 			}
 			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
-			return host.NodeId, nil
+			//return host.NodeId, nil
+			return "16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX", nil
 		} else {
 			break
 		}

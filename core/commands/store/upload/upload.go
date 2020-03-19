@@ -15,8 +15,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/guard"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/cenkalti/backoff/v3"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
@@ -163,7 +161,7 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		shardSize, err := getContractSizeFromCid(req.Context, shardCid, api)
+		shardSize, err := helper.GetNodeSizeFromCid(req.Context, shardCid, api)
 		if err != nil {
 			return err
 		}
@@ -448,13 +446,4 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 
 type UploadRes struct {
 	ID string
-}
-
-func getContractSizeFromCid(ctx context.Context, hash cidlib.Cid, api coreiface.CoreAPI) (uint64, error) {
-	leafPath := path.IpfsPath(hash)
-	ipldNode, err := api.ResolveNode(ctx, leafPath)
-	if err != nil {
-		return 0, err
-	}
-	return ipldNode.Size()
 }
