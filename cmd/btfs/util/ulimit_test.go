@@ -40,8 +40,13 @@ func TestManageInvalidNFds(t *testing.T) {
 
 	t.Logf("setting ulimit to %d, max %d, cur %d", value, rlimit.Max, rlimit.Cur)
 
-	if changed, new, err := ManageFdLimit(); err == nil {
-		t.Errorf("ManageFdLimit should return an error: changed %t, new: %d", changed, new)
+	changed, new, err := ManageFdLimit()
+	if err == nil {
+		// privileged user can change the rlimit of no file, so it returns success.
+		// If not privileged, report error.
+		if syscall.Geteuid() != 0 {
+			t.Errorf("ManageFdLimit should return an error: changed %t, new: %d", changed, new)
+		}
 	} else {
 		flag := strings.Contains(err.Error(),
 			"failed to raise ulimit to IPFS_FD_MAX")
