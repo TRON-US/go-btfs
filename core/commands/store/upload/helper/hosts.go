@@ -56,10 +56,10 @@ func (p *HostProvider) init() (err error) {
 func (p *HostProvider) AddIndex() (int, error) {
 	p.Lock()
 	defer p.Unlock()
+	p.current++
 	if p.current >= len(p.hosts) {
 		return -1, errors.New("Index exceeds array bounds.")
 	}
-	p.current++
 	return p.current, nil
 }
 

@@ -218,7 +218,9 @@ the shard and replies back to client for the next challenge step.`,
 		if !paid {
 			return errors.New("contract is not paid:" + escrowContract.ContractId)
 		}
+		fmt.Println("init before download shard")
 		downloadShardFromClient(n, api, contract, req.Arguments[1], shardHash)
+		fmt.Println("init after download shard")
 		in := &guardPb.ReadyForChallengeRequest{
 			RenterPid:   guardContractMeta.RenterPid,
 			FileHash:    guardContractMeta.FileHash,
@@ -290,10 +292,12 @@ func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI,
 	// file root dag + shard root dag + metadata full dag + only this shard dag
 	fileCid, err := cidlib.Parse(fileHash)
 	if err != nil {
+		fmt.Println("cidlib.parse fh error", err)
 		return
 	}
 	shardCid, err := cidlib.Parse(shardHash)
 	if err != nil {
+		fmt.Println("cidlib.parse sh error", err)
 		return
 	}
 	_, err = storage.NewStorageChallengeResponse(ctx, n, api, fileCid, shardCid, "", true, expir)
