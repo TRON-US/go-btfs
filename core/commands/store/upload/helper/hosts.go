@@ -67,16 +67,14 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 	for true {
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index]
-			//id, err := peer.IDB58Decode(host.NodeId)
-			id, err := peer.IDB58Decode("16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX")
+			id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				continue
 			}
 			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
-			//return host.NodeId, nil
-			return "16Uiu2HAmVGndWgJEG2ZXnhdRXbRXS7a1XGMuozdidw8kuwQ9wDKX", nil
+			return host.NodeId, nil
 		} else {
 			break
 		}
