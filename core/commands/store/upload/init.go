@@ -163,7 +163,7 @@ the shard and replies back to client for the next challenge step.`,
 		}
 
 		// Sign on the contract
-		signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
+		signedEscrowContractBytes, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, false)
 		if err != nil {
 			return err
 		}

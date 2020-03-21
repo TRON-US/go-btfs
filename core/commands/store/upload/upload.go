@@ -318,6 +318,8 @@ func doSubmit(f *ds.Session, fileSize int64) {
 	for _, c := range req.Contract {
 		amount += c.Contract.Amount
 	}
+	fmt.Println("req 0", req.Contract[0].Contract.Amount)
+	fmt.Println("req 1", req.BuyerChannel.Channel.Amount)
 	submitContractRes, err := escrow.SubmitContractToEscrow(f.Context, f.Config, req)
 	if err != nil {
 		f.Error(fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
