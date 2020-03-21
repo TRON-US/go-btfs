@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/alecthomas/units"
+	cidlib "github.com/ipfs/go-cid"
 	"strconv"
 	"time"
 
@@ -65,7 +71,10 @@ the shard and replies back to client for the next challenge step.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
-
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
 		var (
 			requestPid peer.ID
 			ok         bool
@@ -82,12 +91,19 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
-		// Check existing storage has enough left
-		cfgRoot, err := cmdenv.GetConfigRoot(env)
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		n, err := cmdenv.GetNode(env)
+		sh, err := ds.GetShard(n.Identity.Pretty(), ssID, shardHash, &ds.ShardInitParams{
+			Context:   req.Context,
+			Datastore: n.Repo.Datastore(),
+		})
+		if err != nil {
+			return err
+		}
+		// Check existing storage has enough left
+		cfgRoot, err := cmdenv.GetConfigRoot(env)
 		if err != nil {
 			return err
 		}
@@ -182,7 +198,14 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-
+		contract, err := guard.UnmarshalGuardContract(signedGuardContractBytes)
+		if err != nil {
+			return err
+		}
+		sh.Contract(&shardpb.SingedContracts{
+			SignedEscrowContract: signedEscrowContractBytes,
+			GuardContract:        contract,
+		})
 		// check payment
 		signedContractID, err := escrow.SignContractID(escrowContract.ContractId, n.PrivateKey)
 		if err != nil {
@@ -195,6 +218,7 @@ the shard and replies back to client for the next challenge step.`,
 		if !paid {
 			return errors.New("contract is not paid:" + escrowContract.ContractId)
 		}
+		downloadShardFromClient(n, api, contract, req.Arguments[1], shardHash)
 		in := &guardPb.ReadyForChallengeRequest{
 			RenterPid:   guardContractMeta.RenterPid,
 			FileHash:    guardContractMeta.FileHash,
@@ -208,16 +232,18 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		in.Signature = sign
-		grpc.GuardClient(cfg.Services.GuardDomain).WithContext(req.Context,
+		err = grpc.GuardClient(cfg.Services.GuardDomain).WithContext(req.Context,
 			func(ctx context.Context, client guardPb.GuardServiceClient) error {
-				challenge, err := client.ReadyForChallenge(ctx, in)
+				_, err = client.ReadyForChallenge(ctx, in)
 				if err != nil {
-					fmt.Println("ready challenge error", err)
 					return err
 				}
-				fmt.Println("code", challenge.Code, "msg", challenge.Message)
 				return nil
 			})
+		if err != nil {
+			return err
+		}
+		sh.Complete()
 		return nil
 	},
 }
@@ -241,5 +267,39 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool,
 	if err != nil {
 		log.Error("Check escrow IsPaidin failed", err)
 		paidIn <- paid
+	}
+}
+
+func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI,
+	guardContract *guardPb.Contract,
+	fileHash string, shardHash string) {
+	// Need to compute a time that's fair for small vs large files
+	// TODO: use backoff to achieve pause/resume cases for host downloads
+	low := 30 * time.Second
+	high := 5 * time.Minute
+	scaled := time.Duration(float64(guardContract.ShardFileSize) / float64(units.GiB) * float64(high))
+	if scaled < low {
+		scaled = low
+	} else if scaled > high {
+		scaled = high
+	}
+	ctx, _ := context.WithTimeout(context.Background(), scaled)
+	expir := uint64(guardContract.RentEnd.Unix())
+	// Get + pin to make sure it does not get accidentally deleted
+	// Sharded scheme as special pin logic to add
+	// file root dag + shard root dag + metadata full dag + only this shard dag
+	fileCid, err := cidlib.Parse(fileHash)
+	if err != nil {
+		return
+	}
+	shardCid, err := cidlib.Parse(shardHash)
+	if err != nil {
+		return
+	}
+	_, err = storage.NewStorageChallengeResponse(ctx, n, api, fileCid, shardCid, "", true, expir)
+	if err != nil {
+		log.Errorf("failed to download shard %s from file %s with contract id %s: [%v]",
+			guardContract.ShardHash, guardContract.FileHash, guardContract.ContractId, err)
+		return
 	}
 }
