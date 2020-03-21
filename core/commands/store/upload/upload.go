@@ -33,7 +33,7 @@ var waitUploadBo = func() *backoff.ExponentialBackOff {
 	bo.InitialInterval = 1 * time.Second
 	bo.MaxElapsedTime = 24 * time.Hour
 	bo.Multiplier = 1.5
-	bo.MaxInterval = 5 * time.Minute
+	bo.MaxInterval = 1 * time.Minute
 	return bo
 }()
 

@@ -4,30 +4,30 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
-	shardpb "github.com/TRON-US/go-btfs/protos/shard"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/alecthomas/units"
-	cidlib "github.com/ipfs/go-cid"
 	"strconv"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
 	"github.com/dustin/go-humanize"
+	cidlib "github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/common/log"
 )
@@ -292,12 +292,10 @@ func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI,
 	// file root dag + shard root dag + metadata full dag + only this shard dag
 	fileCid, err := cidlib.Parse(fileHash)
 	if err != nil {
-		fmt.Println("cidlib.parse fh error", err)
 		return
 	}
 	shardCid, err := cidlib.Parse(shardHash)
 	if err != nil {
-		fmt.Println("cidlib.parse sh error", err)
 		return
 	}
 	_, err = storage.NewStorageChallengeResponse(ctx, n, api, fileCid, shardCid, "", true, expir)
