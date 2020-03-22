@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	gopath "path"
 	"strconv"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
@@ -27,6 +26,7 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
+	gopath "path"
 )
 
 var log = logging.Logger("coreunix")
@@ -61,6 +61,7 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCLocker, ds ipld.DAG
 		Chunker:          "",
 		TokenMetadata:    "",
 		PinDuration:      0,
+		AddInProcess:     false,
 	}, nil
 }
 
@@ -90,6 +91,7 @@ type Adder struct {
 	liveNodes        uint64
 	TokenMetadata    string
 	PinDuration      int64
+	AddInProcess     bool
 }
 
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
@@ -365,6 +367,7 @@ func (adder *Adder) AddAllAndPin(file files.Node) (ipld.Node, error) {
 		adder.unlocker = adder.gcLocker.PinLock()
 	}
 	defer func() {
+		adder.AddInProcess = false
 		if adder.unlocker != nil {
 			adder.unlocker.Unlock()
 		}

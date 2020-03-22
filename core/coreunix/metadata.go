@@ -6,12 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	gopath "path"
-
-	core "github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/pin"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
+	core "github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
@@ -25,6 +23,7 @@ import (
 	posinfo "github.com/ipfs/go-ipfs-posinfo"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
+	gopath "path"
 )
 
 // MetaModifier contains the options to the `metadata` command.
@@ -68,6 +67,10 @@ func (modifier *MetaModifier) AddMetaAndPin(node ipld.Node) (ipld.Node, ipath.Re
 		return nil, nil, err
 	}
 
+	if !modifier.Pin {
+		return nd, p, nil
+	}
+
 	if node.Cid() != nd.Cid() {
 		err = modifier.pinning.Unpin(modifier.ctx, node.Cid(), true)
 		if err != nil {
@@ -75,9 +78,6 @@ func (modifier *MetaModifier) AddMetaAndPin(node ipld.Node) (ipld.Node, ipath.Re
 		}
 	}
 
-	if !modifier.Pin {
-		return nd, p, nil
-	}
 	return nd, p, modifier.PinRoot(nd)
 }
 

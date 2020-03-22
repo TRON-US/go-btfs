@@ -153,6 +153,7 @@ func addFileToBtfs(node *core.IpfsNode, data []byte, metadata string) (ipath.Pat
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
+	adder.AddInProcess = true
 	go func() {
 		defer close(output)
 		_, err := adder.AddAllAndPin(file)
@@ -171,6 +172,20 @@ func addFileToBtfs(node *core.IpfsNode, data []byte, metadata string) (ipath.Pat
 		addedFileHash = o.(*coreiface.AddEvent).Path.Cid()
 	case <-ctx.Done():
 		return nil, ctx.Err()
+	}
+
+	// The following adder.AddInProcess-for-loop mechanism is to wait for
+	// AddAllAndPin() to finish its callng of adder.PinRoot() since AddAllAndPin()
+	// sends data to the above channel before calling adder.PinRoot().
+	// Otherwise, this function will finish and the caller of this function
+	// may call AddMetaAndPin(), which tries and fails to unpin the root of the DAG
+	// from the above AddAllAndPin() if AddAllAndPin() is not finished. - BTFS-1573
+	for {
+		if adder.AddInProcess {
+			time.Sleep(time.Second)
+		} else {
+			break
+		}
 	}
 
 	return ipath.IpfsPath(addedFileHash), nil
@@ -362,20 +377,19 @@ func TestAddFileWithMetadata(t *testing.T) {
 
 	// Add a file to BTFS network.
 	expected := "{\"price\":11.2,\"number\":2368}"
-	path, err := addFileWithMetadata(node, []byte("existing file contents"), expected)
+	path, err := addFileWithMetadata(node, []byte("existing file contents for adding file with metadata"), expected)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify modified file.
 	verifyMetadataItems(t, node, path, &MetaStruct{Price: 11.2, Number: 2368})
-	if path.String() != "/btfs/QmXeTzZ1jRaYcXpyQmYajLw91XQCssWz6hCj5WLxduB8YV" {
+	if path.String() != "/btfs/QmRM4vKujpTaafJs6DfF2jpxadvgktYAdbK7JZYhswr9V6" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmXeTzZ1jRaYcXpyQmYajLw91XQCssWz6hCj5WLxduB8YV", path.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmRM4vKujpTaafJs6DfF2jpxadvgktYAdbK7JZYhswr9V6", path.String())
 	}
 }
 
-/*
 func TestAppendMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -393,8 +407,8 @@ func TestAppendMetadata(t *testing.T) {
 	}
 
 	// Add a file to BTFS network.
-	data := []byte("existing file contents")
-	path, err := addFileWithMetadata(node, data, `{"price":11.2}`)
+	data := []byte("existing file contents for appending metadata")
+	path, err := addFileWithMetadata(node, data, `{"price":11.21}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,15 +420,14 @@ func TestAppendMetadata(t *testing.T) {
 	}
 
 	// Verify modified file.
-	verifyMetadataItems(t, node, p, &MetaStruct{Price: 11.2, Number: 1234})
+	verifyMetadataItems(t, node, p, &MetaStruct{Price: 11.21, Number: 1234})
 
-	if p.String() != "/btfs/QmTeHFgkjCqcBbUfcWcU2FKhshoAbaicgtPkkjT7q2P3u5" {
+	if p.String() != "/btfs/QmYu6CoRhJATcu5QM9XhsT85jE5sBrV61SByALHG6kz4kH" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmTeHFgkjCqcBbUfcWcU2FKhshoAbaicgtPkkjT7q2P3u5", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmYu6CoRhJATcu5QM9XhsT85jE5sBrV61SByALHG6kz4kH", p.String())
 	}
 }
-*/
-/*
+
 // TestAddMetadataToFileWithoutMeta tests the functionality
 // to add metadata items to an existing BTFS file without metadata.
 func TestAddMetadataToFileWithoutMeta(t *testing.T) {
@@ -434,7 +447,7 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 	}
 
 	// Add a file to BTFS network.
-	path, err := addFile(node, []byte("existing file contents"))
+	path, err := addFile(node, []byte("existing file contents for adding without meta"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,14 +468,12 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 		t.Fatalf("expected %d, got %d", len(expected), int(metaSize))
 	}
 	verifyMetadataItems(t, node, p, &MetaStruct{Number: 2368})
-	if p.String() != "/btfs/QmNoKCmonn3LpGfenLocMkzw4woRJ4CZ7hs88MgsA77tGb" {
+	if p.String() != "/btfs/QmPob5g1dZfqFeL56SRqpVwXr7YVwkW86iMgsD7xc5iKwb" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmNoKCmonn3LpGfenLocMkzw4woRJ4CZ7hs88MgsA77tGb", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmPob5g1dZfqFeL56SRqpVwXr7YVwkW86iMgsD7xc5iKwb", p.String())
 	}
 }
 
-*/
-/*
 func TestUpdateMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -480,8 +491,8 @@ func TestUpdateMetadata(t *testing.T) {
 	}
 
 	// Add a file to BTFS network.
-	data := []byte("existing file contents")
-	path, err := addFileWithMetadata(node, data, `{"price":11.2}`)
+	data := []byte("existing file contents for updating metadata")
+	path, err := addFileWithMetadata(node, data, `{"price":11.23}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,13 +506,12 @@ func TestUpdateMetadata(t *testing.T) {
 	// Verify modified file.
 	verifyMetadataItems(t, node, p, &MetaStruct{Price: 23.56, Number: 4356})
 
-	if p.String() != "/btfs/QmdmxXzfb95DiPjDZn6vGjt8ejVxbt1ifjLi27N8jk2zAp" {
+	if p.String() != "/btfs/QmUZVy85njUTjZygd1KeHbWfYumKjsE5ewFD8W7RYNVTwQ" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmdmxXzfb95DiPjDZn6vGjt8ejVxbt1ifjLi27N8jk2zAp", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmUZVy85njUTjZygd1KeHbWfYumKjsE5ewFD8W7RYNVTwQ", p.String())
 	}
 }
-*/
-/*
+
 // removeMetadata removes the metadata items for the key values from the given `meta` string.
 // `meta` will have a format of key list. E.g., "price,nodeId".
 func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillBeUnpinned bool) (ipath.Path, error) {
@@ -557,8 +567,7 @@ func removeMetadata(node *core.IpfsNode, path ipath.Path, meta string, rootWillB
 	}
 	return ipath.IpfsPath(modifiedFileHash), nil
 }
-*/
-/*
+
 func TestRemoveMetadata(t *testing.T) {
 	// Create repo.
 	r := &repo.Mock{
@@ -576,8 +585,8 @@ func TestRemoveMetadata(t *testing.T) {
 	}
 
 	// Add a file to BTFS network.
-	data := []byte("existing file contents")
-	path, err := addFileWithMetadata(node, data, `{"price":11.2,"number":1234}`)
+	data := []byte("existing file contentsfor removing")
+	path, err := addFileWithMetadata(node, data, `{"price":11.25,"number":1234}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,12 +600,12 @@ func TestRemoveMetadata(t *testing.T) {
 	// Verify modified file.
 	verifyMetadataItems(t, node, p, &MetaStruct{Number: 1234})
 
-	if p.String() != "/btfs/QmdFTTBrDPB57r3FyqzSKiJmjJEptpHsUxTDUiQ3gkdiwE" {
+	if p.String() != "/btfs/QmcSVqDuQaNDPrgMUGhmcWWR6qyavjKYtsnqn6xFVicufz" {
 		// note: the exact number will depend on the size and the sharding algo. used
-		t.Fatalf("expected %s, got %s", "/btfs/QmdFTTBrDPB57r3FyqzSKiJmjJEptpHsUxTDUiQ3gkdiwE", p.String())
+		t.Fatalf("expected %s, got %s", "/btfs/QmcSVqDuQaNDPrgMUGhmcWWR6qyavjKYtsnqn6xFVicufz", p.String())
 	}
 }
-*/
+
 // metaDataSize returns the size of the metadata sub-DAG of
 // the DAG of the given `p`.
 func metaDataSize(node *core.IpfsNode, p ipath.Path) (int, error) {
