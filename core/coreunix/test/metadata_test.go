@@ -153,9 +153,10 @@ func addFileToBtfs(node *core.IpfsNode, data []byte, metadata string) (ipath.Pat
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	adder.AddInProcess = true
+	addDone := make(chan struct{})
 	go func() {
 		defer close(output)
+		defer close(addDone)
 		_, err := adder.AddAllAndPin(file)
 		if err != nil {
 			output <- err
@@ -174,19 +175,7 @@ func addFileToBtfs(node *core.IpfsNode, data []byte, metadata string) (ipath.Pat
 		return nil, ctx.Err()
 	}
 
-	// The following adder.AddInProcess-for-loop mechanism is to wait for
-	// AddAllAndPin() to finish its callng of adder.PinRoot() since AddAllAndPin()
-	// sends data to the above channel before calling adder.PinRoot().
-	// Otherwise, this function will finish and the caller of this function
-	// may call AddMetaAndPin(), which tries and fails to unpin the root of the DAG
-	// from the above AddAllAndPin() if AddAllAndPin() is not finished. - BTFS-1573
-	for {
-		if adder.AddInProcess {
-			time.Sleep(time.Second)
-		} else {
-			break
-		}
-	}
+	<-addDone
 
 	return ipath.IpfsPath(addedFileHash), nil
 }
