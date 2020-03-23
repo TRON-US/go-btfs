@@ -64,11 +64,13 @@ func (p *HostProvider) AddIndex() (int, error) {
 }
 
 func (p *HostProvider) NextValidHost(price int64) (string, error) {
+	needHigherPrice := false
 	for true {
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index]
 			id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
+				needHigherPrice = true
 				continue
 			}
 			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
@@ -79,5 +81,9 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 			break
 		}
 	}
-	return "", errors.New("failed to find more valid hosts, please try again later")
+	msg := "failed to find more valid hosts, please try again later"
+	if needHigherPrice {
+		msg += " or raise price"
+	}
+	return "", errors.New(msg)
 }
