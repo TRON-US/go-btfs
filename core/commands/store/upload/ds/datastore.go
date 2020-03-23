@@ -44,6 +44,7 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 }
 
 func List(d ds.Datastore, prefix string, limit int) ([]proto.Message, error) {
+	ms := make([]proto.Message, 0)
 	if limit <= 0 || limit > limitList {
 		limit = limitList
 	}

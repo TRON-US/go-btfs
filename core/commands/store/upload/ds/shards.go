@@ -145,7 +145,7 @@ func (s *Shard) SignedCongtracts() (*shardpb.SingedContracts, error) {
 }
 
 func ListShards(d datastore.Datastore, peerId string) error {
-	err := List(d, fmt.Sprintf(sessionsPrefix, peerId, "renter"))
+	_, err := List(d, fmt.Sprintf(sessionsPrefix, peerId, "renter"), 100)
 	if err != nil {
 		return err
 	}
