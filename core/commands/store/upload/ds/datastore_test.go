@@ -50,6 +50,6 @@ func TestList(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, m := range list {
-		fmt.Println("i", i)
+		fmt.Println("i", i, "m", m)
 	}
 }
