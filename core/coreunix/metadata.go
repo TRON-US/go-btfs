@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	gopath "path"
 
-	chunker "github.com/TRON-US/go-btfs-chunker"
 	core "github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/pin"
+
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"
@@ -23,7 +25,6 @@ import (
 	posinfo "github.com/ipfs/go-ipfs-posinfo"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
-	gopath "path"
 )
 
 // MetaModifier contains the options to the `metadata` command.
