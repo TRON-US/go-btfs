@@ -170,7 +170,7 @@ Use status command to check for completion:
 			return fmt.Errorf("invalid storage len. want: >= %d, got: %d",
 				ns.StorageTimeMin, storageLength)
 		}
-		ss, err := ds.GetSession("", n.Identity.Pretty(), &ds.SessionInitParams{
+		ss, err := ds.GetSession("", "renter", n.Identity.Pretty(), &ds.SessionInitParams{
 			Context:     req.Context,
 			Config:      cfg,
 			N:           n,
@@ -360,7 +360,7 @@ func doGuard(f *ds.Session, res *escrowpb.SignedPayinResult, payerPriKey ic.Priv
 	}
 	cts := make([]*guardpb.Contract, 0)
 	for _, h := range md.ShardHashes {
-		shard, err := ds.GetShard(f.PeerId, f.Id, h, &ds.ShardInitParams{
+		shard, err := ds.GetShard(f.PeerId, f.Role, f.Id, h, &ds.ShardInitParams{
 			Context:   f.Context,
 			Datastore: f.Datastore,
 		})

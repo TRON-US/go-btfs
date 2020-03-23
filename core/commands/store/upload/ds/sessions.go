@@ -22,11 +22,15 @@ import (
 	"github.com/prometheus/common/log"
 )
 
+/*
+/btfs/$peerId/$renter_or_host/sessions/$sessionId/*
+*/
 const (
-	sessionKeyPrefix   = "/btfs/%s/renter/sessions/%s/"
+	sessionsPrefix     = "/btfs/%s/sessions/%s/"
+	sessionKeyPrefix   = sessionsPrefix + "%s/"
 	sessionInMemKey    = sessionKeyPrefix
 	sessionMetadataKey = sessionKeyPrefix + "metadata"
-	session_status_key = sessionKeyPrefix + "status"
+	sessionStatusKey   = sessionKeyPrefix + "status"
 )
 
 var (
@@ -44,6 +48,7 @@ var (
 type Session struct {
 	Id        string
 	PeerId    string
+	Role      string
 	Datastore datastore.Datastore
 	Context   context.Context
 	cancel    context.CancelFunc
@@ -64,12 +69,12 @@ type SessionInitParams struct {
 	ShardHashes []string
 }
 
-func GetSession(sessionId string, peerId string, params *SessionInitParams) (*Session, error) {
+func GetSession(sessionId string, role string, peerId string, params *SessionInitParams) (*Session, error) {
 	// NewSession
 	if sessionId == "" {
 		sessionId = uuid.New().String()
 	}
-	k := fmt.Sprintf(sessionInMemKey, peerId, sessionId)
+	k := fmt.Sprintf(sessionInMemKey, peerId, role, sessionId)
 	var s *Session
 	if tmp, ok := sessionsInMem.Get(k); ok {
 		s = tmp.(*Session)
@@ -82,6 +87,7 @@ func GetSession(sessionId string, peerId string, params *SessionInitParams) (*Se
 		ctx, cancel := storage.NewGoContext(params.Context)
 		s = &Session{
 			Id:        sessionId,
+			Role:      role,
 			PeerId:    peerId,
 			Context:   ctx,
 			cancel:    cancel,
@@ -113,8 +119,8 @@ func (f *Session) init(params *SessionInitParams) error {
 		FileHash:    params.FileHash,
 		ShardHashes: params.ShardHashes,
 	}
-	ks := []string{fmt.Sprintf(session_status_key, f.PeerId, f.Id),
-		fmt.Sprintf(sessionMetadataKey, f.PeerId, f.Id),
+	ks := []string{fmt.Sprintf(sessionStatusKey, f.PeerId, f.Role, f.Id),
+		fmt.Sprintf(sessionMetadataKey, f.PeerId, f.Role, f.Id),
 	}
 	vs := []proto.Message{
 		status,
@@ -124,7 +130,7 @@ func (f *Session) init(params *SessionInitParams) error {
 }
 
 func (f *Session) GetStatus() (*sessionpb.Status, error) {
-	sk := fmt.Sprintf(session_status_key, f.PeerId, f.Id)
+	sk := fmt.Sprintf(sessionStatusKey, f.PeerId, f.Role, f.Id)
 	st := &sessionpb.Status{}
 	err := Get(f.Datastore, sk, st)
 	if err == datastore.ErrNotFound {
@@ -134,7 +140,7 @@ func (f *Session) GetStatus() (*sessionpb.Status, error) {
 }
 
 func (f *Session) GetMetadata() (*sessionpb.Metadata, error) {
-	mk := fmt.Sprintf(sessionMetadataKey, f.PeerId, f.Id)
+	mk := fmt.Sprintf(sessionMetadataKey, f.PeerId, f.Role, f.Id)
 	md := &sessionpb.Metadata{}
 	err := Get(f.Datastore, mk, md)
 	if err == datastore.ErrNotFound {
@@ -188,7 +194,7 @@ func (f *Session) setStatus(s string, msg string) error {
 		Status:  s,
 		Message: msg,
 	}
-	return Save(f.Datastore, fmt.Sprintf(session_status_key, f.PeerId, f.Id), status)
+	return Save(f.Datastore, fmt.Sprintf(sessionStatusKey, f.PeerId, f.Role, f.Id), status)
 }
 
 func (f *Session) GetCompleteShardsNum() (int, int, error) {
@@ -198,7 +204,7 @@ func (f *Session) GetCompleteShardsNum() (int, int, error) {
 		return 0, 0, err
 	}
 	for _, h := range md.ShardHashes {
-		shard, err := GetShard(f.PeerId, f.Id, h, &ShardInitParams{
+		shard, err := GetShard(f.PeerId, "renter", f.Id, h, &ShardInitParams{
 			Context:   f.Context,
 			Datastore: f.Datastore,
 		})
@@ -228,7 +234,7 @@ func (s *Session) PrepareContractFromShard() ([]*escrowpb.SignedEscrowContract, 
 		return nil, 0, err
 	}
 	for _, hash := range md.ShardHashes {
-		shard, err := GetShard(s.PeerId, s.Id, hash, &ShardInitParams{
+		shard, err := GetShard(s.PeerId, s.Role, s.Id, hash, &ShardInitParams{
 			Context:   s.Context,
 			Datastore: s.Datastore,
 		})

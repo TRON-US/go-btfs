@@ -3,7 +3,6 @@ package ds
 import (
 	"context"
 	"fmt"
-
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
@@ -16,7 +15,8 @@ import (
 )
 
 const (
-	shardKeyPrefix          = "/btfs/%s/renter/sessions/%s/shards/%s/"
+	shardsKey               = "/btfs/%s/sessions/%s/%s/shards/"
+	shardKeyPrefix          = shardsKey + "%s/"
 	shardInMemKey           = shardKeyPrefix
 	shardStatusKey          = shardKeyPrefix + "status"
 	shardSignedContractsKey = shardKeyPrefix + "signed-contracts"
@@ -34,6 +34,7 @@ type Shard struct {
 	peerId    string
 	sessionId string
 	shardHash string
+	role      string
 	ds        datastore.Datastore
 	ctx       context.Context
 	fsm       *fsm.FSM
@@ -44,8 +45,8 @@ type ShardInitParams struct {
 	Datastore datastore.Datastore
 }
 
-func GetShard(peerId string, sessionId string, shardHash string, params *ShardInitParams) (*Shard, error) {
-	k := fmt.Sprintf(shardInMemKey, peerId, sessionId, shardHash)
+func GetShard(peerId string, role string, sessionId string, shardHash string, params *ShardInitParams) (*Shard, error) {
+	k := fmt.Sprintf(shardInMemKey, peerId, role, sessionId, shardHash)
 	var s *Shard
 	if tmp, ok := shardsInMem.Get(k); ok {
 		s = tmp.(*Shard)
@@ -59,6 +60,7 @@ func GetShard(peerId string, sessionId string, shardHash string, params *ShardIn
 		s = &Shard{
 			ctx:       ctx,
 			ds:        params.Datastore,
+			role:      role,
 			peerId:    peerId,
 			sessionId: sessionId,
 			shardHash: shardHash,
@@ -76,7 +78,7 @@ func GetShard(peerId string, sessionId string, shardHash string, params *ShardIn
 
 func (s *Shard) Init() error {
 	ks := []string{
-		fmt.Sprintf(shardStatusKey, s.peerId, s.sessionId, s.shardHash),
+		fmt.Sprintf(shardStatusKey, s.peerId, s.role, s.sessionId, s.shardHash),
 	}
 	vs := []proto.Message{
 		&shardpb.Status{
@@ -93,7 +95,7 @@ func (s *Shard) enterState(e *fsm.Event) {
 	case "contract":
 		s.doContract(e.Args[0].(*shardpb.SingedContracts))
 	default:
-		err = Save(s.ds, fmt.Sprintf(shardStatusKey, s.peerId, s.sessionId, s.shardHash), &shardpb.Status{
+		err = Save(s.ds, fmt.Sprintf(shardStatusKey, s.peerId, s.role, s.sessionId, s.shardHash), &shardpb.Status{
 			Status: e.Dst,
 		})
 	}
@@ -112,8 +114,8 @@ func (s *Shard) Complete() {
 
 func (s *Shard) doContract(sc *shardpb.SingedContracts) error {
 	ks := []string{
-		fmt.Sprintf(shardStatusKey, s.peerId, s.sessionId, s.shardHash),
-		fmt.Sprintf(shardSignedContractsKey, s.peerId, s.sessionId, s.shardHash),
+		fmt.Sprintf(shardStatusKey, s.peerId, s.role, s.sessionId, s.shardHash),
+		fmt.Sprintf(shardSignedContractsKey, s.peerId, s.role, s.sessionId, s.shardHash),
 	}
 	vs := []proto.Message{
 		&shardpb.Status{
@@ -126,7 +128,7 @@ func (s *Shard) doContract(sc *shardpb.SingedContracts) error {
 
 func (s *Shard) Status() (*shardpb.Status, error) {
 	st := &shardpb.Status{}
-	err := Get(s.ds, fmt.Sprintf(shardStatusKey, s.peerId, s.sessionId, s.shardHash), st)
+	err := Get(s.ds, fmt.Sprintf(shardStatusKey, s.peerId, s.role, s.sessionId, s.shardHash), st)
 	if err == datastore.ErrNotFound {
 		return st, nil
 	}
@@ -135,9 +137,17 @@ func (s *Shard) Status() (*shardpb.Status, error) {
 
 func (s *Shard) SignedCongtracts() (*shardpb.SingedContracts, error) {
 	cg := &shardpb.SingedContracts{}
-	err := Get(s.ds, fmt.Sprintf(shardSignedContractsKey, s.peerId, s.sessionId, s.shardHash), cg)
+	err := Get(s.ds, fmt.Sprintf(shardSignedContractsKey, s.peerId, s.role, s.sessionId, s.shardHash), cg)
 	if err == datastore.ErrNotFound {
 		return cg, nil
 	}
 	return cg, err
+}
+
+func ListShards(d datastore.Datastore, peerId string) error {
+	err := List(d, fmt.Sprintf(sessionsPrefix, peerId, "renter"))
+	if err != nil {
+		return err
+	}
+	return nil
 }

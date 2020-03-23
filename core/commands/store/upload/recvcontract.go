@@ -29,11 +29,11 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 			return err
 		}
 		shardHash := req.Arguments[1]
-		ss, err := ds.GetSession(ssID, n.Identity.Pretty(), nil)
+		ss, err := ds.GetSession(ssID, "renter", n.Identity.Pretty(), nil)
 		if err != nil {
 			return err
 		}
-		s, err := ds.GetShard(n.Identity.Pretty(), ssID, shardHash, &ds.ShardInitParams{
+		s, err := ds.GetShard(n.Identity.Pretty(), ss.Role, ssID, shardHash, &ds.ShardInitParams{
 			Context:   ss.Context,
 			Datastore: n.Repo.Datastore(),
 		})

@@ -40,7 +40,7 @@ This command print upload and payment status by the time queried.`,
 			return err
 		}
 
-		ss, err := ds.GetSession(ssID, n.Identity.Pretty(), &ds.SessionInitParams{
+		ss, err := ds.GetSession(ssID, "renter", n.Identity.Pretty(), &ds.SessionInitParams{
 			Context:   req.Context,
 			Config:    cfg,
 			Datastore: n.Repo.Datastore(),
@@ -71,7 +71,7 @@ This command print upload and payment status by the time queried.`,
 		}
 		status.FileHash = metadata.FileHash
 		for _, h := range metadata.ShardHashes {
-			shard, err := ds.GetShard(ss.PeerId, ss.Id, h, &ds.ShardInitParams{
+			shard, err := ds.GetShard(ss.PeerId, ss.Role, ss.Id, h, &ds.ShardInitParams{
 				Context:   ss.Context,
 				Datastore: ss.Datastore,
 			})

@@ -95,7 +95,7 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		sh, err := ds.GetShard(n.Identity.Pretty(), ssID, shardHash, &ds.ShardInitParams{
+		sh, err := ds.GetShard( n.Identity.Pretty(),"host", ssID, shardHash, &ds.ShardInitParams{
 			Context:   req.Context,
 			Datastore: n.Repo.Datastore(),
 		})

@@ -2,6 +2,8 @@ package contracts
 
 import (
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"strings"
 	"time"
 
@@ -95,22 +97,22 @@ This command get contracts stats based on role from the local node data store.`,
 var (
 	contractOrderList = []string{"escrow_time"}
 	contractFilterMap = map[string][]guardpb.Contract_ContractState{
-		"active": []guardpb.Contract_ContractState{
+		"active": {
 			guardpb.Contract_DRAFT,
 			guardpb.Contract_SIGNED,
 			guardpb.Contract_UPLOADED,
 			guardpb.Contract_RENEWED,
 			guardpb.Contract_WARN,
 		},
-		"finished": []guardpb.Contract_ContractState{
+		"finished": {
 			guardpb.Contract_CLOSED,
 		},
-		"invalid": []guardpb.Contract_ContractState{
+		"invalid": {
 			guardpb.Contract_LOST,
 			guardpb.Contract_CANCELED,
 			guardpb.Contract_OBSOLETE,
 		},
-		"all": []guardpb.Contract_ContractState{
+		"all": {
 			guardpb.Contract_DRAFT,
 			guardpb.Contract_SIGNED,
 			guardpb.Contract_UPLOADED,
@@ -145,6 +147,14 @@ This command get contracts list based on role from the local node data store.`,
 		if err != nil {
 			return err
 		}
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		err = ds.ListShards(n.Repo.Datastore(), n.Identity.Pretty())
+		if err != nil {
+			return err
+		}
 		orderOpt, _ := req.Options[contractsListOrderOptionName].(string)
 		parts := strings.Split(orderOpt, ",")
 		if len(parts) != 2 {
@@ -173,7 +183,7 @@ This command get contracts list based on role from the local node data store.`,
 		//sizeOpt, _ := req.Options[contractsListSizeOptionName].(int)
 		// TODO: return mock -- static dummy
 		data := []*nodepb.Contracts_Contract{
-			&nodepb.Contracts_Contract{
+			{
 				ContractId:              "737b6d38-5af1-4023-b219-196aadf4d3f0",
 				HostId:                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
 				RenterId:                "16Uiu2HAmCknnNaWa44X4kLRCq33B3zvBevRTLdo27qMhsszCwqdF",
@@ -188,7 +198,7 @@ This command get contracts list based on role from the local node data store.`,
 				ShardHash:               "QmUX3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYmp",
 				FileHash:                "QmAA3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm1",
 			},
-			&nodepb.Contracts_Contract{
+			{
 				ContractId:              "869675ac-c966-4808-83d7-1901d0449fb6",
 				HostId:                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
 				RenterId:                "16Uiu2HAmR6h5aamvwYDKYdp2Z3imCfHLRJnjB7VAYeab23AaZxSY",
