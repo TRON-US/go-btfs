@@ -253,7 +253,6 @@ Use status command to check for completion:
 						n.Identity.Pretty(), //TODO: offline
 					)
 					if err != nil {
-						fmt.Println("init err", err)
 						return err
 					}
 					//TODO: retry when recv contract timeout
@@ -319,8 +318,6 @@ func doSubmit(f *ds.Session, fileSize int64) {
 	for _, c := range req.Contract {
 		amount += c.Contract.Amount
 	}
-	fmt.Println("req 0", req.Contract[0].Contract.Amount)
-	fmt.Println("req 1", req.BuyerChannel.Channel.Amount)
 	submitContractRes, err := escrow.SubmitContractToEscrow(f.Context, f.Config, req)
 	if err != nil {
 		f.Error(fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
@@ -432,7 +429,6 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 				if err != nil {
 					return err
 				}
-				fmt.Println("meta.State", meta.State)
 				if meta.State == guardpb.FileStoreStatus_RUNNING {
 					return nil
 				}

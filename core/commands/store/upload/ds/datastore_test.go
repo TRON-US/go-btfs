@@ -1,7 +1,6 @@
 package ds
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -38,18 +37,4 @@ func TestSaveGet(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, md, newMd)
-}
-
-func TestList(t *testing.T) {
-	node, err := coremock.NewMockNode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	list, err := List(node.Repo.Datastore(), "/", 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i, m := range list {
-		fmt.Println("i", i, "m", m)
-	}
 }
