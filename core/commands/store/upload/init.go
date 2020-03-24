@@ -22,6 +22,7 @@ import (
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
@@ -95,10 +96,11 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		sh, err := ds.GetShard(n.Identity.Pretty(), "host", ssID, shardHash, &ds.ShardInitParams{
-			Context:   req.Context,
-			Datastore: n.Repo.Datastore(),
-		})
+		sh, err := ds.GetShard(n.Identity.Pretty(), nodepb.ContractStat_HOST.String(), ssID, shardHash,
+			&ds.ShardInitParams{
+				Context:   req.Context,
+				Datastore: n.Repo.Datastore(),
+			})
 		if err != nil {
 			return err
 		}

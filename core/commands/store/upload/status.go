@@ -7,6 +7,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
 var StorageUploadStatusCmd = &cmds.Command{
@@ -40,7 +41,7 @@ This command print upload and payment status by the time queried.`,
 			return err
 		}
 
-		ss, err := ds.GetSession(ssID, "renter", n.Identity.Pretty(), &ds.SessionInitParams{
+		ss, err := ds.GetSession(ssID, nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), &ds.SessionInitParams{
 			Context:   req.Context,
 			Config:    cfg,
 			Datastore: n.Repo.Datastore(),

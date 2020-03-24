@@ -1,21 +1,36 @@
 package contracts
 
 import (
+	"context"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+	"github.com/TRON-US/go-btfs/core/escrow"
+	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/tron-us/go-btfs-common/crypto"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
+
+	"github.com/ipfs/go-datastore"
+	"github.com/prometheus/common/log"
 )
 
 const (
 	contractsListOrderOptionName  = "order"
 	contractsListStatusOptionName = "status"
 	contractsListSizeOptionName   = "size"
+
+	contractsKeyPrefix = "/btfs/%s/contracts/"
+	hostContractsKey   = contractsKeyPrefix + "host"
+	renterContractsKey = contractsKeyPrefix + "renter"
 )
 
 // Storage Contracts
@@ -53,13 +68,17 @@ This command contracts stats based on role from network(hub) to local node data 
 	Arguments: []cmds.Argument{
 		cmds.StringArg("role", true, false, "Role in BTFS storage network [host|renter|reserved]."),
 	},
-	RunTimeout: 30 * time.Second,
+	RunTimeout: 60 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		_, err := checkContractStatRole(req.Arguments[0])
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		// TODO: sync
+		role, err := checkContractStatRole(req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		SyncContracts(req.Context, n, role.String())
 		return nil
 	},
 }
@@ -143,15 +162,11 @@ This command get contracts list based on role from the local node data store.`,
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		_, err := checkContractStatRole(req.Arguments[0])
-		if err != nil {
-			return err
-		}
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		err = ds.ListShards(n.Repo.Datastore(), n.Identity.Pretty())
+		_, err = checkContractStatRole(req.Arguments[0])
 		if err != nil {
 			return err
 		}
@@ -174,47 +189,126 @@ This command get contracts list based on role from the local node data store.`,
 			return fmt.Errorf("bad order direction: %s", parts[1])
 		}
 		filterOpt, _ := req.Options[contractsListStatusOptionName].(string)
-		// TODO: use filter list
-		_, ok := contractFilterMap[filterOpt]
+		states, ok := contractFilterMap[filterOpt]
 		if !ok {
 			return fmt.Errorf("invalid filter option: %s", filterOpt)
 		}
 		// TODO: Use size
+		// TODO: sort
 		//sizeOpt, _ := req.Options[contractsListSizeOptionName].(int)
-		// TODO: return mock -- static dummy
-		data := []*nodepb.Contracts_Contract{
-			{
-				ContractId:              "737b6d38-5af1-4023-b219-196aadf4d3f0",
-				HostId:                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
-				RenterId:                "16Uiu2HAmCknnNaWa44X4kLRCq33B3zvBevRTLdo27qMhsszCwqdF",
-				Status:                  guardpb.Contract_DRAFT,
-				StartTime:               time.Now(),
-				EndTime:                 time.Now(),
-				NextEscrowTime:          time.Now(),
-				CompensationPaid:        0,
-				CompensationOutstanding: 15000,
-				UnitPrice:               10,
-				ShardSize:               500,
-				ShardHash:               "QmUX3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYmp",
-				FileHash:                "QmAA3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm1",
-			},
-			{
-				ContractId:              "869675ac-c966-4808-83d7-1901d0449fb6",
-				HostId:                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
-				RenterId:                "16Uiu2HAmR6h5aamvwYDKYdp2Z3imCfHLRJnjB7VAYeab23AaZxSY",
-				Status:                  guardpb.Contract_CLOSED,
-				StartTime:               time.Now(),
-				EndTime:                 time.Now(),
-				NextEscrowTime:          time.Now(),
-				CompensationPaid:        100,
-				CompensationOutstanding: 300,
-				UnitPrice:               10,
-				ShardSize:               40,
-				ShardHash:               "QmTT3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm2",
-				FileHash:                "QmXx3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm3",
-			},
+		contracts, err := ListContracts(n.Repo.Datastore(), req.Arguments[0])
+		if err != nil {
+			return err
 		}
-		return cmds.EmitOnce(res, &nodepb.Contracts{Contracts: data})
+		result := make([]*nodepb.Contracts_Contract, 0)
+		for _, c := range contracts {
+			b := false
+			for _, state := range states {
+				if state == c.Status {
+					continue
+				}
+			}
+			if !b {
+				continue
+			}
+			result = append(result, c)
+		}
+		return cmds.EmitOnce(res, &nodepb.Contracts{Contracts: result})
 	},
 	Type: nodepb.Contracts{},
+}
+
+func getKey(role string) string {
+	var k string
+	if role == nodepb.ContractStat_HOST.String() {
+		k = hostContractsKey
+	} else if role == nodepb.ContractStat_RENTER.String() {
+		k = renterContractsKey
+	} else {
+		return "reserved"
+	}
+	return k
+}
+
+func Save(d datastore.Datastore, cs []*nodepb.Contracts_Contract, role string) error {
+	return ds.Save(d, getKey(role), &contractspb.Contracts{
+		Contracts: cs,
+	})
+}
+
+func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Contract, error) {
+	cs := &contractspb.Contracts{}
+	err := ds.Get(d, getKey(role), cs)
+	if err != nil && err != datastore.ErrNotFound {
+		return nil, err
+	}
+	return cs.Contracts, nil
+}
+
+func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
+	cfg, err := n.Repo.Config()
+	if err != nil {
+		return err
+	}
+	pk, err := n.Identity.ExtractPublicKey()
+	if err != nil {
+		return err
+	}
+	pkBytes, err := pk.Raw()
+	if err != nil {
+		return err
+	}
+	results := make([]*nodepb.Contracts_Contract, 0)
+	cs, err := ds.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
+	if err != nil {
+		return err
+	}
+	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
+		func(ctx context.Context,
+			client escrowpb.EscrowServiceClient) error {
+			for _, c := range cs {
+				ec, err := escrow.UnmarshalEscrowContract(c.SignedEscrowContract)
+				if err != nil {
+					log.Error("unmarshal escrow contract error:", err)
+					continue
+				}
+				in := &escrowpb.SignedContractID{
+					Data: &escrowpb.ContractID{
+						ContractId: ec.Contract.ContractId,
+						Address:    pkBytes,
+					},
+				}
+				sign, err := crypto.Sign(n.PrivateKey, in.Data)
+				if err != nil {
+					log.Error("sign contractID error:", err)
+					continue
+				}
+				in.Signature = sign
+				s, err := client.GetPayOutStatus(ctx, in)
+				if err != nil {
+					log.Error("get payout status error:", err)
+					continue
+				}
+				results = append(results, &nodepb.Contracts_Contract{
+					ContractId:              c.GuardContract.ContractId,
+					HostId:                  c.GuardContract.HostPid,
+					RenterId:                c.GuardContract.RenterPid,
+					Status:                  c.GuardContract.State,
+					StartTime:               c.GuardContract.RentStart,
+					EndTime:                 c.GuardContract.RentEnd,
+					NextEscrowTime:          s.Status.NextPayoutTime,
+					CompensationPaid:        s.Status.PaidAmount,
+					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
+					UnitPrice:               c.GuardContract.Price,
+					ShardSize:               c.GuardContract.ShardFileSize,
+					ShardHash:               c.GuardContract.ShardHash,
+					FileHash:                c.GuardContract.FileHash,
+				})
+			}
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+	return Save(n.Repo.Datastore(), results, role)
 }

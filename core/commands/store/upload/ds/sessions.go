@@ -13,6 +13,7 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	iface "github.com/TRON-US/interface-go-btfs-core"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/google/uuid"
@@ -204,7 +205,7 @@ func (f *Session) GetCompleteShardsNum() (int, int, error) {
 		return 0, 0, err
 	}
 	for _, h := range md.ShardHashes {
-		shard, err := GetShard(f.PeerId, "renter", f.Id, h, &ShardInitParams{
+		shard, err := GetShard(f.PeerId, nodepb.ContractStat_RENTER.String(), f.Id, h, &ShardInitParams{
 			Context:   f.Context,
 			Datastore: f.Datastore,
 		})

@@ -7,6 +7,7 @@ import (
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
 var StorageUploadRecvContractCmd = &cmds.Command{
@@ -29,7 +30,7 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 			return err
 		}
 		shardHash := req.Arguments[1]
-		ss, err := ds.GetSession(ssID, "renter", n.Identity.Pretty(), nil)
+		ss, err := ds.GetSession(ssID, nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), nil)
 		if err != nil {
 			return err
 		}

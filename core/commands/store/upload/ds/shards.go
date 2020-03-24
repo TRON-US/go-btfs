@@ -3,6 +3,7 @@ package ds
 import (
 	"context"
 	"fmt"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
@@ -20,6 +21,8 @@ const (
 	shardInMemKey           = shardKeyPrefix
 	shardStatusKey          = shardKeyPrefix + "status"
 	shardSignedContractsKey = shardKeyPrefix + "signed-contracts"
+
+	fetchShardsSize = 500
 )
 
 var (
@@ -144,10 +147,21 @@ func (s *Shard) SignedCongtracts() (*shardpb.SingedContracts, error) {
 	return cg, err
 }
 
-func ListShards(d datastore.Datastore, peerId string) error {
-	_, err := List(d, fmt.Sprintf(sessionsPrefix, peerId, "renter"), 100)
+func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*shardpb.SingedContracts, error) {
+	vs, err := List(d, fmt.Sprintf(sessionsPrefix, peerId, role), fetchShardsSize, "/shards/",
+		"/signed-contracts")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	contracts := make([]*shardpb.SingedContracts, 0)
+	for _, v := range vs {
+		sc := &shardpb.SingedContracts{}
+		err := proto.Unmarshal(v, sc)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		contracts = append(contracts, sc)
+	}
+	return contracts, nil
 }

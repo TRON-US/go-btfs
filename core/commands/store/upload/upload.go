@@ -19,6 +19,7 @@ import (
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
@@ -96,7 +97,7 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		//"init":         StorageUploadInitCmd,
+		"init":         StorageUploadInitCmd,
 		"recvcontract": StorageUploadRecvContractCmd,
 		"status":       StorageUploadStatusCmd,
 	},
@@ -170,7 +171,7 @@ Use status command to check for completion:
 			return fmt.Errorf("invalid storage len. want: >= %d, got: %d",
 				ns.StorageTimeMin, storageLength)
 		}
-		ss, err := ds.GetSession("", "renter", n.Identity.Pretty(), &ds.SessionInitParams{
+		ss, err := ds.GetSession("", nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), &ds.SessionInitParams{
 			Context:     req.Context,
 			Config:      cfg,
 			N:           n,

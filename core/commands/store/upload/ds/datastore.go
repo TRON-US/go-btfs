@@ -1,17 +1,16 @@
 package ds
 
 import (
-	"fmt"
-	shardpb "github.com/TRON-US/go-btfs/protos/shard"
-	"github.com/ipfs/go-datastore/query"
-	"github.com/tron-us/protobuf/proto"
 	"strings"
 
+	"github.com/tron-us/protobuf/proto"
+
 	ds "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/query"
 )
 
 const (
-	limitList = 100
+	limitList = 500
 )
 
 func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {
@@ -43,8 +42,8 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 	return err
 }
 
-func List(d ds.Datastore, prefix string, limit int) ([]proto.Message, error) {
-	ms := make([]proto.Message, 0)
+func List(d ds.Datastore, prefix string, limit int, substrInKey ...string) ([][]byte, error) {
+	vs := make([][]byte, 0)
 	if limit <= 0 || limit > limitList {
 		limit = limitList
 	}
@@ -56,17 +55,15 @@ func List(d ds.Datastore, prefix string, limit int) ([]proto.Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	for nxt, ok := results.NextSync(); ok; nxt, ok = results.NextSync() {
-		if strings.Contains(nxt.Key, "/shards/") && strings.Contains(nxt.Key, "/signed-contracts") {
-			bytes := nxt.Value
-			sc := &shardpb.SingedContracts{}
-			err := proto.Unmarshal(bytes, sc)
-			if err != nil {
-				continue
-			}
-			fmt.Println("key", nxt.Key, "value", sc.GuardContract.FileHash, sc.GuardContract.ShardHash)
-
+	for entry := range results.Next() {
+		contains := true
+		for _, substr := range substrInKey {
+			contains = contains && strings.Contains(entry.Key, substr)
+		}
+		if contains {
+			value := entry.Value
+			vs = append(vs, value)
 		}
 	}
-	return ms, nil
+	return vs, nil
 }
