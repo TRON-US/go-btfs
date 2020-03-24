@@ -22,7 +22,6 @@ require (
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/cenkalti/backoff/v3 v3.1.1
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
-	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
