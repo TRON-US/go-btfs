@@ -3,6 +3,7 @@ package contracts
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/ipfs/go-datastore"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prometheus/common/log"
 )
 
@@ -78,8 +80,7 @@ This command contracts stats based on role from network(hub) to local node data 
 		if err != nil {
 			return err
 		}
-		SyncContracts(req.Context, n, role.String())
-		return nil
+		return SyncContracts(req.Context, n, role.String())
 	},
 }
 
@@ -145,6 +146,12 @@ var (
 	}
 )
 
+type ByTime []*nodepb.Contracts_Contract
+
+func (a ByTime) Len() int           { return len(a) }
+func (a ByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTime) Less(i, j int) bool { return a[i].StartTime.UnixNano() < a[j].StartTime.UnixNano() }
+
 // sub-commands: btfs storage contracts list
 var storageContractsListCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -166,7 +173,7 @@ This command get contracts list based on role from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		_, err = checkContractStatRole(req.Arguments[0])
+		cr, err := checkContractStatRole(req.Arguments[0])
 		if err != nil {
 			return err
 		}
@@ -193,18 +200,27 @@ This command get contracts list based on role from the local node data store.`,
 		if !ok {
 			return fmt.Errorf("invalid filter option: %s", filterOpt)
 		}
-		// TODO: Use size
-		// TODO: sort
-		//sizeOpt, _ := req.Options[contractsListSizeOptionName].(int)
-		contracts, err := ListContracts(n.Repo.Datastore(), req.Arguments[0])
+		size, ok := req.Options[contractsListSizeOptionName].(int)
+		if !ok {
+			return fmt.Errorf("invalid size option: %s", size)
+		}
+		contracts, err := ListContracts(n.Repo.Datastore(), cr.String())
 		if err != nil {
 			return err
+		}
+		sort.Sort(ByTime(contracts))
+		if parts[1] == "" || parts[1] == "desc" {
+			// reverse
+			for i, j := 0, len(contracts)-1; i < j; i, j = i+1, j-1 {
+				contracts[i], contracts[j] = contracts[j], contracts[i]
+			}
 		}
 		result := make([]*nodepb.Contracts_Contract, 0)
 		for _, c := range contracts {
 			b := false
 			for _, state := range states {
 				if state == c.Status {
+					b = true
 					continue
 				}
 			}
@@ -212,6 +228,9 @@ This command get contracts list based on role from the local node data store.`,
 				continue
 			}
 			result = append(result, c)
+			if len(result) == size {
+				break
+			}
 		}
 		return cmds.EmitOnce(res, &nodepb.Contracts{Contracts: result})
 	},
@@ -254,7 +273,7 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
 	if err != nil {
 		return err
 	}
-	pkBytes, err := pk.Raw()
+	pkBytes, err := ic.RawFull(pk)
 	if err != nil {
 		return err
 	}
@@ -287,7 +306,10 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
 				s, err := client.GetPayOutStatus(ctx, in)
 				if err != nil {
 					log.Error("get payout status error:", err)
-					continue
+					//continue
+					s = &escrowpb.SignedPayoutStatus{
+						Status: &escrowpb.PayoutStatus{},
+					}
 				}
 				results = append(results, &nodepb.Contracts_Contract{
 					ContractId:              c.GuardContract.ContractId,

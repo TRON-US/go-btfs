@@ -21,8 +21,6 @@ const (
 	shardInMemKey           = shardKeyPrefix
 	shardStatusKey          = shardKeyPrefix + "status"
 	shardSignedContractsKey = shardKeyPrefix + "signed-contracts"
-
-	fetchShardsSize = 500
 )
 
 var (
@@ -148,8 +146,7 @@ func (s *Shard) SignedCongtracts() (*shardpb.SingedContracts, error) {
 }
 
 func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*shardpb.SingedContracts, error) {
-	vs, err := List(d, fmt.Sprintf(sessionsPrefix, peerId, role), fetchShardsSize, "/shards/",
-		"/signed-contracts")
+	vs, err := List(d, fmt.Sprintf(sessionsPrefix, peerId, role), "/shards/", "/signed-contracts")
 	if err != nil {
 		return nil, err
 	}

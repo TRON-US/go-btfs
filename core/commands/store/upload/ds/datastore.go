@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	limitList = 500
+	defaultSize = 500
 )
 
 func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {
@@ -42,15 +42,11 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 	return err
 }
 
-func List(d ds.Datastore, prefix string, limit int, substrInKey ...string) ([][]byte, error) {
+func List(d ds.Datastore, prefix string, substrInKey ...string) ([][]byte, error) {
 	vs := make([][]byte, 0)
-	if limit <= 0 || limit > limitList {
-		limit = limitList
-	}
 	results, err := d.Query(query.Query{
 		Prefix:  prefix,
 		Filters: []query.Filter{},
-		Limit:   limit,
 	})
 	if err != nil {
 		return nil, err
