@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -12,26 +11,23 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-	"github.com/TRON-US/go-btfs/core/corerepo"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
-	"github.com/TRON-US/go-btfs/core/hub"
-
-	"github.com/tron-us/go-btfs-common/crypto"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
-	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/tron-us/go-btfs-common/crypto"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+
 	"github.com/Workiva/go-datastructures/set"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -39,27 +35,16 @@ import (
 )
 
 const (
-	leafHashOptionName               = "leaf-hash"
-	uploadPriceOptionName            = "price"
-	replicationFactorOptionName      = "replication-factor"
-	hostSelectModeOptionName         = "host-select-mode"
-	hostSelectionOptionName          = "host-selection"
-	hostInfoModeOptionName           = "host-info-mode"
-	hostSyncModeOptionName           = "host-sync-mode"
-	hostStoragePriceOptionName       = "host-storage-price"
-	hostBandwidthPriceOptionName     = "host-bandwidth-price"
-	hostCollateralPriceOptionName    = "host-collateral-price"
-	hostBandwidthLimitOptionName     = "host-bandwidth-limit"
-	hostStorageTimeMinOptionName     = "host-storage-time-min"
-	hostStorageMaxOptionName         = "host-storage-max"
-	hostStorageEnableOptionName      = "enable-host-mode"
+	leafHashOptionName          = "leaf-hash"
+	uploadPriceOptionName       = "price"
+	replicationFactorOptionName = "replication-factor"
+	hostSelectModeOptionName    = "host-select-mode"
+	hostSelectionOptionName     = "host-selection"
+
 	testOnlyOptionName               = "host-search-local"
 	storageLengthOptionName          = "storage-length"
 	customizedPayoutOptionName       = "customize-payout"
 	customizedPayoutPeriodOptionName = "customize-payout-period"
-	contractsListOrderOptionName     = "order"
-	contractsListStatusOptionName    = "status"
-	contractsListSizeOptionName      = "size"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -67,8 +52,6 @@ const (
 	// retry limit
 	RetryLimit = 1
 	FailLimit  = 1
-
-	bttTotalSupply uint64 = 990_000_000_000
 )
 
 var bo = func() *backoff.ExponentialBackOff {
@@ -88,14 +71,14 @@ Storage services include client upload operations, host storage operations,
 host information sync/display operations, and BTT payment-related routines.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"upload":    storageUploadCmd,
-		"hosts":     storageHostsCmd,
-		"info":      storageInfoCmd,
-		"announce":  storageAnnounceCmd,
-		"challenge": storageChallengeCmd,
-		"stats":     storageStatsCmd,
-		"contracts": storageContractsCmd,
+		"upload": storageUploadCmd,
 	},
+}
+
+func init() {
+	for k, v := range storageUploadCmd.Subcommands {
+		upload.StorageUploadCmd.Subcommands[k] = v
+	}
 }
 
 var storageUploadCmd = &cmds.Command{
@@ -129,9 +112,9 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":              storageUploadInitCmd,
-		"recvcontract":      storageUploadRecvContractCmd,
-		"status":            storageUploadStatusCmd,
+		"init":              upload.StorageUploadInitCmd,
+		"recvcontract":      upload.StorageUploadRecvContractCmd,
+		"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
 		"offline":           storageUploadOfflineCmd,
 		"getcontractbatch":  storageUploadGetContractBatchCmd,
@@ -598,7 +581,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	p := req.Options[customizedPayoutPeriodOptionName].(int)
 
 	// create main session context
-	ss.RetryMonitorCtx = storage.NewGoContext(param.ctx)
+	ss.RetryMonitorCtx, _ = storage.NewGoContext(param.ctx)
 
 	// Set upload session file size.
 	ss.SetFileSize(param.fileSize)
@@ -937,73 +920,6 @@ func changeAddress(pinfo *peer.AddrInfo) error {
 	return nil
 }
 
-// for client to receive all the half signed contracts
-var storageUploadRecvContractCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "For renter client to receive half signed contracts.",
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("session-id", true, false, "Session ID which renter uses to store all shards information."),
-		cmds.StringArg("shard-hash", true, false, "Shard the storage node should fetch."),
-		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
-		cmds.StringArg("escrow-contract", true, false, "Signed Escrow contract."),
-		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
-	},
-	RunTimeout: 15 * time.Minute,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		// receive contracts
-		escrowContractBytes := []byte(req.Arguments[3])
-		guardContractBytes := []byte(req.Arguments[4])
-		ssID := req.Arguments[0]
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		ss, err := storage.GlobalSession.GetSession(n, storage.RenterStoragePrefix, ssID)
-		if err != nil {
-			return err
-		}
-		shardHash := req.Arguments[1]
-		sidx := req.Arguments[2]
-		shardIndex, err := strconv.Atoi(sidx)
-		if err != nil {
-			return err
-		}
-		shard, err := ss.GetShard(shardHash, shardIndex)
-		if err != nil {
-			return err
-		}
-		// TODO: For more secure, check if contracts are right or not
-		shard.SendStepStateChan(storage.ContractState, true, nil, nil)
-		guardContract, err := guard.UnmarshalGuardContract(guardContractBytes)
-		if err != nil {
-			shard.SendStepStateChan(storage.CompleteState, false, err, nil)
-			return err
-		}
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			shard.SendStepStateChan(storage.CompleteState, false, err, nil)
-			return err
-		}
-		isLast, err := ss.IncrementAndCompareContract(len(ss.ShardInfo), shard, escrowContractBytes, guardContract)
-		if err != nil {
-			shard.SendStepStateChan(storage.CompleteState, false, err, nil)
-			return err
-		}
-
-		shard.SendStepStateChan(storage.CompleteState, true, nil, nil)
-
-		var contractRequest *escrowpb.EscrowContractRequest
-		if isLast {
-			err := payWithSigning(req, cfg, n, env, ss, contractRequest)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	},
-}
-
 func payWithSigning(req *cmds.Request, cfg *config.Config, n *core.IpfsNode, env cmds.Environment,
 	ss *storage.FileContracts, contractRequest *escrowpb.EscrowContractRequest) error {
 	// collecting all signed contracts means init status finished
@@ -1288,9 +1204,6 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		if err != nil {
-			return err
-		}
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
 		// get renter's public key
@@ -1432,255 +1345,6 @@ func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI, ss *storag
 	}
 }
 
-var storageHostsCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "Interact with information on hosts.",
-		ShortDescription: `Allows interaction with information on hosts. Host information is synchronized from btfs-hub and saved in local datastore.`,
-	},
-	Subcommands: map[string]*cmds.Command{
-		"info": storageHostsInfoCmd,
-		"sync": storageHostsSyncCmd,
-	},
-}
-
-var storageHostsInfoCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Display saved host information.",
-		ShortDescription: `
-This command displays saved information from btfs-hub under multiple modes.
-Each mode ranks hosts based on its criteria and is randomized based on current node location.
-
-Mode options include:` + hub.AllModeHelpText,
-	},
-	Options: []cmds.Option{
-		cmds.StringOption(hostInfoModeOptionName, "m", "Hosts info showing mode. Default: mode set in config option Experimental.HostsSyncMode."),
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
-		}
-
-		mode, ok := req.Options[hostInfoModeOptionName].(string)
-		if !ok {
-			mode = cfg.Experimental.HostsSyncMode
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		nodes, err := storage.GetHostsFromDatastore(req.Context, n, mode, 0)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &HostInfoRes{nodes})
-	},
-	Type: HostInfoRes{},
-}
-
-type HostInfoRes struct {
-	Nodes []*hubpb.Host
-}
-
-var storageHostsSyncCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Synchronize host information from btfs-hub.",
-		ShortDescription: `
-This command synchronizes information from btfs-hub using multiple modes.
-Each mode ranks hosts based on its criteria and is randomized based on current node location.
-
-Mode options include:` + hub.AllModeHelpText,
-	},
-	Options: []cmds.Option{
-		cmds.StringOption(hostSyncModeOptionName, "m", "Hosts syncing mode. Default: mode set in config option Experimental.HostsSyncMode."),
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
-		}
-
-		mode, ok := req.Options[hostSyncModeOptionName].(string)
-		if !ok {
-			mode = cfg.Experimental.HostsSyncMode
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		return SyncHosts(req.Context, n, mode)
-	},
-}
-
-func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	nodes, err := hub.QueryHosts(ctx, node, mode)
-	if err != nil {
-		return err
-	}
-	return storage.SaveHostsIntoDatastore(ctx, node, mode, nodes)
-}
-
-var storageInfoCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Show storage host information.",
-		ShortDescription: `
-This command displays host information synchronized from the BTFS network.
-By default it shows local host node information.`,
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self.").EnableStdin(),
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if len(req.Arguments) > 0 {
-			if !cfg.Experimental.StorageClientEnabled {
-				return fmt.Errorf("storage client api not enabled")
-			}
-		} else if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		// Default to self
-		var data *nodepb.Node_Settings
-		var peerID string
-		if len(req.Arguments) > 0 {
-			peerID = req.Arguments[0]
-			data, err = storage.GetHostStorageConfigForPeer(n, peerID)
-		} else {
-			data, err = storage.GetHostStorageConfig(req.Context, n)
-		}
-		if err != nil {
-			return err
-		}
-		return cmds.EmitOnce(res, data)
-	},
-	Type: nodepb.Node_Settings{},
-}
-
-var storageAnnounceCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Update and announce storage host information.",
-		ShortDescription: `
-This command updates host information and broadcasts to the BTFS network. 
-
-Examples
-
-To set the min price per GiB to 1000000 JUST (1 BTT):
-$ btfs storage announce --host-storage-price=1000000`,
-	},
-	Options: []cmds.Option{
-		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Min price per GiB of storage per day in JUST."),
-		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Min price per MiB of bandwidth in JUST."),
-		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in JUST."),
-		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
-		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
-		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
-		cmds.BoolOption(hostStorageEnableOptionName, "hm", "Enable/disable host storage mode. By default no mode change is made. When specified, toggles between enable/disable host mode."),
-	},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		hm, hmFound := req.Options[hostStorageEnableOptionName].(bool)
-		if hmFound {
-			// New value is different from stored, then
-			if hm != cfg.Experimental.StorageHostEnabled {
-				cfg.Experimental.StorageHostEnabled = hm
-				err = n.Repo.SetConfig(cfg)
-				if err != nil {
-					return err
-				}
-			}
-			// turned off, do nothing
-			if !hm {
-				return nil
-			}
-		}
-
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-
-		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
-		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
-		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
-		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
-		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
-		sm, smFound := req.Options[hostStorageMaxOptionName].(uint64)
-
-		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
-			return fmt.Errorf("maximum price is %d", bttTotalSupply)
-		}
-
-		ns, err := storage.GetHostStorageConfig(req.Context, n)
-		if err != nil {
-			return err
-		}
-
-		// Update fields if set
-		if spFound {
-			ns.StoragePriceAsk = sp
-		}
-		if bpFound {
-			ns.BandwidthPriceAsk = bp
-		}
-		if cpFound {
-			ns.CollateralStake = cp
-		}
-		if blFound {
-			ns.BandwidthLimit = bl
-		}
-		if stmFound {
-			ns.StorageTimeMin = stm
-		}
-		// Storage size max is set in config instead of dynamic store
-		if smFound {
-			cfgRoot, err := cmdenv.GetConfigRoot(env)
-			if err != nil {
-				return err
-			}
-			sm = sm * uint64(units.GB)
-			_, err = storage.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, &sm, false)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = storage.PutHostStorageConfig(n, ns)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
 type StatusRes struct {
 	Status   string
 	Message  string
@@ -1743,436 +1407,4 @@ This command print upload and payment status by the time queried.`,
 		return res.Emit(status)
 	},
 	Type: StatusRes{},
-}
-
-var storageChallengeCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Interact with storage challenge requests and responses.",
-		ShortDescription: `
-These commands contain both client-side and host-side challenge functions.
-
-btfs storage challenge request <peer-id> <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>
-btfs storage challenge response <contract-id> <file-hash> <shard-hash> <chunk-index> <nonce>`,
-	},
-	Subcommands: map[string]*cmds.Command{
-		"request":  storageChallengeRequestCmd,
-		"response": storageChallengeResponseCmd,
-	},
-}
-
-var storageChallengeRequestCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Challenge storage hosts with Proof-of-Storage requests.",
-		ShortDescription: `
-This command challenges storage hosts on behalf of a client to see if hosts
-still store a piece of file (usually a shard) as agreed in storage contract.`,
-	},
-	Arguments: append([]cmds.Argument{
-		cmds.StringArg("peer-id", true, false, "Host Peer ID to send challenge requests."),
-	}, storageChallengeResponseCmd.Arguments...), // append pass-through arguments
-	RunTimeout: 5 * time.Second, // TODO: consider slow networks?
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		// Check if peer is reachable
-		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		// Pass arguments through to host response endpoint
-		resp, err := remote.P2PCallStrings(req.Context, n, pi.ID, "/storage/challenge/response",
-			req.Arguments[1:]...)
-		if err != nil {
-			return err
-		}
-
-		var scr StorageChallengeRes
-		err = json.Unmarshal(resp, &scr)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &scr)
-	},
-	Type: StorageChallengeRes{},
-}
-
-type StorageChallengeRes struct {
-	Answer string
-}
-
-var storageChallengeResponseCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Storage host responds to Proof-of-Storage requests.",
-		ShortDescription: `
-This command (on host) reads the challenge question and returns the answer to
-the challenge request back to the caller.`,
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("contract-id", true, false, "Contract ID associated with the challenge requests."),
-		cmds.StringArg("file-hash", true, false, "File root multihash for the data stored at this host."),
-		cmds.StringArg("shard-hash", true, false, "Shard multihash for the data stored at this host."),
-		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
-		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
-	},
-	RunTimeout: 3 * time.Second,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		api, err := cmdenv.GetApi(env, req)
-		if err != nil {
-			return err
-		}
-
-		fileHash, err := cidlib.Parse(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-		sh := req.Arguments[2]
-		shardHash, err := cidlib.Parse(sh)
-		if err != nil {
-			return err
-		}
-		// Check if host store has this contract id
-		shardInfo, err := storage.GetShardInfoFromDatastore(n, storage.HostStoragePrefix, sh)
-		if err != nil {
-			return err
-		}
-		ctID := req.Arguments[0]
-		if ctID != shardInfo.ContractID {
-			return fmt.Errorf("contract id does not match, has [%s], needs [%s]", shardInfo.ContractID, ctID)
-		}
-		if !shardHash.Equals(shardInfo.ShardHash) {
-			return fmt.Errorf("datastore internal error: mismatched existing shard hash %s with %s",
-				shardInfo.ShardHash.String(), shardHash.String())
-		}
-		chunkIndex, err := strconv.Atoi(req.Arguments[3])
-		if err != nil {
-			return err
-		}
-		nonce := req.Arguments[4]
-		// Get (cached) challenge response object and solve challenge
-		sc, err := shardInfo.GetChallengeResponseOrNew(req.Context, n, api, fileHash, false, 0)
-		if err != nil {
-			return err
-		}
-		err = sc.SolveChallenge(chunkIndex, nonce)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
-	},
-	Type: StorageChallengeRes{},
-}
-
-// Storage Stats
-//
-// Includes sub-commands: info, sync
-var storageStatsCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Get node storage stats.",
-		ShortDescription: `
-This command get node storage stats in the network.`,
-	},
-	Subcommands: map[string]*cmds.Command{
-		"sync": storageStatsSyncCmd,
-		"info": storageStatsInfoCmd,
-	},
-}
-
-// sub-commands: btfs storage stats sync
-var storageStatsSyncCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Synchronize node stats.",
-		ShortDescription: `
-This command synchronize node stats from network(hub) to local node data store.`,
-	},
-	Arguments: []cmds.Argument{},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		return SyncStats(req.Context, cfg, n)
-	},
-}
-
-func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode) error {
-	sr, err := hub.QueryStats(ctx, node)
-	if err != nil {
-		return err
-	}
-	stat, err := corerepo.RepoStat(ctx, node)
-	if err != nil {
-		return err
-	}
-	hs := &nodepb.StorageStat_Host{
-		Online:      cfg.Experimental.StorageHostEnabled,
-		Uptime:      sr.Uptime,
-		Score:       sr.Score,
-		StorageUsed: int64(stat.RepoSize),
-		StorageCap:  int64(stat.StorageMax),
-	}
-	return storage.SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
-}
-
-// sub-commands: btfs storage stats info
-var storageStatsInfoCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Get node stats.",
-		ShortDescription: `
-This command get node stats in the network from the local node data store.`,
-	},
-	Arguments:  []cmds.Argument{},
-	RunTimeout: 3 * time.Second,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		hs, err := storage.GetHostStatsFromDatastore(req.Context, n, n.Identity.Pretty())
-		if err != nil {
-			return err
-		}
-
-		// Only host stats for now
-		return cmds.EmitOnce(res, &nodepb.StorageStat{
-			HostStats: *hs,
-		})
-	},
-	Type: nodepb.StorageStat{},
-}
-
-// Storage Contracts
-//
-// Includes sub-commands: sync, stat, list
-var storageContractsCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Get node storage contracts info.",
-		ShortDescription: `
-This command get node storage contracts info respect to different roles.`,
-	},
-	Subcommands: map[string]*cmds.Command{
-		"sync": storageContractsSyncCmd,
-		"stat": storageContractsStatCmd,
-		"list": storageContractsListCmd,
-	},
-}
-
-// checkContractStatRole checks role argument strings against valid roles
-// and returns the role type
-func checkContractStatRole(roleArg string) (nodepb.ContractStat_Role, error) {
-	if cr, ok := nodepb.ContractStat_Role_value[strings.ToUpper(roleArg)]; ok {
-		return nodepb.ContractStat_Role(cr), nil
-	}
-	return 0, fmt.Errorf("invalid role: %s", roleArg)
-}
-
-// sub-commands: btfs storage contracts sync
-var storageContractsSyncCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Synchronize contracts stats based on role.",
-		ShortDescription: `
-This command contracts stats based on role from network(hub) to local node data store.`,
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("role", true, false, "Role in BTFS storage network [host|renter|reserved]."),
-	},
-	RunTimeout: 30 * time.Second,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		_, err := checkContractStatRole(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		// TODO: sync
-		return nil
-	},
-}
-
-// sub-commands: btfs storage contracts stat
-var storageContractsStatCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Get contracts stats based on role.",
-		ShortDescription: `
-This command get contracts stats based on role from the local node data store.`,
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("role", true, false, "Role in BTFS storage network [host|renter|reserved]."),
-	},
-	RunTimeout: 3 * time.Second,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cr, err := checkContractStatRole(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		// TODO: return mock -- static dummy
-		data := &nodepb.ContractStat{
-			ActiveContractNum:       10,
-			CompensationPaid:        20000,
-			CompensationOutstanding: 80000,
-			FirstContractStart:      time.Now(),
-			LastContractEnd:         time.Now(),
-			Role:                    cr,
-		}
-		return cmds.EmitOnce(res, data)
-	},
-	Type: nodepb.ContractStat{},
-}
-
-var (
-	contractOrderList = []string{"escrow_time"}
-	contractFilterMap = map[string][]guardpb.Contract_ContractState{
-		"active": []guardpb.Contract_ContractState{
-			guardpb.Contract_DRAFT,
-			guardpb.Contract_SIGNED,
-			guardpb.Contract_UPLOADED,
-			guardpb.Contract_RENEWED,
-			guardpb.Contract_WARN,
-		},
-		"finished": []guardpb.Contract_ContractState{
-			guardpb.Contract_CLOSED,
-		},
-		"invalid": []guardpb.Contract_ContractState{
-			guardpb.Contract_LOST,
-			guardpb.Contract_CANCELED,
-			guardpb.Contract_OBSOLETE,
-		},
-		"all": []guardpb.Contract_ContractState{
-			guardpb.Contract_DRAFT,
-			guardpb.Contract_SIGNED,
-			guardpb.Contract_UPLOADED,
-			guardpb.Contract_LOST,
-			guardpb.Contract_CANCELED,
-			guardpb.Contract_CLOSED,
-			guardpb.Contract_RENEWED,
-			guardpb.Contract_OBSOLETE,
-			guardpb.Contract_WARN,
-		},
-	}
-)
-
-// sub-commands: btfs storage contracts list
-var storageContractsListCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Get contracts list based on role.",
-		ShortDescription: `
-This command get contracts list based on role from the local node data store.`,
-	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("role", true, false, "Role in BTFS storage network [host|renter|reserved]."),
-	},
-	Options: []cmds.Option{
-		cmds.StringOption(contractsListOrderOptionName, "o", "Order to return the list of contracts.").WithDefault("escrow_time,asc"),
-		cmds.StringOption(contractsListStatusOptionName, "st", "Filter the returned list by contract status [active|finished|invalid|all].").WithDefault("active"),
-		cmds.IntOption(contractsListSizeOptionName, "s", "Number of contracts to return.").WithDefault(20),
-	},
-	RunTimeout: 3 * time.Second,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		_, err := checkContractStatRole(req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		orderOpt, _ := req.Options[contractsListOrderOptionName].(string)
-		parts := strings.Split(orderOpt, ",")
-		if len(parts) != 2 {
-			return fmt.Errorf(`bad order format "<order-name>,<order-direction>"`)
-		}
-		var order string
-		for _, o := range contractOrderList {
-			if o == parts[0] {
-				order = o
-				break
-			}
-		}
-		if order == "" {
-			return fmt.Errorf("bad order name: %s", parts[0])
-		}
-		if parts[1] != "asc" && parts[1] != "desc" {
-			return fmt.Errorf("bad order direction: %s", parts[1])
-		}
-		filterOpt, _ := req.Options[contractsListStatusOptionName].(string)
-		// TODO: use filter list
-		_, ok := contractFilterMap[filterOpt]
-		if !ok {
-			return fmt.Errorf("invalid filter option: %s", filterOpt)
-		}
-		// TODO: Use size
-		//sizeOpt, _ := req.Options[contractsListSizeOptionName].(int)
-		// TODO: return mock -- static dummy
-		data := []*nodepb.Contracts_Contract{
-			&nodepb.Contracts_Contract{
-				ContractId:              "737b6d38-5af1-4023-b219-196aadf4d3f0",
-				HostId:                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
-				RenterId:                "16Uiu2HAmCknnNaWa44X4kLRCq33B3zvBevRTLdo27qMhsszCwqdF",
-				Status:                  guardpb.Contract_DRAFT,
-				StartTime:               time.Now(),
-				EndTime:                 time.Now(),
-				NextEscrowTime:          time.Now(),
-				CompensationPaid:        0,
-				CompensationOutstanding: 15000,
-				UnitPrice:               10,
-				ShardSize:               500,
-				ShardHash:               "QmUX3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYmp",
-				FileHash:                "QmAA3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm1",
-			},
-			&nodepb.Contracts_Contract{
-				ContractId:              "869675ac-c966-4808-83d7-1901d0449fb6",
-				HostId:                  "16Uiu2HAmPTPCDrinViMyEzRGGcEJpc2VUH9bc46dU7sP2TzsbNnc",
-				RenterId:                "16Uiu2HAmR6h5aamvwYDKYdp2Z3imCfHLRJnjB7VAYeab23AaZxSY",
-				Status:                  guardpb.Contract_CLOSED,
-				StartTime:               time.Now(),
-				EndTime:                 time.Now(),
-				NextEscrowTime:          time.Now(),
-				CompensationPaid:        100,
-				CompensationOutstanding: 300,
-				UnitPrice:               10,
-				ShardSize:               40,
-				ShardHash:               "QmTT3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm2",
-				FileHash:                "QmXx3GkfVQ8ARa79VE5HC6dxA5AtQQGaUTg1nbaqcAaYm3",
-			},
-		}
-		return cmds.EmitOnce(res, &nodepb.Contracts{Contracts: data})
-	},
-	Type: nodepb.Contracts{},
 }
