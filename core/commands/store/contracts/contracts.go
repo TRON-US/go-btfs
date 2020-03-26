@@ -200,10 +200,7 @@ This command get contracts list based on role from the local node data store.`,
 		if !ok {
 			return fmt.Errorf("invalid filter option: %s", filterOpt)
 		}
-		size, ok := req.Options[contractsListSizeOptionName].(int)
-		if !ok {
-			return fmt.Errorf("invalid size option: %s", size)
-		}
+		size, _ := req.Options[contractsListSizeOptionName].(int)
 		contracts, err := ListContracts(n.Repo.Datastore(), cr.String())
 		if err != nil {
 			return err
@@ -221,7 +218,7 @@ This command get contracts list based on role from the local node data store.`,
 			for _, state := range states {
 				if state == c.Status {
 					b = true
-					continue
+					break
 				}
 			}
 			if !b {
