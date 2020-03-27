@@ -123,24 +123,26 @@ func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	hs := make([]*hubpb.Host, 0)
+	gs := make([]*hubpb.Host, 0)
+	bs := make([]*hubpb.Host, 0)
 	for _, h := range nodes {
 		wg.Add(1)
 		go func(h *hubpb.Host) {
 			if err := api.Swarm().Connect(ctx, peer.AddrInfo{ID: peer.ID(h.NodeId)}); err != nil {
 				mu.Lock()
 				// push back
-				hs = append(hs, h)
+				bs = append(bs, h)
 				mu.Unlock()
 			} else {
 				mu.Lock()
 				// push front
-				hs = append([]*hubpb.Host{h}, hs...)
+				gs = append(gs, h)
 				mu.Unlock()
 			}
 			wg.Done()
 		}(h)
 	}
 	wg.Wait()
-	return storage.SaveHostsIntoDatastore(ctx, node, mode, hs)
+	gs = append(gs, bs...)
+	return storage.SaveHostsIntoDatastore(ctx, node, mode, gs)
 }
