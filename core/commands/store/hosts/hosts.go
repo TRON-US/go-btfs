@@ -3,14 +3,18 @@ package hosts
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/coreapi"
 	"github.com/TRON-US/go-btfs/core/hub"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -104,15 +108,41 @@ Mode options include:` + hub.AllModeHelpText,
 		if err != nil {
 			return err
 		}
-
 		return SyncHosts(req.Context, n, mode)
 	},
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
+	api, err := coreapi.NewCoreAPI(node)
+	if err != nil {
+		return err
+	}
 	nodes, err := hub.QueryHosts(ctx, node, mode)
 	if err != nil {
 		return err
 	}
-	return storage.SaveHostsIntoDatastore(ctx, node, mode, nodes)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	gs := make([]*hubpb.Host, 0)
+	bs := make([]*hubpb.Host, 0)
+	for _, h := range nodes {
+		wg.Add(1)
+		go func(h *hubpb.Host) {
+			if err := api.Swarm().Connect(ctx, peer.AddrInfo{ID: peer.ID(h.NodeId)}); err != nil {
+				mu.Lock()
+				// push back
+				bs = append(bs, h)
+				mu.Unlock()
+			} else {
+				mu.Lock()
+				// push front
+				gs = append(gs, h)
+				mu.Unlock()
+			}
+			wg.Done()
+		}(h)
+	}
+	wg.Wait()
+	gs = append(gs, bs...)
+	return storage.SaveHostsIntoDatastore(ctx, node, mode, gs)
 }
