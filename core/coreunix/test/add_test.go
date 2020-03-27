@@ -76,12 +76,32 @@ func TestAddMultipleGCLive(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// This for loop waits for the above goroutine with adder.AddAllAndPin()
+	// to acquire PinLock - to prevent a race condition encountered at BTFS-1724.
+	for {
+		if adder.GcLocker() == nil {
+			time.Sleep(time.Millisecond * 100)
+		} else {
+			break
+		}
+	}
+
 	var gc1out <-chan gc.Result
 	gc1started := make(chan struct{})
 	go func() {
 		defer close(gc1started)
 		gc1out = gc.GC(context.Background(), node.Blockstore, node.Repo.Datastore(), node.Pinning, nil)
 	}()
+
+	// This for loop waits for the above goroutine with gc.GC()
+	// to request GC lock - to prevent a race condition encountered at BTFS-1724.
+	for {
+		if !adder.GcLocker().GCRequested() {
+			time.Sleep(time.Millisecond * 100)
+		} else {
+			break
+		}
+	}
 
 	// GC shouldn't get the lock until after the file is completely added
 	select {

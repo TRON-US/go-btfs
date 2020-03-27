@@ -226,8 +226,11 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, r
 			return nil, fmt.Errorf("unexpected files.Directory type [%T]", dir)
 		}
 	}
+
+	addDone := make(chan struct{})
 	go func() {
 		defer close(output)
+		defer close(addDone)
 		if !rs {
 			_, err = adder.AddAllAndPin(file)
 
@@ -262,6 +265,8 @@ func addDirectoryToBtfs(node *core.IpfsNode, file files.Node, metadata string, r
 			return nil, ctx.Err()
 		}
 	}
+
+	<-addDone
 
 	return ipath.IpfsPath(addedFileHash), nil
 }
