@@ -33,6 +33,8 @@ const (
 	contractsKeyPrefix = "/btfs/%s/contracts/"
 	hostContractsKey   = contractsKeyPrefix + "host"
 	renterContractsKey = contractsKeyPrefix + "renter"
+
+	payoutNotFoundErr = "rpc error: code = Unknown desc = not found"
 )
 
 // Storage Contracts
@@ -324,8 +326,11 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
 				in.Signature = sign
 				s, err := client.GetPayOutStatus(ctx, in)
 				if err != nil {
-					log.Error("get payout status error:", err)
-					//continue
+					// It's possible contract is in initial state and does not
+					// have actual payout status yet
+					if err.Error() != payoutNotFoundErr {
+						log.Errorf("state: [%s], get payout status error: %v", c.GuardContract.State, err)
+					}
 					s = &escrowpb.SignedPayoutStatus{
 						Status: &escrowpb.PayoutStatus{},
 					}
