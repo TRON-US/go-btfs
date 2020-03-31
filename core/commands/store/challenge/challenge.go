@@ -125,26 +125,13 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
-		// Check if host store has this contract id
-		shardInfo, err := storage.GetShardInfoFromDatastore(n, storage.HostStoragePrefix, sh)
-		if err != nil {
-			return err
-		}
-		ctID := req.Arguments[0]
-		if ctID != shardInfo.ContractID {
-			return fmt.Errorf("contract id does not match, has [%s], needs [%s]", shardInfo.ContractID, ctID)
-		}
-		if !shardHash.Equals(shardInfo.ShardHash) {
-			return fmt.Errorf("datastore internal error: mismatched existing shard hash %s with %s",
-				shardInfo.ShardHash.String(), shardHash.String())
-		}
 		chunkIndex, err := strconv.Atoi(req.Arguments[3])
 		if err != nil {
 			return err
 		}
 		nonce := req.Arguments[4]
 		// Get (cached) challenge response object and solve challenge
-		sc, err := shardInfo.GetChallengeResponseOrNew(req.Context, n, api, fileHash, false, 0)
+		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", true, 0)
 		if err != nil {
 			return err
 		}
@@ -152,7 +139,6 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
-
 		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
 	},
 	Type: StorageChallengeRes{},
