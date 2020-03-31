@@ -100,13 +100,42 @@ This command get contracts stats based on role from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		// TODO: return mock -- static dummy
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		contracts, err := ListContracts(n.Repo.Datastore(), cr.String())
+		if err != nil {
+			return err
+		}
+		activeStates := contractFilterMap["active"]
+		invalidStates := contractFilterMap["invalid"]
+		var activeCount, totalPaid, totalUnpaid int64
+		var first, last time.Time
+		for _, c := range contracts {
+			if _, ok := activeStates[c.Status]; ok {
+				activeCount++
+				// Count outstanding on only active ones
+				totalUnpaid += c.CompensationOutstanding
+			}
+			// Count all paid on all contracts
+			totalPaid += c.CompensationPaid
+			// Count start/end for all non-invalid ones
+			if _, ok := invalidStates[c.Status]; !ok {
+				if (first == time.Time{}) || c.StartTime.Before(first) {
+					first = c.StartTime
+				}
+				if (last == time.Time{}) || c.EndTime.After(last) {
+					last = c.EndTime
+				}
+			}
+		}
 		data := &nodepb.ContractStat{
-			ActiveContractNum:       10,
-			CompensationPaid:        20000,
-			CompensationOutstanding: 80000,
-			FirstContractStart:      time.Now(),
-			LastContractEnd:         time.Now(),
+			ActiveContractNum:       activeCount,
+			CompensationPaid:        totalPaid,
+			CompensationOutstanding: totalUnpaid,
+			FirstContractStart:      first,
+			LastContractEnd:         last,
 			Role:                    cr,
 		}
 		return cmds.EmitOnce(res, data)
@@ -116,32 +145,32 @@ This command get contracts stats based on role from the local node data store.`,
 
 var (
 	contractOrderList = []string{"escrow_time"}
-	contractFilterMap = map[string][]guardpb.Contract_ContractState{
+	contractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
 		"active": {
-			guardpb.Contract_DRAFT,
-			guardpb.Contract_SIGNED,
-			guardpb.Contract_UPLOADED,
-			guardpb.Contract_RENEWED,
-			guardpb.Contract_WARN,
+			guardpb.Contract_DRAFT:    true,
+			guardpb.Contract_SIGNED:   true,
+			guardpb.Contract_UPLOADED: true,
+			guardpb.Contract_RENEWED:  true,
+			guardpb.Contract_WARN:     true,
 		},
 		"finished": {
-			guardpb.Contract_CLOSED,
+			guardpb.Contract_CLOSED: true,
 		},
 		"invalid": {
-			guardpb.Contract_LOST,
-			guardpb.Contract_CANCELED,
-			guardpb.Contract_OBSOLETE,
+			guardpb.Contract_LOST:     true,
+			guardpb.Contract_CANCELED: true,
+			guardpb.Contract_OBSOLETE: true,
 		},
 		"all": {
-			guardpb.Contract_DRAFT,
-			guardpb.Contract_SIGNED,
-			guardpb.Contract_UPLOADED,
-			guardpb.Contract_LOST,
-			guardpb.Contract_CANCELED,
-			guardpb.Contract_CLOSED,
-			guardpb.Contract_RENEWED,
-			guardpb.Contract_OBSOLETE,
-			guardpb.Contract_WARN,
+			guardpb.Contract_DRAFT:    true,
+			guardpb.Contract_SIGNED:   true,
+			guardpb.Contract_UPLOADED: true,
+			guardpb.Contract_LOST:     true,
+			guardpb.Contract_CANCELED: true,
+			guardpb.Contract_CLOSED:   true,
+			guardpb.Contract_RENEWED:  true,
+			guardpb.Contract_OBSOLETE: true,
+			guardpb.Contract_WARN:     true,
 		},
 	}
 )
@@ -214,14 +243,7 @@ This command get contracts list based on role from the local node data store.`,
 		}
 		result := make([]*nodepb.Contracts_Contract, 0)
 		for _, c := range contracts {
-			b := false
-			for _, state := range states {
-				if state == c.Status {
-					b = true
-					break
-				}
-			}
-			if !b {
+			if _, ok := states[c.Status]; !ok {
 				continue
 			}
 			result = append(result, c)
