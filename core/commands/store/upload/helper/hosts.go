@@ -30,7 +30,7 @@ type HostProvider struct {
 }
 
 func GetHostProvider(ctx context.Context, node *core.IpfsNode, mode string,
-	api coreiface.CoreAPI) *HostProvider {
+	api coreiface.CoreAPI, hostIDs []string) *HostProvider {
 	p := &HostProvider{
 		ctx:     ctx,
 		node:    node,
@@ -41,11 +41,17 @@ func GetHostProvider(ctx context.Context, node *core.IpfsNode, mode string,
 			return false
 		},
 	}
-	p.init()
+	p.init(hostIDs)
 	return p
 }
 
-func (p *HostProvider) init() (err error) {
+func (p *HostProvider) init(hostIDs []string) (err error) {
+	if p.mode == "custom" {
+		for _, hid := range hostIDs {
+			p.hosts = append(p.hosts, &hubpb.Host{NodeId: hid})
+		}
+		return nil
+	}
 	p.hosts, err = storage.GetHostsFromDatastore(p.ctx, p.node, p.mode, numHosts)
 	if err != nil {
 		return err
