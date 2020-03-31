@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
@@ -14,15 +15,15 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/cenkalti/backoff/v3"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/alecthomas/units"
+	"github.com/cenkalti/backoff/v3"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
@@ -185,7 +186,20 @@ Use status command to check for completion:
 			return err
 		}
 
-		hp := helper.GetHostProvider(req.Context, n, cfg.Experimental.HostsSyncMode, api)
+		mode, ok := req.Options[hostSelectModeOptionName].(string)
+		if !ok {
+			mode = cfg.Experimental.HostsSyncMode
+		}
+		var hostIDs []string
+		if mode == "custom" {
+			if hosts, ok := req.Options[hostSelectionOptionName].(string); ok {
+				hostIDs = strings.Split(hosts, ",")
+			}
+			if len(hostIDs) != len(shardHashes) {
+				return fmt.Errorf("custom mode hosts length must match shard hashes length")
+			}
+		}
+		hp := helper.GetHostProvider(req.Context, n, mode, api, hostIDs)
 		for shardIndex, shardHash := range shardHashes {
 			go func(i int, h string, f *ds.Session) {
 				backoff.Retry(func() error {
