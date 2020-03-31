@@ -104,6 +104,16 @@ This command get node stats in the network from the local node data store.`,
 			return err
 		}
 
+		// Refresh latest repo stats
+		stat, err := corerepo.RepoStat(req.Context, n)
+		if err != nil {
+			return err
+		}
+
+		hs.Online = cfg.Experimental.StorageHostEnabled
+		hs.StorageUsed = int64(stat.RepoSize)
+		hs.StorageCap = int64(stat.StorageMax)
+
 		// Only host stats for now
 		return cmds.EmitOnce(res, &nodepb.StorageStat{
 			HostStats: *hs,
