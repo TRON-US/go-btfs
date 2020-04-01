@@ -409,7 +409,7 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 	err = backoff.Retry(func() error {
 		select {
 		case <-f.Context.Done():
-			return errors.New("context clonsed")
+			return errors.New("context closed")
 		default:
 		}
 		err := grpc.GuardClient(f.Config.Services.GuardDomain).WithContext(f.Context,
