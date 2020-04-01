@@ -12,7 +12,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/tron-us/go-common/v2/json"
 
-	"github.com/cenkalti/backoff"
+	"github.com/cenkalti/backoff/v3"
 	cidlib "github.com/ipfs/go-cid"
 )
 
