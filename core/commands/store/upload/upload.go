@@ -212,7 +212,7 @@ Use status command to check for completion:
 					host, err := hp.NextValidHost(price)
 					if err != nil {
 						f.Error(err)
-						return err
+						return nil
 					}
 					totalPay := int64(float64(shardSize) / float64(units.GiB) * float64(price) * float64(storageLength))
 					if totalPay <= 0 {
@@ -423,7 +423,7 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 	err = backoff.Retry(func() error {
 		select {
 		case <-f.Context.Done():
-			return nil
+			return errors.New("context closed")
 		default:
 		}
 		err := grpc.GuardClient(f.Config.Services.GuardDomain).WithContext(f.Context,
