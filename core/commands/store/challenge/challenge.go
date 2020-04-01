@@ -12,6 +12,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/tron-us/go-common/v2/json"
 
+	"github.com/cenkalti/backoff"
 	cidlib "github.com/ipfs/go-cid"
 )
 
@@ -55,20 +56,26 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 			return err
 		}
 
-		// Check if peer is reachable
-		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
-		if err != nil {
-			return err
-		}
-		// Pass arguments through to host response endpoint
-		resp, err := remote.P2PCallStrings(req.Context, n, pi.ID, "/storage/challenge/response",
-			req.Arguments[1:]...)
-		if err != nil {
-			return err
-		}
-
 		var scr StorageChallengeRes
-		err = json.Unmarshal(resp, &scr)
+		err = backoff.Retry(func() error {
+			// Check if peer is reachable
+			pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
+			if err != nil {
+				return err
+			}
+			// Pass arguments through to host response endpoint
+			resp, err := remote.P2PCallStrings(req.Context, n, pi.ID, "/storage/challenge/response",
+				req.Arguments[1:]...)
+			if err != nil {
+				return err
+			}
+
+			err = json.Unmarshal(resp, &scr)
+			if err != nil {
+				return err
+			}
+			return nil
+		}, backoff.WithMaxRetries(backoff.NewConstantBackOff(5*time.Minute), 5))
 		if err != nil {
 			return err
 		}
