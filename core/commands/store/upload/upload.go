@@ -58,8 +58,9 @@ const (
 	customizedPayoutOptionName       = "customize-payout"
 	customizedPayoutPeriodOptionName = "customize-payout-period"
 
-	defaultRepFactor     = 3
-	defaultStorageLength = 30
+	defaultRepFactor       = 3
+	defaultStorageLength   = 30
+	thresholdContractsNums = 20
 )
 
 type ShardObj struct {
@@ -443,7 +444,13 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 				if err != nil {
 					return err
 				}
-				if meta.State == guardpb.FileStoreStatus_RUNNING {
+				num := 0
+				for _, c := range meta.Contracts {
+					if c.State == guardpb.Contract_UPLOADED {
+						num++
+					}
+				}
+				if num >= thresholdContractsNums {
 					return nil
 				}
 				return errors.New("uploading")
