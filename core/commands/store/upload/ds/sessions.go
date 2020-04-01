@@ -18,9 +18,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-datastore"
+	logging "github.com/ipfs/go-log"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
-	"github.com/prometheus/common/log"
 )
 
 /*
@@ -33,6 +33,8 @@ const (
 	sessionMetadataKey = sessionKeyPrefix + "metadata"
 	sessionStatusKey   = sessionKeyPrefix + "status"
 )
+
+var log = logging.Logger("core/commands/store/upload")
 
 var (
 	sessionsInMem = cmap.New()
@@ -151,7 +153,7 @@ func (f *Session) GetMetadata() (*sessionpb.Metadata, error) {
 }
 
 func (f *Session) enterState(e *fsm.Event) {
-	log.Info("session:", f.Id, ",enter status:", e.Dst)
+	log.Infof("session:", f.Id, ",enter status:", e.Dst)
 	msg := ""
 	switch e.Dst {
 	case "error":

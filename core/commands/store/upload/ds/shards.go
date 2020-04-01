@@ -12,7 +12,6 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
-	"github.com/prometheus/common/log"
 )
 
 const (
