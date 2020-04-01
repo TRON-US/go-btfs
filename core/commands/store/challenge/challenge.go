@@ -131,7 +131,7 @@ the challenge request back to the caller.`,
 		}
 		nonce := req.Arguments[4]
 		// Get (cached) challenge response object and solve challenge
-		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", true, 0)
+		sc, err := storage.NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", false, 0)
 		if err != nil {
 			return err
 		}
