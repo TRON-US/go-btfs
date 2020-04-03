@@ -352,14 +352,9 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 		func(ctx context.Context,
 			client escrowpb.EscrowServiceClient) error {
 			for _, c := range cs {
-				ec, err := UnmarshalEscrowContract(c.SignedEscrowContract)
-				if err != nil {
-					log.Error("unmarshal escrow contract error:", err)
-					continue
-				}
 				in := &escrowpb.SignedContractID{
 					Data: &escrowpb.ContractID{
-						ContractId: ec.Contract.ContractId,
+						ContractId: c.GuardContract.ContractId,
 						Address:    pkBytes,
 					},
 				}

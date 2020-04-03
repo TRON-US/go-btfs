@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	shardsKey               = "/btfs/%s/sessions/%s/%s/shards/"
+	shardsKey               = sessionsPrefix + "%s/shards/"
 	shardKeyPrefix          = shardsKey + "%s/"
 	shardInMemKey           = shardKeyPrefix
 	shardStatusKey          = shardKeyPrefix + "status"
