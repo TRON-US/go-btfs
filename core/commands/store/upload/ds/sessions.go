@@ -34,7 +34,7 @@ const (
 	sessionStatusKey   = sessionKeyPrefix + "status"
 )
 
-var log = logging.Logger("core/commands/store/upload")
+var log = logging.Logger("core/commands/store/upload/ds")
 
 var (
 	sessionsInMem = cmap.New()

@@ -29,9 +29,11 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	"github.com/dustin/go-humanize"
 	cidlib "github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prometheus/common/log"
 )
+
+var log = logging.Logger("core/commands/store/upload")
 
 var checkPaymentBo = func() *backoff.ExponentialBackOff {
 	bo := backoff.NewExponentialBackOff()
