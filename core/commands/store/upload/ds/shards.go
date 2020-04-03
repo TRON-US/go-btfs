@@ -93,7 +93,7 @@ func (s *Shard) enterState(e *fsm.Event) {
 	var err error
 	switch e.Dst {
 	case "contract":
-		s.doContract(e.Args[0].(*shardpb.SingedContracts))
+		s.doContract(e.Args[0].(*shardpb.SignedContracts))
 	default:
 		err = Save(s.ds, fmt.Sprintf(shardStatusKey, s.peerId, s.role, s.sessionId, s.shardHash), &shardpb.Status{
 			Status: e.Dst,
@@ -104,7 +104,7 @@ func (s *Shard) enterState(e *fsm.Event) {
 	}
 }
 
-func (s *Shard) Contract(sc *shardpb.SingedContracts) {
+func (s *Shard) Contract(sc *shardpb.SignedContracts) {
 	s.fsm.Event("e-contract", sc)
 }
 
@@ -112,7 +112,7 @@ func (s *Shard) Complete() {
 	s.fsm.Event("e-complete")
 }
 
-func (s *Shard) doContract(sc *shardpb.SingedContracts) error {
+func (s *Shard) doContract(sc *shardpb.SignedContracts) error {
 	ks := []string{
 		fmt.Sprintf(shardStatusKey, s.peerId, s.role, s.sessionId, s.shardHash),
 		fmt.Sprintf(shardSignedContractsKey, s.peerId, s.role, s.sessionId, s.shardHash),
@@ -135,8 +135,8 @@ func (s *Shard) Status() (*shardpb.Status, error) {
 	return st, err
 }
 
-func (s *Shard) SignedCongtracts() (*shardpb.SingedContracts, error) {
-	cg := &shardpb.SingedContracts{}
+func (s *Shard) SignedCongtracts() (*shardpb.SignedContracts, error) {
+	cg := &shardpb.SignedContracts{}
 	err := Get(s.ds, fmt.Sprintf(shardSignedContractsKey, s.peerId, s.role, s.sessionId, s.shardHash), cg)
 	if err == datastore.ErrNotFound {
 		return cg, nil
@@ -144,14 +144,14 @@ func (s *Shard) SignedCongtracts() (*shardpb.SingedContracts, error) {
 	return cg, err
 }
 
-func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*shardpb.SingedContracts, error) {
+func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*shardpb.SignedContracts, error) {
 	vs, err := List(d, fmt.Sprintf(sessionsPrefix, peerId, role), "/shards/", "/signed-contracts")
 	if err != nil {
 		return nil, err
 	}
-	contracts := make([]*shardpb.SingedContracts, 0)
+	contracts := make([]*shardpb.SignedContracts, 0)
 	for _, v := range vs {
-		sc := &shardpb.SingedContracts{}
+		sc := &shardpb.SignedContracts{}
 		err := proto.Unmarshal(v, sc)
 		if err != nil {
 			log.Error(err)

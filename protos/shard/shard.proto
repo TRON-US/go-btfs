@@ -52,7 +52,7 @@ message Contracts {
   bytes half_signed_guard_contract = 2;
 }
 
-message SingedContracts {
+message SignedContracts {
   bytes signed_escrow_contract = 1;
   guard.Contract guard_contract = 2;
 }

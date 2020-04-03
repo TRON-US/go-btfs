@@ -204,7 +204,7 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		sh.Contract(&shardpb.SingedContracts{
+		sh.Contract(&shardpb.SignedContracts{
 			SignedEscrowContract: signedEscrowContractBytes,
 			GuardContract:        contract,
 		})

@@ -11,18 +11,13 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"github.com/TRON-US/go-btfs/core/escrow"
-	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/tron-us/go-btfs-common/crypto"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/ipfs/go-datastore"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/prometheus/common/log"
 )
 
 const (
@@ -33,8 +28,6 @@ const (
 	contractsKeyPrefix = "/btfs/%s/contracts/"
 	hostContractsKey   = contractsKeyPrefix + "host"
 	renterContractsKey = contractsKeyPrefix + "renter"
-
-	payoutNotFoundErr = "rpc error: code = Unknown desc = not found"
 )
 
 // Storage Contracts
@@ -286,73 +279,11 @@ func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Cont
 }
 
 func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
-	cfg, err := n.Repo.Config()
-	if err != nil {
-		return err
-	}
-	pk, err := n.Identity.ExtractPublicKey()
-	if err != nil {
-		return err
-	}
-	pkBytes, err := ic.RawFull(pk)
-	if err != nil {
-		return err
-	}
-	results := make([]*nodepb.Contracts_Contract, 0)
 	cs, err := ds.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
 	if err != nil {
 		return err
 	}
-	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
-		func(ctx context.Context,
-			client escrowpb.EscrowServiceClient) error {
-			for _, c := range cs {
-				ec, err := escrow.UnmarshalEscrowContract(c.SignedEscrowContract)
-				if err != nil {
-					log.Error("unmarshal escrow contract error:", err)
-					continue
-				}
-				in := &escrowpb.SignedContractID{
-					Data: &escrowpb.ContractID{
-						ContractId: ec.Contract.ContractId,
-						Address:    pkBytes,
-					},
-				}
-				sign, err := crypto.Sign(n.PrivateKey, in.Data)
-				if err != nil {
-					log.Error("sign contractID error:", err)
-					continue
-				}
-				in.Signature = sign
-				s, err := client.GetPayOutStatus(ctx, in)
-				if err != nil {
-					// It's possible contract is in initial state and does not
-					// have actual payout status yet
-					if err.Error() != payoutNotFoundErr {
-						log.Errorf("state: [%s], get payout status error: %v", c.GuardContract.State, err)
-					}
-					s = &escrowpb.SignedPayoutStatus{
-						Status: &escrowpb.PayoutStatus{},
-					}
-				}
-				results = append(results, &nodepb.Contracts_Contract{
-					ContractId:              c.GuardContract.ContractId,
-					HostId:                  c.GuardContract.HostPid,
-					RenterId:                c.GuardContract.RenterPid,
-					Status:                  c.GuardContract.State,
-					StartTime:               c.GuardContract.RentStart,
-					EndTime:                 c.GuardContract.RentEnd,
-					NextEscrowTime:          s.Status.NextPayoutTime,
-					CompensationPaid:        s.Status.PaidAmount,
-					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
-					UnitPrice:               c.GuardContract.Price,
-					ShardSize:               c.GuardContract.ShardFileSize,
-					ShardHash:               c.GuardContract.ShardHash,
-					FileHash:                c.GuardContract.FileHash,
-				})
-			}
-			return nil
-		})
+	results, err := escrow.SyncContractPayoutStatus(ctx, n, cs)
 	if err != nil {
 		return err
 	}

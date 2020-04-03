@@ -4,15 +4,18 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core"
 
-	config "github.com/TRON-US/go-btfs-config"
+	"github.com/TRON-US/go-btfs/core"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
@@ -20,6 +23,10 @@ import (
 )
 
 var log = logging.Logger("core/escrow")
+
+const (
+	payoutNotFoundErr = "rpc error: code = Unknown desc = not found"
+)
 
 func NewContract(configuration *config.Config, id string, n *core.IpfsNode, hostPid peer.ID,
 	price int64, customizedSchedule bool, period int, offSignPid peer.ID) (*escrowpb.EscrowContract, error) {
@@ -322,4 +329,77 @@ func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bo
 		return 0, err
 	}
 	return balance, nil
+}
+
+// SyncContractPayoutStatus looks at local contracts, refreshes from Guard, and then
+// syncs payout status for all of them
+func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
+	cs []*shardpb.SignedContracts) ([]*nodepb.Contracts_Contract, error) {
+	cfg, err := n.Repo.Config()
+	if err != nil {
+		return nil, err
+	}
+	pk, err := n.Identity.ExtractPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	pkBytes, err := ic.RawFull(pk)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]*nodepb.Contracts_Contract, 0)
+	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
+		func(ctx context.Context,
+			client escrowpb.EscrowServiceClient) error {
+			for _, c := range cs {
+				ec, err := UnmarshalEscrowContract(c.SignedEscrowContract)
+				if err != nil {
+					log.Error("unmarshal escrow contract error:", err)
+					continue
+				}
+				in := &escrowpb.SignedContractID{
+					Data: &escrowpb.ContractID{
+						ContractId: ec.Contract.ContractId,
+						Address:    pkBytes,
+					},
+				}
+				sign, err := crypto.Sign(n.PrivateKey, in.Data)
+				if err != nil {
+					log.Error("sign contractID error:", err)
+					continue
+				}
+				in.Signature = sign
+				s, err := client.GetPayOutStatus(ctx, in)
+				if err != nil {
+					// It's possible contract is in initial state and does not
+					// have actual payout status yet
+					if err.Error() != payoutNotFoundErr {
+						log.Errorf("state: [%s], get payout status error: %v", c.GuardContract.State, err)
+					}
+					s = &escrowpb.SignedPayoutStatus{
+						Status: &escrowpb.PayoutStatus{},
+					}
+				}
+				results = append(results, &nodepb.Contracts_Contract{
+					ContractId:              c.GuardContract.ContractId,
+					HostId:                  c.GuardContract.HostPid,
+					RenterId:                c.GuardContract.RenterPid,
+					Status:                  c.GuardContract.State,
+					StartTime:               c.GuardContract.RentStart,
+					EndTime:                 c.GuardContract.RentEnd,
+					NextEscrowTime:          s.Status.NextPayoutTime,
+					CompensationPaid:        s.Status.PaidAmount,
+					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
+					UnitPrice:               c.GuardContract.Price,
+					ShardSize:               c.GuardContract.ShardFileSize,
+					ShardHash:               c.GuardContract.ShardHash,
+					FileHash:                c.GuardContract.FileHash,
+				})
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
