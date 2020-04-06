@@ -228,14 +228,14 @@ func SubmitFileMetaHelper(ctx context.Context, configuration *config.Config,
 // GetUpdatedGuardContracts retrieves updated guard contracts from remote based on latest timestamp
 // and returns the list updated
 func GetUpdatedGuardContracts(ctx context.Context, n *core.IpfsNode,
-	lastUpdatedTime time.Time) ([]*guardpb.Contract, error) {
+	lastUpdatedTime *time.Time) ([]*guardpb.Contract, error) {
 	now := time.Now()
 	req := &guardpb.ListHostContractsRequest{
 		HostPid:             n.Identity.Pretty(),
 		RequesterPid:        n.Identity.Pretty(),
 		RequestPageSize:     0, // FIXME Does it return all?
 		RequestPageIndex:    0,
-		LastModifyTimeSince: &lastUpdatedTime,
+		LastModifyTimeSince: lastUpdatedTime,
 		State:               guardpb.ListHostContractsRequest_ALL,
 		RequestTime:         &now,
 	}

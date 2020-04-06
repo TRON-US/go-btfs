@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/TRON-US/go-btfs/core"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
@@ -17,6 +18,7 @@ import (
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
+	"github.com/google/uuid"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -28,7 +30,26 @@ const (
 	payoutNotFoundErr = "rpc error: code = Unknown desc = not found"
 )
 
-func NewContract(configuration *config.Config, id string, n *core.IpfsNode, hostPid peer.ID,
+func NewContractID(sessionId string) string {
+	id := uuid.New().String()
+	return sessionId + "," + id
+}
+
+// ExtractSessionIDFromContractID takes the first segment separated by ","
+// and returns it as the session id. If in an old format, i.e. did not
+// have a session id, return an error.
+func ExtractSessionIDFromContractID(contractID string) (string, error) {
+	ids := strings.Split(contractID, ",")
+	if len(ids) != 2 {
+		return "", fmt.Errorf("bad contract id: fewer than 2 segments")
+	}
+	if len(ids[0]) != 36 {
+		return "", fmt.Errorf("invalid session id within contract id")
+	}
+	return ids[0], nil
+}
+
+func NewContract(configuration *config.Config, sessionId string, n *core.IpfsNode, hostPid peer.ID,
 	price int64, customizedSchedule bool, period int, offSignPid peer.ID) (*escrowpb.EscrowContract, error) {
 	var payerPubKey ic.PubKey
 	var err error
@@ -57,7 +78,8 @@ func NewContract(configuration *config.Config, id string, n *core.IpfsNode, host
 		ps = escrowpb.Schedule_CUSTOMIZED
 		p = period
 	}
-	return ledger.NewEscrowContract(id, payerPubKey, hostPubKey, authPubKey, price, ps, int32(p))
+	return ledger.NewEscrowContract(NewContractID(sessionId),
+		payerPubKey, hostPubKey, authPubKey, price, ps, int32(p))
 }
 
 func ConvertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {

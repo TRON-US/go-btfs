@@ -24,7 +24,6 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
-	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -223,13 +222,13 @@ Use status command to check for completion:
 					if err != nil {
 						return err
 					}
-					contractId := uuid.New().String()
-					escrowContract, err := escrow.NewContract(cfg, contractId, n, hostPid, totalPay, false, 0, "")
+					// Pass in session id and generate final contract id inside NewContract
+					escrowContract, err := escrow.NewContract(cfg, ss.Id, n, hostPid, totalPay, false, 0, "")
 					if err != nil {
 						return fmt.Errorf("create escrow contract failed: [%v] ", err)
 					}
 					guardContractMeta, err := helper.NewContract(cfg, &helper.ContractParams{
-						ContractId:    ss.Id,
+						ContractId:    escrowContract.ContractId,
 						RenterPid:     n.Identity.Pretty(),
 						HostPid:       host,
 						ShardIndex:    int32(i),

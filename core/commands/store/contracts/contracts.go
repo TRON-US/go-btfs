@@ -11,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/TRON-US/go-btfs/core/guard"
 
 	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -282,6 +283,23 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
 	cs, err := ds.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
 	if err != nil {
 		return err
+	}
+	var latest *time.Time
+	for _, c := range cs {
+		if latest == nil || c.GuardContract.LastModifyTime.After(*latest) {
+			latest = &c.GuardContract.LastModifyTime
+		}
+	}
+	updated, err := guard.GetUpdatedGuardContracts(ctx, n, latest)
+	if err != nil {
+		return err
+	}
+	if len(updated) > 0 {
+		// save and retrieve updated signed contracts
+		cs, err = ds.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
+		if err != nil {
+			return err
+		}
 	}
 	results, err := escrow.SyncContractPayoutStatus(ctx, n, cs)
 	if err != nil {

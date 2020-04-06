@@ -5,13 +5,15 @@ import (
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/escrow"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
-	"github.com/tron-us/protobuf/proto"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
+	"github.com/tron-us/protobuf/proto"
 )
 
 const (
@@ -124,6 +126,52 @@ func (s *Shard) doContract(sc *shardpb.SignedContracts) error {
 		}, sc,
 	}
 	return Batch(s.ds, ks, vs)
+}
+
+// SaveShardsContracts persists updated guard contracts from upstream, if an existing entry
+// is not available, then an empty signed escrow contract is inserted along with the
+// new guard contract.
+func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
+	gcs []*guardpb.Contract, peerID, role string) ([]*shardpb.SignedContracts, error) {
+	var ks []string
+	var vs []proto.Message
+	gmap := map[string]*guardpb.Contract{}
+	for _, g := range gcs {
+		gmap[g.ContractId] = g
+	}
+	for _, c := range scs {
+		// only append the updated contracts
+		if gc, ok := gmap[c.GuardContract.ContractId]; ok {
+			sessionID, err := escrow.ExtractSessionIDFromContractID(c.GuardContract.ContractId)
+			if err != nil {
+				return nil, err
+			}
+			ks = append(ks, fmt.Sprintf(shardSignedContractsKey, peerID, role, sessionID, gc.ShardHash))
+			// update
+			c.GuardContract = gc
+			vs = append(vs, c)
+			delete(gmap, c.GuardContract.ContractId)
+		}
+	}
+	// append what's left in guard map as new contracts
+	for contractID, gc := range gmap {
+		sessionID, err := escrow.ExtractSessionIDFromContractID(contractID)
+		if err != nil {
+			return nil, err
+		}
+		ks = append(ks, fmt.Sprintf(shardSignedContractsKey, peerID, role, sessionID, gc.ShardHash))
+		// add a new (guard contract only) signed contracts
+		c := &shardpb.SignedContracts{GuardContract: gc}
+		scs = append(scs, c)
+		vs = append(vs, c)
+	}
+	if len(ks) > 0 {
+		err := Batch(ds, ks, vs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return scs, nil
 }
 
 func (s *Shard) Status() (*shardpb.Status, error) {
