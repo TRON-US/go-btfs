@@ -141,7 +141,7 @@ func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
 		gmap[g.ContractId] = g
 	}
 	activeShards := map[string]bool{}      // active shard hash -> has one file hash (bool)
-	activeFiles := map[string][]bool{}     // active file hash -> has one shard hash (bool)
+	activeFiles := map[string]bool{}       // active file hash -> has one shard hash (bool)
 	invalidShards := map[string][]string{} // invalid shard hash -> (maybe) invalid file hash list
 	for _, c := range scs {
 		// only append the updated contracts
@@ -204,8 +204,10 @@ func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
 				staleHashes = append(staleHashes, fh)
 			}
 		}
+		// TODO: Cannot prematurally remove shard because it's indirectly pinned
+		// Need a way to disassociated indirect pins from parent...
 		// remove hash anyway even if no file is getting removed
-		staleHashes = append(staleHashes, ish)
+		//staleHashes = append(staleHashes, ish)
 	}
 	return scs, staleHashes, nil
 }

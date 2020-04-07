@@ -9,6 +9,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/rm"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
@@ -75,7 +76,7 @@ This command contracts stats based on role from network(hub) to local node data 
 		if err != nil {
 			return err
 		}
-		return SyncContracts(req.Context, n, role.String())
+		return SyncContracts(req.Context, n, req, env, role.String())
 	},
 }
 
@@ -250,7 +251,8 @@ func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Cont
 	return cs.Contracts, nil
 }
 
-func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
+func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
+	role string) error {
 	cs, err := ds.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
 	if err != nil {
 		return err
@@ -267,7 +269,12 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
 	}
 	if len(updated) > 0 {
 		// save and retrieve updated signed contracts
-		cs, err = ds.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
+		var stale []string
+		cs, stale, err = ds.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
+		if err != nil {
+			return err
+		}
+		_, err := rm.RmDag(ctx, stale, n, req, env, true)
 		if err != nil {
 			return err
 		}
