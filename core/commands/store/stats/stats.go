@@ -14,6 +14,8 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+
+	"github.com/shirou/gopsutil/disk"
 )
 
 // Storage Stats
@@ -53,11 +55,11 @@ This command synchronize node stats from network(hub) to local node data store.`
 			return err
 		}
 
-		return SyncStats(req.Context, cfg, n)
+		return SyncStats(req.Context, cfg, n, env)
 	},
 }
 
-func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode) error {
+func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode, env cmds.Environment) error {
 	sr, err := hub.QueryStats(ctx, node)
 	if err != nil {
 		return err
@@ -66,12 +68,21 @@ func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode) err
 	if err != nil {
 		return err
 	}
+	cfgRoot, err := cmdenv.GetConfigRoot(env)
+	if err != nil {
+		return err
+	}
+	du, err := disk.Usage(cfgRoot)
+	if err != nil {
+		return err
+	}
 	hs := &nodepb.StorageStat_Host{
-		Online:      cfg.Experimental.StorageHostEnabled,
-		Uptime:      sr.Uptime,
-		Score:       sr.Score,
-		StorageUsed: int64(stat.RepoSize),
-		StorageCap:  int64(stat.StorageMax),
+		Online:           cfg.Experimental.StorageHostEnabled,
+		Uptime:           sr.Uptime,
+		Score:            sr.Score,
+		StorageUsed:      int64(stat.RepoSize),
+		StorageCap:       int64(stat.StorageMax),
+		StorageDiskTotal: int64(du.Total),
 	}
 	return storage.SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
 }
@@ -110,9 +121,19 @@ This command get node stats in the network from the local node data store.`,
 			return err
 		}
 
+		cfgRoot, err := cmdenv.GetConfigRoot(env)
+		if err != nil {
+			return err
+		}
+		du, err := disk.Usage(cfgRoot)
+		if err != nil {
+			return err
+		}
+
 		hs.Online = cfg.Experimental.StorageHostEnabled
 		hs.StorageUsed = int64(stat.RepoSize)
 		hs.StorageCap = int64(stat.StorageMax)
+		hs.StorageDiskTotal = int64(du.Total)
 
 		// Only host stats for now
 		return cmds.EmitOnce(res, &nodepb.StorageStat{

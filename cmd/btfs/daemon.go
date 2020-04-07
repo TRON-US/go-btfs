@@ -504,7 +504,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	// Spin jobs in the background
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
-	spin.Hosts(node)
+	spin.Hosts(node, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
 
 	// Give the user some immediate feedback when they hit C-c
