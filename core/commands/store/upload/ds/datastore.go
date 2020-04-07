@@ -16,6 +16,10 @@ const (
 func Batch(d ds.Datastore, keys []string, vals []proto.Message) error {
 	batch := ds.NewBasicBatch(d)
 	for i, k := range keys {
+		if vals[i] == nil {
+			batch.Delete(ds.NewKey(k))
+			continue
+		}
 		bytes, err := proto.Marshal(vals[i])
 		if err != nil {
 			return err
@@ -40,6 +44,10 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 	}
 	err = proto.Unmarshal(bytes, m)
 	return err
+}
+
+func Remove(d ds.Datastore, key string) error {
+	return d.Delete(ds.NewKey(key))
 }
 
 func List(d ds.Datastore, prefix string, substrInKey ...string) ([][]byte, error) {

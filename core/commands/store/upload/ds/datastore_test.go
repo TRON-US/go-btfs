@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSaveGet(t *testing.T) {
+func TestSaveGetRemove(t *testing.T) {
 	node, err := coremock.NewMockNode()
 	if err != nil {
 		t.Fatal(err)
@@ -37,4 +37,12 @@ func TestSaveGet(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, md, newMd)
+	err = Remove(node.Repo.Datastore(), "ds.ds.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = Get(node.Repo.Datastore(), "ds.ds.test", newMd)
+	if err == nil {
+		t.Fatal("ds.ds.test should have been removed")
+	}
 }

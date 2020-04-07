@@ -32,7 +32,7 @@ func sendChallengeQuestions(ctx context.Context, cfg *config.Config,
 	})
 }
 
-// submitFileStatus opens a grpc connection, sends the file meta, and closes (short) connection
+// SubmitFileStatus opens a grpc connection, sends the file meta, and closes (short) connection
 func SubmitFileStatus(ctx context.Context, cfg *config.Config,
 	fileStatus *guardpb.FileStoreStatus) error {
 	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
@@ -47,4 +47,25 @@ func SubmitFileStatus(ctx context.Context, cfg *config.Config,
 		}
 		return nil
 	})
+}
+
+// ListHostContracts opens a grpc connection, sends the host contract list request and
+// closes (short) connection
+func ListHostContracts(ctx context.Context, cfg *config.Config,
+	listReq *guardpb.ListHostContractsRequest) ([]*guardpb.Contract, error) {
+	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
+	cb.Timeout(guardTimeout)
+	var contracts []*guardpb.Contract
+	err := cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
+		res, err := client.ListHostContracts(ctx, listReq)
+		if err != nil {
+			return err
+		}
+		contracts = res.Contracts
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return contracts, nil
 }

@@ -45,7 +45,7 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		s.Contract(&shardpb.SingedContracts{
+		s.Contract(&shardpb.SignedContracts{
 			SignedEscrowContract: escrowContractBytes,
 			GuardContract:        guardContract,
 		})

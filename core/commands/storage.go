@@ -702,7 +702,7 @@ func buildContractsForShard(param *paramsForPrepareContractsForShard,
 	} else {
 		offSignPid = ""
 	}
-	escrowContract, err := escrow.NewContract(cfg, shard.ContractID, param.n, hostPid,
+	escrowContract, err := escrow.NewContract(cfg, ss.ID, param.n, hostPid,
 		shard.TotalPay, param.customizedSchedule, param.period, offSignPid)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create escrow contract failed: [%v] ", err)

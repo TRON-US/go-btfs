@@ -9,20 +9,16 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/rm"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/TRON-US/go-btfs/core/guard"
+
 	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/tron-us/go-btfs-common/crypto"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	nodepb "github.com/tron-us/go-btfs-common/protos/node"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
-
 	"github.com/ipfs/go-datastore"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/prometheus/common/log"
 )
 
 const (
@@ -33,8 +29,6 @@ const (
 	contractsKeyPrefix = "/btfs/%s/contracts/"
 	hostContractsKey   = contractsKeyPrefix + "host"
 	renterContractsKey = contractsKeyPrefix + "renter"
-
-	payoutNotFoundErr = "rpc error: code = Unknown desc = not found"
 )
 
 // Storage Contracts
@@ -82,7 +76,7 @@ This command contracts stats based on role from network(hub) to local node data 
 		if err != nil {
 			return err
 		}
-		return SyncContracts(req.Context, n, role.String())
+		return SyncContracts(req.Context, n, req, env, role.String())
 	},
 }
 
@@ -110,8 +104,8 @@ This command get contracts stats based on role from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		activeStates := contractFilterMap["active"]
-		invalidStates := contractFilterMap["invalid"]
+		activeStates := guard.ContractFilterMap["active"]
+		invalidStates := guard.ContractFilterMap["invalid"]
 		var activeCount, totalPaid, totalUnpaid int64
 		var first, last time.Time
 		for _, c := range contracts {
@@ -147,34 +141,6 @@ This command get contracts stats based on role from the local node data store.`,
 
 var (
 	contractOrderList = []string{"escrow_time"}
-	contractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
-		"active": {
-			guardpb.Contract_DRAFT:    true,
-			guardpb.Contract_SIGNED:   true,
-			guardpb.Contract_UPLOADED: true,
-			guardpb.Contract_RENEWED:  true,
-			guardpb.Contract_WARN:     true,
-		},
-		"finished": {
-			guardpb.Contract_CLOSED: true,
-		},
-		"invalid": {
-			guardpb.Contract_LOST:     true,
-			guardpb.Contract_CANCELED: true,
-			guardpb.Contract_OBSOLETE: true,
-		},
-		"all": {
-			guardpb.Contract_DRAFT:    true,
-			guardpb.Contract_SIGNED:   true,
-			guardpb.Contract_UPLOADED: true,
-			guardpb.Contract_LOST:     true,
-			guardpb.Contract_CANCELED: true,
-			guardpb.Contract_CLOSED:   true,
-			guardpb.Contract_RENEWED:  true,
-			guardpb.Contract_OBSOLETE: true,
-			guardpb.Contract_WARN:     true,
-		},
-	}
 )
 
 type ByTime []*nodepb.Contracts_Contract
@@ -227,7 +193,7 @@ This command get contracts list based on role from the local node data store.`,
 			return fmt.Errorf("bad order direction: %s", parts[1])
 		}
 		filterOpt, _ := req.Options[contractsListStatusOptionName].(string)
-		states, ok := contractFilterMap[filterOpt]
+		states, ok := guard.ContractFilterMap[filterOpt]
 		if !ok {
 			return fmt.Errorf("invalid filter option: %s", filterOpt)
 		}
@@ -285,74 +251,35 @@ func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Cont
 	return cs.Contracts, nil
 }
 
-func SyncContracts(ctx context.Context, n *core.IpfsNode, role string) error {
-	cfg, err := n.Repo.Config()
-	if err != nil {
-		return err
-	}
-	pk, err := n.Identity.ExtractPublicKey()
-	if err != nil {
-		return err
-	}
-	pkBytes, err := ic.RawFull(pk)
-	if err != nil {
-		return err
-	}
-	results := make([]*nodepb.Contracts_Contract, 0)
+func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
+	role string) error {
 	cs, err := ds.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
 	if err != nil {
 		return err
 	}
-	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
-		func(ctx context.Context,
-			client escrowpb.EscrowServiceClient) error {
-			for _, c := range cs {
-				ec, err := escrow.UnmarshalEscrowContract(c.SignedEscrowContract)
-				if err != nil {
-					log.Error("unmarshal escrow contract error:", err)
-					continue
-				}
-				in := &escrowpb.SignedContractID{
-					Data: &escrowpb.ContractID{
-						ContractId: ec.Contract.ContractId,
-						Address:    pkBytes,
-					},
-				}
-				sign, err := crypto.Sign(n.PrivateKey, in.Data)
-				if err != nil {
-					log.Error("sign contractID error:", err)
-					continue
-				}
-				in.Signature = sign
-				s, err := client.GetPayOutStatus(ctx, in)
-				if err != nil {
-					// It's possible contract is in initial state and does not
-					// have actual payout status yet
-					if err.Error() != payoutNotFoundErr {
-						log.Errorf("state: [%s], get payout status error: %v", c.GuardContract.State, err)
-					}
-					s = &escrowpb.SignedPayoutStatus{
-						Status: &escrowpb.PayoutStatus{},
-					}
-				}
-				results = append(results, &nodepb.Contracts_Contract{
-					ContractId:              c.GuardContract.ContractId,
-					HostId:                  c.GuardContract.HostPid,
-					RenterId:                c.GuardContract.RenterPid,
-					Status:                  c.GuardContract.State,
-					StartTime:               c.GuardContract.RentStart,
-					EndTime:                 c.GuardContract.RentEnd,
-					NextEscrowTime:          s.Status.NextPayoutTime,
-					CompensationPaid:        s.Status.PaidAmount,
-					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
-					UnitPrice:               c.GuardContract.Price,
-					ShardSize:               c.GuardContract.ShardFileSize,
-					ShardHash:               c.GuardContract.ShardHash,
-					FileHash:                c.GuardContract.FileHash,
-				})
-			}
-			return nil
-		})
+	var latest *time.Time
+	for _, c := range cs {
+		if latest == nil || c.GuardContract.LastModifyTime.After(*latest) {
+			latest = &c.GuardContract.LastModifyTime
+		}
+	}
+	updated, err := guard.GetUpdatedGuardContracts(ctx, n, latest)
+	if err != nil {
+		return err
+	}
+	if len(updated) > 0 {
+		// save and retrieve updated signed contracts
+		var stale []string
+		cs, stale, err = ds.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
+		if err != nil {
+			return err
+		}
+		_, err := rm.RmDag(ctx, stale, n, req, env, true)
+		if err != nil {
+			return err
+		}
+	}
+	results, err := escrow.SyncContractPayoutStatus(ctx, n, cs)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,82 @@
+package rm
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
+	ipld "github.com/ipfs/go-ipld-format"
+)
+
+func RmDag(ctx context.Context, hashes []string, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
+	force bool) ([]string, error) {
+	// do not perform online operations for local delete
+	api, err := cmdenv.GetApi(env, req, options.Api.Offline(true), options.Api.FetchBlocks(false))
+	if err != nil {
+		return nil, err
+	}
+
+	var results []string
+	for _, b := range hashes {
+		// Make sure node exists
+		p := path.New(b)
+		node, err := api.ResolveNode(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+
+		_, pinned, err := n.Pinning.IsPinned(node.Cid())
+		if err != nil {
+			return nil, err
+		}
+		if pinned {
+			// Since we are removing a file, we need to set recursive flag to true
+			err = api.Pin().Rm(ctx, p, options.Pin.RmRecursive(true), options.Pin.RmForce(force))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Rm all child links
+		err = rmAllDags(ctx, api, node, &results, map[string]bool{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return results, nil
+}
+
+func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *[]string,
+	removed map[string]bool) error {
+	for _, nl := range node.Links() {
+		// Skipped just removed nodes
+		if _, ok := removed[nl.Cid.String()]; ok {
+			continue
+		}
+		// Resolve, recurse, then finally remove
+		rn, err := api.ResolveNode(ctx, path.IpfsPath(nl.Cid))
+		if err != nil {
+			*res = append(*res, fmt.Sprintf("Error resolving object %s", nl.Cid))
+			continue // continue with other nodes
+		}
+		if err := rmAllDags(ctx, api, rn, res, removed); err != nil {
+			continue // continue with other nodes
+		}
+	}
+	ncid := node.Cid()
+	if err := api.Dag().Remove(ctx, ncid); err != nil {
+		*res = append(*res, fmt.Sprintf("Error removing object %s", ncid))
+		return err
+	} else {
+		*res = append(*res, fmt.Sprintf("Removed %s", ncid))
+		removed[ncid.String()] = true
+	}
+	return nil
+}

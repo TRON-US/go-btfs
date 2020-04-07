@@ -29,9 +29,11 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	"github.com/dustin/go-humanize"
 	cidlib "github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prometheus/common/log"
 )
+
+var log = logging.Logger("core/commands/store/upload")
 
 var checkPaymentBo = func() *backoff.ExponentialBackOff {
 	bo := backoff.NewExponentialBackOff()
@@ -204,7 +206,7 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		sh.Contract(&shardpb.SingedContracts{
+		sh.Contract(&shardpb.SignedContracts{
 			SignedEscrowContract: signedEscrowContractBytes,
 			GuardContract:        contract,
 		})

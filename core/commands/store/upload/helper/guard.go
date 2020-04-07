@@ -18,10 +18,12 @@ import (
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prometheus/common/log"
 )
+
+var log = logging.Logger("core/commands/store/upload/helper")
 
 type ContractParams struct {
 	ContractId    string
