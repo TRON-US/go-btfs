@@ -14,7 +14,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/guard"
 
 	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -104,8 +103,8 @@ This command get contracts stats based on role from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		activeStates := contractFilterMap["active"]
-		invalidStates := contractFilterMap["invalid"]
+		activeStates := guard.ContractFilterMap["active"]
+		invalidStates := guard.ContractFilterMap["invalid"]
 		var activeCount, totalPaid, totalUnpaid int64
 		var first, last time.Time
 		for _, c := range contracts {
@@ -141,34 +140,6 @@ This command get contracts stats based on role from the local node data store.`,
 
 var (
 	contractOrderList = []string{"escrow_time"}
-	contractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
-		"active": {
-			guardpb.Contract_DRAFT:    true,
-			guardpb.Contract_SIGNED:   true,
-			guardpb.Contract_UPLOADED: true,
-			guardpb.Contract_RENEWED:  true,
-			guardpb.Contract_WARN:     true,
-		},
-		"finished": {
-			guardpb.Contract_CLOSED: true,
-		},
-		"invalid": {
-			guardpb.Contract_LOST:     true,
-			guardpb.Contract_CANCELED: true,
-			guardpb.Contract_OBSOLETE: true,
-		},
-		"all": {
-			guardpb.Contract_DRAFT:    true,
-			guardpb.Contract_SIGNED:   true,
-			guardpb.Contract_UPLOADED: true,
-			guardpb.Contract_LOST:     true,
-			guardpb.Contract_CANCELED: true,
-			guardpb.Contract_CLOSED:   true,
-			guardpb.Contract_RENEWED:  true,
-			guardpb.Contract_OBSOLETE: true,
-			guardpb.Contract_WARN:     true,
-		},
-	}
 )
 
 type ByTime []*nodepb.Contracts_Contract
@@ -221,7 +192,7 @@ This command get contracts list based on role from the local node data store.`,
 			return fmt.Errorf("bad order direction: %s", parts[1])
 		}
 		filterOpt, _ := req.Options[contractsListStatusOptionName].(string)
-		states, ok := contractFilterMap[filterOpt]
+		states, ok := guard.ContractFilterMap[filterOpt]
 		if !ok {
 			return fmt.Errorf("invalid filter option: %s", filterOpt)
 		}

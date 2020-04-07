@@ -6,6 +6,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/TRON-US/go-btfs/core/guard"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -132,46 +133,81 @@ func (s *Shard) doContract(sc *shardpb.SignedContracts) error {
 // is not available, then an empty signed escrow contract is inserted along with the
 // new guard contract.
 func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
-	gcs []*guardpb.Contract, peerID, role string) ([]*shardpb.SignedContracts, error) {
+	gcs []*guardpb.Contract, peerID, role string) ([]*shardpb.SignedContracts, []string, error) {
 	var ks []string
 	var vs []proto.Message
 	gmap := map[string]*guardpb.Contract{}
 	for _, g := range gcs {
 		gmap[g.ContractId] = g
 	}
+	activeShards := map[string]bool{}      // active shard hash -> has one file hash (bool)
+	activeFiles := map[string][]bool{}     // active file hash -> has one shard hash (bool)
+	invalidShards := map[string][]string{} // invalid shard hash -> (maybe) invalid file hash list
 	for _, c := range scs {
 		// only append the updated contracts
 		if gc, ok := gmap[c.GuardContract.ContractId]; ok {
 			sessionID, err := escrow.ExtractSessionIDFromContractID(c.GuardContract.ContractId)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			ks = append(ks, fmt.Sprintf(shardSignedContractsKey, peerID, role, sessionID, gc.ShardHash))
 			// update
 			c.GuardContract = gc
 			vs = append(vs, c)
 			delete(gmap, c.GuardContract.ContractId)
+
+			// mark stale files if no longer active (must be synced to become inactive)
+			if _, ok := guard.ContractFilterMap["active"][gc.State]; !ok {
+				invalidShards[gc.ShardHash] = append(invalidShards[gc.ShardHash], gc.FileHash)
+			}
+		} else {
+			activeShards[c.GuardContract.ShardHash] = true
+			activeFiles[c.GuardContract.FileHash] = true
 		}
 	}
 	// append what's left in guard map as new contracts
 	for contractID, gc := range gmap {
 		sessionID, err := escrow.ExtractSessionIDFromContractID(contractID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		ks = append(ks, fmt.Sprintf(shardSignedContractsKey, peerID, role, sessionID, gc.ShardHash))
 		// add a new (guard contract only) signed contracts
 		c := &shardpb.SignedContracts{GuardContract: gc}
 		scs = append(scs, c)
 		vs = append(vs, c)
+
+		// mark stale files if no longer active (must be synced to become inactive)
+		if _, ok := guard.ContractFilterMap["active"][gc.State]; !ok {
+			invalidShards[gc.ShardHash] = append(invalidShards[gc.ShardHash], gc.FileHash)
+		} else {
+			activeShards[gc.ShardHash] = true
+			activeFiles[gc.FileHash] = true
+		}
 	}
 	if len(ks) > 0 {
 		err := Batch(ds, ks, vs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return scs, nil
+	var staleHashes []string
+	// compute what's stale
+	for ish, fhs := range invalidShards {
+		if _, ok := activeShards[ish]; ok {
+			// other files are referring to this hash, skip
+			continue
+		}
+		for _, fh := range fhs {
+			if _, ok := activeFiles[fh]; !ok {
+				// file does not have other active shards
+				staleHashes = append(staleHashes, fh)
+			}
+		}
+		// remove hash anyway even if no file is getting removed
+		staleHashes = append(staleHashes, ish)
+	}
+	return scs, staleHashes, nil
 }
 
 func (s *Shard) Status() (*shardpb.Status, error) {
