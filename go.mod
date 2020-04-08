@@ -9,7 +9,7 @@ require (
 	github.com/TRON-US/go-btfs-api v0.1.0
 	github.com/TRON-US/go-btfs-chunker v0.2.8
 	github.com/TRON-US/go-btfs-cmds v0.1.6
-	github.com/TRON-US/go-btfs-config v0.4.9
+	github.com/TRON-US/go-btfs-config v0.5.0
 	github.com/TRON-US/go-btfs-files v0.1.6
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
@@ -126,7 +126,7 @@ require (
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	github.com/tron-us/go-btfs-common v0.3.6
+	github.com/tron-us/go-btfs-common v0.3.7
 	github.com/tron-us/go-common/v2 v2.0.5
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564

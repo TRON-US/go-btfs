@@ -77,12 +77,13 @@ func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode, env
 		return err
 	}
 	hs := &nodepb.StorageStat_Host{
-		Online:           cfg.Experimental.StorageHostEnabled,
-		Uptime:           sr.Uptime,
-		Score:            sr.Score,
-		StorageUsed:      int64(stat.RepoSize),
-		StorageCap:       int64(stat.StorageMax),
-		StorageDiskTotal: int64(du.Total),
+		Online:               cfg.Experimental.StorageHostEnabled,
+		Uptime:               sr.Uptime,
+		Score:                sr.Score,
+		StorageUsed:          int64(stat.RepoSize),
+		StorageCap:           int64(stat.StorageMax),
+		StorageDiskTotal:     int64(du.Total),
+		StorageDiskAvailable: int64(du.Free),
 	}
 	return storage.SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
 }
@@ -134,6 +135,7 @@ This command get node stats in the network from the local node data store.`,
 		hs.StorageUsed = int64(stat.RepoSize)
 		hs.StorageCap = int64(stat.StorageMax)
 		hs.StorageDiskTotal = int64(du.Total)
+		hs.StorageDiskAvailable = int64(du.Free)
 
 		// Only host stats for now
 		return cmds.EmitOnce(res, &nodepb.StorageStat{

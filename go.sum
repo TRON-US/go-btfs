@@ -45,8 +45,8 @@ github.com/TRON-US/go-btfs-chunker v0.2.8 h1:oUSEhjIZlJ52AVCXna4UqZEStH+xPEBCcZb
 github.com/TRON-US/go-btfs-chunker v0.2.8/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
 github.com/TRON-US/go-btfs-cmds v0.1.6 h1:r1JCcAfWxGHpFxZpmlQN3NTEqbN9BRmX4ximfmBh2ok=
 github.com/TRON-US/go-btfs-cmds v0.1.6/go.mod h1:rtki4vmPzq7qmjdzThJELFpSpxTiORoXreHlExdI6eg=
-github.com/TRON-US/go-btfs-config v0.4.9 h1:4QGLCydsmN10ZQNAwMq1lMF+eRAkoR91bGT6iY4KjRg=
-github.com/TRON-US/go-btfs-config v0.4.9/go.mod h1:045+FmBpTIWNy34ISzjtPaEf6afBq6wVQtviNmAnF5g=
+github.com/TRON-US/go-btfs-config v0.5.0 h1:ZnnPX9sGXGqkcfXPP4nttdCPVmaUP29FD2vNfK2FHWo=
+github.com/TRON-US/go-btfs-config v0.5.0/go.mod h1:045+FmBpTIWNy34ISzjtPaEf6afBq6wVQtviNmAnF5g=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
 github.com/TRON-US/go-btfs-files v0.1.6 h1:POR7n7UUIMNtjIDEloqqi1/pRua2Gn5asjMJZsfiSxI=
 github.com/TRON-US/go-btfs-files v0.1.6/go.mod h1:I8LeoFulha712BW03zGgmDdNwa0qbAPwfMIglzw0fnE=
@@ -908,8 +908,8 @@ github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e h1:RumXZ56IrCj4C
 github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tron-us/go-btfs-common v0.2.11/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
-github.com/tron-us/go-btfs-common v0.3.6 h1:ODXjXDPS+wZS/Hwl7EL4Ial2Y7MhAx9ccJ1NofTWYLA=
-github.com/tron-us/go-btfs-common v0.3.6/go.mod h1:FbYoo6ZrtnJH3TKdyJTGQrUP2rbwNVATQpxplwaYQ/c=
+github.com/tron-us/go-btfs-common v0.3.7 h1:fcdXv4FpfNXTvGjuuFq/bJtw//b3uHCtNI/cwUxKLjA=
+github.com/tron-us/go-btfs-common v0.3.7/go.mod h1:FbYoo6ZrtnJH3TKdyJTGQrUP2rbwNVATQpxplwaYQ/c=
 github.com/tron-us/go-common/v2 v2.0.5 h1:LiGEmOd0FVVRisFyg3AJWDWMXlM537M3JZ+gh75sBlw=
 github.com/tron-us/go-common/v2 v2.0.5/go.mod h1:GiKX9noBLHotkZAU+7ET4h7N0DYWnm3OcGHOFJg1Q68=
 github.com/tron-us/protobuf v1.3.4 h1:oqokl6jMAfe1fb/B6t1UMllbw/KtfdJcCn8plxPkHM8=
