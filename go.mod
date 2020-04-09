@@ -105,7 +105,7 @@ require (
 	github.com/libp2p/go-maddr-filter v0.0.5
 	github.com/libp2p/go-testutil v0.1.0
 	github.com/looplab/fsm v0.1.0
-	github.com/markbates/pkger v0.14.1
+	github.com/markbates/pkger v0.15.1
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
