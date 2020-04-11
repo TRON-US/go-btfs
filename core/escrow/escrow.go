@@ -373,29 +373,39 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context,
 			client escrowpb.EscrowServiceClient) error {
+			in := &escrowpb.SignedContractIDBatch{
+				Data: &escrowpb.ContractIDBatch{
+					Address: pkBytes,
+				},
+			}
 			for _, c := range cs {
-				in := &escrowpb.SignedContractID{
-					Data: &escrowpb.ContractID{
-						ContractId: c.GuardContract.ContractId,
-						Address:    pkBytes,
-					},
+				in.Data.ContractId = append(in.Data.ContractId, c.GuardContract.ContractId)
+			}
+			sign, err := crypto.Sign(n.PrivateKey, in.Data)
+			if err != nil {
+				log.Error("sign contractID error:", err)
+				return err
+			}
+			in.Signature = sign
+			sb, err := client.GetPayOutStatusBatch(ctx, in)
+			if err != nil {
+				// It's possible contract is in initial state and does not
+				// have actual payout status yet
+				if err.Error() != payoutNotFoundErr {
+					log.Errorf("get payout status error: %v", err)
 				}
-				sign, err := crypto.Sign(n.PrivateKey, in.Data)
-				if err != nil {
-					log.Error("sign contractID error:", err)
-					continue
+				// Create dummy status
+				sb = &escrowpb.SignedPayoutStatusBatch{}
+				for range cs {
+					sb.Status = append(sb.Status, &escrowpb.PayoutStatus{})
 				}
-				in.Signature = sign
-				s, err := client.GetPayOutStatus(ctx, in)
-				if err != nil {
-					// It's possible contract is in initial state and does not
-					// have actual payout status yet
-					if err.Error() != payoutNotFoundErr {
-						log.Errorf("state: [%s], get payout status error: %v", c.GuardContract.State, err)
-					}
-					s = &escrowpb.SignedPayoutStatus{
-						Status: &escrowpb.PayoutStatus{},
-					}
+			}
+			for i, c := range cs {
+				var s *escrowpb.PayoutStatus
+				if i >= len(sb.Status) {
+					s = &escrowpb.PayoutStatus{}
+				} else {
+					s = sb.Status[i]
 				}
 				results = append(results, &nodepb.Contracts_Contract{
 					ContractId:              c.GuardContract.ContractId,
@@ -404,9 +414,9 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 					Status:                  c.GuardContract.State,
 					StartTime:               c.GuardContract.RentStart,
 					EndTime:                 c.GuardContract.RentEnd,
-					NextEscrowTime:          s.Status.NextPayoutTime,
-					CompensationPaid:        s.Status.PaidAmount,
-					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
+					NextEscrowTime:          s.NextPayoutTime,
+					CompensationPaid:        s.PaidAmount,
+					CompensationOutstanding: s.Amount - s.PaidAmount,
 					UnitPrice:               c.GuardContract.Price,
 					ShardSize:               c.GuardContract.ShardFileSize,
 					ShardHash:               c.GuardContract.ShardHash,
