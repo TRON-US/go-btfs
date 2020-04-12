@@ -204,7 +204,9 @@ the shard and replies back to client for the next challenge step.`,
 				return nil
 			}()
 			//TODO
-			log.Error(tmp)
+			if tmp != nil {
+				log.Error(tmp)
+			}
 		}()
 		return nil
 	},
