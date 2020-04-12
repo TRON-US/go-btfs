@@ -21,7 +21,7 @@ var (
 )
 
 func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEscrowContract,
-	totalPrice int64) (*escrowpb.EscrowContractRequest, error) {
+	totalPrice int64, offlineSign bool) (*escrowpb.EscrowContractRequest, error) {
 	conf := rss.ctxParams.cfg
 	ssId := rss.ssId
 	escrowPubKey, err := newContractRequestHelper(conf)
@@ -41,28 +41,30 @@ func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEs
 	unsignedChannelCommitChanMaps.Set(ssId, cc)
 	cb := make(chan []byte)
 	signedChannelCommitChanMaps.Set(ssId, cb)
-	go func() {
-		var chanCommit *ledgerpb.ChannelCommit
-		var buyerChanSig []byte
-		buyerPrivKey, err := conf.Identity.DecodePrivateKey("")
-		if err != nil {
-			return
-		}
-		chanCommit, err = ledger.NewChannelCommit(buyerPrivKey.GetPublic(), escrowPubKey, totalPrice)
-		if err != nil {
-			return
-		}
-		buyerChanSig, err = crypto.Sign(buyerPrivKey, chanCommit)
-		if err != nil {
-			return
-		}
-		commit := ledger.NewSignedChannelCommit(chanCommit, buyerChanSig)
-		bs, err := proto.Marshal(commit)
-		if err != nil {
-			return
-		}
-		cb <- bs
-	}()
+	if !offlineSign {
+		go func() {
+			var chanCommit *ledgerpb.ChannelCommit
+			var buyerChanSig []byte
+			buyerPrivKey, err := conf.Identity.DecodePrivateKey("")
+			if err != nil {
+				return
+			}
+			chanCommit, err = ledger.NewChannelCommit(buyerPrivKey.GetPublic(), escrowPubKey, totalPrice)
+			if err != nil {
+				return
+			}
+			buyerChanSig, err = crypto.Sign(buyerPrivKey, chanCommit)
+			if err != nil {
+				return
+			}
+			commit := ledger.NewSignedChannelCommit(chanCommit, buyerChanSig)
+			bs, err := proto.Marshal(commit)
+			if err != nil {
+				return
+			}
+			cb <- bs
+		}()
+	}
 	signedBytes := <-cb
 	rss.to(rssToSubmitLedgerChannelCommitSignedEvent)
 	var signedChannelCommit ledgerpb.SignedChannelCommit

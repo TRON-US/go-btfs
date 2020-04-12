@@ -22,7 +22,7 @@ var (
 	waitUploadChanMap = cmap.New()
 )
 
-func waitUpload(rss *RenterSession) {
+func waitUpload(rss *RenterSession, offlineSigning bool) {
 	rss.to(rssToWaitUploadEvent)
 	req := &guardpb.CheckFileStoreMetaRequest{
 		FileHash:     rss.hash,
@@ -37,14 +37,16 @@ func waitUpload(rss *RenterSession) {
 	}
 	cb := make(chan []byte)
 	waitUploadChanMap.Set(rss.ssId, cb)
-	go func() {
-		sign, err := crypto.Sign(payerPrivKey, req)
-		if err != nil {
-			//TODO
-			return
-		}
-		cb <- sign
-	}()
+	if !offlineSigning {
+		go func() {
+			sign, err := crypto.Sign(payerPrivKey, req)
+			if err != nil {
+				//TODO
+				return
+			}
+			cb <- sign
+		}()
+	}
 	sign := <-cb
 	rss.to(rssToWaitUploadReqSignedEvent)
 	req.Signature = sign

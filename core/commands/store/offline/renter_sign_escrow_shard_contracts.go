@@ -46,7 +46,7 @@ func renterSignEscrowContract(rss *RenterSession, host string, totalPay int64, o
 		}
 	}
 	renterSignBytes := <-bc
-	renterSignedEscrowContract, err := signContractAndMarshalOffSign(escrowContract, renterSignBytes, nil, true)
+	renterSignedEscrowContract, err := signContractAndMarshalOffSign(escrowContract, renterSignBytes, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -87,17 +87,12 @@ func newContract(rss *RenterSession, hostPid peer.ID, totalPay int64, customized
 }
 
 func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, signedBytes []byte,
-	signedContract *escrowpb.SignedEscrowContract,
-	isPayer bool) ([]byte, error) {
+	signedContract *escrowpb.SignedEscrowContract) ([]byte, error) {
 
 	if signedContract == nil {
 		signedContract = newSignedContract(unsignedContract)
 	}
-	if isPayer {
-		signedContract.BuyerSignature = signedBytes
-	} else {
-		signedContract.SellerSignature = signedBytes
-	}
+	signedContract.BuyerSignature = signedBytes
 	signedBytes, err := proto.Marshal(signedContract)
 	if err != nil {
 		return nil, err

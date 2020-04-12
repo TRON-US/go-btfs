@@ -15,53 +15,55 @@ var (
 	payinReqChanMaps = cmap.New()
 )
 
-func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64) error {
+func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSign bool) error {
 	rss.to(rssToPayEvent)
 	bc := make(chan []byte)
 	payinReqChanMaps.Set(rss.ssId, bc)
-	errChan := make(chan error)
-	go func() {
-		//TODO: split to 2 sub function
-		chanState := result.Result.BuyerChannelState
-		payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+	if offlineSign {
+		errChan := make(chan error)
+		go func() {
+			//TODO: split to 2 sub function
+			chanState := result.Result.BuyerChannelState
+			payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+			if err != nil {
+				errChan <- err
+				return
+			}
+			sig, err := crypto.Sign(payerPrivKey, chanState.Channel)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			chanState.FromSignature = sig
+			payinReq, err := ledger.NewPayinRequest(result.Result.PayinId, payerPrivKey.GetPublic(), chanState)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			payinSig, err := crypto.Sign(payerPrivKey, payinReq)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			request := ledger.NewSignedPayinRequest(payinReq, payinSig)
+			bs, err := proto.Marshal(request)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			errChan <- nil
+			bc <- bs
+		}()
+		err := <-errChan
 		if err != nil {
-			errChan <- err
-			return
+			return err
 		}
-		sig, err := crypto.Sign(payerPrivKey, chanState.Channel)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		chanState.FromSignature = sig
-		payinReq, err := ledger.NewPayinRequest(result.Result.PayinId, payerPrivKey.GetPublic(), chanState)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		payinSig, err := crypto.Sign(payerPrivKey, payinReq)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		request := ledger.NewSignedPayinRequest(payinReq, payinSig)
-		bs, err := proto.Marshal(request)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		errChan <- nil
-		bc <- bs
-	}()
-	err := <-errChan
-	if err != nil {
-		return err
+		rss.to(rssToPayChanStateSignedEvent)
 	}
 	signed := <-bc
-	rss.to(rssToPayChanStateSignedEvent)
 	rss.to(rssToPayPayinRequestSignedEvent)
 	signedPayInRequest := new(escrowpb.SignedPayinRequest)
-	err = proto.Unmarshal(signed, signedPayInRequest)
+	err := proto.Unmarshal(signed, signedPayInRequest)
 	if err != nil {
 		return err
 	}
@@ -70,6 +72,6 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 		//TODO
 		return err
 	}
-	doGuard(rss, payinRes, fileSize)
+	doGuard(rss, payinRes, fileSize, offlineSign)
 	return nil
 }

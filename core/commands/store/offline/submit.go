@@ -17,7 +17,7 @@ func submit(rss *RenterSession, fileSize int64, offlineSigning bool) {
 		return
 	}
 	//TODO
-	pay(rss, res, fileSize)
+	pay(rss, res, fileSize, offlineSigning)
 }
 
 func doSubmit(rss *RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {
@@ -29,7 +29,7 @@ func doSubmit(rss *RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitCo
 	if err != nil {
 		return nil, err
 	}
-	req, err := NewContractRequest(rss, bs, t)
+	req, err := NewContractRequest(rss, bs, t, offlineSigning)
 	if err != nil {
 		return nil, err
 	}
