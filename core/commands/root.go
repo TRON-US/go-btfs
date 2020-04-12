@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/TRON-US/go-btfs/core/commands/store"
 	"github.com/TRON-US/go-btfs/core/commands/store/challenge"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload"
+	upload "github.com/TRON-US/go-btfs/core/commands/store/offline"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
@@ -220,7 +220,7 @@ var rootRemoteSubcommands = map[string]*cmds.Command{
 			},
 			"upload": &cmds.Command{
 				Subcommands: map[string]*cmds.Command{
-					"init":         upload.StorageUploadInitCmd,
+					//"init":         upload.StorageUploadInitCmd,
 					"recvcontract": upload.StorageUploadRecvContractCmd,
 				},
 			},

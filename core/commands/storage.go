@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	upload "github.com/TRON-US/go-btfs/core/commands/store/offline"
 	"strconv"
 	"strings"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
@@ -112,9 +112,9 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"init":              upload.StorageUploadInitCmd,
+		//"init":              upload.StorageUploadInitCmd,
 		"recvcontract":      upload.StorageUploadRecvContractCmd,
-		"status":            upload.StorageUploadStatusCmd,
+		//"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
 		"offline":           storageUploadOfflineCmd,
 		"getcontractbatch":  storageUploadGetContractBatchCmd,

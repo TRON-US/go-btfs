@@ -10,7 +10,7 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
-var StorageUploadRecvContractCmd = &cmds.Command{
+var storageUploadRecvContractCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "For renter client to receive half signed contracts.",
 	},

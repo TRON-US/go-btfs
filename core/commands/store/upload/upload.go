@@ -67,7 +67,7 @@ type ShardObj struct {
 	hash  string
 }
 
-var StorageUploadCmd = &cmds.Command{
+var storageUploadCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Store files on BTFS network nodes through BTT payment.",
 		ShortDescription: `

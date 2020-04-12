@@ -199,30 +199,40 @@ the shard and replies back to client for the next challenge step.`,
 			signedEscrowContractBytes,
 			signedGuardContractBytes,
 		)
+		fmt.Println(1)
 		if err != nil {
+			fmt.Println(1, err)
 			return err
 		}
+		fmt.Println(2)
 		contract, err := guard.UnmarshalGuardContract(signedGuardContractBytes)
 		if err != nil {
 			return err
 		}
+		fmt.Println(3)
 		sh.Contract(&shardpb.SignedContracts{
 			SignedEscrowContract: signedEscrowContractBytes,
 			GuardContract:        contract,
 		})
 		// check payment
+		fmt.Println(4)
 		signedContractID, err := escrow.SignContractID(escrowContract.ContractId, n.PrivateKey)
 		if err != nil {
+			fmt.Println(4, err)
 			return err
 		}
 
+		fmt.Println(5)
 		paidIn := make(chan bool)
 		go checkPaymentFromClient(req.Context, paidIn, signedContractID, cfg)
 		paid := <-paidIn
 		if !paid {
+			fmt.Println(5, err)
 			return errors.New("contract is not paid:" + escrowContract.ContractId)
 		}
+		fmt.Println(6)
 		downloadShardFromClient(n, api, contract, req.Arguments[1], shardHash)
+		fmt.Println(7)
 		in := &guardPb.ReadyForChallengeRequest{
 			RenterPid:   guardContractMeta.RenterPid,
 			FileHash:    guardContractMeta.FileHash,
@@ -232,19 +242,26 @@ the shard and replies back to client for the next challenge step.`,
 			PrepareTime: guardContractMeta.RentStart,
 		}
 		sign, err := crypto.Sign(n.PrivateKey, in)
+		fmt.Println(8)
 		if err != nil {
+			fmt.Println(8, err)
 			return err
 		}
 		in.Signature = sign
+		//TODO: add RETRY
+		fmt.Println(9)
 		err = grpc.GuardClient(cfg.Services.GuardDomain).WithContext(req.Context,
 			func(ctx context.Context, client guardPb.GuardServiceClient) error {
+				fmt.Println(9.1)
 				_, err = client.ReadyForChallenge(ctx, in)
 				if err != nil {
+					fmt.Println(9.1, err)
 					return err
 				}
 				return nil
 			})
 		if err != nil {
+			fmt.Println(9, err)
 			return err
 		}
 		sh.Complete()
