@@ -57,8 +57,8 @@ func (p *HostsProvider) NextValidHost(price int64) (string, error) {
 	for true {
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index]
-			//id, err := peer.IDB58Decode("16Uiu2HAkxQ6QAPuQXLoFhcWo7aWmKjLjq1THLNjoL5HM6Xpmm7i9")
-			id, err := peer.IDB58Decode(host.NodeId)
+			id, err := peer.IDB58Decode("16Uiu2HAkxQ6QAPuQXLoFhcWo7aWmKjLjq1THLNjoL5HM6Xpmm7i9")
+			//id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				needHigherPrice = true
 				continue
@@ -66,8 +66,8 @@ func (p *HostsProvider) NextValidHost(price int64) (string, error) {
 			if err := p.cp.api.Swarm().Connect(p.cp.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
-			return host.NodeId, nil
-			//return "16Uiu2HAkxQ6QAPuQXLoFhcWo7aWmKjLjq1THLNjoL5HM6Xpmm7i9", nil
+			//return host.NodeId, nil
+			return "16Uiu2HAkxQ6QAPuQXLoFhcWo7aWmKjLjq1THLNjoL5HM6Xpmm7i9", nil
 		} else {
 			break
 		}

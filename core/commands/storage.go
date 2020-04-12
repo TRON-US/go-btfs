@@ -112,7 +112,7 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		//"init":              upload.StorageUploadInitCmd,
+		"init":              upload.StorageUploadInitCmd,
 		"recvcontract":      upload.StorageUploadRecvContractCmd,
 		//"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,

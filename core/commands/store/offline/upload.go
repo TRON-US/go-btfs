@@ -59,8 +59,8 @@ Use status command to check for completion:
     $ btfs storage upload status <session-id> | jq`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		//"init":         StorageUploadInitCmd,
-		//"recvcontract": StorageUploadRecvContractCmd,
+		"init":         StorageUploadInitCmd,
+		"recvcontract": StorageUploadRecvContractCmd,
 		//"status":       StorageUploadStatusCmd,
 	},
 	Arguments: []cmds.Argument{
@@ -150,20 +150,22 @@ Use status command to check for completion:
 						log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
 						return err
 					}
-					_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, hostPid, "/storage/upload/init",
-						ssId,
-						fileHash,
-						h,
-						price,
-						escrowCotractBytes,
-						guardContractBytes,
-						storageLength,
-						shardSize,
-						i,
-						offlinePeerId,
-					)
-					fmt.Println("done init...")
+					fmt.Println(ssId, fileHash, h, price, len(escrowCotractBytes), len(guardContractBytes),
+						storageLength, shardSize, i, offlinePeerId)
 					go func() {
+						_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, hostPid, "/storage/upload/init",
+							ssId,
+							fileHash,
+							h,
+							price,
+							escrowCotractBytes,
+							guardContractBytes,
+							storageLength,
+							shardSize,
+							i,
+							offlinePeerId,
+						)
+						fmt.Println("done init...", err)
 						if err != nil {
 							switch err.(type) {
 							case remote.IoError:
