@@ -19,7 +19,7 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 	rss.to(rssToPayEvent)
 	bc := make(chan []byte)
 	payinReqChanMaps.Set(rss.ssId, bc)
-	if offlineSign {
+	if !offlineSign {
 		errChan := make(chan error)
 		go func() {
 			//TODO: split to 2 sub function

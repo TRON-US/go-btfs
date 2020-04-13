@@ -138,7 +138,7 @@ the shard and replies back to client for the next challenge step.`,
 			fmt.Println(14, err)
 			return err
 		}
-		signedGuardContractBytes, err := signGuardContractAndMarshal(&guardContractMeta, nil, ctxParams.n.PrivateKey)
+		signedGuardContractBytes, err := signGuardContractAndMarshal(&guardContractMeta, halfSignedGuardContract, ctxParams.n.PrivateKey)
 		if err != nil {
 			fmt.Println(15, err)
 			return err

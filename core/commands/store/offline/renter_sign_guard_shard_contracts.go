@@ -56,7 +56,8 @@ func renterSignGuardContract(ctxParams *ContextParams, params *ContractParams, o
 		LastModifyTime: time.Now(),
 	}
 	cont.RenterPid = ctxParams.n.Identity.String()
-	cont.PreparerPid = cont.RenterPid
+	cont.PreparerPid = ctxParams.n.Identity.String()
+	fmt.Println("@cont.PreparerPid", cont.PreparerPid)
 	bc := make(chan []byte)
 	guardChanMaps.Set(gm.ContractId, bc)
 	if !offlineSigning {

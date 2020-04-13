@@ -74,28 +74,34 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 	}
 	signBytes := <-cb
 	rss.to(rssToGuardFileMetaSignedEvent)
+	fmt.Println("guard", 1)
 	fsStatus, err = submitFileMetaHelper(rss.ctx, rss.ctxParams.cfg, fsStatus, signBytes)
 	if err != nil {
+		fmt.Println("guard 1", err)
 		//TODO
 		return
 	}
+	fmt.Println("guard", 2)
 	qs, err := PrepFileChallengeQuestions(rss, fsStatus, rss.hash)
 	if err != nil {
 		//TODO
 		return
 	}
 
+	fmt.Println("guard", 3)
 	fcid, err := cidlib.Parse(rss.hash)
 	if err != nil {
 		//TODO
 		return
 	}
+	fmt.Println("guard", 4)
 	err = SendChallengeQuestions(rss.ctx, rss.ctxParams.cfg, fcid, qs)
 	if err != nil {
 		//TODO
 		//fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 		return
 	}
+	fmt.Println("guard", 5)
 	waitUpload(rss, offlineSigning)
 }
 
@@ -175,6 +181,19 @@ func submitFileStatus(ctx context.Context, cfg *config.Config,
 	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
 	cb.Timeout(guardTimeout)
 	return cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
+		fmt.Println("fileStatus")
+		fmt.Println(fileStatus.RenterPid)
+		fmt.Println(fileStatus.FileHash)
+		fmt.Println(fileStatus.State)
+		fmt.Println(fileStatus.GuardPid)
+		fmt.Println(fileStatus.PreparerPid)
+		fmt.Println("fileStatus.Contracts[0].PreparerPid")
+		fmt.Println(fileStatus.Contracts[0].PreparerPid)
+		fmt.Println(fileStatus.Contracts[0].GuardPid)
+		fmt.Println(fileStatus.Contracts[0].FileHash)
+		fmt.Println(fileStatus.Contracts[0].RenterPid)
+		fmt.Println(fileStatus.Contracts[0].HostPid)
+		fmt.Println(fileStatus.Contracts[0].ShardHash)
 		res, err := client.SubmitFileStoreMeta(ctx, fileStatus)
 		if err != nil {
 			return err
@@ -297,6 +316,7 @@ func PrepShardChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardH
 	cb := make(chan []byte)
 	questionsChanMaps.Set(rss.ssId, cb)
 	go func() {
+		fmt.Println("sign questions:", shardHash)
 		sig, err := crypto.Sign(node.PrivateKey, sq)
 		if err != nil {
 			//TODO

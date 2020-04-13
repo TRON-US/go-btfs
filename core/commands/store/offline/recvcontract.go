@@ -57,6 +57,7 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	guardContractBytes := []byte(req.Arguments[4])
 	guardContract := new(guardpb.Contract)
 	err = proto.Unmarshal(guardContractBytes, guardContract)
+	fmt.Println("recv guardContract preparerPid:", guardContract.PreparerPid)
 	if err != nil {
 		return
 	}
