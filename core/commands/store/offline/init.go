@@ -7,12 +7,12 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/tron-us/go-btfs-common/crypto"
+	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
@@ -145,6 +145,10 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		go func() {
 			tmp := func() error {
+				shard, err := GetHostShard(ctxParams, escrowContract.ContractId)
+				if err != nil {
+					return err
+				}
 				_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, requestPid, "/storage/upload/recvcontract",
 					ssId,
 					shardHash,
@@ -158,7 +162,7 @@ the shard and replies back to client for the next challenge step.`,
 				}
 				return nil
 				// check payment
-				signedContractID, err := escrow.SignContractID(escrowContract.ContractId, ctxParams.n.PrivateKey)
+				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.n.PrivateKey)
 				if err != nil {
 					fmt.Println(17, err)
 					return err
@@ -170,6 +174,11 @@ the shard and replies back to client for the next challenge step.`,
 				if !paid {
 					fmt.Println(18, err)
 					return errors.New("contract is not paid:" + escrowContract.ContractId)
+				}
+				err = shard.contract(signedEscrowContractBytes, signedGuardContractBytes)
+				if err != nil {
+					fmt.Println(18-2, err)
+					return err
 				}
 				downloadShardFromClient(ctxParams, halfSignedGuardContract, req.Arguments[1], shardHash)
 				in := &guardpb.ReadyForChallengeRequest{
@@ -201,6 +210,7 @@ the shard and replies back to client for the next challenge step.`,
 					return err
 				}
 				fmt.Println("after ready for challenge")
+				shard.complete()
 				return nil
 			}()
 			//TODO
@@ -319,4 +329,17 @@ func isPaidin(ctxParams *ContextParams, contractID *escrowpb.SignedContractID) (
 		return false, err
 	}
 	return signedPayinRes.Status.Paid, nil
+}
+
+func signContractID(id string, privKey ic.PrivKey) (*escrowpb.SignedContractID, error) {
+	contractID, err := ledger.NewContractID(id, privKey.GetPublic())
+	if err != nil {
+		return nil, err
+	}
+	// sign contractID
+	sig, err := crypto.Sign(privKey, contractID)
+	if err != nil {
+		return nil, err
+	}
+	return ledger.NewSingedContractID(contractID, sig), nil
 }

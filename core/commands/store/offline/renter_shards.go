@@ -87,7 +87,7 @@ func (rs *RenterShard) status() (*renterpb.RenterShardStatus, error) {
 	err := ds.Get(rs.ds, k, status)
 	if err == datastore.ErrNotFound {
 		status = &renterpb.RenterShardStatus{
-			Status: rssInitStatus,
+			Status: rshInitStatus,
 		}
 		//ignore error
 		_ = ds.Save(rs.ds, k, status)
