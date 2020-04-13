@@ -279,9 +279,12 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 			return err
 		}
 	}
-	results, err := escrow.SyncContractPayoutStatus(ctx, n, cs)
-	if err != nil {
-		return err
+	if len(cs) > 0 {
+		results, err := escrow.SyncContractPayoutStatus(ctx, n, cs)
+		if err != nil {
+			return err
+		}
+		return Save(n.Repo.Datastore(), results, role)
 	}
-	return Save(n.Repo.Datastore(), results, role)
+	return nil
 }

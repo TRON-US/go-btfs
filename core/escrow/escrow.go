@@ -373,30 +373,48 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context,
 			client escrowpb.EscrowServiceClient) error {
+			in := &escrowpb.SignedContractIDBatch{
+				Data: &escrowpb.ContractIDBatch{
+					Address: pkBytes,
+				},
+			}
 			for _, c := range cs {
-				in := &escrowpb.SignedContractID{
-					Data: &escrowpb.ContractID{
+				in.Data.ContractId = append(in.Data.ContractId, c.GuardContract.ContractId)
+			}
+			sign, err := crypto.Sign(n.PrivateKey, in.Data)
+			if err != nil {
+				log.Error("sign contractID error:", err)
+				return err
+			}
+			in.Signature = sign
+			sb, err := client.GetPayOutStatusBatch(ctx, in)
+			if err != nil {
+				log.Error("get payout status batch error:", err)
+				return err
+			}
+			if len(sb.Status) != len(cs) {
+				return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
+					len(cs), len(sb.Status))
+			}
+			for i, c := range cs {
+				s := sb.Status[i]
+				// Set dummy payout status on invalid id or error msg
+				// Reset to dummy status so we have a copy locally with invalid params
+				if s.ContractId != c.GuardContract.ContractId {
+					s = &escrowpb.PayoutStatus{
 						ContractId: c.GuardContract.ContractId,
-						Address:    pkBytes,
-					},
-				}
-				sign, err := crypto.Sign(n.PrivateKey, in.Data)
-				if err != nil {
-					log.Error("sign contractID error:", err)
-					continue
-				}
-				in.Signature = sign
-				s, err := client.GetPayOutStatus(ctx, in)
-				if err != nil {
-					// It's possible contract is in initial state and does not
-					// have actual payout status yet
-					if err.Error() != payoutNotFoundErr {
-						log.Errorf("state: [%s], get payout status error: %v", c.GuardContract.State, err)
+						ErrorMsg:   "mistmatched contract id",
 					}
-					s = &escrowpb.SignedPayoutStatus{
-						Status: &escrowpb.PayoutStatus{},
+				} else if s.ErrorMsg != "" {
+					s = &escrowpb.PayoutStatus{
+						ContractId: c.GuardContract.ContractId,
+						ErrorMsg:   s.ErrorMsg,
 					}
 				}
+				if s.ErrorMsg != "" {
+					log.Debug("got payout status error message:", s.ErrorMsg)
+				}
+
 				results = append(results, &nodepb.Contracts_Contract{
 					ContractId:              c.GuardContract.ContractId,
 					HostId:                  c.GuardContract.HostPid,
@@ -404,9 +422,9 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 					Status:                  c.GuardContract.State,
 					StartTime:               c.GuardContract.RentStart,
 					EndTime:                 c.GuardContract.RentEnd,
-					NextEscrowTime:          s.Status.NextPayoutTime,
-					CompensationPaid:        s.Status.PaidAmount,
-					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
+					NextEscrowTime:          s.NextPayoutTime,
+					CompensationPaid:        s.PaidAmount,
+					CompensationOutstanding: s.Amount - s.PaidAmount,
 					UnitPrice:               c.GuardContract.Price,
 					ShardSize:               c.GuardContract.ShardFileSize,
 					ShardHash:               c.GuardContract.ShardHash,

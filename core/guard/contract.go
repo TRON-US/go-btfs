@@ -22,6 +22,10 @@ import (
 
 var log = logging.Logger("core/guard")
 
+const (
+	guardContractPageSize = 100
+)
+
 func NewFileStatus(session *storage.FileContracts, contracts []*guardpb.Contract, configuration *config.Config) (*guardpb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
@@ -258,26 +262,39 @@ var ContractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
 // and returns the list updated
 func GetUpdatedGuardContracts(ctx context.Context, n *core.IpfsNode,
 	lastUpdatedTime *time.Time) ([]*guardpb.Contract, error) {
-	now := time.Now()
-	req := &guardpb.ListHostContractsRequest{
-		HostPid:             n.Identity.Pretty(),
-		RequesterPid:        n.Identity.Pretty(),
-		RequestPageSize:     0, // FIXME Does it return all?
-		RequestPageIndex:    0,
-		LastModifyTimeSince: lastUpdatedTime,
-		State:               guardpb.ListHostContractsRequest_ALL,
-		RequestTime:         &now,
-	}
-	signedReq, err := crypto.Sign(n.PrivateKey, req)
-	if err != nil {
-		return nil, err
-	}
-	req.Signature = signedReq
+	// Loop until all pages are obtained
+	var contracts []*guardpb.Contract
+	for i := 0; ; i++ {
+		now := time.Now()
+		req := &guardpb.ListHostContractsRequest{
+			HostPid:             n.Identity.Pretty(),
+			RequesterPid:        n.Identity.Pretty(),
+			RequestPageSize:     guardContractPageSize,
+			RequestPageIndex:    int32(i),
+			LastModifyTimeSince: lastUpdatedTime,
+			State:               guardpb.ListHostContractsRequest_ALL,
+			RequestTime:         &now,
+		}
+		signedReq, err := crypto.Sign(n.PrivateKey, req)
+		if err != nil {
+			return nil, err
+		}
+		req.Signature = signedReq
 
-	cfg, err := n.Repo.Config()
-	if err != nil {
-		return nil, err
-	}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return nil, err
+		}
 
-	return ListHostContracts(ctx, cfg, req)
+		cs, last, err := ListHostContracts(ctx, cfg, req)
+		if err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, cs...)
+		if last {
+			break
+		}
+	}
+	return contracts, nil
 }
