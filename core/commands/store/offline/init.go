@@ -161,6 +161,7 @@ the shard and replies back to client for the next challenge step.`,
 				}
 				fmt.Println(5)
 				// check payment
+				fmt.Println("escrowContract.ContractId:", escrowContract.ContractId)
 				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.n.PrivateKey)
 				if err != nil {
 					fmt.Println(17, err)
