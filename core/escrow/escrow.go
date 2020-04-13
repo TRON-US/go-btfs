@@ -399,6 +399,7 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 			for i, c := range cs {
 				s := sb.Status[i]
 				// Set dummy payout status on invalid id or error msg
+				// Reset to dummy status so we have a copy locally with invalid params
 				if s.ContractId != c.GuardContract.ContractId {
 					s = &escrowpb.PayoutStatus{
 						ContractId: c.GuardContract.ContractId,
@@ -409,6 +410,9 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						ContractId: c.GuardContract.ContractId,
 						ErrorMsg:   s.ErrorMsg,
 					}
+				}
+				if s.ErrorMsg != "" {
+					log.Debug("got payout status error message:", s.ErrorMsg)
 				}
 
 				results = append(results, &nodepb.Contracts_Contract{
