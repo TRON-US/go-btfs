@@ -132,6 +132,8 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 		&renterpb.RenterSessionStatus{
 			Status:      e.Dst,
 			Message:     msg,
+			Hash:        rs.hash,
+			ShardHashes: rs.shardHashes,
 			LastUpdated: time.Now().UTC(),
 		})
 }

@@ -28,6 +28,7 @@ message RenterSessionStatus {
     (gogoproto.stdtime) = true
   ];
   repeated string shard_hashes = 4;
+  string hash = 5;
 }
 
 message RenterShardStatus {

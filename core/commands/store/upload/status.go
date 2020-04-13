@@ -46,7 +46,7 @@ This command print upload and payment status by the time queried.`,
 
 		// get shards info from session
 		shards := make(map[string]*ShardStatus)
-		status.FileHash = session.hash
+		status.FileHash = sessionStatus.Hash
 		for _, h := range session.shardHashes {
 			shard, err := GetRenterShard(ctxParams, ssId, h)
 			if err != nil {
