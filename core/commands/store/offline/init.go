@@ -144,11 +144,14 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		go func() {
+			fmt.Println(1)
 			tmp := func() error {
+				fmt.Println(2)
 				shard, err := GetHostShard(ctxParams, escrowContract.ContractId)
 				if err != nil {
 					return err
 				}
+				fmt.Println(3)
 				_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, requestPid, "/storage/upload/recvcontract",
 					ssId,
 					shardHash,
@@ -156,11 +159,12 @@ the shard and replies back to client for the next challenge step.`,
 					signedEscrowContractBytes,
 					signedGuardContractBytes,
 				)
+				fmt.Println(4)
 				if err != nil {
 					fmt.Println(16, err)
 					return err
 				}
-				return nil
+				fmt.Println(5)
 				// check payment
 				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.n.PrivateKey)
 				if err != nil {
