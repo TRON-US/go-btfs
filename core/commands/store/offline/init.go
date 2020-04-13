@@ -203,7 +203,7 @@ the shard and replies back to client for the next challenge step.`,
 				fmt.Println(11)
 				in.Signature = sign
 				fmt.Println("before ready for challenge")
-				err = grpc.GuardClient(ctxParams.cfg.Services.GuardDomain).WithContext(req.Context,
+				err = grpc.GuardClient(ctxParams.cfg.Services.GuardDomain).WithContext(ctxParams.ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
 						_, err = client.ReadyForChallenge(ctx, in)
 						if err != nil {
@@ -271,7 +271,6 @@ func checkPaymentFromClient(ctxParams *ContextParams, paidIn chan bool, contract
 	err = backoff.Retry(func() error {
 		paid, err = isPaidin(ctxParams, contractID)
 		if err != nil {
-			fmt.Println("paid err", err)
 			return err
 		}
 		if paid {

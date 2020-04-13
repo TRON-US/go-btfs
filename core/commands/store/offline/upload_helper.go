@@ -78,9 +78,10 @@ func extractContextParams(req *cmds.Request, env cmds.Environment) (*ContextPara
 	if err != nil {
 		return nil, err
 	}
+	ctx, _ := storage.NewGoContext(req.Context)
 	return &ContextParams{
 		req: req,
-		ctx: req.Context,
+		ctx: ctx,
 		n:   n,
 		cfg: cfg,
 		api: api,
