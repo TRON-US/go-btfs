@@ -9,7 +9,7 @@ test_description="Test ipfs repo operations"
 . lib/test-lib.sh
 
 test_init_ipfs
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon --upload
 
 test_expect_success "'ipfs repo gc' succeeds" '
   ipfs repo gc >gc_out_actual
@@ -65,7 +65,7 @@ test_expect_success "ipfs repo gc fully reverse ipfs add (part 2)" '
   { test "$actual" -gt "0" || test_fsh echo "not($actual > 0)"; }
 '
 
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon --upload
 
 test_expect_success "file no longer pinned" '
   ipfs pin ls --type=recursive --quiet >actual2 &&

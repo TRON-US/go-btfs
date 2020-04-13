@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	cmap "github.com/orcaman/concurrent-map"
 	"time"
 
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -12,6 +11,7 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/cenkalti/backoff/v3"
+	cmap "github.com/orcaman/concurrent-map"
 )
 
 const (

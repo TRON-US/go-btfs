@@ -358,7 +358,7 @@ func TestAddFileWithMetadata(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
+				PeerID: testPeerID, // required by upload node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -389,7 +389,7 @@ func TestAppendMetadata(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
+				PeerID: testPeerID, // required by upload node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -429,7 +429,7 @@ func TestAddMetadataToFileWithoutMeta(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
+				PeerID: testPeerID, // required by upload node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -473,7 +473,7 @@ func TestUpdateMetadata(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
+				PeerID: testPeerID, // required by upload node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -567,7 +567,7 @@ func TestRemoveMetadata(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
+				PeerID: testPeerID, // required by upload node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -683,7 +683,7 @@ func testAddDirectory(t *testing.T, file files.Node, originalMetadataString stri
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by offline node
+				PeerID: testPeerID, // required by upload node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),

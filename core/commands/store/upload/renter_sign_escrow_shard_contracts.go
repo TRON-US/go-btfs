@@ -2,13 +2,13 @@ package upload
 
 import (
 	"fmt"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
+
+	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	"github.com/tron-us/protobuf/proto"
 
-	"github.com/tron-us/go-btfs-common/crypto"
-
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	cmap "github.com/orcaman/concurrent-map"
 )

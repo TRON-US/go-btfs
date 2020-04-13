@@ -2,6 +2,7 @@ package upload
 
 import (
 	"fmt"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
@@ -15,7 +16,7 @@ the contracts to the caller.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
-		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this upload signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of <peer-id>:<nonce-timstamp>"),
 		cmds.StringArg("session-status", true, false, "Current upload session status."),
 	},

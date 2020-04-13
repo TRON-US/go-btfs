@@ -92,7 +92,7 @@ EXAMPLE:
 			return cmds.EmitOnce(res, output)
 		}
 
-		// TODO handle offline mode with polymorphism instead of conditionals
+		// TODO handle upload mode with polymorphism instead of conditionals
 		if !n.IsOnline {
 			return errors.New(offlineIdErrorMessage)
 		}

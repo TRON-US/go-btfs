@@ -3,10 +3,12 @@ package upload
 import (
 	"errors"
 	"fmt"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-	"github.com/gogo/protobuf/proto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 var StorageUploadRecvContractCmd = &cmds.Command{

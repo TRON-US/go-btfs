@@ -6,8 +6,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/store/contracts"
 	"github.com/TRON-US/go-btfs/core/commands/store/hosts"
 	"github.com/TRON-US/go-btfs/core/commands/store/info"
-	upload "github.com/TRON-US/go-btfs/core/commands/store/offline"
 	"github.com/TRON-US/go-btfs/core/commands/store/stats"
+	upload "github.com/TRON-US/go-btfs/core/commands/store/upload"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )

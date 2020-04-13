@@ -106,7 +106,7 @@ the contracts to the caller.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
-		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this upload signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of <peer-id>:<nonce-timstamp>"),
 		cmds.StringArg("session-status", true, false, "Current upload session status."),
 	},
@@ -133,7 +133,7 @@ the contracts to the caller.`,
 
 		status, _ := ss.GetStatus(ss.GetCurrentStatus())
 		if req.Arguments[4] != status {
-			return errors.New("unexpected session status from SDK during communication in offline signing")
+			return errors.New("unexpected session status from SDK during communication in upload signing")
 		}
 
 		// Get relevant contracts from ss and ss.ShardInfo
@@ -193,7 +193,7 @@ This command reads all the unsigned contracts from the upload session
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
-		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this upload signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nonce-timestamp"),
 		cmds.StringArg("session-status", true, false, "current upload session status."),
 		cmds.StringArg("signed-data-items", true, false, "signed data items."),
@@ -285,15 +285,15 @@ func verifyReceivedMessage(req *cmds.Request, ss *storage.FileContracts) error {
 
 var storageUploadGetUnsignedCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Get the input data for offline signing.",
+		Tagline: "Get the input data for upload signing.",
 		ShortDescription: `
-This command obtains the offline signing input data for from the upload session 
+This command obtains the upload signing input data for from the upload session 
 (From BTFS SDK application's perspective) and returns to the caller.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
-		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this upload signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nonce-timestamp"),
 		cmds.StringArg("session-status", true, false, "current upload session status."),
 	},
@@ -323,7 +323,7 @@ This command obtains the offline signing input data for from the upload session
 
 		status, _ := ss.GetStatus(ss.GetCurrentStatus())
 		if req.Arguments[4] != status {
-			return errors.New("unexpected session status from SDK during communication in offline signing")
+			return errors.New("unexpected session status from SDK during communication in upload signing")
 		}
 
 		// Obtain relevant operation info from ss and ss.ShardInfo
@@ -348,7 +348,7 @@ to the upload session.`,
 	Arguments: []cmds.Argument{
 		cmds.StringArg("session-id", true, false, "ID for the entire storage upload session."),
 		cmds.StringArg("peer-id", true, false, "Offline signs needed for this particular client."),
-		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this offline signing."),
+		cmds.StringArg("nonce-timestamp", true, false, "Nonce timestamp string for this upload signing."),
 		cmds.StringArg("upload-session-signature", true, false, "Private key-signed string of peer-id:nonce-timestamp"),
 		cmds.StringArg("session-status", true, false, "current upload session status."),
 		cmds.StringArg("signed", true, false, "signed json data."),
@@ -379,7 +379,7 @@ to the upload session.`,
 
 		// Set the received `signed`.
 		if ss.OfflineCB == nil {
-			return errors.New("offline control block is nil")
+			return errors.New("upload control block is nil")
 		}
 		ss.OfflineCB.OfflineSigned = req.Arguments[4]
 
@@ -390,7 +390,7 @@ to the upload session.`,
 	},
 }
 
-// helpers for upload in offline signing
+// helpers for upload in upload signing
 
 // prepareSignedContractsForEscrowOffSign gets a valid host and
 // prepares unsigned escrow contract and unsigned quard contract.
@@ -419,7 +419,7 @@ func prepareSignedContractsForEscrowOffSign(param *paramsForPrepareContractsForS
 			if currentStatus != storage.UninitializedStatus {
 				return fmt.Errorf("current status %d does not match expected UninitializedStatus", currentStatus)
 			}
-			// Reset variables for the next offline signing for the session
+			// Reset variables for the next upload signing for the session
 			ss.SetOffSignReadyShards(0)
 			ss.UpdateSessionStatus(currentStatus, true, nil) // call this since the current session status is before "initStatus"
 		}
@@ -435,7 +435,7 @@ func prepareSignedContractsForEscrowOffSign(param *paramsForPrepareContractsForS
 
 func resetPaySignChannel(ss *storage.FileContracts) error {
 	if ss.OfflineCB == nil {
-		return errors.New("offline control block is nil")
+		return errors.New("upload control block is nil")
 	}
 	ss.OfflineCB.OfflinePaySignChan = nil
 	ss.OfflineCB.OfflinePaySignChan = make(chan string)

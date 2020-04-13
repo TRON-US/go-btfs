@@ -4,7 +4,7 @@ test_description="Test config command"
 
 . lib/test-lib.sh
 
-# we use a function so that we can run it both offline + online
+# we use a function so that we can run it both upload + online
 test_config_cmd_set() {
 
   # flags (like --bool in "btfs config --bool")
@@ -286,7 +286,7 @@ test_config_cmd() {
 
 test_init_btfs
 
-# should work offline
+# should work upload
 test_config_cmd
 
 # should work online

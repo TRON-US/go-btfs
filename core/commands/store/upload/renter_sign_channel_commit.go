@@ -2,14 +2,13 @@ package upload
 
 import (
 	"fmt"
-	"github.com/tron-us/go-btfs-common/crypto"
-	"github.com/tron-us/go-btfs-common/ledger"
-	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
-	"github.com/tron-us/protobuf/proto"
 
 	config "github.com/TRON-US/go-btfs-config"
-
+	"github.com/tron-us/go-btfs-common/crypto"
+	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	"github.com/tron-us/protobuf/proto"
 
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	cmap "github.com/orcaman/concurrent-map"

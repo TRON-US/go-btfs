@@ -185,9 +185,9 @@ test_filestore_dups
 
 test_init
 
-# must be in offline mode so tests that retrieve non-existent blocks
+# must be in upload mode so tests that retrieve non-existent blocks
 # doesn't hang
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon --upload
 
 test_filestore_adds
 
@@ -249,9 +249,9 @@ test_filestore_dups
 
 test_init
 
-# must be in offline mode so tests that retrieve non-existent blocks
+# must be in upload mode so tests that retrieve non-existent blocks
 # doesn't hang
-test_launch_ipfs_daemon --offline
+test_launch_ipfs_daemon --upload
 
 test_filestore_adds
 

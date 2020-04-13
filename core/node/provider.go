@@ -73,7 +73,7 @@ func OnlineProviders(useStrategicProviding bool, reprovideStrategy string, repro
 	)
 }
 
-// OfflineProviders groups units managing provider routing records offline
+// OfflineProviders groups units managing provider routing records upload
 func OfflineProviders(useStrategicProviding bool, reprovideStrategy string, reprovideInterval string) fx.Option {
 	if useStrategicProviding {
 		return fx.Provide(provider.NewOfflineProvider)

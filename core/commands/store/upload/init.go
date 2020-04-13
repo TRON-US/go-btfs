@@ -4,21 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	"strconv"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-	"github.com/alecthomas/units"
-	"github.com/cenkalti/backoff/v3"
-	cidlib "github.com/ipfs/go-cid"
-	ic "github.com/libp2p/go-libp2p-core/crypto"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"github.com/tron-us/protobuf/proto"
-	"strconv"
-	"time"
+
+	"github.com/alecthomas/units"
+	"github.com/cenkalti/backoff/v3"
+	cidlib "github.com/ipfs/go-cid"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
 
 var StorageUploadInitCmd = &cmds.Command{
@@ -39,7 +42,7 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("storage-length", true, false, "Store file for certain length in days."),
 		cmds.StringArg("shard-size", true, false, "Size of each shard received in bytes."),
 		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
-		cmds.StringArg("offline-peer-id", false, false, "Peer id when offline sign is used."),
+		cmds.StringArg("upload-peer-id", false, false, "Peer id when upload sign is used."),
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {

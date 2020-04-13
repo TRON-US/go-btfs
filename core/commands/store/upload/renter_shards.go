@@ -3,17 +3,20 @@ package upload
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/guard"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/protobuf/proto"
+
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/protobuf/proto"
-	"strings"
-	"time"
 )
 
 const (

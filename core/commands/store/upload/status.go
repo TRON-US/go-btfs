@@ -2,10 +2,11 @@ package upload
 
 import (
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 var StorageUploadStatusCmd = &cmds.Command{

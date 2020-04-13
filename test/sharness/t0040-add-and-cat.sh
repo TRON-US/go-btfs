@@ -810,7 +810,7 @@ test_expect_success "ipfs add --cid-version=9 fails" '
 
 test_kill_ipfs_daemon
 
-# should work offline
+# should work upload
 
 test_add_cat_file
 
@@ -831,8 +831,8 @@ test_add_named_pipe ""
 
 test_add_pwd_is_symlink
 
-# Test daemon in offline mode
-test_launch_ipfs_daemon --offline
+# Test daemon in upload mode
+test_launch_ipfs_daemon --upload
 
 test_add_cat_file
 

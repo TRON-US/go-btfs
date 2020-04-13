@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	upload "github.com/TRON-US/go-btfs/core/commands/store/offline"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
@@ -116,7 +116,7 @@ Use status command to check for completion:
 		"recvcontract":      upload.StorageUploadRecvContractCmd,
 		"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
-		"offline":           storageUploadOfflineCmd,
+		"upload":            storageUploadOfflineCmd,
 		"getcontractbatch":  storageUploadGetContractBatchCmd,
 		"signcontractbatch": storageUploadSignContractBatchCmd,
 		"getunsigned":       storageUploadGetUnsignedCmd,
@@ -220,7 +220,7 @@ func parseRequest(param *paramsForOpenSession) error {
 		if runMode == storage.RegularMode && len(req.Arguments) != 1 {
 			return fmt.Errorf("need one and only one root file hash")
 		} else if runMode == storage.OfflineSignMode && len(req.Arguments) != 4 {
-			return fmt.Errorf("need file hash, offline-peer-id, offline-nonce-timestamp, and session-signature")
+			return fmt.Errorf("need file hash, upload-peer-id, upload-nonce-timestamp, and session-signature")
 		}
 		if runMode == storage.RegularMode && len(req.Arguments) > 3 {
 			blacklistStr := req.Arguments[3]
@@ -373,15 +373,15 @@ This command repairs the given shards of a file.`,
 
 var storageUploadOfflineCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Store files on BTFS network nodes through BTT payment via offline signing.",
+		Tagline: "Store files on BTFS network nodes through BTT payment via upload signing.",
 		ShortDescription: `
-Upload a file with offline signing. I.e., SDK application acts as renter.`,
+Upload a file with upload signing. I.e., SDK application acts as renter.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
-		cmds.StringArg("offline-peer-id", true, false, "Peer id when offline upload."),
-		cmds.StringArg("offline-nonce-ts", true, false, "Nounce timestamp when offline upload."),
-		cmds.StringArg("offline-signature", true, false, "Session signature when offline upload."),
+		cmds.StringArg("upload-peer-id", true, false, "Peer id when upload upload."),
+		cmds.StringArg("upload-nonce-ts", true, false, "Nounce timestamp when upload upload."),
+		cmds.StringArg("upload-signature", true, false, "Session signature when upload upload."),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -558,7 +558,7 @@ func openSession(param *paramsForOpenSession) (*outputOfOpenSession, error) {
 	// retry queue need to be reused in proof cmd
 	ss.SetRetryQueue(retryQueue)
 
-	// set offline info items
+	// set upload info items
 	if ss.IsOffSignRunmode() {
 		ss.SetFOfflinePeerID(param.offPeerId)
 		ss.SetFOfflineNonceTimestamp(param.offNonceTimestamp)
@@ -1075,7 +1075,7 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("storage-length", true, false, "Store file for certain length in days."),
 		cmds.StringArg("shard-size", true, false, "Size of each shard received in bytes."),
 		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
-		cmds.StringArg("offline-peer-id", false, false, "Peer id when offline sign is used."),
+		cmds.StringArg("upload-peer-id", false, false, "Peer id when upload sign is used."),
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {

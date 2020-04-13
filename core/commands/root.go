@@ -2,9 +2,10 @@ package commands
 
 import (
 	"errors"
+
 	"github.com/TRON-US/go-btfs/core/commands/store"
 	"github.com/TRON-US/go-btfs/core/commands/store/challenge"
-	upload "github.com/TRON-US/go-btfs/core/commands/store/offline"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
@@ -24,14 +25,14 @@ const (
 	ConfigOption  = "config"
 	DebugOption   = "debug"
 	LocalOption   = "local" // DEPRECATED: use OfflineOption
-	OfflineOption = "offline"
+	OfflineOption = "upload"
 	ApiOption     = "api"
 )
 
 var Root = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:  "Global p2p merkle-dag filesystem.",
-		Synopsis: "btfs [--config=<config> | -c] [--debug | -D] [--help] [-h] [--api=<api>] [--offline] [--cid-base=<base>] [--upgrade-cidv0-in-output] [--encoding=<encoding> | --enc] [--timeout=<timeout>] <command> ...",
+		Synopsis: "btfs [--config=<config> | -c] [--debug | -D] [--help] [-h] [--api=<api>] [--upload] [--cid-base=<base>] [--upgrade-cidv0-in-output] [--encoding=<encoding> | --enc] [--timeout=<timeout>] <command> ...",
 		Subcommands: `
 BASIC COMMANDS
   init          Initialize btfs local configuration
@@ -100,8 +101,8 @@ The CLI will exit with one of the following values:
 		cmds.BoolOption(DebugOption, "D", "Operate in debug mode."),
 		cmds.BoolOption(cmds.OptLongHelp, "Show the full command help text."),
 		cmds.BoolOption(cmds.OptShortHelp, "Show a short version of the command help text."),
-		cmds.BoolOption(LocalOption, "L", "Run the command locally, instead of using the daemon. DEPRECATED: use --offline."),
-		cmds.BoolOption(OfflineOption, "Run the command offline."),
+		cmds.BoolOption(LocalOption, "L", "Run the command locally, instead of using the daemon. DEPRECATED: use --upload."),
+		cmds.BoolOption(OfflineOption, "Run the command upload."),
 		cmds.StringOption(ApiOption, "Use a specific API instance (defaults to /ip4/127.0.0.1/tcp/5001)"),
 
 		// global options, added to every command

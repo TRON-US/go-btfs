@@ -10,7 +10,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/rm"
-	"github.com/TRON-US/go-btfs/core/commands/store/offline"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 

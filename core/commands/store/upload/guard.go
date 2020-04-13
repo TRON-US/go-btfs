@@ -3,17 +3,20 @@ package upload
 import (
 	"context"
 	"fmt"
-	config "github.com/TRON-US/go-btfs-config"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/gogo/protobuf/proto"
-	cidlib "github.com/ipfs/go-cid"
-	cmap "github.com/orcaman/concurrent-map"
+
+	config "github.com/TRON-US/go-btfs-config"
 	cc "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
-	"time"
+
+	"github.com/gogo/protobuf/proto"
+	cidlib "github.com/ipfs/go-cid"
+	cmap "github.com/orcaman/concurrent-map"
 )
 
 const (

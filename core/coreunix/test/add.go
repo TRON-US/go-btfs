@@ -37,7 +37,7 @@ func HelpTestMockRepo(t *testing.T, cfg *config.Config) *core.IpfsNode {
 		mc = *cfg
 	}
 	mc.Identity = config.Identity{
-		PeerID: testPeerID, // required by offline node
+		PeerID: testPeerID, // required by upload node
 	}
 	r := &repo.Mock{
 		C: mc,

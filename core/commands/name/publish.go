@@ -15,13 +15,13 @@ import (
 )
 
 var (
-	errAllowOffline = errors.New("can't publish while offline: pass `--allow-offline` to override")
+	errAllowOffline = errors.New("can't publish while upload: pass `--allow-upload` to override")
 )
 
 const (
 	ipfsPathOptionName     = "btfs-path"
 	resolveOptionName      = "resolve"
-	allowOfflineOptionName = "allow-offline"
+	allowOfflineOptionName = "allow-upload"
 	lifeTimeOptionName     = "lifetime"
 	ttlOptionName          = "ttl"
 	keyOptionName          = "key"
@@ -77,7 +77,7 @@ Alternatively, publish an <btfs-path> using a valid PeerID (as listed by
 			`Time duration that the record will be valid for. <<default>>
     This accepts durations such as "300s", "1.5h" or "2h45m". Valid time units are
     "ns", "us" (or "µs"), "ms", "s", "m", "h".`).WithDefault("24h"),
-		cmds.BoolOption(allowOfflineOptionName, "When offline, save the BTNS record to the the local datastore without broadcasting to the network instead of simply failing."),
+		cmds.BoolOption(allowOfflineOptionName, "When upload, save the BTNS record to the the local datastore without broadcasting to the network instead of simply failing."),
 		cmds.StringOption(ttlOptionName, "Time duration this record should be cached for. Uses the same syntax as the lifetime option. (caution: experimental)"),
 		cmds.StringOption(keyOptionName, "k", "Name of the key to be used or a valid PeerID, as listed by 'btfs key list -l'.").WithDefault("self"),
 		cmds.BoolOption(quieterOptionName, "Q", "Write only final hash."),

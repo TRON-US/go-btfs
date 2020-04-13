@@ -3,13 +3,16 @@ package upload
 import (
 	"errors"
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/cenkalti/backoff/v3"
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	cmap "github.com/orcaman/concurrent-map"
-	"time"
 )
 
 const (

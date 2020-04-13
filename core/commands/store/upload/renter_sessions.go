@@ -3,12 +3,14 @@ package upload
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
-	"time"
 )
 
 const (

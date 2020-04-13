@@ -1,12 +1,11 @@
 package upload
 
 import (
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/protobuf/proto"
-
 	"github.com/TRON-US/go-btfs/core/escrow"
 
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/protobuf/proto"
 )
 
 func submit(rss *RenterSession, fileSize int64, offlineSigning bool) {

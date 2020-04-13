@@ -52,7 +52,7 @@ const (
 	ipnsMountKwd              = "mount-btns"
 	migrateKwd                = "migrate"
 	mountKwd                  = "mount"
-	offlineKwd                = "offline" // global option
+	offlineKwd                = "upload" // global option
 	routingOptionKwd          = "routing"
 	routingOptionSupernodeKwd = "supernode"
 	routingOptionDHTClientKwd = "dhtclient"
@@ -451,7 +451,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// construct fuse mountpoints - if the user provided the --mount flag
 	mount, _ := req.Options[mountKwd].(bool)
 	if mount && offline {
-		return cmds.Errorf(cmds.ErrClient, "mount is not currently supported in offline mode")
+		return cmds.Errorf(cmds.ErrClient, "mount is not currently supported in upload mode")
 	}
 	if mount {
 		if err := mountFuse(req, cctx); err != nil {
@@ -620,7 +620,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 // printSwarmAddrs prints the addresses of the host
 func printSwarmAddrs(node *core.IpfsNode) {
 	if !node.IsOnline {
-		fmt.Println("Swarm not listening, running in offline mode.")
+		fmt.Println("Swarm not listening, running in upload mode.")
 		return
 	}
 
