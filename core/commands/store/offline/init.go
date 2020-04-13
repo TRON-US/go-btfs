@@ -320,7 +320,8 @@ func downloadShardFromClient(ctxParams *ContextParams, guardContract *guardpb.Co
 
 func isPaidin(ctxParams *ContextParams, contractID *escrowpb.SignedContractID) (bool, error) {
 	var signedPayinRes *escrowpb.SignedPayinStatus
-	err := grpc.EscrowClient(ctxParams.cfg.Services.EscrowDomain).WithContext(ctxParams.ctx,
+	ctx, _ := storage.NewGoContext(ctxParams.ctx)
+	err := grpc.EscrowClient(ctxParams.cfg.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			res, err := client.IsPaid(ctx, contractID)
 			if err != nil {
