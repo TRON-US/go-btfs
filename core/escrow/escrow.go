@@ -389,24 +389,28 @@ func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 			in.Signature = sign
 			sb, err := client.GetPayOutStatusBatch(ctx, in)
 			if err != nil {
-				// It's possible contract is in initial state and does not
-				// have actual payout status yet
-				if err.Error() != payoutNotFoundErr {
-					log.Errorf("get payout status error: %v", err)
-				}
-				// Create dummy status
-				sb = &escrowpb.SignedPayoutStatusBatch{}
-				for range cs {
-					sb.Status = append(sb.Status, &escrowpb.PayoutStatus{})
-				}
+				log.Error("get payout status batch error:", err)
+				return err
+			}
+			if len(sb.Status) != len(cs) {
+				return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
+					len(cs), len(sb.Status))
 			}
 			for i, c := range cs {
-				var s *escrowpb.PayoutStatus
-				if i >= len(sb.Status) {
-					s = &escrowpb.PayoutStatus{}
-				} else {
-					s = sb.Status[i]
+				s := sb.Status[i]
+				// Set dummy payout status on invalid id or error msg
+				if s.ContractId != c.GuardContract.ContractId {
+					s = &escrowpb.PayoutStatus{
+						ContractId: c.GuardContract.ContractId,
+						ErrorMsg:   "mistmatched contract id",
+					}
+				} else if s.ErrorMsg != "" {
+					s = &escrowpb.PayoutStatus{
+						ContractId: c.GuardContract.ContractId,
+						ErrorMsg:   s.ErrorMsg,
+					}
 				}
+
 				results = append(results, &nodepb.Contracts_Contract{
 					ContractId:              c.GuardContract.ContractId,
 					HostId:                  c.GuardContract.HostPid,
