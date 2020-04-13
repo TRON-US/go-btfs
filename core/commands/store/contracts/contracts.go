@@ -259,8 +259,8 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 	}
 	var latest *time.Time
 	for _, c := range cs {
-		if latest == nil || c.GuardContract.LastModifyTime.After(*latest) {
-			latest = &c.GuardContract.LastModifyTime
+		if latest == nil || c.SignedGuardContract.LastModifyTime.After(*latest) {
+			latest = &c.SignedGuardContract.LastModifyTime
 		}
 	}
 	updated, err := guard.GetUpdatedGuardContracts(ctx, n, latest)

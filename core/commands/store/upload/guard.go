@@ -14,7 +14,6 @@ import (
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
-	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -42,16 +41,10 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 			//TODO
 			return
 		}
-		contract := new(guardpb.Contract)
-		err = proto.Unmarshal(contracts.SignedGuardContract, contract)
-		if err != nil {
-			//TODO
-			return
-		}
-		contract.EscrowSignature = res.EscrowSignature
-		contract.EscrowSignedTime = res.Result.EscrowSignedTime
-		contract.LastModifyTime = time.Now()
-		cts = append(cts, contract)
+		contracts.SignedGuardContract.EscrowSignature = res.EscrowSignature
+		contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
+		contracts.SignedGuardContract.LastModifyTime = time.Now()
+		cts = append(cts, contracts.SignedGuardContract)
 	}
 	fsStatus, err := newFileStatus(cts, rss.ctxParams.cfg, cts[0].ContractMeta.RenterPid, rss.hash, fileSize)
 	if err != nil {

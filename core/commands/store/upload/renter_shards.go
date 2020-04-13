@@ -3,12 +3,11 @@ package upload
 import (
 	"context"
 	"fmt"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"strings"
-	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/guard"
-	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -81,17 +80,17 @@ func (rs *RenterShard) enterState(e *fsm.Event) {
 	log.Infof("shard: %s:%s enter status: %s", rs.ssId, rs.hash, e.Dst)
 	switch e.Dst {
 	case rshContractStatus:
-		rs.doContract(e.Args[0].([]byte), e.Args[1].([]byte))
+		rs.doContract(e.Args[0].([]byte), e.Args[1].(*guardpb.Contract))
 	}
 }
 
-func (rs *RenterShard) status() (*renterpb.RenterShardStatus, error) {
-	status := new(renterpb.RenterShardStatus)
+func (rs *RenterShard) status() (*shardpb.Status, error) {
+	status := new(shardpb.Status)
 	contractId := getContractId(rs.ssId, rs.hash)
 	k := fmt.Sprintf(renterShardStatusKey, rs.peerId, contractId)
 	err := Get(rs.ds, k, status)
 	if err == datastore.ErrNotFound {
-		status = &renterpb.RenterShardStatus{
+		status = &shardpb.Status{
 			Status: rshInitStatus,
 		}
 		//ignore error
@@ -127,12 +126,11 @@ func extractSessionIDFromContractID(contractID string) (string, error) {
 	return ids[0], nil
 }
 
-func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContract []byte) error {
-	status := &renterpb.RenterShardStatus{
-		Status:      rshContractStatus,
-		LastUpdated: time.Now().UTC(),
+func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
+	status := &shardpb.Status{
+		Status: rshContractStatus,
 	}
-	signedContracts := &renterpb.RenterShardSignedContracts{
+	signedContracts := &shardpb.SignedContracts{
 		SignedEscrowContract: signedEscrowContract,
 		SignedGuardContract:  signedGuardContract,
 	}
@@ -145,12 +143,12 @@ func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContra
 	})
 }
 
-func (rs *RenterShard) contract(signedEscrowContract []byte, signedGuardContract []byte) error {
+func (rs *RenterShard) contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
 	return rs.fsm.Event(rshToContractEvent, signedEscrowContract, signedGuardContract)
 }
 
-func (rs *RenterShard) contracts() (*renterpb.RenterShardSignedContracts, error) {
-	contracts := &renterpb.RenterShardSignedContracts{}
+func (rs *RenterShard) contracts() (*shardpb.SignedContracts, error) {
+	contracts := &shardpb.SignedContracts{}
 	err := Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, getContractId(rs.ssId, rs.hash)), contracts)
 	if err == datastore.ErrNotFound {
 		return contracts, nil
@@ -159,7 +157,11 @@ func (rs *RenterShard) contracts() (*renterpb.RenterShardSignedContracts, error)
 }
 
 func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*shardpb.SignedContracts, error) {
-	vs, err := List(d, fmt.Sprintf(renterShardPrefix, peerId), "/signed-contracts")
+	var k string
+	if k = fmt.Sprintf(renterShardPrefix, peerId); role == nodepb.ContractStat_HOST.String() {
+		k = fmt.Sprintf(hostShardPrefix, peerId)
+	}
+	vs, err := List(d, k, "/signed-contracts")
 	if err != nil {
 		return nil, err
 	}
@@ -192,27 +194,27 @@ func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
 	invalidShards := map[string][]string{} // invalid shard hash -> (maybe) invalid file hash list
 	for _, c := range scs {
 		// only append the updated contracts
-		if gc, ok := gmap[c.GuardContract.ContractId]; ok {
-			ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, c.GuardContract.ContractId))
+		if gc, ok := gmap[c.SignedGuardContract.ContractId]; ok {
+			ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, c.SignedGuardContract.ContractId))
 			// update
-			c.GuardContract = gc
+			c.SignedGuardContract = gc
 			vs = append(vs, c)
-			delete(gmap, c.GuardContract.ContractId)
+			delete(gmap, c.SignedGuardContract.ContractId)
 
 			// mark stale files if no longer active (must be synced to become inactive)
 			if _, ok := guard.ContractFilterMap["active"][gc.State]; !ok {
 				invalidShards[gc.ShardHash] = append(invalidShards[gc.ShardHash], gc.FileHash)
 			}
 		} else {
-			activeShards[c.GuardContract.ShardHash] = true
-			activeFiles[c.GuardContract.FileHash] = true
+			activeShards[c.SignedGuardContract.ShardHash] = true
+			activeFiles[c.SignedGuardContract.FileHash] = true
 		}
 	}
 	// append what's left in guard map as new contracts
 	for contractID, gc := range gmap {
 		ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, contractID))
 		// add a new (guard contract only) signed contracts
-		c := &shardpb.SignedContracts{GuardContract: gc}
+		c := &shardpb.SignedContracts{SignedGuardContract: gc}
 		scs = append(scs, c)
 		vs = append(vs, c)
 

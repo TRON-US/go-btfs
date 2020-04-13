@@ -30,17 +30,3 @@ message RenterSessionStatus {
   repeated string shard_hashes = 4;
   string hash = 5;
 }
-
-message RenterShardStatus {
-  string status = 1;
-  string message = 2;
-  google.protobuf.Timestamp last_updated = 3 [
-    (gogoproto.nullable) = false,
-    (gogoproto.stdtime) = true
-  ];
-}
-
-message RenterShardSignedContracts {
-  bytes signed_escrow_contract = 1;
-  bytes signed_guard_contract = 2;
-}

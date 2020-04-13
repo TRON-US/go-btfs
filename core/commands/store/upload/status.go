@@ -4,9 +4,6 @@ import (
 	"fmt"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-
-	"github.com/gogo/protobuf/proto"
 )
 
 var StorageUploadStatusCmd = &cmds.Command{
@@ -68,14 +65,9 @@ This command print upload and payment status by the time queried.`,
 				Message:    st.Message,
 			}
 			if contracts.SignedGuardContract != nil {
-				contract := new(guardpb.Contract)
-				err := proto.Unmarshal(contracts.SignedGuardContract, contract)
-				if err != nil {
-					return err
-				}
-				c.ContractID = contract.ContractId
-				c.Price = contract.Price
-				c.Host = contract.HostPid
+				c.ContractID = contracts.SignedGuardContract.ContractId
+				c.Price = contracts.SignedGuardContract.Price
+				c.Host = contracts.SignedGuardContract.HostPid
 			}
 			shards[h] = c
 		}

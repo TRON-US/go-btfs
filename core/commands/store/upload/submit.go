@@ -4,7 +4,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/escrow"
 
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/protobuf/proto"
 )
 
@@ -61,12 +60,7 @@ func prepareContracts(rss *RenterSession, shardHashes []string) ([]*escrowpb.Sig
 			return nil, 0, err
 		}
 		signedContracts = append(signedContracts, escrowContract)
-		guardContract := &guardpb.Contract{}
-		err = proto.Unmarshal(c.SignedGuardContract, guardContract)
-		if err != nil {
-			return nil, 0, err
-		}
-		totalPrice += guardContract.Amount
+		totalPrice += c.SignedGuardContract.Amount
 	}
 	return signedContracts, totalPrice, nil
 }

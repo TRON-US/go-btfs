@@ -3,10 +3,9 @@ package upload
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	hostpb "github.com/TRON-US/go-btfs/protos/host"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	"github.com/tron-us/protobuf/proto"
 
@@ -16,7 +15,8 @@ import (
 )
 
 const (
-	hostShardKey          = "/btfs/%s/host/shards/%s/"
+	hostShardPrefix       = "/btfs/%s/renter/shards/"
+	hostShardKey          = hostShardPrefix + "%s/"
 	hostShardsInMemKey    = hostShardKey
 	hostShardStatusKey    = hostShardKey + "status"
 	hostShardContractsKey = hostShardKey + "contracts"
@@ -80,16 +80,16 @@ func (hs *HostShard) enterState(e *fsm.Event) {
 	fmt.Printf("shard: %s enter status: %s\n", hs.contractId, e.Dst)
 	switch e.Dst {
 	case hshContractStatus:
-		hs.doContract(e.Args[0].([]byte), e.Args[1].([]byte))
+		hs.doContract(e.Args[0].([]byte), e.Args[1].(*guardpb.Contract))
 	}
 }
 
-func (hs *HostShard) status() (*hostpb.HostShardStatus, error) {
-	status := new(hostpb.HostShardStatus)
+func (hs *HostShard) status() (*shardpb.Status, error) {
+	status := new(shardpb.Status)
 	k := fmt.Sprintf(hostShardStatusKey, hs.peerId, hs.contractId)
 	err := Get(hs.ds, k, status)
 	if err == datastore.ErrNotFound {
-		status = &hostpb.HostShardStatus{
+		status = &shardpb.Status{
 			Status: hshInitStatus,
 		}
 		//ignore error
@@ -100,12 +100,11 @@ func (hs *HostShard) status() (*hostpb.HostShardStatus, error) {
 	return status, nil
 }
 
-func (hs *HostShard) doContract(signedEscrowContract []byte, signedGuardContract []byte) error {
-	status := &hostpb.HostShardStatus{
-		Status:      hshContractStatus,
-		LastUpdated: time.Now().UTC(),
+func (hs *HostShard) doContract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
+	status := &shardpb.Status{
+		Status: hshContractStatus,
 	}
-	signedContracts := &hostpb.HostShardSignedContracts{
+	signedContracts := &shardpb.SignedContracts{
 		SignedEscrowContract: signedEscrowContract,
 		SignedGuardContract:  signedGuardContract,
 	}
@@ -117,7 +116,7 @@ func (hs *HostShard) doContract(signedEscrowContract []byte, signedGuardContract
 	})
 }
 
-func (hs *HostShard) contract(signedEscrowContract []byte, signedGuardContract []byte) error {
+func (hs *HostShard) contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
 	return hs.fsm.Event(hshToContractEvent, signedEscrowContract, signedGuardContract)
 }
 
@@ -125,8 +124,8 @@ func (hs *HostShard) complete() error {
 	return hs.fsm.Event(hshToCompleteEvent)
 }
 
-func (hs *HostShard) contracts() (*hostpb.HostShardSignedContracts, error) {
-	contracts := &hostpb.HostShardSignedContracts{}
+func (hs *HostShard) contracts() (*shardpb.SignedContracts, error) {
+	contracts := &shardpb.SignedContracts{}
 	err := Get(hs.ds, fmt.Sprintf(hostShardContractsKey, hs.peerId, hs.contractId), contracts)
 	if err == datastore.ErrNotFound {
 		return contracts, nil

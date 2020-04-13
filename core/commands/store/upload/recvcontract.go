@@ -82,7 +82,7 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	if err != nil {
 		return
 	}
-	err = shard.contract(escrowContractBytes, guardContractBytes)
+	err = shard.contract(escrowContractBytes, guardContract)
 	if err != nil {
 		return
 	}
