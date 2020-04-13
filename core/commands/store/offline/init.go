@@ -144,14 +144,11 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		go func() {
-			fmt.Println(1)
 			tmp := func() error {
-				fmt.Println(2)
 				shard, err := GetHostShard(ctxParams, escrowContract.ContractId)
 				if err != nil {
 					return err
 				}
-				fmt.Println(3)
 				_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, requestPid, "/storage/upload/recvcontract",
 					ssId,
 					shardHash,
@@ -159,9 +156,7 @@ the shard and replies back to client for the next challenge step.`,
 					signedEscrowContractBytes,
 					signedGuardContractBytes,
 				)
-				fmt.Println(4)
 				if err != nil {
-					fmt.Println(16, err)
 					return err
 				}
 				fmt.Println(5)
@@ -171,20 +166,26 @@ the shard and replies back to client for the next challenge step.`,
 					fmt.Println(17, err)
 					return err
 				}
+				fmt.Println(6)
+				// check payment
 
 				paidIn := make(chan bool)
 				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
+				fmt.Println(7)
 				paid := <-paidIn
 				if !paid {
 					fmt.Println(18, err)
 					return errors.New("contract is not paid:" + escrowContract.ContractId)
 				}
+				fmt.Println(8)
 				err = shard.contract(signedEscrowContractBytes, signedGuardContractBytes)
 				if err != nil {
 					fmt.Println(18-2, err)
 					return err
 				}
+				fmt.Println(9)
 				downloadShardFromClient(ctxParams, halfSignedGuardContract, req.Arguments[1], shardHash)
+				fmt.Println(10)
 				in := &guardpb.ReadyForChallengeRequest{
 					RenterPid:   guardContractMeta.RenterPid,
 					FileHash:    guardContractMeta.FileHash,
@@ -198,6 +199,7 @@ the shard and replies back to client for the next challenge step.`,
 					fmt.Println(19, err)
 					return err
 				}
+				fmt.Println(11)
 				in.Signature = sign
 				fmt.Println("before ready for challenge")
 				err = grpc.GuardClient(ctxParams.cfg.Services.GuardDomain).WithContext(req.Context,
