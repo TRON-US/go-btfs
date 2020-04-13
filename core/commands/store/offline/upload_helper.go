@@ -3,12 +3,12 @@ package upload
 import (
 	"context"
 	"fmt"
+	"github.com/TRON-US/interface-go-btfs-core/path"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/helper"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
@@ -107,7 +107,7 @@ func getShardHashes(params *ContextParams, fileHash string) (shardHashes []strin
 	if err != nil {
 		return nil, -1, -1, err
 	}
-	sz, err := helper.GetNodeSizeFromCid(params.ctx, shardCid, params.api)
+	sz, err := getNodeSizeFromCid(params.ctx, shardCid, params.api)
 	if err != nil {
 		return nil, -1, -1, err
 	}
@@ -143,4 +143,13 @@ func totalPay(shardSize int64, price int64, storageLength int) int64 {
 func newContractID(sessionId string) string {
 	id := uuid.New().String()
 	return sessionId + "," + id
+}
+
+func getNodeSizeFromCid(ctx context.Context, hash cidlib.Cid, api iface.CoreAPI) (uint64, error) {
+	leafPath := path.IpfsPath(hash)
+	ipldNode, err := api.ResolveNode(ctx, leafPath)
+	if err != nil {
+		return 0, err
+	}
+	return ipldNode.Size()
 }

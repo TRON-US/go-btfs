@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	hostpb "github.com/TRON-US/go-btfs/protos/host"
 
 	"github.com/tron-us/protobuf/proto"
@@ -88,13 +87,13 @@ func (hs *HostShard) enterState(e *fsm.Event) {
 func (hs *HostShard) status() (*hostpb.HostShardStatus, error) {
 	status := new(hostpb.HostShardStatus)
 	k := fmt.Sprintf(hostShardStatusKey, hs.peerId, hs.contractId)
-	err := ds.Get(hs.ds, k, status)
+	err := Get(hs.ds, k, status)
 	if err == datastore.ErrNotFound {
 		status = &hostpb.HostShardStatus{
 			Status: hshInitStatus,
 		}
 		//ignore error
-		_ = ds.Save(hs.ds, k, status)
+		_ = Save(hs.ds, k, status)
 	} else if err != nil {
 		return nil, err
 	}
@@ -110,7 +109,7 @@ func (hs *HostShard) doContract(signedEscrowContract []byte, signedGuardContract
 		SignedEscrowContract: signedEscrowContract,
 		SignedGuardContract:  signedGuardContract,
 	}
-	return ds.Batch(hs.ds, []string{
+	return Batch(hs.ds, []string{
 		fmt.Sprintf(hostShardStatusKey, hs.peerId, hs.contractId),
 		fmt.Sprintf(hostShardContractsKey, hs.peerId, hs.contractId),
 	}, []proto.Message{
@@ -128,7 +127,7 @@ func (hs *HostShard) complete() error {
 
 func (hs *HostShard) contracts() (*hostpb.HostShardSignedContracts, error) {
 	contracts := &hostpb.HostShardSignedContracts{}
-	err := ds.Get(hs.ds, fmt.Sprintf(hostShardContractsKey, hs.peerId, hs.contractId), contracts)
+	err := Get(hs.ds, fmt.Sprintf(hostShardContractsKey, hs.peerId, hs.contractId), contracts)
 	if err == datastore.ErrNotFound {
 		return contracts, nil
 	}

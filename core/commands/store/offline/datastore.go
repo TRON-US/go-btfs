@@ -1,4 +1,4 @@
-package ds
+package upload
 
 import (
 	"strings"

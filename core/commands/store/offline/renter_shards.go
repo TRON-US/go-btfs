@@ -4,18 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+	"github.com/TRON-US/go-btfs/core/guard"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/protobuf/proto"
 	"strings"
 	"time"
 )
 
 const (
-	renterShardKey          = "/btfs/%s/renter/shards/%s/"
+	renterShardPrefix       = "/btfs/%s/renter/shards/"
+	renterShardKey          = renterShardPrefix + "%s/"
 	renterShardsInMemKey    = renterShardKey
 	renterShardStatusKey    = renterShardKey + "status"
 	renterShardContractsKey = renterShardKey + "contracts"
@@ -72,8 +75,7 @@ func GetRenterShard(ctxParams *ContextParams, ssId string, hash string) (*Renter
 }
 
 func (rs *RenterShard) enterState(e *fsm.Event) {
-	//log.Info("shard: %s:%s enter status: %s\n", rs.ssId, rs.hash, e.Dst)
-	fmt.Printf("shard: %s:%s enter status: %s\n", rs.ssId, rs.hash, e.Dst)
+	log.Infof("shard: %s:%s enter status: %s", rs.ssId, rs.hash, e.Dst)
 	switch e.Dst {
 	case rshContractStatus:
 		rs.doContract(e.Args[0].([]byte), e.Args[1].([]byte))
@@ -84,13 +86,13 @@ func (rs *RenterShard) status() (*renterpb.RenterShardStatus, error) {
 	status := new(renterpb.RenterShardStatus)
 	contractId := getContractId(rs.ssId, rs.hash)
 	k := fmt.Sprintf(renterShardStatusKey, rs.peerId, contractId)
-	err := ds.Get(rs.ds, k, status)
+	err := Get(rs.ds, k, status)
 	if err == datastore.ErrNotFound {
 		status = &renterpb.RenterShardStatus{
 			Status: rshInitStatus,
 		}
 		//ignore error
-		_ = ds.Save(rs.ds, k, status)
+		_ = Save(rs.ds, k, status)
 	} else if err != nil {
 		return nil, err
 	}
@@ -108,6 +110,20 @@ func splitContractId(contractId string) (ssId string, shardHash string) {
 	return
 }
 
+// ExtractSessionIDFromContractID takes the first segment separated by ","
+// and returns it as the session id. If in an old format, i.e. did not
+// have a session id, return an error.
+func extractSessionIDFromContractID(contractID string) (string, error) {
+	ids := strings.Split(contractID, ":")
+	if len(ids) != 2 {
+		return "", fmt.Errorf("bad contract id: fewer than 2 segments")
+	}
+	if len(ids[0]) != 36 {
+		return "", fmt.Errorf("invalid session id within contract id")
+	}
+	return ids[0], nil
+}
+
 func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContract []byte) error {
 	status := &renterpb.RenterShardStatus{
 		Status:      rshContractStatus,
@@ -118,7 +134,7 @@ func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContra
 		SignedGuardContract:  signedGuardContract,
 	}
 	contractId := getContractId(rs.ssId, rs.hash)
-	return ds.Batch(rs.ds, []string{
+	return Batch(rs.ds, []string{
 		fmt.Sprintf(renterShardStatusKey, rs.peerId, contractId),
 		fmt.Sprintf(renterShardContractsKey, rs.peerId, contractId),
 	}, []proto.Message{
@@ -132,9 +148,102 @@ func (rs *RenterShard) contract(signedEscrowContract []byte, signedGuardContract
 
 func (rs *RenterShard) contracts() (*renterpb.RenterShardSignedContracts, error) {
 	contracts := &renterpb.RenterShardSignedContracts{}
-	err := ds.Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, getContractId(rs.ssId, rs.hash)), contracts)
+	err := Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, getContractId(rs.ssId, rs.hash)), contracts)
 	if err == datastore.ErrNotFound {
 		return contracts, nil
 	}
 	return contracts, err
+}
+
+func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*shardpb.SignedContracts, error) {
+	vs, err := List(d, fmt.Sprintf(renterShardPrefix, peerId), "/signed-contracts")
+	if err != nil {
+		return nil, err
+	}
+	contracts := make([]*shardpb.SignedContracts, 0)
+	for _, v := range vs {
+		sc := &shardpb.SignedContracts{}
+		err := proto.Unmarshal(v, sc)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		contracts = append(contracts, sc)
+	}
+	return contracts, nil
+}
+
+// SaveShardsContracts persists updated guard contracts from upstream, if an existing entry
+// is not available, then an empty signed escrow contract is inserted along with the
+// new guard contract.
+func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
+	gcs []*guardpb.Contract, peerID, role string) ([]*shardpb.SignedContracts, []string, error) {
+	var ks []string
+	var vs []proto.Message
+	gmap := map[string]*guardpb.Contract{}
+	for _, g := range gcs {
+		gmap[g.ContractId] = g
+	}
+	activeShards := map[string]bool{}      // active shard hash -> has one file hash (bool)
+	activeFiles := map[string]bool{}       // active file hash -> has one shard hash (bool)
+	invalidShards := map[string][]string{} // invalid shard hash -> (maybe) invalid file hash list
+	for _, c := range scs {
+		// only append the updated contracts
+		if gc, ok := gmap[c.GuardContract.ContractId]; ok {
+			ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, c.GuardContract.ContractId))
+			// update
+			c.GuardContract = gc
+			vs = append(vs, c)
+			delete(gmap, c.GuardContract.ContractId)
+
+			// mark stale files if no longer active (must be synced to become inactive)
+			if _, ok := guard.ContractFilterMap["active"][gc.State]; !ok {
+				invalidShards[gc.ShardHash] = append(invalidShards[gc.ShardHash], gc.FileHash)
+			}
+		} else {
+			activeShards[c.GuardContract.ShardHash] = true
+			activeFiles[c.GuardContract.FileHash] = true
+		}
+	}
+	// append what's left in guard map as new contracts
+	for contractID, gc := range gmap {
+		ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, contractID))
+		// add a new (guard contract only) signed contracts
+		c := &shardpb.SignedContracts{GuardContract: gc}
+		scs = append(scs, c)
+		vs = append(vs, c)
+
+		// mark stale files if no longer active (must be synced to become inactive)
+		if _, ok := guard.ContractFilterMap["active"][gc.State]; !ok {
+			invalidShards[gc.ShardHash] = append(invalidShards[gc.ShardHash], gc.FileHash)
+		} else {
+			activeShards[gc.ShardHash] = true
+			activeFiles[gc.FileHash] = true
+		}
+	}
+	if len(ks) > 0 {
+		err := Batch(ds, ks, vs)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	var staleHashes []string
+	// compute what's stale
+	for ish, fhs := range invalidShards {
+		if _, ok := activeShards[ish]; ok {
+			// other files are referring to this hash, skip
+			continue
+		}
+		for _, fh := range fhs {
+			if _, ok := activeFiles[fh]; !ok {
+				// file does not have other active shards
+				staleHashes = append(staleHashes, fh)
+			}
+		}
+		// TODO: Cannot prematurally remove shard because it's indirectly pinned
+		// Need a way to disassociated indirect pins from parent...
+		// remove hash anyway even if no file is getting removed
+		//staleHashes = append(staleHashes, ish)
+	}
+	return scs, staleHashes, nil
 }

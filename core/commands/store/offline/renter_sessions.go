@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
@@ -127,7 +126,7 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 	case rssErrorStatus:
 		msg = e.Args[0].(error).Error()
 	}
-	ds.Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId),
+	Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId),
 		&renterpb.RenterSessionStatus{
 			Status:      e.Dst,
 			Message:     msg,
@@ -137,7 +136,7 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 
 func (rs *RenterSession) status() (*renterpb.RenterSessionStatus, error) {
 	status := &renterpb.RenterSessionStatus{}
-	err := ds.Get(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId), status)
+	err := Get(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId), status)
 	if err == datastore.ErrNotFound {
 		return &renterpb.RenterSessionStatus{
 			Status:      rssInitStatus,
