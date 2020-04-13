@@ -270,6 +270,7 @@ func checkPaymentFromClient(ctxParams *ContextParams, paidIn chan bool, contract
 	err = backoff.Retry(func() error {
 		paid, err = isPaidin(ctxParams, contractID)
 		if err != nil {
+			fmt.Println("paid err", err)
 			return err
 		}
 		if paid {
@@ -279,6 +280,7 @@ func checkPaymentFromClient(ctxParams *ContextParams, paidIn chan bool, contract
 		return errors.New("reach max retry times")
 	}, checkPaymentBo)
 	if err != nil {
+		fmt.Println("paid in err", err)
 		log.Error("Check escrow IsPaidin failed", err)
 		paidIn <- paid
 	}
