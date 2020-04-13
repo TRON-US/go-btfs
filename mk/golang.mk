@@ -9,9 +9,13 @@ GOTAGS ?=
 unexport GOFLAGS
 GOFLAGS ?=
 GOTFLAGS ?=
+TEST_COVERAGE_OUTPUT ?= tests_coverage
 
 # Try to make building as reproducible as possible by stripping the go path.
 GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
+
+#GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=./..."
+GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
 
 ifeq ($(tarball-is),1)
 	GOFLAGS += -mod=vendor
@@ -48,6 +52,15 @@ endef
 test_go_test: $$(DEPS_GO)
 	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
 .PHONY: test_go_test
+
+#Used to display coverage per function an total at the end
+test_coverage_output:
+	$(GOCC) tool cover -func="$(TEST_COVERAGE_OUTPUT).out"
+
+#Generates an html report of the unit tests coverage
+test_coverage_html:
+	$(GOCC) tool cover -html="$(TEST_COVERAGE_OUTPUT).out" -o "$(TEST_COVERAGE_OUTPUT).html"
+.PHONY: test_coverage_html
 
 test_go_build: $$(TEST_GO_BUILD)
 
