@@ -119,7 +119,7 @@ Use status command to check for completion:
 						rss.cancel()
 						return nil
 					}
-					contractId := newContractID(rss.ssId)
+					contractId := newContractID(ssId)
 					cb := make(chan error)
 					shardErrChanMap.Set(contractId, cb)
 					tp := totalPay(shardSize, price, storageLength)
