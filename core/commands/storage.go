@@ -114,7 +114,7 @@ Use status command to check for completion:
 	Subcommands: map[string]*cmds.Command{
 		"init":              upload.StorageUploadInitCmd,
 		"recvcontract":      upload.StorageUploadRecvContractCmd,
-		//"status":            upload.StorageUploadStatusCmd,
+		"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
 		"offline":           storageUploadOfflineCmd,
 		"getcontractbatch":  storageUploadGetContractBatchCmd,

@@ -9,6 +9,7 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
+	"time"
 )
 
 const (
@@ -120,8 +121,18 @@ func GetRenterSession(ctxParams *ContextParams, ssId string, hash string, shardH
 
 func (rs *RenterSession) enterState(e *fsm.Event) {
 	// FIXME: log.Info
-	fmt.Printf("session: %s enter status: %s\n", rs.ssId, e.Dst)
-
+	log.Infof("session: %s enter status: %s\n", rs.ssId, e.Dst)
+	msg := ""
+	switch e.Dst {
+	case rssErrorStatus:
+		msg = e.Args[0].(error).Error()
+	}
+	ds.Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId),
+		&renterpb.RenterSessionStatus{
+			Status:      e.Dst,
+			Message:     msg,
+			LastUpdated: time.Now().UTC(),
+		})
 }
 
 func (rs *RenterSession) status() (*renterpb.RenterSessionStatus, error) {

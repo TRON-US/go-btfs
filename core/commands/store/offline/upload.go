@@ -61,7 +61,7 @@ Use status command to check for completion:
 	Subcommands: map[string]*cmds.Command{
 		"init":         StorageUploadInitCmd,
 		"recvcontract": StorageUploadRecvContractCmd,
-		//"status":       StorageUploadStatusCmd,
+		"status":       StorageUploadStatusCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
