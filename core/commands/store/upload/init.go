@@ -182,7 +182,12 @@ the shard and replies back to client for the next challenge step.`,
 					return errors.New("contract is not paid:" + escrowContract.ContractId)
 				}
 				fmt.Println(8)
-				err = shard.contract(signedEscrowContractBytes, signedGuardContractBytes)
+				tmp := new(guardpb.Contract)
+				err = proto.Unmarshal(signedGuardContractBytes, tmp)
+				if err != nil {
+					return err
+				}
+				err = shard.contract(signedEscrowContractBytes, tmp)
 				if err != nil {
 					fmt.Println(18-2, err)
 					return err
