@@ -39,6 +39,8 @@ const (
 	payoutNotFoundErr  = "rpc error: code = Unknown desc = not found"
 
 	guardTimeout = 360 * time.Second
+
+	guardContractPageSize = 100
 )
 
 // Storage Contracts
@@ -289,60 +291,77 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 			return err
 		}
 	}
-	results, err := syncContractPayoutStatus(ctx, n, cs)
-	if err != nil {
-		return err
+	if len(cs) > 0 {
+		results, err := syncContractPayoutStatus(ctx, n, cs)
+		if err != nil {
+			return err
+		}
+		return Save(n.Repo.Datastore(), results, role)
 	}
-	return Save(n.Repo.Datastore(), results, role)
+	return nil
 }
 
 // GetUpdatedGuardContracts retrieves updated guard contracts from remote based on latest timestamp
 // and returns the list updated
 func GetUpdatedGuardContracts(ctx context.Context, n *core.IpfsNode,
 	lastUpdatedTime *time.Time) ([]*guardpb.Contract, error) {
-	now := time.Now()
-	req := &guardpb.ListHostContractsRequest{
-		HostPid:             n.Identity.Pretty(),
-		RequesterPid:        n.Identity.Pretty(),
-		RequestPageSize:     0, // FIXME Does it return all?
-		RequestPageIndex:    0,
-		LastModifyTimeSince: lastUpdatedTime,
-		State:               guardpb.ListHostContractsRequest_ALL,
-		RequestTime:         &now,
-	}
-	signedReq, err := crypto.Sign(n.PrivateKey, req)
-	if err != nil {
-		return nil, err
-	}
-	req.Signature = signedReq
+	// Loop until all pages are obtained
+	var contracts []*guardpb.Contract
+	for i := 0; ; i++ {
+		now := time.Now()
+		req := &guardpb.ListHostContractsRequest{
+			HostPid:             n.Identity.Pretty(),
+			RequesterPid:        n.Identity.Pretty(),
+			RequestPageSize:     guardContractPageSize,
+			RequestPageIndex:    int32(i),
+			LastModifyTimeSince: lastUpdatedTime,
+			State:               guardpb.ListHostContractsRequest_ALL,
+			RequestTime:         &now,
+		}
+		signedReq, err := crypto.Sign(n.PrivateKey, req)
+		if err != nil {
+			return nil, err
+		}
+		req.Signature = signedReq
 
-	cfg, err := n.Repo.Config()
-	if err != nil {
-		return nil, err
-	}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return nil, err
+		}
+		cs, last, err := ListHostContracts(ctx, cfg, req)
+		if err != nil {
+			return nil, err
+		}
 
-	return ListHostContracts(ctx, cfg, req)
+		contracts = append(contracts, cs...)
+		if last {
+			break
+		}
+	}
+	return contracts, nil
 }
 
 // ListHostContracts opens a grpc connection, sends the host contract list request and
 // closes (short) connection
 func ListHostContracts(ctx context.Context, cfg *config.Config,
-	listReq *guardpb.ListHostContractsRequest) ([]*guardpb.Contract, error) {
+	listReq *guardpb.ListHostContractsRequest) ([]*guardpb.Contract, bool, error) {
 	cb := grpc.GuardClient(cfg.Services.GuardDomain)
 	cb.Timeout(guardTimeout)
 	var contracts []*guardpb.Contract
+	var lastPage bool
 	err := cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
 		res, err := client.ListHostContracts(ctx, listReq)
 		if err != nil {
 			return err
 		}
 		contracts = res.Contracts
+		lastPage = res.Count < listReq.RequestPageSize
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return contracts, nil
+	return contracts, lastPage, nil
 }
 
 // SyncContractPayoutStatus looks at local contracts, refreshes from Guard, and then
@@ -365,30 +384,48 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context,
 			client escrowpb.EscrowServiceClient) error {
+			in := &escrowpb.SignedContractIDBatch{
+				Data: &escrowpb.ContractIDBatch{
+					Address: pkBytes,
+				},
+			}
 			for _, c := range cs {
-				in := &escrowpb.SignedContractID{
-					Data: &escrowpb.ContractID{
+				in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
+			}
+			sign, err := crypto.Sign(n.PrivateKey, in.Data)
+			if err != nil {
+				log.Error("sign contractID error:", err)
+				return err
+			}
+			in.Signature = sign
+			sb, err := client.GetPayOutStatusBatch(ctx, in)
+			if err != nil {
+				log.Error("get payout status batch error:", err)
+				return err
+			}
+			if len(sb.Status) != len(cs) {
+				return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
+					len(cs), len(sb.Status))
+			}
+			for i, c := range cs {
+				s := sb.Status[i]
+				// Set dummy payout status on invalid id or error msg
+				// Reset to dummy status so we have a copy locally with invalid params
+				if s.ContractId != c.SignedGuardContract.ContractId {
+					s = &escrowpb.PayoutStatus{
 						ContractId: c.SignedGuardContract.ContractId,
-						Address:    pkBytes,
-					},
-				}
-				sign, err := crypto.Sign(n.PrivateKey, in.Data)
-				if err != nil {
-					log.Error("sign contractID error:", err)
-					continue
-				}
-				in.Signature = sign
-				s, err := client.GetPayOutStatus(ctx, in)
-				if err != nil {
-					// It's possible contract is in initial state and does not
-					// have actual payout status yet
-					if err.Error() != payoutNotFoundErr {
-						log.Errorf("state: [%s], get payout status error: %v", c.SignedGuardContract.State, err)
+						ErrorMsg:   "mistmatched contract id",
 					}
-					s = &escrowpb.SignedPayoutStatus{
-						Status: &escrowpb.PayoutStatus{},
+				} else if s.ErrorMsg != "" {
+					s = &escrowpb.PayoutStatus{
+						ContractId: c.SignedGuardContract.ContractId,
+						ErrorMsg:   s.ErrorMsg,
 					}
 				}
+				if s.ErrorMsg != "" {
+					log.Debug("got payout status error message:", s.ErrorMsg)
+				}
+
 				results = append(results, &nodepb.Contracts_Contract{
 					ContractId:              c.SignedGuardContract.ContractId,
 					HostId:                  c.SignedGuardContract.HostPid,
@@ -396,9 +433,9 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 					Status:                  c.SignedGuardContract.State,
 					StartTime:               c.SignedGuardContract.RentStart,
 					EndTime:                 c.SignedGuardContract.RentEnd,
-					NextEscrowTime:          s.Status.NextPayoutTime,
-					CompensationPaid:        s.Status.PaidAmount,
-					CompensationOutstanding: s.Status.Amount - s.Status.PaidAmount,
+					NextEscrowTime:          s.NextPayoutTime,
+					CompensationPaid:        s.PaidAmount,
+					CompensationOutstanding: s.Amount - s.PaidAmount,
 					UnitPrice:               c.SignedGuardContract.Price,
 					ShardSize:               c.SignedGuardContract.ShardFileSize,
 					ShardHash:               c.SignedGuardContract.ShardHash,
