@@ -67,6 +67,11 @@ Use status command to check for completion:
 		"init":         StorageUploadInitCmd,
 		"recvcontract": StorageUploadRecvContractCmd,
 		"status":       StorageUploadStatusCmd,
+		//"repair":            storageUploadRepairCmd,
+		"getcontractbatch":  storageUploadGetContractBatchCmd,
+		"signcontractbatch": storageUploadSignContractBatchCmd,
+		"getunsigned":       storageUploadGetUnsignedCmd,
+		"sign":              storageUploadSignCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),

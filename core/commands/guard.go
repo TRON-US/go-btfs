@@ -54,8 +54,8 @@ Sends all shard challenge questions under a reed-solomon encoded file
 to the guard service.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "File hash to generate the questions from.").EnableStdin(),
-		cmds.StringArg("session-id", true, false, "Session id to generate the questions from.").EnableStdin(),
+		cmds.StringArg("file-hash", true, false, "File hash to generate the questions from."),
+		cmds.StringArg("session-id", true, false, "Session id to generate the questions from."),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(guardUrlOptionName, "u", "Guard service url including protocol and port. Default: reads from BTFS config."),
