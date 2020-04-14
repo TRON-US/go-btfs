@@ -11,11 +11,14 @@ GOFLAGS ?=
 GOTFLAGS ?=
 TEST_COVERAGE_OUTPUT ?= tests_coverage
 
+MY_FILE := coverpkg_list.txt
+PACKAGE_LIST := $(shell cat ${MY_FILE})
+
 # Try to make building as reproducible as possible by stripping the go path.
 GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
 
-#GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=./..."
-GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
+GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=$(PACKAGE_LIST)"
+#GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
 
 ifeq ($(tarball-is),1)
 	GOFLAGS += -mod=vendor
