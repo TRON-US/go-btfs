@@ -549,7 +549,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		apiMaddr = apiLis.Multiaddr()
 		fmt.Printf("API server listening on %s\n", apiMaddr)
 		fmt.Printf("WebUI: http://%s/webui\n", apiLis.Addr())
-		//fmt.Printf("HostUI: http://%s/hostui\n", apiLis.Addr())
+		fmt.Printf("HostUI: http://%s/hostui\n", apiLis.Addr())
 		listeners = append(listeners, apiLis)
 	}
 
@@ -568,7 +568,7 @@ func serveHTTPApi(req *cmds.Request, cctx *oldcmds.Context) (<-chan error, error
 		corehttp.CheckVersionOption(),
 		corehttp.CommandsOption(*cctx),
 		corehttp.WebUIOption,
-		//corehttp.HostUIOption,
+		corehttp.HostUIOption,
 		gatewayOpt,
 		corehttp.VersionOption(),
 		defaultMux("/debug/vars"),
