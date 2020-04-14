@@ -2,8 +2,9 @@ package spin
 
 import (
 	"context"
-	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"time"
+
+	"github.com/TRON-US/go-btfs/core/commands/storage"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
