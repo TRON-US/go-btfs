@@ -126,7 +126,6 @@ func SignedContractAndMarshal(meta *guardpb.ContractMeta, offlineSignedBytes []b
 	}
 	if isPayer {
 		cont.RenterPid = renterPid
-		fmt.Println("@nodePid", nodePid)
 		cont.PreparerPid = nodePid
 		if isRepair {
 			cont.PreparerSignature = signedBytes

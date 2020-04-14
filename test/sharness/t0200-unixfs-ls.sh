@@ -129,7 +129,7 @@ EOF
 }
 
 
-# should work upload
+# should work offline
 test_ls_cmd
 
 # should work online

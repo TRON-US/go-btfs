@@ -63,7 +63,7 @@ test_gc() {
 }
 
 
-# should work upload
+# should work offline
 test_cat_get
 test_gc
 

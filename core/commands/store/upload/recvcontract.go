@@ -1,12 +1,13 @@
 package upload
 
 import (
-	"errors"
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+	"github.com/TRON-US/go-btfs/core/guard"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
-	"github.com/gogo/protobuf/proto"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
 var StorageUploadRecvContractCmd = &cmds.Command{
@@ -21,64 +22,34 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		contractId, err := doRecv(req, env)
-		if contractId != "" {
-			if ch, ok := shardErrChanMap.Get(contractId); ok {
-				go func() {
-					ch.(chan error) <- err
-				}()
-			}
+		escrowContractBytes := []byte(req.Arguments[3])
+		guardContractBytes := []byte(req.Arguments[4])
+		ssID := req.Arguments[0]
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
 			return err
 		}
+		shardHash := req.Arguments[1]
+		ss, err := ds.GetSession(ssID, nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), nil)
+		if err != nil {
+			return err
+		}
+		s, err := ds.GetShard(n.Identity.Pretty(), ss.Role, ssID, shardHash, &ds.ShardInitParams{
+			Context:   ss.Context,
+			Datastore: n.Repo.Datastore(),
+		})
+		if err != nil {
+			return err
+		}
+		guardContract, err := guard.UnmarshalGuardContract(guardContractBytes)
+		if err != nil {
+			return err
+		}
+		s.Contract(&shardpb.SignedContracts{
+			SignedEscrowContract: escrowContractBytes,
+			GuardContract:        guardContract,
+		})
+		s.Complete()
 		return nil
 	},
-}
-
-func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err error) {
-	ssID := req.Arguments[0]
-	ctxParams, err := extractContextParams(req, env)
-	if err != nil {
-		return
-	}
-	requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.n)
-	if !ok {
-		err = errors.New("failed to get remote peer id")
-		return
-	}
-	rpk, err := requestPid.ExtractPublicKey()
-	if err != nil {
-		return
-	}
-
-	escrowContractBytes := []byte(req.Arguments[3])
-	guardContractBytes := []byte(req.Arguments[4])
-	guardContract := new(guardpb.Contract)
-	err = proto.Unmarshal(guardContractBytes, guardContract)
-	if err != nil {
-		return
-	}
-	bytes, err := proto.Marshal(&guardContract.ContractMeta)
-	if err != nil {
-		return
-	}
-	valid, err := rpk.Verify(bytes, guardContract.HostSignature)
-	if err != nil {
-		return
-	}
-	if !valid || guardContract.ContractMeta.GetHostPid() != requestPid.Pretty() {
-		err = errors.New("invalid guard contract bytes")
-		return
-	}
-	contractId = guardContract.ContractMeta.ContractId
-
-	shardHash := req.Arguments[1]
-	shard, err := GetRenterShard(ctxParams, ssID, shardHash)
-	if err != nil {
-		return
-	}
-	err = shard.contract(escrowContractBytes, guardContract)
-	if err != nil {
-		return
-	}
-	return
 }

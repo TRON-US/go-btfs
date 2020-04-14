@@ -32,7 +32,7 @@ test_ipfs_get_flag() {
   '
 }
 
-# we use a function so that we can run it both upload + online
+# we use a function so that we can run it both offline + online
 test_get_cmd() {
 
   test_expect_success "'ipfs get --help' succeeds" '
@@ -173,10 +173,10 @@ EOF
   '
 }
 
-# should work upload
+# should work offline
 test_get_cmd
 
-# only really works upload, will try and search network when online
+# only really works offline, will try and search network when online
 test_get_fail
 
 # should work online

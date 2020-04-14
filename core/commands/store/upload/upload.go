@@ -1,37 +1,71 @@
 package upload
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	renterpb "github.com/TRON-US/go-btfs/protos/renter"
-	"strconv"
+	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/helper"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/TRON-US/go-btfs/core/guard"
+
+	"github.com/tron-us/go-btfs-common/crypto"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-
+	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
-	"github.com/google/uuid"
+	cidlib "github.com/ipfs/go-cid"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	cmap "github.com/orcaman/concurrent-map"
 )
 
+var waitUploadBo = func() *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 1 * time.Second
+	bo.MaxElapsedTime = 24 * time.Hour
+	bo.Multiplier = 1.5
+	bo.MaxInterval = 1 * time.Minute
+	return bo
+}()
+
+var handleShardBo = func() *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 1 * time.Second
+	bo.MaxElapsedTime = 300 * time.Second
+	bo.Multiplier = 1
+	bo.MaxInterval = 1 * time.Second
+	return bo
+}()
+
 const (
+	uploadPriceOptionName            = "price"
 	replicationFactorOptionName      = "replication-factor"
 	hostSelectModeOptionName         = "host-select-mode"
 	hostSelectionOptionName          = "host-selection"
 	testOnlyOptionName               = "host-search-local"
+	storageLengthOptionName          = "storage-length"
 	customizedPayoutOptionName       = "customize-payout"
 	customizedPayoutPeriodOptionName = "customize-payout-period"
 
-	defaultRepFactor     = 3
-	defaultStorageLength = 30
+	defaultRepFactor       = 3
+	defaultStorageLength   = 30
+	thresholdContractsNums = 20
 )
 
-var (
-	shardErrChanMap = cmap.New()
-)
+type ShardObj struct {
+	index int
+	hash  string
+}
 
 var StorageUploadCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -70,9 +104,6 @@ Use status command to check for completion:
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
-		cmds.StringArg("upload-peer-id", false, false, "Peer id when upload upload."),
-		cmds.StringArg("upload-nonce-ts", false, false, "Nounce timestamp when upload upload."),
-		cmds.StringArg("upload-signature", false, false, "Session signature when upload upload."),
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in JUST."),
@@ -86,192 +117,352 @@ Use status command to check for completion:
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ssId := uuid.New().String()
-		ctxParams, err := extractContextParams(req, env)
+		// get config settings
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+		// get node
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		// get core api
+		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
 		fileHash := req.Arguments[0]
-		offlinePeerId := ctxParams.n.Identity.Pretty()
-		offlineSigning := false
-		if len(req.Arguments) > 1 {
-			offlinePeerId = req.Arguments[1]
-			offlineSigning = true
-		}
-		shardHashes, fileSize, shardSize, err := getShardHashes(ctxParams, fileHash)
+		fileCid, err := cidlib.Parse(fileHash)
 		if err != nil {
 			return err
 		}
-		price, storageLength, err := getPriceAndMinStorageLength(ctxParams)
+		cids, fileSize, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, fileCid)
+		if err != nil || len(cids) == 0 {
+			return fmt.Errorf("invalid hash: %s", err)
+		}
+
+		shardHashes := make([]string, 0)
+		for _, c := range cids {
+			shardHashes = append(shardHashes, c.String())
+		}
+
+		// set price limit, the price is default when host doesn't provide price
+		ns, err := storage.GetHostStorageConfig(req.Context, n)
 		if err != nil {
 			return err
 		}
-		hp := getHostsProvider(ctxParams)
-		rss, err := GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
+		price, found := req.Options[uploadPriceOptionName].(int64)
+		if !found {
+			price = int64(ns.StoragePriceAsk)
+		}
+		shardCid, err := cidlib.Parse(shardHashes[0])
 		if err != nil {
 			return err
 		}
-		if offlineSigning {
-			offNonceTimestamp, err := strconv.ParseUint(req.Arguments[2], 10, 64)
-			if err != nil {
-				return err
+		shardSize, err := helper.GetNodeSizeFromCid(req.Context, shardCid, api)
+		if err != nil {
+			return err
+		}
+		storageLength := req.Options[storageLengthOptionName].(int)
+		if uint64(storageLength) < ns.StorageTimeMin {
+			return fmt.Errorf("invalid storage len. want: >= %d, got: %d",
+				ns.StorageTimeMin, storageLength)
+		}
+		ss, err := ds.GetSession("", nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), &ds.SessionInitParams{
+			Context:     req.Context,
+			Config:      cfg,
+			N:           n,
+			Api:         api,
+			Datastore:   n.Repo.Datastore(),
+			RenterId:    n.Identity.Pretty(),
+			FileHash:    fileHash,
+			ShardHashes: shardHashes,
+		})
+		if err != nil {
+			return err
+		}
+
+		mode, ok := req.Options[hostSelectModeOptionName].(string)
+		if !ok {
+			mode = cfg.Experimental.HostsSyncMode
+		}
+		var hostIDs []string
+		if mode == "custom" {
+			if hosts, ok := req.Options[hostSelectionOptionName].(string); ok {
+				hostIDs = strings.Split(hosts, ",")
 			}
-			err = rss.saveOfflineMeta(&renterpb.OfflineMeta{
-				OfflinePeerId:    req.Arguments[1],
-				OfflineNonceTs:   offNonceTimestamp,
-				OfflineSignature: req.Arguments[3],
-			})
-			if err != nil {
-				return err
+			if len(hostIDs) != len(shardHashes) {
+				return fmt.Errorf("custom mode hosts length must match shard hashes length")
 			}
 		}
+		hp := helper.GetHostProvider(req.Context, n, mode, api, hostIDs)
 		for shardIndex, shardHash := range shardHashes {
-			go func(i int, h string) error {
+			go func(i int, h string, f *ds.Session) {
 				backoff.Retry(func() error {
 					select {
-					case <-rss.ctx.Done():
+					case <-f.Context.Done():
 						return nil
 					default:
 						break
 					}
 					host, err := hp.NextValidHost(price)
 					if err != nil {
-						fmt.Println("next valid host", err)
-						rss.to(rssErrorStatus, err)
-						rss.cancel()
+						f.Error(err)
 						return nil
 					}
-					contractId := newContractID(ssId)
-					cb := make(chan error)
-					shardErrChanMap.Set(contractId, cb)
-					tp := totalPay(shardSize, price, storageLength)
-					var escrowCotractBytes []byte
-					errChan := make(chan error, 2)
-					go func() {
-						tmp := func() error {
-							escrowCotractBytes, err = renterSignEscrowContract(rss, h, host, tp, offlineSigning, contractId)
-							if err != nil {
-								log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
-								return err
-							}
-							return nil
-						}()
-						errChan <- tmp
-					}()
-					var guardContractBytes []byte
-					go func() {
-						tmp := func() error {
-							guardContractBytes, err = renterSignGuardContract(rss, &ContractParams{
-								ContractId:    contractId,
-								RenterPid:     ctxParams.n.Identity.Pretty(),
-								HostPid:       host,
-								ShardIndex:    int32(i),
-								ShardHash:     h,
-								ShardSize:     shardSize,
-								FileHash:      fileHash,
-								StartTime:     time.Now(),
-								StorageLength: int64(storageLength),
-								Price:         price,
-								TotalPay:      tp,
-							}, offlineSigning)
-							if err != nil {
-								log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
-								return err
-							}
-							return nil
-						}()
-						errChan <- tmp
-					}()
-					i := 0
-					for err := range errChan {
-						i++
-						if err != nil {
-							return err
-						}
-						if i == 2 {
-							break
-						}
+					totalPay := int64(float64(shardSize) / float64(units.GiB) * float64(price) * float64(storageLength))
+					if totalPay <= 0 {
+						totalPay = 1
 					}
-
 					hostPid, err := peer.IDB58Decode(host)
 					if err != nil {
-						log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
 						return err
 					}
-					go func() {
-						_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, hostPid, "/storage/upload/init",
-							ssId,
-							fileHash,
-							h,
-							price,
-							escrowCotractBytes,
-							guardContractBytes,
-							storageLength,
-							shardSize,
-							i,
-							offlinePeerId,
-						)
-						if err != nil {
-							switch err.(type) {
-							case remote.IoError:
-								// NOP
-								log.Error("io error", err)
-							case remote.BusinessError:
-								log.Error("write remote.BusinessError", h, err)
-								cb <- err
-							default:
-								log.Error("write default err", h, err)
-								cb <- err
-							}
-						}
-					}()
-					// host needs to send recv in 30 seconds, or the contract will be invalid.
-					tick := time.Tick(30 * time.Second)
-					select {
-					case err = <-cb:
-						shardErrChanMap.Remove(contractId)
-						return err
-					case <-tick:
-						return errors.New("host timeout")
+					// Pass in session id and generate final contract id inside NewContract
+					escrowContract, err := escrow.NewContract(cfg, ss.Id, n, hostPid, totalPay, false, 0, "")
+					if err != nil {
+						return fmt.Errorf("create escrow contract failed: [%v] ", err)
 					}
+					guardContractMeta, err := helper.NewContract(cfg, &helper.ContractParams{
+						ContractId:    escrowContract.ContractId,
+						RenterPid:     n.Identity.Pretty(),
+						HostPid:       host,
+						ShardIndex:    int32(i),
+						ShardHash:     h,
+						ShardSize:     int64(shardSize),
+						FileHash:      fileHash,
+						StartTime:     time.Now(),
+						StorageLength: int64(storageLength),
+						Price:         price,
+						TotalPay:      totalPay,
+					})
+					if err != nil {
+						return fmt.Errorf("fail to new contract meta: [%v] ", err)
+					}
+
+					// online signing
+					halfSignedEscrowContract, err := escrow.SignContractAndMarshal(escrowContract, nil, n.PrivateKey, true)
+					if err != nil {
+						return fmt.Errorf("sign escrow contract and maorshal failed: [%v] ", err)
+					}
+					halfSignGuardContract, err := guard.SignedContractAndMarshal(guardContractMeta, nil, nil, n.PrivateKey, true,
+						false, n.Identity.Pretty(), n.Identity.Pretty())
+					if err != nil {
+						return fmt.Errorf("fail to sign guard contract and marshal: [%v] ", err)
+					}
+					_, err = remote.P2PCall(req.Context, n, hostPid, "/storage/upload/init",
+						ss.Id,
+						fileHash,
+						h,
+						price,
+						halfSignedEscrowContract,
+						halfSignGuardContract,
+						storageLength,
+						shardSize,
+						i,
+						n.Identity.Pretty(), //TODO: offline
+					)
+					if err != nil {
+						return err
+					}
+					//TODO: retry when recv contract timeout
 					return nil
 				}, handleShardBo)
-				return nil
-			}(shardIndex, shardHash)
+			}(shardIndex, shardHash, ss)
 		}
+
 		// waiting for contracts of 30 shards
-		go func(rss *RenterSession, numShards int) {
+		go func(f *ds.Session, numShards int) {
 			tick := time.Tick(5 * time.Second)
 			for true {
 				select {
 				case <-tick:
-					completeNum, errorNum, err := rss.GetCompleteShardsNum()
+					completeNum, errorNum, err := f.GetCompleteShardsNum()
 					if err != nil {
 						continue
 					}
-					log.Info("session", rss.ssId, "contractNum", completeNum, "errorNum", errorNum)
 					if completeNum == numShards {
-						submit(rss, fileSize, offlineSigning)
+						doSubmit(f, fileSize)
 						return
 					} else if errorNum > 0 {
-						rss.to(rssErrorStatus, errors.New("there are error shards"))
-						log.Error("session:", rss.ssId, ",errorNum:", errorNum)
+						f.Error(errors.New("there are error shards"))
 						return
 					}
-				case <-rss.ctx.Done():
-					log.Infof("session %s done", rss.ssId)
+				case <-f.Context.Done():
 					return
 				}
 			}
-		}(rss, len(shardHashes))
-		seRes := &Res{
-			ID: ssId,
+		}(ss, len(shardHashes))
+
+		seRes := &UploadRes{
+			ID: ss.Id,
 		}
 		return res.Emit(seRes)
 	},
-	Type: Res{},
+	Type: UploadRes{},
 }
 
-type Res struct {
+func doSubmit(f *ds.Session, fileSize int64) {
+	f.Submit()
+	bs, t, err := f.PrepareContractFromShard()
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	// check account balance, if not enough for the totalPrice do not submit to escrow
+	balance, err := escrow.Balance(f.Context, f.Config)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	if balance < t {
+		f.Error(fmt.Errorf("not enough balance to submit contract, current balance is [%v]", balance))
+		return
+	}
+	req, err := escrow.NewContractRequest(f.Config, bs, t)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	var amount int64 = 0
+	for _, c := range req.Contract {
+		amount += c.Contract.Amount
+	}
+	submitContractRes, err := escrow.SubmitContractToEscrow(f.Context, f.Config, req)
+	if err != nil {
+		f.Error(fmt.Errorf("failed to submit contracts to escrow: [%v]", err))
+		return
+	}
+	doPay(f, submitContractRes, fileSize)
+	return
+}
+
+func doPay(f *ds.Session, response *escrowpb.SignedSubmitContractResult, fileSize int64) {
+	f.Pay()
+	privKeyStr := f.Config.Identity.PrivKey
+	payerPrivKey, err := crypto.ToPrivKey(privKeyStr)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	payerPubKey := payerPrivKey.GetPublic()
+	payinRequest, err := escrow.NewPayinRequest(response, payerPubKey, payerPrivKey)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	payinRes, err := escrow.PayInToEscrow(f.Context, f.Config, payinRequest)
+	if err != nil {
+		f.Error(fmt.Errorf("failed to pay in to escrow: [%v]", err))
+		return
+	}
+	doGuard(f, payinRes, payerPrivKey, fileSize)
+}
+
+func doGuard(f *ds.Session, res *escrowpb.SignedPayinResult, payerPriKey ic.PrivKey, fileSize int64) {
+	f.Guard()
+	md, err := f.GetMetadata()
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	cts := make([]*guardpb.Contract, 0)
+	for _, h := range md.ShardHashes {
+		shard, err := ds.GetShard(f.PeerId, f.Role, f.Id, h, &ds.ShardInitParams{
+			Context:   f.Context,
+			Datastore: f.Datastore,
+		})
+		if err != nil {
+			f.Error(err)
+			return
+		}
+		contracts, err := shard.SignedCongtracts()
+		if err != nil {
+			f.Error(err)
+			return
+		}
+		cts = append(cts, contracts.GuardContract)
+	}
+	fsStatus, err := helper.PrepAndUploadFileMeta(f.Context, cts, res, payerPriKey, f.Config, f.PeerId, md.FileHash,
+		fileSize)
+	if err != nil {
+		f.Error(fmt.Errorf("failed to send file meta to guard: [%v]", err))
+		return
+	}
+
+	qs, err := helper.PrepFileChallengeQuestions(f.Context, f.N, f.Api, fsStatus, md.FileHash, f.PeerId, f.Id)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+
+	fcid, err := cidlib.Parse(md.FileHash)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	err = helper.SendChallengeQuestions(f.Context, f.Config, fcid, qs)
+	if err != nil {
+		f.Error(fmt.Errorf("failed to send challenge questions to guard: [%v]", err))
+		return
+	}
+	doWaitUpload(f, payerPriKey)
+}
+
+func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
+	f.WaitUpload()
+	md, err := f.GetMetadata()
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	err = backoff.Retry(func() error {
+		select {
+		case <-f.Context.Done():
+			return errors.New("context closed")
+		default:
+		}
+		err := grpc.GuardClient(f.Config.Services.GuardDomain).WithContext(f.Context,
+			func(ctx context.Context, client guardpb.GuardServiceClient) error {
+				req := &guardpb.CheckFileStoreMetaRequest{
+					FileHash:     md.FileHash,
+					RenterPid:    md.RenterId,
+					RequesterPid: f.N.Identity.Pretty(),
+					RequestTime:  time.Now().UTC(),
+				}
+				sign, err := crypto.Sign(payerPriKey, req)
+				if err != nil {
+					return err
+				}
+				req.Signature = sign
+				meta, err := client.CheckFileStoreMeta(ctx, req)
+				if err != nil {
+					return err
+				}
+				num := 0
+				for _, c := range meta.Contracts {
+					if c.State == guardpb.Contract_UPLOADED {
+						num++
+					}
+				}
+				if num >= thresholdContractsNums {
+					return nil
+				}
+				return errors.New("uploading")
+			})
+		return err
+	}, waitUploadBo)
+	if err != nil {
+		f.Error(err)
+		return
+	}
+	f.Complete()
+}
+
+type UploadRes struct {
 	ID string
 }

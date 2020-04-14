@@ -24,7 +24,7 @@ test_expect_success "daemon no longer running" '
   done
 '
 
-test_launch_btfs_daemon --upload
+test_launch_btfs_daemon --offline
 
 test_expect_success "shutdown succeeds" '
   btfs shutdown

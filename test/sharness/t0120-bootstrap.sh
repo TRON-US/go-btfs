@@ -25,7 +25,7 @@ test_description="Test ipfs repo operations"
 
 test_init_ipfs
 
-# we use a function so that we can run it both upload + online
+# we use a function so that we can run it both offline + online
 test_bootstrap_list_cmd() {
   printf "" >list_expected
 
@@ -51,7 +51,7 @@ test_bootstrap_list_cmd() {
   '
 }
 
-# we use a function so that we can run it both upload + online
+# we use a function so that we can run it both offline + online
 test_bootstrap_cmd() {
 
   # remove all peers just in case.
@@ -168,7 +168,7 @@ test_bootstrap_cmd() {
   test_bootstrap_list_cmd
 }
 
-# should work upload
+# should work offline
 test_bootstrap_cmd
 
 # should work online

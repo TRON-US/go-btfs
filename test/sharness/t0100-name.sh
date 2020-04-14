@@ -16,7 +16,7 @@ test_init_ipfs
 test_expect_success "'ipfs name publish --allow-offline' succeeds" '
   PEERID=`ipfs id --format="<id>"` &&
   test_check_peerid "${PEERID}" &&
-  ipfs name publish --allow-upload  "/ipfs/$HASH_WELCOME_DOCS" >publish_out
+  ipfs name publish --allow-offline  "/ipfs/$HASH_WELCOME_DOCS" >publish_out
 '
 
 test_expect_success "publish output looks good" '
@@ -39,7 +39,7 @@ test_expect_success "resolve output looks good" '
 test_expect_success "'ipfs name publish --quieter' succeeds" '
   PEERID=`ipfs id --format="<id>"` &&
   test_check_peerid "${PEERID}" &&
-  ipfs name publish --allow-upload  -Q "/ipfs/$HASH_WELCOME_DOCS" >publish_out
+  ipfs name publish --allow-offline  -Q "/ipfs/$HASH_WELCOME_DOCS" >publish_out
 '
 
 test_expect_success "pubrmlish --quieter output looks good" '
@@ -61,7 +61,7 @@ test_expect_success "resolve output looks good" '
 test_expect_success "'ipfs name publish --allow-offline' succeeds" '
   PEERID=`ipfs id --format="<id>"` &&
   test_check_peerid "${PEERID}" &&
-  ipfs name publish --allow-upload "/ipfs/$HASH_WELCOME_DOCS/help" >publish_out
+  ipfs name publish --allow-offline "/ipfs/$HASH_WELCOME_DOCS/help" >publish_out
 '
 
 test_expect_success "publish a path looks good" '
@@ -89,8 +89,8 @@ test_expect_success "ipfs cat on published content succeeds" '
 test_expect_failure "'ipfs name publish --allow-offline <local-id> <hash>' succeeds" '
   PEERID=`ipfs id --format="<id>"` &&
   test_check_peerid "${PEERID}" &&
-  echo ipfs name publish --allow-upload "${PEERID}" "/ipfs/$HASH_WELCOME_DOCS" &&
-  ipfs name publish --allow-upload "${PEERID}" "/ipfs/$HASH_WELCOME_DOCS" >actual_node_id_publish
+  echo ipfs name publish --allow-offline "${PEERID}" "/ipfs/$HASH_WELCOME_DOCS" &&
+  ipfs name publish --allow-offline "${PEERID}" "/ipfs/$HASH_WELCOME_DOCS" >actual_node_id_publish
 '
 
 test_expect_failure "publish with our explicit node ID looks good" '
@@ -106,7 +106,7 @@ test_expect_success "generate and verify a new key" '
 '
 
 test_expect_success "'ipfs name publis --allow-offline --key=<peer-id> <hash>' succeeds" '
-  ipfs name publish --allow-upload  --key=${NEWID} "/ipfs/$HASH_WELCOME_DOCS" >actual_node_id_publish
+  ipfs name publish --allow-offline  --key=${NEWID} "/ipfs/$HASH_WELCOME_DOCS" >actual_node_id_publish
 '
 
 test_expect_success "publish an explicit node ID as key name looks good" '
@@ -122,7 +122,7 @@ test_expect_success "'ipfs dag put' succeeds" '
 test_expect_success "'ipfs name publish --allow-offline /ipld/...' succeeds" '
   PEERID=`ipfs id --format="<id>"` &&
   test_check_peerid "${PEERID}" &&
-  ipfs name publish --allow-upload "/ipld/$OBJECT_HASH/thing" >publish_out
+  ipfs name publish --allow-offline "/ipld/$OBJECT_HASH/thing" >publish_out
 '
 test_expect_success "publish a path looks good" '
   echo "Published to ${PEERID}: /ipld/$OBJECT_HASH/thing" >expected3 &&
@@ -139,7 +139,7 @@ test_expect_success "resolve output looks good" '
 # test publishing nothing
 
 test_expect_success "'ipfs name publish' fails" '
-  printf '' | test_expect_code 1 ipfs name publish --allow-upload  >publish_out 2>&1
+  printf '' | test_expect_code 1 ipfs name publish --allow-offline  >publish_out 2>&1
 '
 
 test_expect_success "publish output has the correct error" '
@@ -147,7 +147,7 @@ test_expect_success "publish output has the correct error" '
 '
 
 test_expect_success "'ipfs name publish' fails" '
-  printf '' | test_expect_code 1 ipfs name publish -Q --allow-upload  >publish_out 2>&1
+  printf '' | test_expect_code 1 ipfs name publish -Q --allow-offline  >publish_out 2>&1
 '
 
 test_expect_success "publish output has the correct error" '
@@ -158,10 +158,10 @@ test_expect_success "'ipfs name publish --help' succeeds" '
   ipfs name publish --help
 '
 
-# test upload resolve
+# test offline resolve
 
 test_expect_success "'ipfs name resolve --offline' succeeds" '
-  ipfs name resolve --upload "$PEERID" >output
+  ipfs name resolve --offline "$PEERID" >output
 '
 test_expect_success "resolve output looks good" '
   printf "/ipld/%s/thing\n" "$OBJECT_HASH" >expected4 &&
@@ -169,7 +169,7 @@ test_expect_success "resolve output looks good" '
 '
 
 test_expect_success "'ipfs name resolve --offline -n' succeeds" '
-  ipfs name resolve --upload -n "$PEERID" >output
+  ipfs name resolve --offline -n "$PEERID" >output
 '
 test_expect_success "resolve output looks good" '
   printf "/ipld/%s/thing\n" "$OBJECT_HASH" >expected4 &&
@@ -179,7 +179,7 @@ test_expect_success "resolve output looks good" '
 test_launch_ipfs_daemon
 
 test_expect_success "'ipfs name resolve --offline' succeeds" '
-  ipfs name resolve --upload "$PEERID" >output
+  ipfs name resolve --offline "$PEERID" >output
 '
 test_expect_success "resolve output looks good" '
   printf "/ipld/%s/thing\n" "$OBJECT_HASH" >expected4 &&
@@ -187,7 +187,7 @@ test_expect_success "resolve output looks good" '
 '
 
 test_expect_success "'ipfs name resolve --offline -n' succeeds" '
-  ipfs name resolve --upload -n "$PEERID" >output
+  ipfs name resolve --offline -n "$PEERID" >output
 '
 test_expect_success "resolve output looks good" '
   printf "/ipld/%s/thing\n" "$OBJECT_HASH" >expected4 &&
@@ -202,8 +202,8 @@ test_expect_success "empty request to name publish doesn't panic and returns err
 test_kill_ipfs_daemon
 
 
-# Test daemon in upload mode
-test_launch_ipfs_daemon --upload
+# Test daemon in offline mode
+test_launch_ipfs_daemon --offline
 
 test_expect_success "'ipfs name publish' fails offline mode" '
   PEERID=`ipfs id --format="<id>"` &&

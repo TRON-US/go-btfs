@@ -31,7 +31,7 @@ test_resolve_setup_name() {
   local ref="$2"
 
   test_expect_success "resolve: prepare $key" '
-    ipfs name publish --key="$key" --allow-upload "$ref"
+    ipfs name publish --key="$key" --allow-offline "$ref"
   '
 }
 
@@ -40,7 +40,7 @@ test_resolve_setup_name_fail() {
   local ref="$2"
 
   test_expect_failure "resolve: prepare $key" '
-    ipfs name publish --key="$key" --allow-upload "$ref"
+    ipfs name publish --key="$key" --allow-offline "$ref"
   '
 }
 
@@ -157,7 +157,7 @@ test_resolve_cmd_fail() {
   test_resolve_fail "/ipns/$self_hash" "/ipfs/$c_hash"
 }
 
-# should work upload
+# should work offline
 test_resolve_cmd
 test_resolve_cmd_b32
 

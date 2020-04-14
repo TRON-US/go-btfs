@@ -61,7 +61,7 @@ EOF
 
 }
 
-# should work upload
+# should work offline
 test_init_btfs
 test_add_skip
 

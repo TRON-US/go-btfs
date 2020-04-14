@@ -33,7 +33,7 @@ func TestAddMultipleGCLive(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by upload node
+				PeerID: testPeerID, // required by offline node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -163,7 +163,7 @@ func TestAddGCLive(t *testing.T) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by upload node
+				PeerID: testPeerID, // required by offline node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),
@@ -280,7 +280,7 @@ func testAddWPosInfo(t *testing.T, rawLeaves bool) {
 	r := &repo.Mock{
 		C: config.Config{
 			Identity: config.Identity{
-				PeerID: testPeerID, // required by upload node
+				PeerID: testPeerID, // required by offline node
 			},
 		},
 		D: syncds.MutexWrap(datastore.NewMapDatastore()),

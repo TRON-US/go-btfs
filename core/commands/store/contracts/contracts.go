@@ -10,7 +10,7 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/rm"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
 	"github.com/TRON-US/go-btfs/core/escrow"
 	"github.com/TRON-US/go-btfs/core/guard"
 
@@ -237,14 +237,14 @@ func getKey(role string) string {
 }
 
 func Save(d datastore.Datastore, cs []*nodepb.Contracts_Contract, role string) error {
-	return upload.Save(d, getKey(role), &contractspb.Contracts{
+	return ds.Save(d, getKey(role), &contractspb.Contracts{
 		Contracts: cs,
 	})
 }
 
 func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Contract, error) {
 	cs := &contractspb.Contracts{}
-	err := upload.Get(d, getKey(role), cs)
+	err := ds.Get(d, getKey(role), cs)
 	if err != nil && err != datastore.ErrNotFound {
 		return nil, err
 	}
@@ -253,14 +253,14 @@ func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Cont
 
 func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
 	role string) error {
-	cs, err := upload.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
+	cs, err := ds.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
 	if err != nil {
 		return err
 	}
 	var latest *time.Time
 	for _, c := range cs {
-		if latest == nil || c.SignedGuardContract.LastModifyTime.After(*latest) {
-			latest = &c.SignedGuardContract.LastModifyTime
+		if latest == nil || c.GuardContract.LastModifyTime.After(*latest) {
+			latest = &c.GuardContract.LastModifyTime
 		}
 	}
 	updated, err := guard.GetUpdatedGuardContracts(ctx, n, latest)
@@ -270,7 +270,7 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 	if len(updated) > 0 {
 		// save and retrieve updated signed contracts
 		var stale []string
-		cs, stale, err = upload.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
+		cs, stale, err = ds.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
 		if err != nil {
 			return err
 		}

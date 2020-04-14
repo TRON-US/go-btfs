@@ -54,17 +54,17 @@ test_expect_success "no daemon crash on improper file argument - #4003" '
 test_kill_ipfs_daemon
 
 test_expect_success "ipfs daemon --offline --mount fails - #2995" '
-  test_expect_code 1 ipfs daemon --upload --mount 2>daemon_err &&
-  grep "mount is not currently supported in upload mode" daemon_err ||
+  test_expect_code 1 ipfs daemon --offline --mount 2>daemon_err &&
+  grep "mount is not currently supported in offline mode" daemon_err ||
   test_fsh cat daemon_err
 '
 
-test_launch_ipfs_daemon --upload
+test_launch_ipfs_daemon --offline
 
 test_expect_success "'ipfs name resolve' succeeds after ipfs id when daemon offline" '
   PEERID=`ipfs id --format="<id>"` &&
   test_check_peerid "${PEERID}" &&
-  ipfs name publish --allow-upload  -Q "/ipfs/$HASH_WELCOME_DOCS" >publish_out
+  ipfs name publish --allow-offline  -Q "/ipfs/$HASH_WELCOME_DOCS" >publish_out
 '
 
 test_expect_success "pubrmlish --quieter output looks good" '

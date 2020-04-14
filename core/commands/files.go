@@ -144,7 +144,7 @@ var filesStatCmd = &cmds.Command{
 
 		var dagserv ipld.DAGService
 		if withLocal {
-			// an upload DAGService will not fetch from the network
+			// an offline DAGService will not fetch from the network
 			dagserv = dag.NewDAGService(bservice.New(
 				node.Blockstore,
 				offline.Exchange(node.Blockstore),

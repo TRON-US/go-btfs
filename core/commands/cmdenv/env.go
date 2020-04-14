@@ -33,11 +33,11 @@ func GetApi(env cmds.Environment, req *cmds.Request, opts ...options.ApiOption) 
 		return nil, fmt.Errorf("expected env to be of type %T, got %T", ctx, env)
 	}
 
-	offline, _ := req.Options["upload"].(bool)
+	offline, _ := req.Options["offline"].(bool)
 	if !offline {
 		offline, _ = req.Options["local"].(bool)
 		if offline {
-			log.Errorf("Command '%s', --local is deprecated, use --upload instead", strings.Join(req.Path, " "))
+			log.Errorf("Command '%s', --local is deprecated, use --offline instead", strings.Join(req.Path, " "))
 		}
 	}
 	api, err := ctx.GetAPI()

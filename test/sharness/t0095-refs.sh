@@ -9,7 +9,7 @@ test_description="Test 'ipfs refs' command"
 . lib/test-lib.sh
 
 test_init_ipfs
-test_launch_ipfs_daemon --upload
+test_launch_ipfs_daemon --offline
 
 # This file performs tests with the following directory
 # structure.

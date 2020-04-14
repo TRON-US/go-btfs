@@ -1,11 +1,14 @@
-package upload
+package helper
 
 import (
+	"context"
 	"errors"
 	"sync"
 
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 
+	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,8 +18,10 @@ const (
 	numHosts = 100
 )
 
-type HostsProvider struct {
-	cp *ContextParams
+type HostProvider struct {
+	ctx  context.Context
+	node *core.IpfsNode
+	api  coreiface.CoreAPI
 	sync.Mutex
 	mode    string
 	current int
@@ -24,25 +29,37 @@ type HostsProvider struct {
 	filter  func() bool
 }
 
-func getHostsProvider(cp *ContextParams) *HostsProvider {
-	p := &HostsProvider{
-		cp:      cp,
-		mode:    cp.cfg.Experimental.HostsSyncMode,
+func GetHostProvider(ctx context.Context, node *core.IpfsNode, mode string,
+	api coreiface.CoreAPI, hostIDs []string) *HostProvider {
+	p := &HostProvider{
+		ctx:     ctx,
+		node:    node,
+		mode:    mode,
+		api:     api,
 		current: -1,
 		filter: func() bool {
 			return false
 		},
 	}
-	p.init()
+	p.init(hostIDs)
 	return p
 }
 
-func (p *HostsProvider) init() (err error) {
-	p.hosts, err = storage.GetHostsFromDatastore(p.cp.ctx, p.cp.n, p.mode, numHosts)
-	return err
+func (p *HostProvider) init(hostIDs []string) (err error) {
+	if p.mode == "custom" {
+		for _, hid := range hostIDs {
+			p.hosts = append(p.hosts, &hubpb.Host{NodeId: hid})
+		}
+		return nil
+	}
+	p.hosts, err = storage.GetHostsFromDatastore(p.ctx, p.node, p.mode, numHosts)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (p *HostsProvider) AddIndex() (int, error) {
+func (p *HostProvider) AddIndex() (int, error) {
 	p.Lock()
 	defer p.Unlock()
 	p.current++
@@ -52,7 +69,7 @@ func (p *HostsProvider) AddIndex() (int, error) {
 	return p.current, nil
 }
 
-func (p *HostsProvider) NextValidHost(price int64) (string, error) {
+func (p *HostProvider) NextValidHost(price int64) (string, error) {
 	needHigherPrice := false
 	for true {
 		if index, err := p.AddIndex(); err == nil {
@@ -62,7 +79,7 @@ func (p *HostsProvider) NextValidHost(price int64) (string, error) {
 				needHigherPrice = true
 				continue
 			}
-			if err := p.cp.api.Swarm().Connect(p.cp.ctx, peer.AddrInfo{ID: id}); err != nil {
+			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
 			return host.NodeId, nil

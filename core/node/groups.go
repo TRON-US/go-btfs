@@ -257,7 +257,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 	)
 }
 
-// Offline groups upload alternatives to Online units
+// Offline groups offline alternatives to Online units
 func Offline(cfg *config.Config) fx.Option {
 	return fx.Options(
 		fx.Provide(offline.Exchange),

@@ -65,7 +65,7 @@ const (
 	InitSignProcessForEscrowStatus
 	InitSignReadyForGuardStatus
 	InitSignProcessForGuardStatus
-	InitStatus // if upload signing, set this flag when all the shards are complete in upload signing
+	InitStatus // if offline signing, set this flag when all the shards are complete in offline signing
 	SubmitStatus
 	BalanceSignReadyStatus
 	BalanceSignProcessStatus
@@ -83,7 +83,7 @@ const (
 )
 
 const (
-	// upload signing status
+	// offline signing status
 	OfflineRetrySignUninitialized = iota
 	OfflineRetrySignReady
 	OfflineRetrySignProcess
@@ -485,7 +485,7 @@ func (ss *FileContracts) Initialize(rootHash cidlib.Cid, runMode int) int {
 	ss.RunMode = runMode
 	initSessionStatus := InitStatus
 	if ss.IsOffSignRunmode() {
-		// Note that we are updating the "init" status timeout for upload signing.
+		// Note that we are updating the "init" status timeout for offline signing.
 		StdSessionStateFlow[InitState].TimeOut = 15 * time.Minute
 		ss.OfflineCB = new(OfflineControlBlock)
 		initSessionStatus = UninitializedStatus
@@ -500,10 +500,10 @@ func (ss *FileContracts) Initialize(rootHash cidlib.Cid, runMode int) int {
 
 func (ss *FileContracts) initOfflineSignChannels() error {
 	if !ss.IsOffSignRunmode() {
-		return errors.New("it is not upload sign mode")
+		return errors.New("it is not offline sign mode")
 	}
 	if ss.OfflineCB == nil {
-		return errors.New("upload control block is nil")
+		return errors.New("offline control block is nil")
 	}
 	offCB := ss.OfflineCB
 	offCB.OfflineSignEscrowChan = nil
@@ -522,7 +522,7 @@ func (ss *FileContracts) MoveToNextSessionStatus(sessionState StatusChanMessage)
 	currentSessionStatus := sessionState.CurrentStep
 	if ss.RunMode != OfflineSignMode {
 		// If the current runMode is not OfflineSignMode, then
-		// we need to skip upload sign mode related steps from the session status table.
+		// we need to skip offline sign mode related steps from the session status table.
 		// The following switch is doing that task.
 		switch currentSessionStatus {
 		case InitStatus:
@@ -785,7 +785,7 @@ func (ss *FileContracts) SetFOfflinePeerID(peerId peer.ID) error {
 	defer ss.Unlock()
 
 	if ss.OfflineCB == nil {
-		return errors.New("upload control block is nil")
+		return errors.New("offline control block is nil")
 	}
 	ss.OfflineCB.OfflinePeerID = peerId
 	return nil
@@ -796,7 +796,7 @@ func (ss *FileContracts) GetOfflinePeerID() (peer.ID, error) {
 	defer ss.Unlock()
 
 	if ss.OfflineCB == nil {
-		return "", errors.New("upload control block is nil")
+		return "", errors.New("offline control block is nil")
 	}
 	return ss.OfflineCB.OfflinePeerID, nil
 }
@@ -806,7 +806,7 @@ func (ss *FileContracts) SetFOfflineNonceTimestamp(nonceTimestamp uint64) error 
 	defer ss.Unlock()
 
 	if ss.OfflineCB == nil {
-		return errors.New("upload control block is nil")
+		return errors.New("offline control block is nil")
 	}
 	ss.OfflineCB.OfflineNonceTimestamp = nonceTimestamp
 	return nil

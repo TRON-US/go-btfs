@@ -270,7 +270,7 @@ test_dag_cmd() {
   '
 }
 
-# should work upload
+# should work offline
 test_dag_cmd
 
 # should work online

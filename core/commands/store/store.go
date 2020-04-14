@@ -7,7 +7,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/store/hosts"
 	"github.com/TRON-US/go-btfs/core/commands/store/info"
 	"github.com/TRON-US/go-btfs/core/commands/store/stats"
-	upload "github.com/TRON-US/go-btfs/core/commands/store/upload"
+	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )

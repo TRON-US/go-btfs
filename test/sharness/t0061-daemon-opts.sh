@@ -26,12 +26,12 @@ test_expect_success 'transport should be unencrypted' '
 
 test_kill_ipfs_daemon
 
-test_launch_ipfs_daemon --upload
+test_launch_ipfs_daemon --offline
 
 gwyaddr=$GWAY_ADDR
 apiaddr=$API_ADDR
 
-test_expect_success 'gateway should work in upload mode' '
+test_expect_success 'gateway should work in offline mode' '
   echo "hello mars :$gwyaddr :$apiaddr" >expected &&
   HASH=$(ipfs add -q expected) &&
   curl -sfo actual1 "http://$gwyaddr/ipfs/$HASH" &&

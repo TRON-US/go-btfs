@@ -435,7 +435,7 @@ test_object_content_type() {
   '
 }
 
-# should work upload
+# should work offline
 test_object_cmd
 
 # should work online

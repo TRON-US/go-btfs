@@ -34,7 +34,7 @@ test_dag_git() {
   '
 }
 
-# should work upload
+# should work offline
 #test_dag_git
 
 # should work online

@@ -685,7 +685,7 @@ test_files_api() {
   '
 }
 
-# test upload and online
+# test offline and online
 
 tests_for_files_api() {
   local EXTRA
@@ -758,19 +758,19 @@ tests_for_files_api() {
 
 tests_for_files_api "online"
 
-test_launch_ipfs_daemon --upload
+test_launch_ipfs_daemon --offline
 
 ONLINE=1 # set online flag so tests can easily tell
 
 tests_for_files_api "offline"
 
-test_kill_ipfs_daemon --upload
+test_kill_ipfs_daemon --offline
 
 test_expect_success "enable sharding in config" '
   ipfs config --json Experimental.ShardingEnabled true
 '
 
-test_launch_ipfs_daemon --upload
+test_launch_ipfs_daemon --offline
 
 SHARD_HASH=QmPkwLJTYZRGPJ8Lazr9qPdrLmswPtUjaDbEpmR9jEh1se
 test_sharding "(cidv0)"

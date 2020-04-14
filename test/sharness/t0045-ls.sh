@@ -252,7 +252,7 @@ test_ls_object() {
   '
 }
 
-# should work upload
+# should work offline
 test_ls_cmd
 test_ls_cmd_streaming
 test_ls_cmd_raw_leaves
@@ -302,7 +302,7 @@ test_expect_success "'btfs ls --resolve-type=true --size=false' fails" '
   test_must_fail btfs ls --resolve-type=true --size=false $DIR
 '
 
-test_launch_btfs_daemon --upload
+test_launch_btfs_daemon --offline
 
 test_expect_success "'btfs ls --resolve-type=false --size=false' ok" '
   btfs ls --resolve-type=false --size=false $DIR > /dev/null
