@@ -19,23 +19,25 @@ import (
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
-	commands "github.com/TRON-US/go-btfs/core/commands"
-	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
-	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
+	"github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/coreapi"
+	"github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
-	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
-	libp2p "github.com/TRON-US/go-btfs/core/node/libp2p"
+	"github.com/TRON-US/go-btfs/core/corerepo"
+	"github.com/TRON-US/go-btfs/core/node/libp2p"
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
-	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
+	"github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 	"github.com/TRON-US/go-btfs/spin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+
 	"github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
-	goprocess "github.com/jbenet/goprocess"
+	"github.com/jbenet/goprocess"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
 	"github.com/prometheus/client_golang/prometheus"
@@ -329,7 +331,12 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// Btfs auto update.
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
-	go update(url, hValue)
+
+	if !cfg.Experimental.DisableAutoUpdate {
+		go update(url, hValue)
+	} else {
+		fmt.Println("Auto-update was disabled as config Experimental.DisableAutoUpdate was set as True")
+	}
 
 	// Start assembling node config
 	ncfg := &core.BuildCfg{
@@ -497,7 +504,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	// Spin jobs in the background
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
-	spin.Hosts(node)
+	spin.Hosts(node, env)
+	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {

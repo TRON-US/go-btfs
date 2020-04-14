@@ -14,11 +14,9 @@ const (
 // NewGoContext creates a new context with remaining timeout from the existing
 // request context, so that request can be cancelled and new goroutine should
 // use this new context.
-func NewGoContext(reqCtx context.Context) context.Context {
+func NewGoContext(reqCtx context.Context) (context.Context, context.CancelFunc) {
 	if dl, ok := reqCtx.Deadline(); ok {
-		ctx, _ := context.WithDeadline(context.Background(), dl)
-		return ctx
+		return context.WithDeadline(context.Background(), dl)
 	}
-	ctx, _ := context.WithTimeout(context.Background(), DefaultStorageTimeout)
-	return ctx
+	return context.WithTimeout(context.Background(), DefaultStorageTimeout)
 }
