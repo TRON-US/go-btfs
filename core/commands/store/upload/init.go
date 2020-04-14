@@ -46,10 +46,8 @@ the shard and replies back to client for the next challenge step.`,
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		fmt.Println("init...")
 		ctxParams, err := extractContextParams(req, env)
 		if err != nil {
-			fmt.Println(1, err)
 			return err
 		}
 		if !ctxParams.cfg.Experimental.StorageHostEnabled {
@@ -57,37 +55,30 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
-			fmt.Println(2, err)
 			return err
 		}
 		settings, err := storage.GetHostStorageConfig(ctxParams.ctx, ctxParams.n)
 		if err != nil {
-			fmt.Println(3, err)
 			return err
 		}
 		if uint64(price) < settings.StoragePriceAsk {
-			fmt.Println(4, err)
 			return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
 		}
 		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.n)
 		if !ok {
-			fmt.Println(5, err)
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 		storeLen, err := strconv.Atoi(req.Arguments[6])
 		if err != nil {
-			fmt.Println(6, err)
 			return err
 		}
 		if uint64(storeLen) < settings.StorageTimeMin {
-			fmt.Println(7, err)
 			return fmt.Errorf("store length invalid: want: >=%d, got: %d", settings.StorageTimeMin, storeLen)
 		}
 		ssId := req.Arguments[0]
 		shardHash := req.Arguments[2]
 		shardIndex, err := strconv.Atoi(req.Arguments[8])
 		if err != nil {
-			fmt.Println(8, err)
 			return err
 		}
 
@@ -100,14 +91,12 @@ the shard and replies back to client for the next challenge step.`,
 		halfSignedGuardContract := &guardpb.Contract{}
 		err = proto.Unmarshal(halfSignedGuardContBytes, halfSignedGuardContract)
 		if err != nil {
-			fmt.Println(9, err)
 			return err
 		}
 
 		halfSignedEscrowContract := &escrowpb.SignedEscrowContract{}
 		err = proto.Unmarshal(halfSignedEscrowContBytes, halfSignedEscrowContract)
 		if err != nil {
-			fmt.Println(10, err)
 			return err
 		}
 
@@ -116,12 +105,10 @@ the shard and replies back to client for the next challenge step.`,
 		// get renter's public key
 		payerPubKey, err := requestPid.ExtractPublicKey()
 		if err != nil {
-			fmt.Println(11, err)
 			return err
 		}
 		ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
 		if !ok || err != nil {
-			fmt.Println(12, err)
 			return fmt.Errorf("can't verify escrow contract: %v", err)
 		}
 		s := halfSignedGuardContract.GetRenterSignature()
@@ -130,7 +117,6 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, s)
 		if !ok || err != nil {
-			fmt.Println(13, err)
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
@@ -138,12 +124,10 @@ the shard and replies back to client for the next challenge step.`,
 		signedEscrowContractBytes, err := signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
 			ctxParams.n.PrivateKey)
 		if err != nil {
-			fmt.Println(14, err)
 			return err
 		}
 		signedGuardContractBytes, err := signGuardContractAndMarshal(&guardContractMeta, halfSignedGuardContract, ctxParams.n.PrivateKey)
 		if err != nil {
-			fmt.Println(15, err)
 			return err
 		}
 		go func() {
@@ -162,26 +146,19 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				fmt.Println(5)
 				// check payment
-				fmt.Println("escrowContract.ContractId:", escrowContract.ContractId)
 				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.n.PrivateKey)
 				if err != nil {
-					fmt.Println(17, err)
 					return err
 				}
-				fmt.Println(6)
 				// check payment
 
 				paidIn := make(chan bool)
 				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
-				fmt.Println(7)
 				paid := <-paidIn
 				if !paid {
-					fmt.Println(18, err)
 					return errors.New("contract is not paid:" + escrowContract.ContractId)
 				}
-				fmt.Println(8)
 				tmp := new(guardpb.Contract)
 				err = proto.Unmarshal(signedGuardContractBytes, tmp)
 				if err != nil {
@@ -189,12 +166,9 @@ the shard and replies back to client for the next challenge step.`,
 				}
 				err = shard.contract(signedEscrowContractBytes, tmp)
 				if err != nil {
-					fmt.Println(18-2, err)
 					return err
 				}
-				fmt.Println(9)
 				downloadShardFromClient(ctxParams, halfSignedGuardContract, req.Arguments[1], shardHash)
-				fmt.Println(10)
 				in := &guardpb.ReadyForChallengeRequest{
 					RenterPid:   guardContractMeta.RenterPid,
 					FileHash:    guardContractMeta.FileHash,
@@ -205,30 +179,23 @@ the shard and replies back to client for the next challenge step.`,
 				}
 				sign, err := crypto.Sign(ctxParams.n.PrivateKey, in)
 				if err != nil {
-					fmt.Println(19, err)
 					return err
 				}
-				fmt.Println(11)
 				in.Signature = sign
-				fmt.Println("before ready for challenge")
 				err = grpc.GuardClient(ctxParams.cfg.Services.GuardDomain).WithContext(ctxParams.ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
 						_, err = client.ReadyForChallenge(ctx, in)
 						if err != nil {
-							fmt.Println(20, err)
 							return err
 						}
 						return nil
 					})
 				if err != nil {
-					fmt.Println(21, err)
 					return err
 				}
-				fmt.Println("after ready for challenge")
 				shard.complete()
 				return nil
 			}()
-			//TODO
 			if tmp != nil {
 				log.Error(tmp)
 			}
@@ -288,7 +255,6 @@ func checkPaymentFromClient(ctxParams *ContextParams, paidIn chan bool, contract
 		return errors.New("reach max retry times")
 	}, checkPaymentBo)
 	if err != nil {
-		fmt.Println("paid in err", err)
 		log.Error("Check escrow IsPaidin failed", err)
 		paidIn <- paid
 	}

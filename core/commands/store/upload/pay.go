@@ -19,10 +19,11 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 	rss.to(rssToPayEvent)
 	bc := make(chan []byte)
 	payinReqChanMaps.Set(rss.ssId, bc)
-	if !offlineSign {
+	if offlineSign {
+		//TODO:
+	} else {
 		errChan := make(chan error)
 		go func() {
-			//TODO: split to 2 sub function
 			chanState := result.Result.BuyerChannelState
 			payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 			if err != nil {
@@ -69,9 +70,7 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 	}
 	payinRes, err := escrow.PayInToEscrow(rss.ctx, rss.ctxParams.cfg, signedPayInRequest)
 	if err != nil {
-		//TODO
 		return err
 	}
-	doGuard(rss, payinRes, fileSize, offlineSign)
-	return nil
+	return doGuard(rss, payinRes, fileSize, offlineSign)
 }

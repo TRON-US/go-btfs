@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+	"github.com/gogo/protobuf/proto"
 	"time"
 
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -22,7 +24,7 @@ var (
 	waitUploadChanMap = cmap.New()
 )
 
-func waitUpload(rss *RenterSession, offlineSigning bool) {
+func waitUpload(rss *RenterSession, offlineSigning bool) error {
 	rss.to(rssToWaitUploadEvent)
 	req := &guardpb.CheckFileStoreMetaRequest{
 		FileHash:     rss.hash,
@@ -32,20 +34,35 @@ func waitUpload(rss *RenterSession, offlineSigning bool) {
 	}
 	payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 	if err != nil {
-		//TODO
-		return
+		return err
 	}
 	cb := make(chan []byte)
 	waitUploadChanMap.Set(rss.ssId, cb)
-	if !offlineSigning {
+	if offlineSigning {
+		raw, err := proto.Marshal(req)
+		if err != nil {
+			return err
+		}
+		err = rss.saveOfflineSigning(&renterpb.OfflineSigning{
+			Raw: raw,
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		errChan := make(chan error)
 		go func() {
 			sign, err := crypto.Sign(payerPrivKey, req)
 			if err != nil {
-				//TODO
+				errChan <- err
 				return
 			}
+			errChan <- nil
 			cb <- sign
 		}()
+		if err := <-errChan; err != nil {
+			return err
+		}
 	}
 	sign := <-cb
 	rss.to(rssToWaitUploadReqSignedEvent)
@@ -79,8 +96,8 @@ func waitUpload(rss *RenterSession, offlineSigning bool) {
 		return err
 	}, waitUploadBo)
 	if err != nil {
-		//TODO
-		return
+		return err
 	}
 	rss.to(rssToCompleteEvent)
+	return nil
 }

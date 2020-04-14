@@ -111,9 +111,139 @@ func (m *RenterSessionStatus) GetHash() string {
 func (*RenterSessionStatus) XXX_MessageName() string {
 	return "renter.RenterSessionStatus"
 }
+
+type OfflineMeta struct {
+	OfflinePeerId        string   `protobuf:"bytes,1,opt,name=offline_peer_id,json=offlinePeerId,proto3" json:"offline_peer_id,omitempty" pg:"offline_peer_id"`
+	OfflineNonceTs       uint64   `protobuf:"varint,2,opt,name=offline_nonce_ts,json=offlineNonceTs,proto3" json:"offline_nonce_ts,omitempty" pg:"offline_nonce_ts"`
+	OfflineSignature     string   `protobuf:"bytes,3,opt,name=offline_signature,json=offlineSignature,proto3" json:"offline_signature,omitempty" pg:"offline_signature"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" pg:"-"`
+	XXX_unrecognized     []byte   `json:"-" pg:"-"`
+	XXX_sizecache        int32    `json:"-" pg:"-"`
+}
+
+func (m *OfflineMeta) Reset()         { *m = OfflineMeta{} }
+func (m *OfflineMeta) String() string { return proto.CompactTextString(m) }
+func (*OfflineMeta) ProtoMessage()    {}
+func (*OfflineMeta) Descriptor() ([]byte, []int) {
+	return fileDescriptor_336e857e53dc1671, []int{1}
+}
+func (m *OfflineMeta) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *OfflineMeta) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_OfflineMeta.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *OfflineMeta) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OfflineMeta.Merge(m, src)
+}
+func (m *OfflineMeta) XXX_Size() int {
+	return m.Size()
+}
+func (m *OfflineMeta) XXX_DiscardUnknown() {
+	xxx_messageInfo_OfflineMeta.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OfflineMeta proto.InternalMessageInfo
+
+func (m *OfflineMeta) GetOfflinePeerId() string {
+	if m != nil {
+		return m.OfflinePeerId
+	}
+	return ""
+}
+
+func (m *OfflineMeta) GetOfflineNonceTs() uint64 {
+	if m != nil {
+		return m.OfflineNonceTs
+	}
+	return 0
+}
+
+func (m *OfflineMeta) GetOfflineSignature() string {
+	if m != nil {
+		return m.OfflineSignature
+	}
+	return ""
+}
+
+func (*OfflineMeta) XXX_MessageName() string {
+	return "renter.OfflineMeta"
+}
+
+type OfflineSigning struct {
+	Raw                  []byte   `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty" pg:"raw"`
+	Sig                  []byte   `protobuf:"bytes,2,opt,name=sig,proto3" json:"sig,omitempty" pg:"sig"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" pg:"-"`
+	XXX_unrecognized     []byte   `json:"-" pg:"-"`
+	XXX_sizecache        int32    `json:"-" pg:"-"`
+}
+
+func (m *OfflineSigning) Reset()         { *m = OfflineSigning{} }
+func (m *OfflineSigning) String() string { return proto.CompactTextString(m) }
+func (*OfflineSigning) ProtoMessage()    {}
+func (*OfflineSigning) Descriptor() ([]byte, []int) {
+	return fileDescriptor_336e857e53dc1671, []int{2}
+}
+func (m *OfflineSigning) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *OfflineSigning) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_OfflineSigning.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *OfflineSigning) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OfflineSigning.Merge(m, src)
+}
+func (m *OfflineSigning) XXX_Size() int {
+	return m.Size()
+}
+func (m *OfflineSigning) XXX_DiscardUnknown() {
+	xxx_messageInfo_OfflineSigning.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OfflineSigning proto.InternalMessageInfo
+
+func (m *OfflineSigning) GetRaw() []byte {
+	if m != nil {
+		return m.Raw
+	}
+	return nil
+}
+
+func (m *OfflineSigning) GetSig() []byte {
+	if m != nil {
+		return m.Sig
+	}
+	return nil
+}
+
+func (*OfflineSigning) XXX_MessageName() string {
+	return "renter.OfflineSigning"
+}
 func init() {
 	proto.RegisterType((*RenterSessionStatus)(nil), "renter.RenterSessionStatus")
 	golang_proto.RegisterType((*RenterSessionStatus)(nil), "renter.RenterSessionStatus")
+	proto.RegisterType((*OfflineMeta)(nil), "renter.OfflineMeta")
+	golang_proto.RegisterType((*OfflineMeta)(nil), "renter.OfflineMeta")
+	proto.RegisterType((*OfflineSigning)(nil), "renter.OfflineSigning")
+	golang_proto.RegisterType((*OfflineSigning)(nil), "renter.OfflineSigning")
 }
 
 func init() {
@@ -124,28 +254,34 @@ func init() {
 }
 
 var fileDescriptor_336e857e53dc1671 = []byte{
-	// 322 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0x90, 0xcf, 0x4e, 0xf2, 0x40,
-	0x14, 0xc5, 0xbf, 0xfb, 0x81, 0x08, 0x53, 0xe2, 0x62, 0x4c, 0xcc, 0x84, 0xc5, 0x80, 0xae, 0xd8,
-	0x30, 0x35, 0x9a, 0xf8, 0x00, 0x24, 0x46, 0x57, 0x4a, 0x0a, 0x6c, 0xdc, 0x90, 0xa9, 0x0c, 0xd3,
-	0x26, 0x94, 0x69, 0x7a, 0xa7, 0xef, 0xe1, 0xd2, 0xc7, 0x71, 0x27, 0x4b, 0x9f, 0xc0, 0x3f, 0xf0,
-	0x12, 0x2e, 0x4d, 0x67, 0x20, 0xba, 0xea, 0x39, 0xe7, 0xde, 0xd3, 0xfc, 0xe6, 0x92, 0x2b, 0x9d,
-	0xda, 0xa4, 0x8c, 0xc5, 0xa3, 0xc9, 0xc2, 0x49, 0x74, 0x7f, 0x37, 0x98, 0x8e, 0x43, 0x6d, 0x06,
-	0xb1, 0x5d, 0x60, 0x98, 0x17, 0xc6, 0x1a, 0x0c, 0x0b, 0xb5, 0xb2, 0xaa, 0xd8, 0x7d, 0x50, 0xb8,
-	0x94, 0x36, 0xbc, 0xed, 0x9c, 0xff, 0xe9, 0xdb, 0xc2, 0xac, 0x06, 0xe5, 0xae, 0x17, 0x97, 0x8b,
-	0x50, 0x1b, 0x6d, 0x9c, 0x71, 0xca, 0x37, 0x3b, 0x5d, 0x6d, 0x8c, 0x5e, 0xaa, 0xdf, 0x2d, 0x9b,
-	0x66, 0x0a, 0xad, 0xcc, 0x72, 0xbf, 0x70, 0xf6, 0x0a, 0xe4, 0x38, 0x72, 0x7f, 0x1f, 0x2b, 0xc4,
-	0xd4, 0xac, 0xc6, 0x56, 0xda, 0x12, 0xe9, 0x09, 0x69, 0xa0, 0x53, 0x0c, 0x7a, 0xd0, 0x6f, 0x45,
-	0x3b, 0x47, 0x19, 0x39, 0xcc, 0x14, 0xa2, 0xd4, 0x8a, 0xfd, 0x77, 0x83, 0xbd, 0xa5, 0x37, 0xa4,
-	0xbd, 0x94, 0x68, 0x67, 0x65, 0x3e, 0x97, 0x56, 0xcd, 0x59, 0xad, 0x07, 0xfd, 0xe0, 0xa2, 0x23,
-	0x3c, 0x81, 0xd8, 0x13, 0x88, 0xc9, 0x9e, 0x60, 0xd8, 0x5c, 0xbf, 0x77, 0xff, 0x3d, 0x7d, 0x74,
-	0x21, 0x0a, 0xaa, 0xe6, 0xd4, 0x17, 0xe9, 0x29, 0x69, 0x63, 0x22, 0x8b, 0xf9, 0x2c, 0x91, 0x98,
-	0x28, 0x64, 0xf5, 0x5e, 0xad, 0xdf, 0x8a, 0x02, 0x97, 0xdd, 0xba, 0x88, 0x52, 0x52, 0xaf, 0x86,
-	0xec, 0xc0, 0x21, 0x38, 0x3d, 0xbc, 0xfe, 0xfe, 0xe2, 0xb0, 0xde, 0x70, 0x78, 0xdb, 0x70, 0xf8,
-	0xdc, 0x70, 0x78, 0xde, 0x72, 0x78, 0xd9, 0x72, 0x58, 0x6f, 0x39, 0x90, 0xa3, 0xd4, 0x88, 0xea,
-	0xce, 0xc2, 0x9f, 0x72, 0x18, 0xf8, 0x47, 0x8f, 0x2a, 0xaa, 0x11, 0x3c, 0x34, 0x7d, 0x9c, 0xc7,
-	0x71, 0xc3, 0x81, 0x5e, 0xfe, 0x04, 0x00, 0x00, 0xff, 0xff, 0x34, 0xc6, 0x8f, 0x12, 0xac, 0x01,
-	0x00, 0x00,
+	// 431 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0x92, 0xcf, 0x8e, 0xd3, 0x3c,
+	0x14, 0xc5, 0x3f, 0x7f, 0x2d, 0x65, 0xea, 0x94, 0x32, 0x18, 0x09, 0x45, 0x5d, 0xa4, 0xa5, 0x0b,
+	0x54, 0x09, 0x35, 0x41, 0x80, 0x78, 0x80, 0x4a, 0x08, 0x58, 0x30, 0xad, 0xdc, 0xce, 0x86, 0x4d,
+	0xe4, 0x4c, 0x6e, 0x5d, 0x4b, 0x6d, 0x1c, 0xf9, 0x3a, 0xe2, 0x25, 0x58, 0xb0, 0xe4, 0x71, 0xd8,
+	0xd1, 0x25, 0x4f, 0xc0, 0x9f, 0xf6, 0x25, 0x58, 0xa2, 0xd8, 0x89, 0x86, 0x55, 0xee, 0xf9, 0xf9,
+	0x1e, 0xe7, 0x5c, 0xdb, 0xf4, 0x95, 0x54, 0x76, 0x57, 0x65, 0xf1, 0x8d, 0x3e, 0x24, 0x1b, 0xbe,
+	0xbc, 0x9a, 0x5f, 0xaf, 0x13, 0xa9, 0xe7, 0x99, 0xdd, 0x62, 0x52, 0x1a, 0x6d, 0x35, 0x26, 0x06,
+	0x0a, 0x0b, 0xa6, 0xf9, 0x60, 0xec, 0x28, 0xeb, 0x79, 0x39, 0x7a, 0xf6, 0x8f, 0xdf, 0x1a, 0x5d,
+	0xcc, 0xab, 0xc6, 0x97, 0x55, 0xdb, 0x44, 0x6a, 0xa9, 0x9d, 0x70, 0x95, 0x77, 0x8e, 0xc6, 0x52,
+	0x6b, 0xb9, 0x87, 0xdb, 0x2e, 0xab, 0x0e, 0x80, 0x56, 0x1c, 0x4a, 0xdf, 0x30, 0xfd, 0x46, 0xe8,
+	0x43, 0xee, 0x76, 0x5f, 0x03, 0xa2, 0xd2, 0xc5, 0xda, 0x0a, 0x5b, 0x21, 0x7b, 0x44, 0x7b, 0xe8,
+	0xaa, 0x90, 0x4c, 0xc8, 0xac, 0xcf, 0x1b, 0xc5, 0x42, 0x7a, 0xf7, 0x00, 0x88, 0x42, 0x42, 0xf8,
+	0xbf, 0x5b, 0x68, 0x25, 0x7b, 0x43, 0x07, 0x7b, 0x81, 0x36, 0xad, 0xca, 0x5c, 0x58, 0xc8, 0xc3,
+	0xce, 0x84, 0xcc, 0x82, 0xe7, 0xa3, 0xd8, 0x27, 0x88, 0xdb, 0x04, 0xf1, 0xa6, 0x4d, 0xb0, 0xb8,
+	0x38, 0xfe, 0x18, 0xff, 0xf7, 0xf9, 0xe7, 0x98, 0xf0, 0xa0, 0x76, 0x5e, 0x7b, 0x23, 0x7b, 0x4c,
+	0x07, 0xb8, 0x13, 0x26, 0x4f, 0x77, 0x02, 0x77, 0x80, 0x61, 0x77, 0xd2, 0x99, 0xf5, 0x79, 0xe0,
+	0xd8, 0x5b, 0x87, 0x18, 0xa3, 0xdd, 0x7a, 0x31, 0xbc, 0xe3, 0x22, 0xb8, 0x7a, 0xfa, 0x89, 0xd0,
+	0x60, 0xb9, 0xdd, 0xee, 0x55, 0x01, 0xef, 0xc1, 0x0a, 0xf6, 0x84, 0xde, 0xd7, 0x5e, 0xa6, 0x25,
+	0x80, 0x49, 0x55, 0xde, 0x8c, 0x72, 0xaf, 0xc1, 0x2b, 0x00, 0xf3, 0x2e, 0x67, 0x33, 0x7a, 0xd9,
+	0xf6, 0x15, 0xba, 0xb8, 0x81, 0xd4, 0xa2, 0x1b, 0xad, 0xcb, 0x87, 0x0d, 0xbf, 0xaa, 0xf1, 0x06,
+	0xd9, 0x53, 0xfa, 0xa0, 0xed, 0x44, 0x25, 0x0b, 0x61, 0x2b, 0x03, 0x6e, 0xcc, 0x3e, 0x6f, 0xb7,
+	0x58, 0xb7, 0x7c, 0xfa, 0x92, 0x0e, 0x97, 0xb7, 0x4c, 0x15, 0x92, 0x5d, 0xd2, 0x8e, 0x11, 0x1f,
+	0x5d, 0x88, 0x01, 0xaf, 0xcb, 0x9a, 0xa0, 0x92, 0xee, 0x6f, 0x03, 0x5e, 0x97, 0x8b, 0xd7, 0x7f,
+	0x7e, 0x47, 0xe4, 0x78, 0x8a, 0xc8, 0xf7, 0x53, 0x44, 0x7e, 0x9d, 0x22, 0xf2, 0xe5, 0x1c, 0x91,
+	0xaf, 0xe7, 0x88, 0x1c, 0xcf, 0x11, 0xa1, 0x43, 0xa5, 0xe3, 0xfa, 0xb1, 0xc4, 0xfe, 0x3d, 0x2c,
+	0x02, 0x7f, 0x73, 0xab, 0xfa, 0x68, 0x57, 0xe4, 0xc3, 0x85, 0xc7, 0x65, 0x96, 0xf5, 0xdc, 0x69,
+	0xbf, 0xf8, 0x1b, 0x00, 0x00, 0xff, 0xff, 0x33, 0x74, 0xcd, 0x0c, 0x71, 0x02, 0x00, 0x00,
 }
 
 func (m *RenterSessionStatus) Marshal() (dAtA []byte, err error) {
@@ -213,6 +349,93 @@ func (m *RenterSessionStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *OfflineMeta) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *OfflineMeta) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *OfflineMeta) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.OfflineSignature) > 0 {
+		i -= len(m.OfflineSignature)
+		copy(dAtA[i:], m.OfflineSignature)
+		i = encodeVarintRenters(dAtA, i, uint64(len(m.OfflineSignature)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.OfflineNonceTs != 0 {
+		i = encodeVarintRenters(dAtA, i, uint64(m.OfflineNonceTs))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.OfflinePeerId) > 0 {
+		i -= len(m.OfflinePeerId)
+		copy(dAtA[i:], m.OfflinePeerId)
+		i = encodeVarintRenters(dAtA, i, uint64(len(m.OfflinePeerId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *OfflineSigning) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *OfflineSigning) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *OfflineSigning) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Sig) > 0 {
+		i -= len(m.Sig)
+		copy(dAtA[i:], m.Sig)
+		i = encodeVarintRenters(dAtA, i, uint64(len(m.Sig)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Raw) > 0 {
+		i -= len(m.Raw)
+		copy(dAtA[i:], m.Raw)
+		i = encodeVarintRenters(dAtA, i, uint64(len(m.Raw)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintRenters(dAtA []byte, offset int, v uint64) int {
 	offset -= sovRenters(v)
 	base := offset
@@ -242,6 +465,35 @@ func NewPopulatedRenterSessionStatus(r randyRenters, easy bool) *RenterSessionSt
 	return this
 }
 
+func NewPopulatedOfflineMeta(r randyRenters, easy bool) *OfflineMeta {
+	this := &OfflineMeta{}
+	this.OfflinePeerId = string(randStringRenters(r))
+	this.OfflineNonceTs = uint64(uint64(r.Uint32()))
+	this.OfflineSignature = string(randStringRenters(r))
+	if !easy && r.Intn(10) != 0 {
+		this.XXX_unrecognized = randUnrecognizedRenters(r, 4)
+	}
+	return this
+}
+
+func NewPopulatedOfflineSigning(r randyRenters, easy bool) *OfflineSigning {
+	this := &OfflineSigning{}
+	v3 := r.Intn(100)
+	this.Raw = make([]byte, v3)
+	for i := 0; i < v3; i++ {
+		this.Raw[i] = byte(r.Intn(256))
+	}
+	v4 := r.Intn(100)
+	this.Sig = make([]byte, v4)
+	for i := 0; i < v4; i++ {
+		this.Sig[i] = byte(r.Intn(256))
+	}
+	if !easy && r.Intn(10) != 0 {
+		this.XXX_unrecognized = randUnrecognizedRenters(r, 3)
+	}
+	return this
+}
+
 type randyRenters interface {
 	Float32() float32
 	Float64() float64
@@ -261,9 +513,9 @@ func randUTF8RuneRenters(r randyRenters) rune {
 	return rune(ru + 61)
 }
 func randStringRenters(r randyRenters) string {
-	v3 := r.Intn(100)
-	tmps := make([]rune, v3)
-	for i := 0; i < v3; i++ {
+	v5 := r.Intn(100)
+	tmps := make([]rune, v5)
+	for i := 0; i < v5; i++ {
 		tmps[i] = randUTF8RuneRenters(r)
 	}
 	return string(tmps)
@@ -285,11 +537,11 @@ func randFieldRenters(dAtA []byte, r randyRenters, fieldNumber int, wire int) []
 	switch wire {
 	case 0:
 		dAtA = encodeVarintPopulateRenters(dAtA, uint64(key))
-		v4 := r.Int63()
+		v6 := r.Int63()
 		if r.Intn(2) == 0 {
-			v4 *= -1
+			v6 *= -1
 		}
-		dAtA = encodeVarintPopulateRenters(dAtA, uint64(v4))
+		dAtA = encodeVarintPopulateRenters(dAtA, uint64(v6))
 	case 1:
 		dAtA = encodeVarintPopulateRenters(dAtA, uint64(key))
 		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
@@ -337,6 +589,49 @@ func (m *RenterSessionStatus) Size() (n int) {
 		}
 	}
 	l = len(m.Hash)
+	if l > 0 {
+		n += 1 + l + sovRenters(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *OfflineMeta) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OfflinePeerId)
+	if l > 0 {
+		n += 1 + l + sovRenters(uint64(l))
+	}
+	if m.OfflineNonceTs != 0 {
+		n += 1 + sovRenters(uint64(m.OfflineNonceTs))
+	}
+	l = len(m.OfflineSignature)
+	if l > 0 {
+		n += 1 + l + sovRenters(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *OfflineSigning) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Raw)
+	if l > 0 {
+		n += 1 + l + sovRenters(uint64(l))
+	}
+	l = len(m.Sig)
 	if l > 0 {
 		n += 1 + l + sovRenters(uint64(l))
 	}
@@ -541,6 +836,265 @@ func (m *RenterSessionStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Hash = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRenters(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *OfflineMeta) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRenters
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: OfflineMeta: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: OfflineMeta: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OfflinePeerId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRenters
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRenters
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OfflinePeerId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OfflineNonceTs", wireType)
+			}
+			m.OfflineNonceTs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRenters
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.OfflineNonceTs |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OfflineSignature", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRenters
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRenters
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OfflineSignature = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRenters(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *OfflineSigning) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRenters
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: OfflineSigning: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: OfflineSigning: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Raw", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRenters
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRenters
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Raw = append(m.Raw[:0], dAtA[iNdEx:postIndex]...)
+			if m.Raw == nil {
+				m.Raw = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sig", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRenters
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRenters
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRenters
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Sig = append(m.Sig[:0], dAtA[iNdEx:postIndex]...)
+			if m.Sig == nil {
+				m.Sig = []byte{}
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

@@ -30,3 +30,14 @@ message RenterSessionStatus {
   repeated string shard_hashes = 4;
   string hash = 5;
 }
+
+message OfflineMeta {
+  string offline_peer_id = 1;
+  uint64 offline_nonce_ts = 2;
+  string offline_signature = 3;
+}
+
+message OfflineSigning {
+  bytes raw = 1;
+  bytes sig = 2;
+}

@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	guardChanMaps = cmap.New()
+	guardChanMaps     = cmap.New()
+	guardContractMaps = cmap.New()
 )
 
 type ContractParams struct {
@@ -31,8 +32,8 @@ type ContractParams struct {
 	TotalPay      int64
 }
 
-func renterSignGuardContract(ctxParams *ContextParams, params *ContractParams, offlineSigning bool) ([]byte, error) {
-	guardPid, escrowPid, err := getGuardAndEscrowPid(ctxParams.cfg)
+func renterSignGuardContract(rss *RenterSession, params *ContractParams, offlineSigning bool) ([]byte, error) {
+	guardPid, escrowPid, err := getGuardAndEscrowPid(rss.ctxParams.cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -55,14 +56,18 @@ func renterSignGuardContract(ctxParams *ContextParams, params *ContractParams, o
 		ContractMeta:   *gm,
 		LastModifyTime: time.Now(),
 	}
-	cont.RenterPid = ctxParams.n.Identity.String()
-	cont.PreparerPid = ctxParams.n.Identity.String()
-	fmt.Println("@cont.PreparerPid", cont.PreparerPid)
+	cont.RenterPid = rss.ctxParams.n.Identity.String()
+	cont.PreparerPid = rss.ctxParams.n.Identity.String()
 	bc := make(chan []byte)
-	guardChanMaps.Set(gm.ContractId, bc)
+	guardChanMaps.Set(getShardId(rss.ssId, gm.ShardHash), bc)
+	bytes, err := proto.Marshal(gm)
+	if err != nil {
+		return nil, err
+	}
+	guardContractMaps.Set(getShardId(rss.ssId, gm.ShardHash), bytes)
 	if !offlineSigning {
 		go func() {
-			sign, err := crypto.Sign(ctxParams.n.PrivateKey, gm)
+			sign, err := crypto.Sign(rss.ctxParams.n.PrivateKey, gm)
 			if err != nil {
 				// TODO: handle error
 				return

@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 
@@ -24,7 +25,11 @@ var (
 func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error {
 	bc := make(chan []byte)
 	balanceChanMaps.Set(rss.ssId, bc)
-	if !offlineSigning {
+	if offlineSigning {
+		rss.saveOfflineSigning(&renterpb.OfflineSigning{
+			Raw: nil,
+		})
+	} else {
 		go func() {
 			privKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 			if err != nil {

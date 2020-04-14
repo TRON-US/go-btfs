@@ -48,8 +48,8 @@ type RenterShard struct {
 }
 
 func GetRenterShard(ctxParams *ContextParams, ssId string, hash string) (*RenterShard, error) {
-	contractId := getContractId(ssId, hash)
-	k := fmt.Sprintf(renterShardsInMemKey, ctxParams.n.Identity.Pretty(), contractId)
+	shardId := getShardId(ssId, hash)
+	k := fmt.Sprintf(renterShardsInMemKey, ctxParams.n.Identity.Pretty(), shardId)
 	var rs *RenterShard
 	if tmp, ok := renterShardsInMem.Get(k); ok {
 		rs = tmp.(*RenterShard)
@@ -86,8 +86,8 @@ func (rs *RenterShard) enterState(e *fsm.Event) {
 
 func (rs *RenterShard) status() (*shardpb.Status, error) {
 	status := new(shardpb.Status)
-	contractId := getContractId(rs.ssId, rs.hash)
-	k := fmt.Sprintf(renterShardStatusKey, rs.peerId, contractId)
+	shardId := getShardId(rs.ssId, rs.hash)
+	k := fmt.Sprintf(renterShardStatusKey, rs.peerId, shardId)
 	err := Get(rs.ds, k, status)
 	if err == datastore.ErrNotFound {
 		status = &shardpb.Status{
@@ -101,7 +101,7 @@ func (rs *RenterShard) status() (*shardpb.Status, error) {
 	return status, nil
 }
 
-func getContractId(ssId string, shardHash string) (contractId string) {
+func getShardId(ssId string, shardHash string) (contractId string) {
 	return fmt.Sprintf("%s:%s", ssId, shardHash)
 }
 
@@ -134,10 +134,10 @@ func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContra
 		SignedEscrowContract: signedEscrowContract,
 		SignedGuardContract:  signedGuardContract,
 	}
-	contractId := getContractId(rs.ssId, rs.hash)
+	shardId := getShardId(rs.ssId, rs.hash)
 	return Batch(rs.ds, []string{
-		fmt.Sprintf(renterShardStatusKey, rs.peerId, contractId),
-		fmt.Sprintf(renterShardContractsKey, rs.peerId, contractId),
+		fmt.Sprintf(renterShardStatusKey, rs.peerId, shardId),
+		fmt.Sprintf(renterShardContractsKey, rs.peerId, shardId),
 	}, []proto.Message{
 		status, signedContracts,
 	})
@@ -149,7 +149,7 @@ func (rs *RenterShard) contract(signedEscrowContract []byte, signedGuardContract
 
 func (rs *RenterShard) contracts() (*shardpb.SignedContracts, error) {
 	contracts := &shardpb.SignedContracts{}
-	err := Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, getContractId(rs.ssId, rs.hash)), contracts)
+	err := Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, getShardId(rs.ssId, rs.hash)), contracts)
 	if err == datastore.ErrNotFound {
 		return contracts, nil
 	}

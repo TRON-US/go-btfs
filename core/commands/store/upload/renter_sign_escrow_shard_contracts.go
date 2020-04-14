@@ -2,6 +2,7 @@ package upload
 
 import (
 	"fmt"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
@@ -14,10 +15,11 @@ import (
 )
 
 var (
-	escrowChanMaps = cmap.New()
+	escrowChanMaps     = cmap.New()
+	escrowContractMaps = cmap.New()
 )
 
-func renterSignEscrowContract(rss *RenterSession, host string, totalPay int64, offlineSigning bool,
+func renterSignEscrowContract(rss *RenterSession, shardHash string, host string, totalPay int64, offlineSigning bool,
 	contractId string) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
 	if err != nil {
@@ -28,8 +30,17 @@ func renterSignEscrowContract(rss *RenterSession, host string, totalPay int64, o
 		return nil, fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
 	bc := make(chan []byte)
-	escrowChanMaps.Set(escrowContract.ContractId, bc)
-	if !offlineSigning {
+	escrowChanMaps.Set(getShardId(rss.ssId, shardHash), bc)
+	bytes, err := proto.Marshal(escrowContract)
+	if err != nil {
+		return nil, err
+	}
+	escrowContractMaps.Set(getShardId(rss.ssId, shardHash), bytes)
+	if offlineSigning {
+		rss.saveOfflineSigning(&renterpb.OfflineSigning{
+			Raw: bytes,
+		})
+	} else {
 		errChan := make(chan error)
 		go func() {
 			sign, err := crypto.Sign(rss.ctxParams.n.PrivateKey, escrowContract)

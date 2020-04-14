@@ -2,8 +2,6 @@ package upload
 
 import (
 	"errors"
-	"fmt"
-
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -24,13 +22,10 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		contractId, err := doRecv(req, env)
-		fmt.Println("contractId", contractId, "err", err)
 		if contractId != "" {
 			if ch, ok := shardErrChanMap.Get(contractId); ok {
 				go func() {
-					fmt.Println("write recv err", req.Arguments[1], err)
 					ch.(chan error) <- err
-					fmt.Println("done write recv err", req.Arguments[1], err)
 				}()
 			}
 			return err
@@ -59,7 +54,6 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	guardContractBytes := []byte(req.Arguments[4])
 	guardContract := new(guardpb.Contract)
 	err = proto.Unmarshal(guardContractBytes, guardContract)
-	fmt.Println("recv guardContract preparerPid:", guardContract.PreparerPid)
 	if err != nil {
 		return
 	}

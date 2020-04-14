@@ -3,6 +3,8 @@ package upload
 import (
 	"context"
 	"fmt"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+	"github.com/gogo/protobuf/proto"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage"
@@ -27,19 +29,17 @@ var (
 	questionsChanMaps = cmap.New()
 )
 
-func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) {
+func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
 	rss.to(rssToGuardEvent)
 	cts := make([]*guardpb.Contract, 0)
 	for _, h := range rss.shardHashes {
 		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, h)
 		if err != nil {
-			//TODO
-			return
+			return err
 		}
 		contracts, err := shard.contracts()
 		if err != nil {
-			//TODO
-			return
+			return err
 		}
 		contracts.SignedGuardContract.EscrowSignature = res.EscrowSignature
 		contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
@@ -48,57 +48,59 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 	}
 	fsStatus, err := newFileStatus(cts, rss.ctxParams.cfg, cts[0].ContractMeta.RenterPid, rss.hash, fileSize)
 	if err != nil {
-		//TODO
-		return
+		return err
 	}
 	cb := make(chan []byte)
 	fileMetaChanMaps.Set(rss.ssId, cb)
-	if !offlineSigning {
+	if offlineSigning {
+		raw, err := proto.Marshal(&fsStatus.FileStoreMeta)
+		if err != nil {
+			return err
+		}
+		rss.saveOfflineSigning(&renterpb.OfflineSigning{
+			Raw: raw,
+		})
+	} else {
+		errChan := make(chan error)
 		go func() {
 			payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 			if err != nil {
-				//TODO
+				errChan <- err
 				return
 			}
 			sign, err := crypto.Sign(payerPrivKey, &fsStatus.FileStoreMeta)
 			if err != nil {
-				//TODO
+				errChan <- err
 				return
 			}
+			errChan <- nil
 			cb <- sign
 		}()
+		err = <-errChan
+		if err != nil {
+			return err
+		}
 	}
 	signBytes := <-cb
 	rss.to(rssToGuardFileMetaSignedEvent)
-	fmt.Println("guard", 1)
 	fsStatus, err = submitFileMetaHelper(rss.ctx, rss.ctxParams.cfg, fsStatus, signBytes)
 	if err != nil {
-		fmt.Println("guard 1", err)
-		//TODO
-		return
+		return err
 	}
-	fmt.Println("guard", 2)
 	qs, err := PrepFileChallengeQuestions(rss, fsStatus, rss.hash)
 	if err != nil {
-		//TODO
-		return
+		return err
 	}
 
-	fmt.Println("guard", 3)
 	fcid, err := cidlib.Parse(rss.hash)
 	if err != nil {
-		//TODO
-		return
+		return err
 	}
-	fmt.Println("guard", 4)
 	err = SendChallengeQuestions(rss.ctx, rss.ctxParams.cfg, fcid, qs)
 	if err != nil {
-		//TODO
-		//fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
-		return
+		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
-	fmt.Println("guard", 5)
-	waitUpload(rss, offlineSigning)
+	return waitUpload(rss, offlineSigning)
 }
 
 func newFileStatus(contracts []*guardpb.Contract, configuration *config.Config,
@@ -177,19 +179,6 @@ func submitFileStatus(ctx context.Context, cfg *config.Config,
 	cb := cgrpc.GuardClient(cfg.Services.GuardDomain)
 	cb.Timeout(guardTimeout)
 	return cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
-		fmt.Println("fileStatus")
-		fmt.Println(fileStatus.RenterPid)
-		fmt.Println(fileStatus.FileHash)
-		fmt.Println(fileStatus.State)
-		fmt.Println(fileStatus.GuardPid)
-		fmt.Println(fileStatus.PreparerPid)
-		fmt.Println("fileStatus.Contracts[0].PreparerPid")
-		fmt.Println(fileStatus.Contracts[0].PreparerPid)
-		fmt.Println(fileStatus.Contracts[0].GuardPid)
-		fmt.Println(fileStatus.Contracts[0].FileHash)
-		fmt.Println(fileStatus.Contracts[0].RenterPid)
-		fmt.Println(fileStatus.Contracts[0].HostPid)
-		fmt.Println(fileStatus.Contracts[0].ShardHash)
 		res, err := client.SubmitFileStoreMeta(ctx, fileStatus)
 		if err != nil {
 			return err
@@ -312,7 +301,6 @@ func PrepShardChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardH
 	cb := make(chan []byte)
 	questionsChanMaps.Set(rss.ssId, cb)
 	go func() {
-		fmt.Println("sign questions:", shardHash)
 		sig, err := crypto.Sign(node.PrivateKey, sq)
 		if err != nil {
 			//TODO

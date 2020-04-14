@@ -43,9 +43,11 @@ const (
 	rssToCompleteEvent            = "to-complete-event"
 	rssToErrorEvent               = "to-error-event"
 
-	renterSessionKey       = "/btfs/%s/renter/sessions/%s/"
-	renterSessionInMemKey  = renterSessionKey
-	renterSessionStatusKey = renterSessionKey + "status"
+	renterSessionKey               = "/btfs/%s/renter/sessions/%s/"
+	renterSessionInMemKey          = renterSessionKey
+	renterSessionStatusKey         = renterSessionKey + "status"
+	renterSessionOfflineMetaKey    = renterSessionKey + "offline-meta"
+	renterSessionOfflineSigningKey = renterSessionKey + "offline-signing"
 )
 
 var (
@@ -178,4 +180,31 @@ func (rs *RenterSession) GetCompleteShardsNum() (int, int, error) {
 
 func (rs *RenterSession) to(status string, args ...interface{}) {
 	rs.fsm.Event(status, args...)
+}
+
+func (rs *RenterSession) saveOfflineMeta(meta *renterpb.OfflineMeta) error {
+	return Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionOfflineMetaKey, rs.peerId, rs.ssId), meta)
+}
+
+func (rs *RenterSession) offlineMeta() (*renterpb.OfflineMeta, error) {
+	meta := new(renterpb.OfflineMeta)
+	err := Get(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionOfflineMetaKey, rs.peerId, rs.ssId), meta)
+	if err != nil {
+		return nil, err
+	}
+	return meta, nil
+}
+
+func (rs *RenterSession) saveOfflineSigning(signingData *renterpb.OfflineSigning) error {
+	return Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionOfflineSigningKey, rs.peerId, rs.ssId), signingData)
+}
+
+func (rs *RenterSession) offlineSigning() (*renterpb.OfflineSigning, error) {
+	signingData := new(renterpb.OfflineSigning)
+	err := Get(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionOfflineSigningKey, rs.peerId, rs.ssId),
+		signingData)
+	if err != nil {
+		return nil, err
+	}
+	return signingData, nil
 }

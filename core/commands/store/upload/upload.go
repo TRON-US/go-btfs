@@ -3,6 +3,8 @@ package upload
 import (
 	"errors"
 	"fmt"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+	"strconv"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
@@ -68,6 +70,9 @@ Use status command to check for completion:
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
+		cmds.StringArg("upload-peer-id", false, false, "Peer id when upload upload."),
+		cmds.StringArg("upload-nonce-ts", false, false, "Nounce timestamp when upload upload."),
+		cmds.StringArg("upload-signature", false, false, "Session signature when upload upload."),
 	},
 	Options: []cmds.Option{
 		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in JUST."),
@@ -106,6 +111,20 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
+		if offlineSigning {
+			offNonceTimestamp, err := strconv.ParseUint(req.Arguments[2], 10, 64)
+			if err != nil {
+				return err
+			}
+			err = rss.saveOfflineMeta(&renterpb.OfflineMeta{
+				OfflinePeerId:    req.Arguments[1],
+				OfflineNonceTs:   offNonceTimestamp,
+				OfflineSignature: req.Arguments[3],
+			})
+			if err != nil {
+				return err
+			}
+		}
 		for shardIndex, shardHash := range shardHashes {
 			go func(i int, h string) error {
 				backoff.Retry(func() error {
@@ -126,35 +145,59 @@ Use status command to check for completion:
 					cb := make(chan error)
 					shardErrChanMap.Set(contractId, cb)
 					tp := totalPay(shardSize, price, storageLength)
-					escrowCotractBytes, err := renterSignEscrowContract(rss, host, tp, offlineSigning, contractId)
-					if err != nil {
-						log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
-						return err
+					var escrowCotractBytes []byte
+					errChan := make(chan error, 2)
+					go func() {
+						tmp := func() error {
+							escrowCotractBytes, err = renterSignEscrowContract(rss, h, host, tp, offlineSigning, contractId)
+							if err != nil {
+								log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
+								return err
+							}
+							return nil
+						}()
+						errChan <- tmp
+					}()
+					var guardContractBytes []byte
+					go func() {
+						tmp := func() error {
+							guardContractBytes, err = renterSignGuardContract(rss, &ContractParams{
+								ContractId:    contractId,
+								RenterPid:     ctxParams.n.Identity.Pretty(),
+								HostPid:       host,
+								ShardIndex:    int32(i),
+								ShardHash:     h,
+								ShardSize:     shardSize,
+								FileHash:      fileHash,
+								StartTime:     time.Now(),
+								StorageLength: int64(storageLength),
+								Price:         price,
+								TotalPay:      tp,
+							}, offlineSigning)
+							if err != nil {
+								log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
+								return err
+							}
+							return nil
+						}()
+						errChan <- tmp
+					}()
+					i := 0
+					for err := range errChan {
+						i++
+						if err != nil {
+							return err
+						}
+						if i == 2 {
+							break
+						}
 					}
-					guardContractBytes, err := renterSignGuardContract(ctxParams, &ContractParams{
-						ContractId:    contractId,
-						RenterPid:     ctxParams.n.Identity.Pretty(),
-						HostPid:       host,
-						ShardIndex:    int32(i),
-						ShardHash:     h,
-						ShardSize:     shardSize,
-						FileHash:      fileHash,
-						StartTime:     time.Now(),
-						StorageLength: int64(storageLength),
-						Price:         price,
-						TotalPay:      tp,
-					}, offlineSigning)
-					if err != nil {
-						log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
-						return err
-					}
+
 					hostPid, err := peer.IDB58Decode(host)
 					if err != nil {
 						log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
 						return err
 					}
-					fmt.Println(ssId, fileHash, h, price, len(escrowCotractBytes), len(guardContractBytes),
-						storageLength, shardSize, i, offlinePeerId)
 					go func() {
 						_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, hostPid, "/storage/upload/init",
 							ssId,
@@ -168,17 +211,16 @@ Use status command to check for completion:
 							i,
 							offlinePeerId,
 						)
-						fmt.Println("done init...", err)
 						if err != nil {
 							switch err.(type) {
 							case remote.IoError:
 								// NOP
 								log.Error("io error", err)
 							case remote.BusinessError:
-								fmt.Println("write remote.BusinessError", h, err)
+								log.Error("write remote.BusinessError", h, err)
 								cb <- err
 							default:
-								fmt.Println("write default err", h, err)
+								log.Error("write default err", h, err)
 								cb <- err
 							}
 						}
