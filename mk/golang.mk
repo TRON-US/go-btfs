@@ -11,13 +11,20 @@ GOFLAGS ?=
 GOTFLAGS ?=
 TEST_COVERAGE_OUTPUT ?= tests_coverage
 
-MY_FILE := coverpkg_list.txt
-PACKAGE_LIST := $(shell cat ${MY_FILE})
+#select explicit list of packages to test
+COVERPKG_LIST := $(shell cat coverpkg_list.txt)
+
+MY_FILE := test_pkgs.txt
+MY_PKGS := $(shell cat ${MY_FILE})
+
+#select packages that dont contain a test dir to avoid build errors
+NON_TEST_PKGS := $(shell go list ./... | grep -v "/test")
 
 # Try to make building as reproducible as possible by stripping the go path.
 GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
 
-GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=$(PACKAGE_LIST)"
+#GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=$(COVERPKG_LIST)"
+GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out"
 #GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
 
 ifeq ($(tarball-is),1)
@@ -53,7 +60,8 @@ $(GOCC) build $(go-flags-with-tags) -o /dev/null "$(call go-pkg-name,$<)"
 endef
 
 test_go_test: $$(DEPS_GO)
-	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
+#	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
+	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) $(MY_PKGS)
 .PHONY: test_go_test
 
 #Used to display coverage per function an total at the end
