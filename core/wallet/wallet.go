@@ -6,10 +6,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload"
+	"github.com/tron-us/go-btfs-common/ledger"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	"github.com/tron-us/protobuf/proto"
 	"strings"
 
 	config "github.com/TRON-US/go-btfs-config"
-	"github.com/TRON-US/go-btfs/core/escrow"
 	exPb "github.com/tron-us/go-btfs-common/protos/exchange"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
@@ -59,7 +63,7 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 
 	ctx := context.Background()
 	// get ledger balance before withdraw
-	ledgerBalance, err := escrow.Balance(ctx, configuration)
+	ledgerBalance, err := Balance(ctx, configuration)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Failed to get ledger balance, reason: %v", err))
 	}
@@ -135,7 +139,7 @@ func GetBalance(configuration *config.Config) (int64, int64, error) {
 	log.Info(fmt.Sprintf("Get exchange tron account success, balance: [%d]", tronBalance))
 
 	// get ledger balance from escrow
-	ledgerBalance, err := escrow.Balance(ctx, configuration)
+	ledgerBalance, err := Balance(ctx, configuration)
 	if err != nil {
 		return 0, 0,
 			errors.New(fmt.Sprintf("Failed to get ledger balance, reason: %v", err))
@@ -236,4 +240,51 @@ func Init(configuration *config.Config) error {
 	fmt.Println("wallet tron address:\n", hex.EncodeToString(hostWallet.tronAddress))
 
 	return nil
+}
+
+func Balance(ctx context.Context, configuration *config.Config) (int64, error) {
+	privKey, err := configuration.Identity.DecodePrivateKey("")
+	if err != nil {
+		return 0, err
+	}
+	lgSignedPubKey, err := ledger.NewSignedPublicKey(privKey, privKey.GetPublic())
+	if err != nil {
+		return 0, err
+	}
+
+	return BalanceHelper(ctx, configuration, false, nil, lgSignedPubKey)
+}
+
+func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bool, signedBytes []byte, lgSignedPubKey *ledgerpb.SignedPublicKey) (int64, error) {
+	if offsign {
+		var ledgerSignedPubKey ledgerpb.SignedPublicKey
+		err := proto.Unmarshal(signedBytes, &ledgerSignedPubKey)
+		if err != nil {
+			return 0, err
+		}
+		lgSignedPubKey = &ledgerSignedPubKey
+	}
+
+	var balance int64 = 0
+	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			res, err := client.BalanceOf(ctx, &ledgerpb.SignedCreateAccountRequest{
+				Key:       lgSignedPubKey.Key,
+				Signature: lgSignedPubKey.Signature,
+			})
+			if err != nil {
+				return err
+			}
+			err = upload.VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			if err != nil {
+				return err
+			}
+			balance = res.Result.Balance
+			log.Debug("balanceof account is ", balance)
+			return nil
+		})
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
 }
