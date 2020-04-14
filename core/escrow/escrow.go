@@ -4,16 +4,21 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core"
+	"strings"
 
-	config "github.com/TRON-US/go-btfs-config"
+	"github.com/TRON-US/go-btfs/core"
+	shardpb "github.com/TRON-US/go-btfs/protos/shard"
+
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
+	"github.com/google/uuid"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -21,7 +26,30 @@ import (
 
 var log = logging.Logger("core/escrow")
 
-func NewContract(configuration *config.Config, id string, n *core.IpfsNode, hostPid peer.ID,
+const (
+	payoutNotFoundErr = "rpc error: code = Unknown desc = not found"
+)
+
+func NewContractID(sessionId string) string {
+	id := uuid.New().String()
+	return sessionId + "," + id
+}
+
+// ExtractSessionIDFromContractID takes the first segment separated by ","
+// and returns it as the session id. If in an old format, i.e. did not
+// have a session id, return an error.
+func ExtractSessionIDFromContractID(contractID string) (string, error) {
+	ids := strings.Split(contractID, ",")
+	if len(ids) != 2 {
+		return "", fmt.Errorf("bad contract id: fewer than 2 segments")
+	}
+	if len(ids[0]) != 36 {
+		return "", fmt.Errorf("invalid session id within contract id")
+	}
+	return ids[0], nil
+}
+
+func NewContract(configuration *config.Config, sessionId string, n *core.IpfsNode, hostPid peer.ID,
 	price int64, customizedSchedule bool, period int, offSignPid peer.ID) (*escrowpb.EscrowContract, error) {
 	var payerPubKey ic.PubKey
 	var err error
@@ -50,7 +78,8 @@ func NewContract(configuration *config.Config, id string, n *core.IpfsNode, host
 		ps = escrowpb.Schedule_CUSTOMIZED
 		p = period
 	}
-	return ledger.NewEscrowContract(id, payerPubKey, hostPubKey, authPubKey, price, ps, int32(p))
+	return ledger.NewEscrowContract(NewContractID(sessionId),
+		payerPubKey, hostPubKey, authPubKey, price, ps, int32(p))
 }
 
 func ConvertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {
@@ -303,7 +332,10 @@ func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bo
 	var balance int64 = 0
 	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			res, err := client.BalanceOf(ctx, lgSignedPubKey)
+			res, err := client.BalanceOf(ctx, &ledgerpb.SignedCreateAccountRequest{
+				Key:       lgSignedPubKey.Key,
+				Signature: lgSignedPubKey.Signature,
+			})
 			if err != nil {
 				return err
 			}
@@ -319,4 +351,90 @@ func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bo
 		return 0, err
 	}
 	return balance, nil
+}
+
+// SyncContractPayoutStatus looks at local contracts, refreshes from Guard, and then
+// syncs payout status for all of them
+func SyncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
+	cs []*shardpb.SignedContracts) ([]*nodepb.Contracts_Contract, error) {
+	cfg, err := n.Repo.Config()
+	if err != nil {
+		return nil, err
+	}
+	pk, err := n.Identity.ExtractPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	pkBytes, err := ic.RawFull(pk)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]*nodepb.Contracts_Contract, 0)
+	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
+		func(ctx context.Context,
+			client escrowpb.EscrowServiceClient) error {
+			in := &escrowpb.SignedContractIDBatch{
+				Data: &escrowpb.ContractIDBatch{
+					Address: pkBytes,
+				},
+			}
+			for _, c := range cs {
+				in.Data.ContractId = append(in.Data.ContractId, c.GuardContract.ContractId)
+			}
+			sign, err := crypto.Sign(n.PrivateKey, in.Data)
+			if err != nil {
+				log.Error("sign contractID error:", err)
+				return err
+			}
+			in.Signature = sign
+			sb, err := client.GetPayOutStatusBatch(ctx, in)
+			if err != nil {
+				log.Error("get payout status batch error:", err)
+				return err
+			}
+			if len(sb.Status) != len(cs) {
+				return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
+					len(cs), len(sb.Status))
+			}
+			for i, c := range cs {
+				s := sb.Status[i]
+				// Set dummy payout status on invalid id or error msg
+				// Reset to dummy status so we have a copy locally with invalid params
+				if s.ContractId != c.GuardContract.ContractId {
+					s = &escrowpb.PayoutStatus{
+						ContractId: c.GuardContract.ContractId,
+						ErrorMsg:   "mistmatched contract id",
+					}
+				} else if s.ErrorMsg != "" {
+					s = &escrowpb.PayoutStatus{
+						ContractId: c.GuardContract.ContractId,
+						ErrorMsg:   s.ErrorMsg,
+					}
+				}
+				if s.ErrorMsg != "" {
+					log.Debug("got payout status error message:", s.ErrorMsg)
+				}
+
+				results = append(results, &nodepb.Contracts_Contract{
+					ContractId:              c.GuardContract.ContractId,
+					HostId:                  c.GuardContract.HostPid,
+					RenterId:                c.GuardContract.RenterPid,
+					Status:                  c.GuardContract.State,
+					StartTime:               c.GuardContract.RentStart,
+					EndTime:                 c.GuardContract.RentEnd,
+					NextEscrowTime:          s.NextPayoutTime,
+					CompensationPaid:        s.PaidAmount,
+					CompensationOutstanding: s.Amount - s.PaidAmount,
+					UnitPrice:               c.GuardContract.Price,
+					ShardSize:               c.GuardContract.ShardFileSize,
+					ShardHash:               c.GuardContract.ShardHash,
+					FileHash:                c.GuardContract.FileHash,
+				})
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }

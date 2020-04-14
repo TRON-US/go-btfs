@@ -1,0 +1,71 @@
+# Protoc directives.
+protoc:
+  version: 3.10.0
+  includes:
+    - ../../../../ #FIXME: use $GOPATH rather than relative dir
+  allow_unused_imports: false
+
+# Lint directives.
+lint:
+  group: google
+  rules:
+    add:
+      - ENUM_NAMES_CAMEL_CASE
+      - ENUM_NAMES_CAPITALIZED
+    # remove:
+    #   - ENUM_NAMES_CAMEL_CASE
+  ignores:
+    - id: ENUM_FIELD_NAMES_UPPER_SNAKE_CASE
+      files:
+        - protos/exchange/exchange_message.proto
+    - id: ENUM_NAMES_CAMEL_CASE
+      files:
+        - protos/exchange/exchange_message.proto
+    - id: ENUM_NAMES_CAPITALIZED
+      files:
+        - protos/exchange/exchange_message.proto
+    - id: MESSAGE_FIELD_NAMES_LOWER_SNAKE_CASE
+      files:
+        - protos/exchange/exchange_message.proto
+    - id: ENUM_FIELD_NAMES_UPPER_SNAKE_CASE
+      files:
+        - protos/exchange/exchange_message.proto
+        - protos/protocol/core/Tron.proto
+    - id: ENUM_NAMES_CAMEL_CASE
+      files:
+        - protos/exchange/exchange_message.proto
+        - protos/protocol/api/api.proto
+    - id: ENUM_NAMES_CAPITALIZED
+      files:
+        - protos/exchange/exchange_message.proto
+        - protos/protocol/api/api.proto
+        - protos/protocol/core/Tron.proto
+    - id: MESSAGE_FIELD_NAMES_LOWER_SNAKE_CASE
+      files:
+        - protos/exchange/exchange_message.proto
+        - protos/protocol/api/api.proto
+        - protos/protocol/core/Discover.proto
+        - protos/protocol/core/Tron.proto
+    - id: MESSAGE_NAMES_CAPITALIZED
+      files:
+        - protos/protocol/core/Tron.proto
+    - id: RPC_NAMES_CAPITALIZED
+      files:
+        - protos/protocol/api/api.proto
+
+# Code generation directives.
+generate:
+  go_options:
+    import_path: github.com/tron-us/go-btfs
+    extra_modifiers:
+      Mgoogle/protobuf/any.proto: github.com/tron-us/protobuf/types
+      Mgoogle/protobuf/duration.proto: github.com/tron-us/protobuf/types
+      Mgoogle/protobuf/struct.proto: github.com/tron-us/protobuf/types
+      Mgoogle/protobuf/timestamp.proto: github.com/tron-us/protobuf/types
+      Mgoogle/protobuf/wrappers.proto: github.com/tron-us/protobuf/types
+
+  plugins:
+    - name: gogo
+      type: gogo
+      flags: plugins=grpc
+      output: ../../../../

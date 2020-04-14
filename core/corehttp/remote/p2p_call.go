@@ -66,6 +66,8 @@ func (r *P2PRemoteCall) CallGet(ctx context.Context, api string, args []interfac
 			sb.WriteString(s)
 		case string:
 			sb.WriteString(arg.(string))
+		default:
+			sb.WriteString(fmt.Sprintf("%v", arg))
 		}
 	}
 	// setup url

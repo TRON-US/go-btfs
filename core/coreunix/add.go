@@ -92,6 +92,10 @@ type Adder struct {
 	PinDuration      int64
 }
 
+func (adder *Adder) GcLocker() bstore.GCLocker {
+	return adder.gcLocker
+}
+
 func (adder *Adder) mfsRoot() (*mfs.Root, error) {
 	if adder.mroot != nil {
 		return adder.mroot, nil

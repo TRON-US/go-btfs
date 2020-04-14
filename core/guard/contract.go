@@ -3,13 +3,15 @@ package guard
 import (
 	"context"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/escrow"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/escrow"
+
 	"github.com/tron-us/go-btfs-common/crypto"
-	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
-	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/gogo/protobuf/proto"
@@ -20,7 +22,11 @@ import (
 
 var log = logging.Logger("core/guard")
 
-func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
+const (
+	guardContractPageSize = 100
+)
+
+func NewFileStatus(session *storage.FileContracts, contracts []*guardpb.Contract, configuration *config.Config) (*guardpb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
 		return nil, err
@@ -30,7 +36,7 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 		rentEnd     time.Time
 		preparerPid = session.Renter.Pretty()
 		renterPid   = session.Renter.Pretty()
-		rentalState = guardPb.FileStoreStatus_NEW
+		rentalState = guardpb.FileStoreStatus_NEW
 	)
 	if len(contracts) > 0 {
 		rentStart = contracts[0].RentStart
@@ -38,16 +44,16 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 		preparerPid = contracts[0].PreparerPid
 		renterPid = contracts[0].RenterPid
 		if contracts[0].PreparerPid != contracts[0].RenterPid {
-			rentalState = guardPb.FileStoreStatus_PARTIAL_NEW
+			rentalState = guardpb.FileStoreStatus_PARTIAL_NEW
 		}
 	}
 
-	fileStoreMeta := guardPb.FileStoreMeta{
+	fileStoreMeta := guardpb.FileStoreMeta{
 		RenterPid:        renterPid,
-		FileHash:         session.FileHash.String(), //TODO need to check
+		FileHash:         session.FileHash.String(),
 		FileSize:         session.GetFileSize(),
-		RentStart:        rentStart, //TODO need to revise later
-		RentEnd:          rentEnd,   //TODO need to revise later
+		RentStart:        rentStart,
+		RentEnd:          rentEnd,
 		CheckFrequency:   0,
 		GuardFee:         0,
 		EscrowFee:        0,
@@ -58,7 +64,7 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 		GuardPid:         guardPid.Pretty(),
 	}
 
-	return &guardPb.FileStoreStatus{
+	return &guardpb.FileStoreStatus{
 		FileStoreMeta:     fileStoreMeta,
 		State:             0,
 		Contracts:         contracts,
@@ -74,13 +80,13 @@ func NewFileStatus(session *storage.FileContracts, contracts []*guardPb.Contract
 }
 
 func NewContract(session *storage.FileContracts, configuration *config.Config, shardKey string, shardIndex int32,
-	renterPid string) (*guardPb.ContractMeta, error) {
+	renterPid string) (*guardpb.ContractMeta, error) {
 	shard := session.ShardInfo[shardKey]
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {
 		return nil, err
 	}
-	return &guardPb.ContractMeta{
+	return &guardpb.ContractMeta{
 		ContractId:    shard.ContractID,
 		RenterPid:     renterPid,
 		HostPid:       shard.Receiver.Pretty(),
@@ -93,11 +99,11 @@ func NewContract(session *storage.FileContracts, configuration *config.Config, s
 		GuardPid:      guardPid.Pretty(),
 		EscrowPid:     escrowPid.Pretty(),
 		Price:         shard.Price,
-		Amount:        shard.TotalPay, // TODO: CHANGE and aLL other optional fields
+		Amount:        shard.TotalPay,
 	}, nil
 }
 
-func SignedContractAndMarshal(meta *guardPb.ContractMeta, offlineSignedBytes []byte, cont *guardPb.Contract, privKey ic.PrivKey,
+func SignedContractAndMarshal(meta *guardpb.ContractMeta, offlineSignedBytes []byte, cont *guardpb.Contract, privKey ic.PrivKey,
 	isPayer bool, isRepair bool, renterPid string, nodePid string) ([]byte, error) {
 	var signedBytes []byte
 	var err error
@@ -111,7 +117,7 @@ func SignedContractAndMarshal(meta *guardPb.ContractMeta, offlineSignedBytes []b
 	}
 
 	if cont == nil {
-		cont = &guardPb.Contract{
+		cont = &guardpb.Contract{
 			ContractMeta:   *meta,
 			LastModifyTime: time.Now(),
 		}
@@ -132,8 +138,8 @@ func SignedContractAndMarshal(meta *guardPb.ContractMeta, offlineSignedBytes []b
 	return proto.Marshal(cont)
 }
 
-func UnmarshalGuardContract(marshaledBody []byte) (*guardPb.Contract, error) {
-	signedContract := &guardPb.Contract{}
+func UnmarshalGuardContract(marshaledBody []byte) (*guardpb.Contract, error) {
+	signedContract := &guardpb.Contract{}
 	err := proto.Unmarshal(marshaledBody, signedContract)
 	if err != nil {
 		return nil, err
@@ -163,35 +169,6 @@ func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error
 	return guardPid, escrowPid, err
 }
 
-// TODO: modify or change it all
-//func NewFileStoreStatus(session *storage.FileContracts, endTime time.Time, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
-//
-//	escrowPid, err := pidFromString(configuration.Services.EscrowPubKeys[0])
-//	if err != nil {
-//		return nil, err
-//	}
-//	guardPid, err := pidFromString(configuration.Services.GuardPubKeys[0])
-//	if err != nil {
-//		return nil, err
-//	}
-//	fileStoreMeta := guardPb.FileStoreMeta{
-//		RenterPid:        session.Renter.Pretty(),
-//		FileHash:         session.FileHash.KeyString(),
-//		FileSize:         2000000000, // default??
-//		RentStart:        time.Now(),
-//		RentEnd:          endTime,
-//		CheckFrequency:   0,
-//		GuardFee:         0,
-//		EscrowFee:        0,
-//		ShardCount:       int32(len(session.ShardInfo)),
-//		MinimumShards:    10,
-//		RecoverThreshold: 20,
-//		EscrowPid:        escrowPid.Pretty(),
-//		GuardPid:         guardPid.Pretty(),
-//	}
-//
-//}
-
 func pidFromString(key string) (peer.ID, error) {
 	pubKey, err := escrow.ConvertPubKeyFromString(key)
 	if err != nil {
@@ -201,8 +178,8 @@ func pidFromString(key string) (peer.ID, error) {
 }
 
 func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
-	escrowResults *escrowPb.SignedSubmitContractResult, payinRes *escrowPb.SignedPayinResult,
-	payerPriKey ic.PrivKey, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
+	escrowResults *escrowpb.SignedSubmitContractResult, payinRes *escrowpb.SignedPayinResult,
+	payerPriKey ic.PrivKey, configuration *config.Config) (*guardpb.FileStoreStatus, error) {
 	// TODO: talk with Jin for doing signature for every contract
 	fileStatus, err := PrepareFileMetaHelper(ss, payinRes, configuration)
 	if err != nil {
@@ -218,7 +195,7 @@ func PrepAndUploadFileMeta(ctx context.Context, ss *storage.FileContracts,
 }
 
 func PrepareFileMetaHelper(ss *storage.FileContracts,
-	payinRes *escrowPb.SignedPayinResult, configuration *config.Config) (*guardPb.FileStoreStatus, error) {
+	payinRes *escrowpb.SignedPayinResult, configuration *config.Config) (*guardpb.FileStoreStatus, error) {
 	// get escrow sig, add them to guard
 	contracts := ss.GetGuardContracts()
 	sig := payinRes.EscrowSignature
@@ -236,7 +213,7 @@ func PrepareFileMetaHelper(ss *storage.FileContracts,
 }
 
 func SubmitFileMetaHelper(ctx context.Context, configuration *config.Config,
-	fileStatus *guardPb.FileStoreStatus, sign []byte) (*guardPb.FileStoreStatus, error) {
+	fileStatus *guardpb.FileStoreStatus, sign []byte) (*guardpb.FileStoreStatus, error) {
 	if fileStatus.PreparerPid == fileStatus.RenterPid {
 		fileStatus.RenterSignature = sign
 	} else {
@@ -250,4 +227,74 @@ func SubmitFileMetaHelper(ctx context.Context, configuration *config.Config,
 	}
 
 	return fileStatus, nil
+}
+
+var ContractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
+	"active": {
+		guardpb.Contract_DRAFT:    true,
+		guardpb.Contract_SIGNED:   true,
+		guardpb.Contract_UPLOADED: true,
+		guardpb.Contract_RENEWED:  true,
+		guardpb.Contract_WARN:     true,
+	},
+	"finished": {
+		guardpb.Contract_CLOSED: true,
+	},
+	"invalid": {
+		guardpb.Contract_LOST:     true,
+		guardpb.Contract_CANCELED: true,
+		guardpb.Contract_OBSOLETE: true,
+	},
+	"all": {
+		guardpb.Contract_DRAFT:    true,
+		guardpb.Contract_SIGNED:   true,
+		guardpb.Contract_UPLOADED: true,
+		guardpb.Contract_LOST:     true,
+		guardpb.Contract_CANCELED: true,
+		guardpb.Contract_CLOSED:   true,
+		guardpb.Contract_RENEWED:  true,
+		guardpb.Contract_OBSOLETE: true,
+		guardpb.Contract_WARN:     true,
+	},
+}
+
+// GetUpdatedGuardContracts retrieves updated guard contracts from remote based on latest timestamp
+// and returns the list updated
+func GetUpdatedGuardContracts(ctx context.Context, n *core.IpfsNode,
+	lastUpdatedTime *time.Time) ([]*guardpb.Contract, error) {
+	// Loop until all pages are obtained
+	var contracts []*guardpb.Contract
+	for i := 0; ; i++ {
+		now := time.Now()
+		req := &guardpb.ListHostContractsRequest{
+			HostPid:             n.Identity.Pretty(),
+			RequesterPid:        n.Identity.Pretty(),
+			RequestPageSize:     guardContractPageSize,
+			RequestPageIndex:    int32(i),
+			LastModifyTimeSince: lastUpdatedTime,
+			State:               guardpb.ListHostContractsRequest_ALL,
+			RequestTime:         &now,
+		}
+		signedReq, err := crypto.Sign(n.PrivateKey, req)
+		if err != nil {
+			return nil, err
+		}
+		req.Signature = signedReq
+
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return nil, err
+		}
+
+		cs, last, err := ListHostContracts(ctx, cfg, req)
+		if err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, cs...)
+		if last {
+			break
+		}
+	}
+	return contracts, nil
 }
