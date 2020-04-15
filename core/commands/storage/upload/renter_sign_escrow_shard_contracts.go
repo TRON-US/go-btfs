@@ -100,11 +100,11 @@ func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, si
 		signedContract = newSignedContract(unsignedContract)
 	}
 	signedContract.BuyerSignature = signedBytes
-	signedBytes, err := proto.Marshal(signedContract)
+	result, err := proto.Marshal(signedContract)
 	if err != nil {
 		return nil, err
 	}
-	return signedBytes, nil
+	return result, nil
 }
 
 func newSignedContract(contract *escrowpb.EscrowContract) *escrowpb.SignedEscrowContract {
