@@ -256,7 +256,10 @@ Use status command to check for completion:
 					}
 					log.Info("session", rss.ssId, "contractNum", completeNum, "errorNum", errorNum)
 					if completeNum == numShards {
-						submit(rss, fileSize, offlineSigning)
+						err := submit(rss, fileSize, offlineSigning)
+						if err != nil {
+							rss.to(rssErrorStatus, err)
+						}
 						return
 					} else if errorNum > 0 {
 						rss.to(rssErrorStatus, errors.New("there are error shards"))

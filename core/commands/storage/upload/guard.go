@@ -299,14 +299,19 @@ func PrepShardChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardH
 	}
 	cb := make(chan []byte)
 	questionsChanMaps.Set(rss.ssId, cb)
+	errChan := make(chan error)
 	go func() {
 		sig, err := crypto.Sign(node.PrivateKey, sq)
 		if err != nil {
-			//TODO
+			errChan <- err
 			return
 		}
+		errChan <- nil
 		cb <- sig
 	}()
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
 	sig := <-cb
 	sq.PreparerSignature = sig
 	return sq, nil

@@ -11,15 +11,13 @@ import (
 	"github.com/tron-us/protobuf/proto"
 )
 
-func submit(rss *RenterSession, fileSize int64, offlineSigning bool) {
+func submit(rss *RenterSession, fileSize int64, offlineSigning bool) error {
 	rss.to(rssToSubmitEvent)
 	res, err := doSubmit(rss, offlineSigning)
 	if err != nil {
-		//TODO: handle error
-		return
+		return err
 	}
-	//TODO
-	pay(rss, res, fileSize, offlineSigning)
+	return pay(rss, res, fileSize, offlineSigning)
 }
 
 func doSubmit(rss *RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {

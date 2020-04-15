@@ -77,8 +77,7 @@ func GetHostShard(ctxParams *ContextParams, contractId string) (*HostShard, erro
 }
 
 func (hs *HostShard) enterState(e *fsm.Event) {
-	//TODO
-	fmt.Printf("shard: %s enter status: %s\n", hs.contractId, e.Dst)
+	log.Infof("shard: %s enter status: %s\n", hs.contractId, e.Dst)
 	switch e.Dst {
 	case hshContractStatus:
 		hs.doContract(e.Args[0].([]byte), e.Args[1].(*guardpb.Contract))
