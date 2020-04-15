@@ -3,7 +3,6 @@ package upload
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
@@ -81,8 +80,6 @@ func waitUpload(rss *RenterSession, offlineSigning bool) error {
 						num++
 					}
 				}
-				//TODO: log.Info
-				fmt.Printf("%d shards uploaded.\n", num)
 				log.Infof("%d shards uploaded.", num)
 				if num >= thresholdContractsNums {
 					return nil
