@@ -123,7 +123,6 @@ func GetRenterSession(ctxParams *ContextParams, ssId string, hash string, shardH
 }
 
 func (rs *RenterSession) enterState(e *fsm.Event) {
-	// FIXME: log.Info
 	log.Infof("session: %s enter status: %s\n", rs.ssId, e.Dst)
 	msg := ""
 	switch e.Dst {

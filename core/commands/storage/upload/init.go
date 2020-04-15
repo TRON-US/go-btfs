@@ -104,7 +104,7 @@ the shard and replies back to client for the next challenge step.`,
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
 		// get renter's public key
-		payerPubKey, err := requestPid.ExtractPublicKey()
+		payerPubKey, err := crypto.GetPubKeyFromPeerId(req.Arguments[9])
 		if err != nil {
 			return err
 		}
