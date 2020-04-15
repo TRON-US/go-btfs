@@ -18,7 +18,8 @@ var (
 	escrowContractMaps = cmap.New()
 )
 
-func renterSignEscrowContract(rss *RenterSession, shardHash string, host string, totalPay int64, offlineSigning bool,
+func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
+	offlineSigning bool,
 	contractId string) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
 	if err != nil {
@@ -29,12 +30,12 @@ func renterSignEscrowContract(rss *RenterSession, shardHash string, host string,
 		return nil, fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
 	bc := make(chan []byte)
-	escrowChanMaps.Set(getShardId(rss.ssId, shardHash), bc)
+	escrowChanMaps.Set(getShardId(rss.ssId, shardHash, shardIndex), bc)
 	bytes, err := proto.Marshal(escrowContract)
 	if err != nil {
 		return nil, err
 	}
-	escrowContractMaps.Set(getShardId(rss.ssId, shardHash), bytes)
+	escrowContractMaps.Set(getShardId(rss.ssId, shardHash, shardIndex), bytes)
 	if !offlineSigning {
 		errChan := make(chan error)
 		go func() {

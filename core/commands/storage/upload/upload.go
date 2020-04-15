@@ -154,7 +154,8 @@ Use status command to check for completion:
 					errChan := make(chan error, 2)
 					go func() {
 						tmp := func() error {
-							escrowCotractBytes, err = renterSignEscrowContract(rss, h, host, tp, offlineSigning, contractId)
+							escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning,
+								contractId)
 							if err != nil {
 								log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
 								return err
@@ -187,13 +188,13 @@ Use status command to check for completion:
 						}()
 						errChan <- tmp
 					}()
-					i := 0
+					c := 0
 					for err := range errChan {
-						i++
+						c++
 						if err != nil {
 							return err
 						}
-						if i == 2 {
+						if c == 2 {
 							break
 						}
 					}
@@ -204,7 +205,7 @@ Use status command to check for completion:
 						return err
 					}
 					go func() {
-						_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, hostPid, "/storage/upload/init",
+						_, err := remote.P2PCall(ctxParams.ctx, ctxParams.n, hostPid, "/storage/upload/init",
 							ssId,
 							fileHash,
 							h,
@@ -239,12 +240,13 @@ Use status command to check for completion:
 					case <-tick:
 						return errors.New("host timeout")
 					}
+					fmt.Println("done contract")
 					return nil
 				}, handleShardBo)
 				return nil
 			}(shardIndex, shardHash)
 		}
-		// waiting for contracts of 30 shards
+		// waiting for contracts of 30(n) shards
 		go func(rss *RenterSession, numShards int) {
 			tick := time.Tick(5 * time.Second)
 			for true {

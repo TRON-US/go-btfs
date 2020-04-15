@@ -47,8 +47,8 @@ func doSubmit(rss *RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitCo
 func prepareContracts(rss *RenterSession, shardHashes []string) ([]*escrowpb.SignedEscrowContract, int64, error) {
 	var signedContracts []*escrowpb.SignedEscrowContract
 	var totalPrice int64
-	for _, hash := range shardHashes {
-		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, hash)
+	for i, hash := range shardHashes {
+		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, hash, i)
 		if err != nil {
 			return nil, 0, err
 		}

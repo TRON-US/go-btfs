@@ -3,6 +3,8 @@ package upload
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"time"
 
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
@@ -25,6 +27,7 @@ var (
 )
 
 func waitUpload(rss *RenterSession, offlineSigning bool) error {
+	threshold := math.Min(float64(len(rss.shardHashes)), thresholdContractsNums)
 	rss.to(rssToWaitUploadEvent)
 	req := &guardpb.CheckFileStoreMetaRequest{
 		FileHash:     rss.hash,
@@ -80,8 +83,8 @@ func waitUpload(rss *RenterSession, offlineSigning bool) error {
 						num++
 					}
 				}
-				log.Infof("%d shards uploaded.", num)
-				if num >= thresholdContractsNums {
+				fmt.Printf("%d shards uploaded.\n", num)
+				if num >= int(threshold) {
 					return nil
 				}
 				return errors.New("uploading")

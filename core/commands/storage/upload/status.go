@@ -44,8 +44,8 @@ This command print upload and payment status by the time queried.`,
 		// get shards info from session
 		shards := make(map[string]*ShardStatus)
 		status.FileHash = sessionStatus.Hash
-		for _, h := range session.shardHashes {
-			shard, err := GetRenterShard(ctxParams, ssId, h)
+		for i, h := range session.shardHashes {
+			shard, err := GetRenterShard(ctxParams, ssId, h, i)
 			if err != nil {
 				return err
 			}
@@ -69,7 +69,7 @@ This command print upload and payment status by the time queried.`,
 				c.Price = contracts.SignedGuardContract.Price
 				c.Host = contracts.SignedGuardContract.HostPid
 			}
-			shards[h] = c
+			shards[getShardId(ssId, h, i)] = c
 		}
 		status.Shards = shards
 		return res.Emit(status)

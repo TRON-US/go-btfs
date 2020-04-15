@@ -34,15 +34,11 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 			if err := func() error {
 				privKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 				if err != nil {
-					if err != nil {
-						return err
-					}
+					return err
 				}
 				lgSignedPubKey, err := ledger.NewSignedPublicKey(privKey, privKey.GetPublic())
 				if err != nil {
-					if err != nil {
-						return err
-					}
+					return err
 				}
 				signedBytes, err := proto.Marshal(lgSignedPubKey)
 				if err != nil {
@@ -50,7 +46,7 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 				}
 				bc <- signedBytes
 				return nil
-			}; err != nil {
+			}(); err != nil {
 				rss.to(rssErrorStatus, err)
 				return
 			}

@@ -31,8 +31,8 @@ var (
 func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
 	rss.to(rssToGuardEvent)
 	cts := make([]*guardpb.Contract, 0)
-	for _, h := range rss.shardHashes {
-		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, h)
+	for i, h := range rss.shardHashes {
+		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, h, i)
 		if err != nil {
 			return err
 		}

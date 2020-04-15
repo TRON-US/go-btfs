@@ -158,8 +158,8 @@ func (rs *RenterSession) GetCompleteShardsNum() (int, int, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	for _, h := range status.ShardHashes {
-		shard, err := GetRenterShard(rs.ctxParams, rs.ssId, h)
+	for i, h := range status.ShardHashes {
+		shard, err := GetRenterShard(rs.ctxParams, rs.ssId, h, i)
 		if err != nil {
 			log.Errorf("get renter shard error:", err.Error())
 			continue

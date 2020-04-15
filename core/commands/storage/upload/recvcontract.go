@@ -2,6 +2,7 @@ package upload
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 
@@ -30,7 +31,9 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 					ch.(chan error) <- err
 				}()
 			}
-			return err
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	},
@@ -74,7 +77,11 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	contractId = guardContract.ContractMeta.ContractId
 
 	shardHash := req.Arguments[1]
-	shard, err := GetRenterShard(ctxParams, ssID, shardHash)
+	index, err := strconv.Atoi(req.Arguments[2])
+	if err != nil {
+		return
+	}
+	shard, err := GetRenterShard(ctxParams, ssID, shardHash, index)
 	if err != nil {
 		return
 	}

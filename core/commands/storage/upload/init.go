@@ -194,7 +194,9 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				shard.complete()
+				if err := shard.complete(); err != nil {
+					return err
+				}
 				return nil
 			}()
 			if tmp != nil {

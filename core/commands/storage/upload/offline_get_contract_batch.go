@@ -54,8 +54,8 @@ the contracts to the caller.`,
 		if cm = escrowContractMaps; req.Arguments[4] == contractsTypeGuard {
 			cm = guardContractMaps
 		}
-		for _, h := range status.ShardHashes {
-			shardId := getShardId(ssId, h)
+		for i, h := range status.ShardHashes {
+			shardId := getShardId(ssId, h, i)
 			c := &contract{
 				Key: shardId,
 			}
