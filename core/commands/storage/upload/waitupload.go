@@ -51,19 +51,14 @@ func waitUpload(rss *RenterSession, offlineSigning bool) error {
 			return err
 		}
 	} else {
-		errChan := make(chan error)
 		go func() {
 			sign, err := crypto.Sign(payerPrivKey, req)
 			if err != nil {
-				errChan <- err
+				rss.to(rssErrorStatus, err)
 				return
 			}
-			errChan <- nil
 			cb <- sign
 		}()
-		if err := <-errChan; err != nil {
-			return err
-		}
 	}
 	sign := <-cb
 	rss.to(rssToWaitUploadReqSignedEvent)

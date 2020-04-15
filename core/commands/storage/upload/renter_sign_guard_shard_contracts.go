@@ -69,7 +69,7 @@ func renterSignGuardContract(rss *RenterSession, params *ContractParams, offline
 		go func() {
 			sign, err := crypto.Sign(rss.ctxParams.n.PrivateKey, gm)
 			if err != nil {
-				// TODO: handle error
+				rss.to(rssErrorStatus, err)
 				return
 			}
 			bc <- sign

@@ -31,26 +31,29 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 		})
 	} else {
 		go func() {
-			privKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
-			if err != nil {
+			if err := func() error {
+				privKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 				if err != nil {
-					// TODO: error
-					return
+					if err != nil {
+						return err
+					}
 				}
-			}
-			lgSignedPubKey, err := ledger.NewSignedPublicKey(privKey, privKey.GetPublic())
-			if err != nil {
+				lgSignedPubKey, err := ledger.NewSignedPublicKey(privKey, privKey.GetPublic())
 				if err != nil {
-					// TODO: error
-					return
+					if err != nil {
+						return err
+					}
 				}
-			}
-			signedBytes, err := proto.Marshal(lgSignedPubKey)
-			if err != nil {
-				// TODO: error
+				signedBytes, err := proto.Marshal(lgSignedPubKey)
+				if err != nil {
+					return err
+				}
+				bc <- signedBytes
+				return nil
+			}; err != nil {
+				rss.to(rssErrorStatus, err)
 				return
 			}
-			bc <- signedBytes
 		}()
 	}
 	signedBytes := <-bc

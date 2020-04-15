@@ -70,26 +70,31 @@ func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEs
 		}
 	} else {
 		go func() {
-			var chanCommit *ledgerpb.ChannelCommit
-			var buyerChanSig []byte
-			buyerPrivKey, err := conf.Identity.DecodePrivateKey("")
-			if err != nil {
-				return
+			if err := func() error {
+				var chanCommit *ledgerpb.ChannelCommit
+				var buyerChanSig []byte
+				buyerPrivKey, err := conf.Identity.DecodePrivateKey("")
+				if err != nil {
+					return err
+				}
+				chanCommit, err = ledger.NewChannelCommit(buyerPrivKey.GetPublic(), escrowPubKey, totalPrice)
+				if err != nil {
+					return err
+				}
+				buyerChanSig, err = crypto.Sign(buyerPrivKey, chanCommit)
+				if err != nil {
+					return err
+				}
+				commit := ledger.NewSignedChannelCommit(chanCommit, buyerChanSig)
+				bs, err := proto.Marshal(commit)
+				if err != nil {
+					return err
+				}
+				cb <- bs
+				return nil
+			}(); err != nil {
+				rss.to(rssErrorStatus, err)
 			}
-			chanCommit, err = ledger.NewChannelCommit(buyerPrivKey.GetPublic(), escrowPubKey, totalPrice)
-			if err != nil {
-				return
-			}
-			buyerChanSig, err = crypto.Sign(buyerPrivKey, chanCommit)
-			if err != nil {
-				return
-			}
-			commit := ledger.NewSignedChannelCommit(chanCommit, buyerChanSig)
-			bs, err := proto.Marshal(commit)
-			if err != nil {
-				return
-			}
-			cb <- bs
 		}()
 	}
 	signedBytes := <-cb

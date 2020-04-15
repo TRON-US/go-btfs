@@ -35,43 +35,38 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 			return err
 		}
 	} else {
-		errChan := make(chan error)
 		go func() {
-			chanState := result.Result.BuyerChannelState
-			payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
-			if err != nil {
-				errChan <- err
+			if err := func() error {
+				chanState := result.Result.BuyerChannelState
+				payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+				if err != nil {
+					return err
+				}
+				sig, err := crypto.Sign(payerPrivKey, chanState.Channel)
+				if err != nil {
+					return err
+				}
+				chanState.FromSignature = sig
+				payinReq, err := ledger.NewPayinRequest(result.Result.PayinId, payerPrivKey.GetPublic(), chanState)
+				if err != nil {
+					return err
+				}
+				payinSig, err := crypto.Sign(payerPrivKey, payinReq)
+				if err != nil {
+					return err
+				}
+				request := ledger.NewSignedPayinRequest(payinReq, payinSig)
+				bs, err := proto.Marshal(request)
+				if err != nil {
+					return err
+				}
+				bc <- bs
+				return nil
+			}(); err != nil {
+				rss.to(rssErrorStatus, err)
 				return
 			}
-			sig, err := crypto.Sign(payerPrivKey, chanState.Channel)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			chanState.FromSignature = sig
-			payinReq, err := ledger.NewPayinRequest(result.Result.PayinId, payerPrivKey.GetPublic(), chanState)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			payinSig, err := crypto.Sign(payerPrivKey, payinReq)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			request := ledger.NewSignedPayinRequest(payinReq, payinSig)
-			bs, err := proto.Marshal(request)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			errChan <- nil
-			bc <- bs
 		}()
-		err := <-errChan
-		if err != nil {
-			return err
-		}
 		rss.to(rssToPayChanStateSignedEvent)
 	}
 	signed := <-bc

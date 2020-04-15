@@ -60,25 +60,23 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 			Raw: raw,
 		})
 	} else {
-		errChan := make(chan error)
 		go func() {
-			payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
-			if err != nil {
-				errChan <- err
+			if err := func() error {
+				payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+				if err != nil {
+					return err
+				}
+				sign, err := crypto.Sign(payerPrivKey, &fsStatus.FileStoreMeta)
+				if err != nil {
+					return err
+				}
+				cb <- sign
+				return nil
+			}(); err != nil {
+				rss.to(rssErrorStatus, err)
 				return
 			}
-			sign, err := crypto.Sign(payerPrivKey, &fsStatus.FileStoreMeta)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			errChan <- nil
-			cb <- sign
 		}()
-		err = <-errChan
-		if err != nil {
-			return err
-		}
 	}
 	signBytes := <-cb
 	rss.to(rssToGuardFileMetaSignedEvent)
