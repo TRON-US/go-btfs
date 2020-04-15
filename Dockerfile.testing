@@ -1,4 +1,4 @@
-FROM golang:1.13-stretch
+FROM golang:1.14-stretch
 MAINTAINER TRON-US <support@tron.network>
 # Dockerfile.testing will build an image that contains the go-btfs source and binary.
 # It is quite large.  Its primary use case is to run the unit tests and test/sharness tests.
