@@ -20,7 +20,6 @@ var (
 )
 
 func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool) error {
-	rss.ctx.Deadline()
 	rss.to(rssToPayEvent)
 	bc := make(chan []byte)
 	payinReqChanMaps.Set(rss.ssId, bc)
