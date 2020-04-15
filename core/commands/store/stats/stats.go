@@ -2,7 +2,6 @@ package stats
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -45,9 +44,6 @@ This command synchronize node stats from network(hub) to local node data store.`
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
-		}
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
 		}
 
 		n, err := cmdenv.GetNode(env)
@@ -101,9 +97,6 @@ This command get node stats in the network from the local node data store.`,
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
-		}
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
 		}
 
 		n, err := cmdenv.GetNode(env)
