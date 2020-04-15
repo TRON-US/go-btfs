@@ -70,10 +70,6 @@ $ btfs storage announce --host-storage-price=1000000`,
 			}
 		}
 
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-
 		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
 		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
 		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
