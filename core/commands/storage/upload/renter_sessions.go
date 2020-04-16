@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
@@ -117,10 +118,23 @@ func GetRenterSession(ctxParams *ContextParams, ssId string, hash string, shardH
 	return rs, nil
 }
 
+var helperText = map[string]string{
+	rssInitStatus:       "Searching for recommended hosts…",
+	rssSubmitStatus:     "Hosts found! Checking wallet balance and submitting contracts to escrow.",
+	rssPayStatus:        "Contracts submitted! Confirming the escrow payment.",
+	rssGuardStatus:      "Payment successful! Preparing meta-data and challenge questions.",
+	rssWaitUploadStatus: "Confirming successful file shard storage by hosts.",
+	rssCompleteStatus:   "File storage successful!",
+}
+
 func (rs *RenterSession) enterState(e *fsm.Event) {
+	var msg string
+	if text, ok := helperText[strings.Split(e.Dst, ":")[0]]; ok {
+		msg = text
+	} else {
+		msg = ""
+	}
 	fmt.Printf("session: %s enter status: %s\n", rs.ssId, e.Dst)
-	//TODO: add helper text
-	msg := ""
 	switch e.Dst {
 	case rssErrorStatus:
 		msg = e.Args[0].(error).Error()
@@ -147,6 +161,7 @@ func (rs *RenterSession) status() (*renterpb.RenterSessionStatus, error) {
 	if err == datastore.ErrNotFound {
 		return &renterpb.RenterSessionStatus{
 			Status:      rssInitStatus,
+			Message:     helperText[rssInitStatus],
 			ShardHashes: rs.shardHashes,
 		}, nil
 	}

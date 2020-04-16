@@ -2,7 +2,6 @@ package upload
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -29,6 +28,7 @@ const (
 var (
 	log = logging.Logger("upload")
 
+	// retry strategies
 	waitUploadBo = func() *backoff.ExponentialBackOff {
 		bo := backoff.NewExponentialBackOff()
 		bo.InitialInterval = 1 * time.Second
@@ -161,35 +161,4 @@ func getNodeSizeFromCid(ctx context.Context, hash cidlib.Cid, api iface.CoreAPI)
 		return 0, err
 	}
 	return ipldNode.Size()
-}
-
-const (
-	Text = iota + 1
-	Base64
-)
-
-func bytesToString(data []byte, encoding int) (string, error) {
-	switch encoding {
-	case Text:
-		return string(data), nil
-	case Base64:
-		return base64.StdEncoding.EncodeToString(data), nil
-	default:
-		return "", fmt.Errorf(`unexpected parameter [%d] is given, either "text" or "base64" should be used`, encoding)
-	}
-}
-
-func stringToBytes(str string, encoding int) ([]byte, error) {
-	switch encoding {
-	case Text:
-		return []byte(str), nil
-	case Base64:
-		by, err := base64.StdEncoding.DecodeString(str)
-		if err != nil {
-			return nil, err
-		}
-		return by, nil
-	default:
-		return nil, fmt.Errorf(`unexpected encoding [%d], expected 1(Text) or 2(Base64)`, encoding)
-	}
 }
