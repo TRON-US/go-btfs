@@ -29,7 +29,9 @@ var (
 )
 
 func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
-	rss.to(rssToGuardEvent)
+	if err := rss.to(rssToGuardEvent); err != nil {
+		return err
+	}
 	cts := make([]*guardpb.Contract, 0)
 	for i, h := range rss.shardHashes {
 		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, h, i)
@@ -56,30 +58,37 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 		if err != nil {
 			return err
 		}
-		rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		err = rss.saveOfflineSigning(&renterpb.OfflineSigning{
 			Raw: raw,
 		})
+		if err != nil {
+			return err
+		}
 	} else {
 		go func() {
-			if err := func() error {
+			if sig, err := func() ([]byte, error) {
 				payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
 				if err != nil {
-					return err
+					return nil, err
 				}
-				sign, err := crypto.Sign(payerPrivKey, &fsStatus.FileStoreMeta)
+				sig, err := crypto.Sign(payerPrivKey, &fsStatus.FileStoreMeta)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				cb <- sign
-				return nil
+				return sig, nil
 			}(); err != nil {
-				rss.to(rssErrorStatus, err)
+				_ = rss.to(rssErrorStatus, err)
 				return
+			} else {
+				cb <- sig
 			}
 		}()
 	}
 	signBytes := <-cb
-	rss.to(rssToGuardFileMetaSignedEvent)
+	fileMetaChanMaps.Remove(rss.ssId)
+	if err := rss.to(rssToGuardFileMetaSignedEvent); err != nil {
+		return err
+	}
 	fsStatus, err = submitFileMetaHelper(rss.ctx, rss.ctxParams.cfg, fsStatus, signBytes)
 	if err != nil {
 		return err
@@ -97,7 +106,7 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
-	return waitUpload(rss, offlineSigning)
+	return waitUpload(rss, offlineSigning, fsStatus.RenterPid)
 }
 
 func newFileStatus(contracts []*guardpb.Contract, configuration *config.Config,

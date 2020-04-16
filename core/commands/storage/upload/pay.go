@@ -2,7 +2,6 @@ package upload
 
 import (
 	"context"
-
 	config "github.com/TRON-US/go-btfs-config"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
@@ -20,7 +19,9 @@ var (
 )
 
 func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool) error {
-	rss.to(rssToPayEvent)
+	if err := rss.to(rssToPayEvent); err != nil {
+		return err
+	}
 	bc := make(chan []byte)
 	payinReqChanMaps.Set(rss.ssId, bc)
 	if offlineSigning {
@@ -63,17 +64,19 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 				bc <- bs
 				return nil
 			}(); err != nil {
-				rss.to(rssErrorStatus, err)
+				_ = rss.to(rssErrorStatus, err)
 				return
 			}
 		}()
-		rss.to(rssToPayChanStateSignedEvent)
 	}
 	signed := <-bc
-	rss.to(rssToPayPayinRequestSignedEvent)
+	payinReqChanMaps.Remove(rss.ssId)
 	signedPayInRequest := new(escrowpb.SignedPayinRequest)
 	err := proto.Unmarshal(signed, signedPayInRequest)
 	if err != nil {
+		return err
+	}
+	if err := rss.to(rssToPayPayinRequestSignedEvent); err != nil {
 		return err
 	}
 	payinRes, err := payInToEscrow(rss.ctx, rss.ctxParams.cfg, signedPayInRequest)

@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	unsignedChannelCommitChanMaps = cmap.New()
-	signedChannelCommitChanMaps   = cmap.New()
+	unsignedChannelCommitMaps   = cmap.New()
+	signedChannelCommitChanMaps = cmap.New()
 )
 
 // fork from ic, use RawFull rather than Raw
@@ -53,7 +53,7 @@ func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEs
 		Amount:    0,
 		PayerId:   0,
 	}
-	unsignedChannelCommitChanMaps.Set(ssId, cc)
+	unsignedChannelCommitMaps.Set(ssId, cc)
 	cb := make(chan []byte)
 	signedChannelCommitChanMaps.Set(ssId, cb)
 	if offlineSigning {
@@ -93,12 +93,14 @@ func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEs
 				cb <- bs
 				return nil
 			}(); err != nil {
-				rss.to(rssErrorStatus, err)
+				_ = rss.to(rssErrorStatus, err)
 			}
 		}()
 	}
 	signedBytes := <-cb
-	rss.to(rssToSubmitLedgerChannelCommitSignedEvent)
+	if err := rss.to(rssToSubmitLedgerChannelCommitSignedEvent); err != nil {
+		return nil, err
+	}
 	var signedChannelCommit ledgerpb.SignedChannelCommit
 	err = proto.Unmarshal(signedBytes, &signedChannelCommit)
 	if err != nil {

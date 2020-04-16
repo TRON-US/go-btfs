@@ -3,7 +3,6 @@ package upload
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -22,17 +21,23 @@ const (
 	thresholdContractsNums = 20
 )
 
+func getSuccessThreshold(totalShards int) int {
+	return int(math.Min(float64(totalShards), thresholdContractsNums))
+}
+
 var (
 	waitUploadChanMap = cmap.New()
 )
 
-func waitUpload(rss *RenterSession, offlineSigning bool) error {
-	threshold := math.Min(float64(len(rss.shardHashes)), thresholdContractsNums)
-	rss.to(rssToWaitUploadEvent)
+func waitUpload(rss *RenterSession, offlineSigning bool, renterId string) error {
+	threshold := getSuccessThreshold(len(rss.shardHashes))
+	if err := rss.to(rssToWaitUploadEvent); err != nil {
+		return err
+	}
 	req := &guardpb.CheckFileStoreMetaRequest{
 		FileHash:     rss.hash,
-		RenterPid:    rss.ctxParams.n.Identity.Pretty(),
-		RequesterPid: rss.ctxParams.n.Identity.Pretty(),
+		RenterPid:    renterId,
+		RequesterPid: renterId,
 		RequestTime:  time.Now().UTC(),
 	}
 	payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
@@ -56,14 +61,17 @@ func waitUpload(rss *RenterSession, offlineSigning bool) error {
 		go func() {
 			sign, err := crypto.Sign(payerPrivKey, req)
 			if err != nil {
-				rss.to(rssErrorStatus, err)
+				_ = rss.to(rssErrorStatus, err)
 				return
 			}
 			cb <- sign
 		}()
 	}
 	sign := <-cb
-	rss.to(rssToWaitUploadReqSignedEvent)
+	waitUploadChanMap.Remove(rss.ssId)
+	if err := rss.to(rssToWaitUploadReqSignedEvent); err != nil {
+		return err
+	}
 	req.Signature = sign
 	err = backoff.Retry(func() error {
 		select {
@@ -83,7 +91,7 @@ func waitUpload(rss *RenterSession, offlineSigning bool) error {
 						num++
 					}
 				}
-				fmt.Printf("%d shards uploaded.\n", num)
+				log.Infof("%d shards uploaded.", num)
 				if num >= int(threshold) {
 					return nil
 				}
@@ -94,6 +102,8 @@ func waitUpload(rss *RenterSession, offlineSigning bool) error {
 	if err != nil {
 		return err
 	}
-	rss.to(rssToCompleteEvent)
+	if err := rss.to(rssToCompleteEvent); err != nil {
+		return err
+	}
 	return nil
 }

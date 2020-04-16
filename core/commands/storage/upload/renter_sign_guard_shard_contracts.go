@@ -56,26 +56,29 @@ func renterSignGuardContract(rss *RenterSession, params *ContractParams, offline
 		ContractMeta:   *gm,
 		LastModifyTime: time.Now(),
 	}
-	cont.RenterPid = rss.ctxParams.n.Identity.String()
-	cont.PreparerPid = rss.ctxParams.n.Identity.String()
+	cont.RenterPid = params.RenterPid
+	cont.PreparerPid = params.RenterPid
 	bc := make(chan []byte)
-	guardChanMaps.Set(getShardId(rss.ssId, gm.ShardHash, int(gm.ShardIndex)), bc)
+	shardId := getShardId(rss.ssId, gm.ShardHash, int(gm.ShardIndex))
+	guardChanMaps.Set(shardId, bc)
 	bytes, err := proto.Marshal(gm)
 	if err != nil {
 		return nil, err
 	}
-	guardContractMaps.Set(getShardId(rss.ssId, gm.ShardHash, int(gm.ShardIndex)), bytes)
+	guardContractMaps.Set(shardId, bytes)
 	if !offlineSigning {
 		go func() {
 			sign, err := crypto.Sign(rss.ctxParams.n.PrivateKey, gm)
 			if err != nil {
-				rss.to(rssErrorStatus, err)
+				_ = rss.to(rssErrorStatus, err)
 				return
 			}
 			bc <- sign
 		}()
 	}
 	signedBytes := <-bc
+	guardContractMaps.Remove(shardId)
+	guardContractMaps.Remove(shardId)
 	cont.RenterSignature = signedBytes
 	return proto.Marshal(cont)
 }

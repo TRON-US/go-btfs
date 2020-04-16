@@ -4,11 +4,7 @@ import (
 	"errors"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-
-	cmap "github.com/orcaman/concurrent-map"
 )
-
-var status = map[string]cmap.ConcurrentMap{}
 
 var storageUploadGetUnsignedCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -49,20 +45,18 @@ This command obtains the upload signing input data for from the upload session
 		if err != nil {
 			return err
 		}
-		status, err := rss.status()
-		if err != nil {
-			return err
-		}
+
 		rawString, err := bytesToString(signing.Raw, Base64)
 		if err != nil {
 			return err
 		}
-		return res.Emit(&getUnsignedRes{Unsigned: rawString, CurrentStatus: status.Status})
+		return res.Emit(&GetUnsignedRes{Unsigned: rawString, Price: signing.Price})
 	},
-	Type: getUnsignedRes{},
+	Type: GetUnsignedRes{},
 }
 
-type getUnsignedRes struct {
-	Unsigned      string
-	CurrentStatus string
+type GetUnsignedRes struct {
+	Opcode   string
+	Unsigned string
+	Price    int64
 }

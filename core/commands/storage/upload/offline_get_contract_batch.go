@@ -1,7 +1,6 @@
 package upload
 
 import (
-	"errors"
 	"fmt"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -11,7 +10,6 @@ import (
 
 const (
 	contractsTypeGuard  = "guard"
-	contractsTypeEscrow = "escrow"
 )
 
 var storageUploadGetContractBatchCmd = &cmds.Command{
@@ -62,7 +60,9 @@ the contracts to the caller.`,
 			if bytes, ok := cm.Get(shardId); ok {
 				c.ContractData, err = bytesToString(bytes.([]byte), Base64)
 			} else {
-				return errors.New("some contracts haven't ready yet")
+				return res.Emit(&getContractBatchRes{
+					Contracts: make([]*contract, 0),
+				})
 			}
 			contracts = append(contracts, c)
 		}

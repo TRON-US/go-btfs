@@ -12,7 +12,9 @@ import (
 )
 
 func submit(rss *RenterSession, fileSize int64, offlineSigning bool) error {
-	rss.to(rssToSubmitEvent)
+	if err := rss.to(rssToSubmitEvent); err != nil {
+		return err
+	}
 	res, err := doSubmit(rss, offlineSigning)
 	if err != nil {
 		return err

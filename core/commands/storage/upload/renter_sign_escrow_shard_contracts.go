@@ -8,7 +8,6 @@ import (
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	"github.com/tron-us/protobuf/proto"
 
-	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -19,23 +18,24 @@ var (
 )
 
 func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
-	offlineSigning bool,
+	offlineSigning bool, offSignPid peer.ID,
 	contractId string) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
 	if err != nil {
 		return nil, err
 	}
-	escrowContract, err := newContract(rss, hostPid, totalPay, false, 0, "", contractId)
+	escrowContract, err := newContract(rss, hostPid, totalPay, false, 0, offSignPid, contractId)
 	if err != nil {
 		return nil, fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
 	bc := make(chan []byte)
-	escrowChanMaps.Set(getShardId(rss.ssId, shardHash, shardIndex), bc)
+	shardId := getShardId(rss.ssId, shardHash, shardIndex)
+	escrowChanMaps.Set(shardId, bc)
 	bytes, err := proto.Marshal(escrowContract)
 	if err != nil {
 		return nil, err
 	}
-	escrowContractMaps.Set(getShardId(rss.ssId, shardHash, shardIndex), bytes)
+	escrowContractMaps.Set(shardId, bytes)
 	if !offlineSigning {
 		errChan := make(chan error)
 		go func() {
@@ -53,6 +53,8 @@ func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex i
 		}
 	}
 	renterSignBytes := <-bc
+	escrowChanMaps.Remove(shardId)
+	escrowContractMaps.Remove(shardId)
 	renterSignedEscrowContract, err := signContractAndMarshalOffSign(escrowContract, renterSignBytes, nil)
 	if err != nil {
 		return nil, err
@@ -61,16 +63,11 @@ func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex i
 }
 
 func newContract(rss *RenterSession, hostPid peer.ID, totalPay int64, customizedSchedule bool, period int,
-	offSignPid peer.ID, contractId string) (*escrowpb.EscrowContract, error) {
-	var payerPubKey ic.PubKey
+	pid peer.ID, contractId string) (*escrowpb.EscrowContract, error) {
 	var err error
-	if offSignPid == "" {
-		payerPubKey = rss.ctxParams.n.PrivateKey.GetPublic()
-	} else {
-		payerPubKey, err = offSignPid.ExtractPublicKey()
-		if err != nil {
-			return nil, err
-		}
+	payerPubKey, err := pid.ExtractPublicKey()
+	if err != nil {
+		return nil, err
 	}
 	hostPubKey, err := hostPid.ExtractPublicKey()
 	if err != nil {

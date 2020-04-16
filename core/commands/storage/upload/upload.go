@@ -2,7 +2,6 @@ package upload
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -97,10 +96,13 @@ Use status command to check for completion:
 			return err
 		}
 		fileHash := req.Arguments[0]
-		offlinePeerId := ctxParams.n.Identity.Pretty()
+		renterId := ctxParams.n.Identity
 		offlineSigning := false
 		if len(req.Arguments) > 1 {
-			offlinePeerId = req.Arguments[1]
+			renterId, err = peer.IDB58Decode(req.Arguments[1])
+			if err != nil {
+				return err
+			}
 			offlineSigning = true
 		}
 		shardHashes, fileSize, shardSize, err := getShardHashes(ctxParams, fileHash)
@@ -131,8 +133,8 @@ Use status command to check for completion:
 			}
 		}
 		for shardIndex, shardHash := range shardHashes {
-			go func(i int, h string) error {
-				backoff.Retry(func() error {
+			go func(i int, h string) {
+				err := backoff.Retry(func() error {
 					select {
 					case <-rss.ctx.Done():
 						return nil
@@ -141,9 +143,7 @@ Use status command to check for completion:
 					}
 					host, err := hp.NextValidHost(price)
 					if err != nil {
-						fmt.Println("next valid host", err)
-						rss.to(rssErrorStatus, err)
-						rss.cancel()
+						_ = rss.to(rssErrorStatus, err)
 						return nil
 					}
 					contractId := newContractID(ssId)
@@ -155,7 +155,7 @@ Use status command to check for completion:
 					go func() {
 						tmp := func() error {
 							escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning,
-								contractId)
+								renterId, contractId)
 							if err != nil {
 								log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
 								return err
@@ -169,7 +169,7 @@ Use status command to check for completion:
 						tmp := func() error {
 							guardContractBytes, err = renterSignGuardContract(rss, &ContractParams{
 								ContractId:    contractId,
-								RenterPid:     ctxParams.n.Identity.Pretty(),
+								RenterPid:     renterId.Pretty(),
 								HostPid:       host,
 								ShardIndex:    int32(i),
 								ShardHash:     h,
@@ -215,7 +215,7 @@ Use status command to check for completion:
 							storageLength,
 							shardSize,
 							i,
-							offlinePeerId,
+							renterId,
 						)
 						if err != nil {
 							switch err.(type) {
@@ -240,10 +240,10 @@ Use status command to check for completion:
 					case <-tick:
 						return errors.New("host timeout")
 					}
-					fmt.Println("done contract")
-					return nil
 				}, handleShardBo)
-				return nil
+				if err != nil {
+					_ = rss.to(rssErrorStatus, err)
+				}
 			}(shardIndex, shardHash)
 		}
 		// waiting for contracts of 30(n) shards
@@ -260,11 +260,11 @@ Use status command to check for completion:
 					if completeNum == numShards {
 						err := submit(rss, fileSize, offlineSigning)
 						if err != nil {
-							rss.to(rssErrorStatus, err)
+							_ = rss.to(rssErrorStatus, err)
 						}
 						return
 					} else if errorNum > 0 {
-						rss.to(rssErrorStatus, errors.New("there are error shards"))
+						_ = rss.to(rssErrorStatus, errors.New("there are some error shards"))
 						log.Error("session:", rss.ssId, ",errorNum:", errorNum)
 						return
 					}

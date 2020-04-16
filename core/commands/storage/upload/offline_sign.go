@@ -1,8 +1,12 @@
 package upload
 
 import (
+	"errors"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+
+	cmap "github.com/orcaman/concurrent-map"
 )
 
 var storageUploadSignCmd = &cmds.Command{
@@ -37,6 +41,24 @@ to the upload session.`,
 		bytes, err := stringToBytes(req.Arguments[5], Base64)
 		if err != nil {
 			return err
+		}
+		var cm cmap.ConcurrentMap
+		switch req.Arguments[4] {
+		case rssSubmitStatus:
+			cm = balanceChanMaps
+		case rssSubmitBalanceReqSignedStatus:
+			cm = signedChannelCommitChanMaps
+		case rssPayStatus:
+			cm = payinReqChanMaps
+		case rssGuardStatus:
+			cm = fileMetaChanMaps
+		case rssWaitUploadStatus:
+			cm = waitUploadChanMap
+		default:
+			return errors.New("wrong status:" + req.Arguments[4])
+		}
+		if bc, ok := cm.Get(ssId); ok {
+			bc.(chan []byte) <- bytes
 		}
 		return rss.saveOfflineSigning(&renterpb.OfflineSigning{
 			Sig: bytes,

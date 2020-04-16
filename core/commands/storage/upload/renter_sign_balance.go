@@ -26,9 +26,12 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 	bc := make(chan []byte)
 	balanceChanMaps.Set(rss.ssId, bc)
 	if offlineSigning {
-		rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		err := rss.saveOfflineSigning(&renterpb.OfflineSigning{
 			Raw: make([]byte, 0),
 		})
+		if err != nil {
+			return err
+		}
 	} else {
 		go func() {
 			if err := func() error {
@@ -47,13 +50,15 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 				bc <- signedBytes
 				return nil
 			}(); err != nil {
-				rss.to(rssErrorStatus, err)
+				_ = rss.to(rssErrorStatus, err)
 				return
 			}
 		}()
 	}
 	signedBytes := <-bc
-	rss.to(rssToSubmitBalanceReqSignedEvent)
+	if err := rss.to(rssToSubmitBalanceReqSignedEvent); err != nil {
+		return err
+	}
 	balance, err := balanceHelper(rss.ctxParams.ctx, rss.ctxParams.cfg, signedBytes)
 	if err != nil {
 		return err
