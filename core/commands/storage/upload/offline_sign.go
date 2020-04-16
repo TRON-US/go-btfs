@@ -2,6 +2,7 @@ package upload
 
 import (
 	"errors"
+	"fmt"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
@@ -37,6 +38,13 @@ to the upload session.`,
 		err = verifyReceivedMessage(req, rss)
 		if err != nil {
 			return err
+		}
+		status, err := rss.status()
+		if err != nil {
+			return err
+		}
+		if status.Status != req.Arguments[4] {
+			return fmt.Errorf("error status, want: %s, actual: %s", status.Status, req.Arguments[4])
 		}
 		bytes, err := stringToBytes(req.Arguments[5], Base64)
 		if err != nil {

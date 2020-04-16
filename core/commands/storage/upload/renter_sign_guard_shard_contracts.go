@@ -77,7 +77,7 @@ func renterSignGuardContract(rss *RenterSession, params *ContractParams, offline
 		}()
 	}
 	signedBytes := <-bc
-	guardContractMaps.Remove(shardId)
+	guardChanMaps.Remove(shardId)
 	guardContractMaps.Remove(shardId)
 	cont.RenterSignature = signedBytes
 	return proto.Marshal(cont)
