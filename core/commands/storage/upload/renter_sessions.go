@@ -19,29 +19,25 @@ const (
 	rssSubmitBalanceReqSignedStatus          = "submit:check-balance-req-singed"
 	rssSubmitLedgerChannelCommitSignedStatus = "submit:ledger-channel-commit-signed"
 	rssPayStatus                             = "pay"
-	rssPayChanStateSignedStatus              = "pay:chan-state-signed"
 	rssPayPayinRequestSignedStatus           = "pay:payin-req-signed"
 	rssGuardStatus                           = "guard"
 	rssGuardFileMetaSignedStatus             = "guard:file-meta-signed"
-	//rssGuardQuestionsSignedStatus            = "guard:questions-signed"
-	rssWaitUploadStatus          = "wait-upload"
-	rssWaitUploadReqSignedStatus = "wait-upload:req-signed"
-	rssCompleteStatus            = "complete"
-	rssErrorStatus               = "error"
+	rssWaitUploadStatus                      = "wait-upload"
+	rssWaitUploadReqSignedStatus             = "wait-upload:req-signed"
+	rssCompleteStatus                        = "complete"
+	rssErrorStatus                           = "error"
 
 	rssToSubmitEvent                          = "to-submit-event"
 	rssToSubmitBalanceReqSignedEvent          = "to-submit:balance-req-signed-event"
 	rssToSubmitLedgerChannelCommitSignedEvent = "to-submit:ledger-channel-commit-signed-event"
 	rssToPayEvent                             = "to-pay-event"
-	rssToPayChanStateSignedEvent              = "to-pay:chan-state-signed-event"
 	rssToPayPayinRequestSignedEvent           = "to-pay:payin-req-signed-event"
 	rssToGuardEvent                           = "to-guard-event"
 	rssToGuardFileMetaSignedEvent             = "to-guard:file-meta-signed-event"
-	//rssToGuardQuestionsSignedEvent            = "to-guard:questions-signed-event"
-	rssToWaitUploadEvent          = "to-wait-upload-event"
-	rssToWaitUploadReqSignedEvent = "to-wait-upload-signed-event"
-	rssToCompleteEvent            = "to-complete-event"
-	rssToErrorEvent               = "to-error-event"
+	rssToWaitUploadEvent                      = "to-wait-upload-event"
+	rssToWaitUploadReqSignedEvent             = "to-wait-upload-signed-event"
+	rssToCompleteEvent                        = "to-complete-event"
+	rssToErrorEvent                           = "to-error-event"
 
 	renterSessionKey               = "/btfs/%s/renter/sessions/%s/"
 	renterSessionInMemKey          = renterSessionKey
@@ -57,8 +53,7 @@ var (
 		{Name: rssToSubmitBalanceReqSignedEvent, Src: []string{rssSubmitStatus}, Dst: rssSubmitBalanceReqSignedStatus},
 		{Name: rssToSubmitLedgerChannelCommitSignedEvent, Src: []string{rssSubmitBalanceReqSignedStatus}, Dst: rssSubmitLedgerChannelCommitSignedStatus},
 		{Name: rssToPayEvent, Src: []string{rssSubmitLedgerChannelCommitSignedStatus}, Dst: rssPayStatus},
-		{Name: rssToPayChanStateSignedEvent, Src: []string{rssPayStatus}, Dst: rssPayChanStateSignedStatus},
-		{Name: rssToPayPayinRequestSignedEvent, Src: []string{rssPayChanStateSignedStatus}, Dst: rssPayPayinRequestSignedStatus},
+		{Name: rssToPayPayinRequestSignedEvent, Src: []string{rssPayStatus}, Dst: rssPayPayinRequestSignedStatus},
 		{Name: rssToGuardEvent, Src: []string{rssPayPayinRequestSignedStatus}, Dst: rssGuardStatus},
 		{Name: rssToGuardFileMetaSignedEvent, Src: []string{rssGuardStatus}, Dst: rssGuardFileMetaSignedStatus},
 		//{Name: rssToGuardQuestionsSignedEvent, Src: []string{rssGuardFileMetaSignedStatus}, Dst: rssGuardQuestionsSignedStatus},
@@ -123,13 +118,17 @@ func GetRenterSession(ctxParams *ContextParams, ssId string, hash string, shardH
 }
 
 func (rs *RenterSession) enterState(e *fsm.Event) {
-	log.Infof("session: %s enter status: %s\n", rs.ssId, e.Dst)
+	fmt.Printf("session: %s enter status: %s\n", rs.ssId, e.Dst)
+	//TODO: add helper text
 	msg := ""
 	switch e.Dst {
 	case rssErrorStatus:
 		msg = e.Args[0].(error).Error()
+		rs.cancel()
+	case rssCompleteStatus:
+		rs.cancel()
 	}
-	Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId),
+	err := Save(rs.ctxParams.n.Repo.Datastore(), fmt.Sprintf(renterSessionStatusKey, rs.peerId, rs.ssId),
 		&renterpb.RenterSessionStatus{
 			Status:      e.Dst,
 			Message:     msg,
@@ -137,6 +136,9 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 			ShardHashes: rs.shardHashes,
 			LastUpdated: time.Now().UTC(),
 		})
+	go func() {
+		_ = rs.to(rssErrorStatus, err)
+	}()
 }
 
 func (rs *RenterSession) status() (*renterpb.RenterSessionStatus, error) {
@@ -177,8 +179,8 @@ func (rs *RenterSession) GetCompleteShardsNum() (int, int, error) {
 	return completeNum, errorNum, nil
 }
 
-func (rs *RenterSession) to(status string, args ...interface{}) {
-	rs.fsm.Event(status, args...)
+func (rs *RenterSession) to(status string, args ...interface{}) error {
+	return rs.fsm.Event(status, args...)
 }
 
 func (rs *RenterSession) saveOfflineMeta(meta *renterpb.OfflineMeta) error {
