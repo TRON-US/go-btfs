@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	contractsTypeGuard  = "guard"
+	contractsTypeGuard = "guard"
 )
 
 var storageUploadGetContractBatchCmd = &cmds.Command{
