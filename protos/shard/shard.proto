@@ -19,40 +19,13 @@ option java_package = "io.btfs.shard";
 
 import "github.com/tron-us/go-btfs-common/protos/guard/guard.proto";
 import "github.com/tron-us/protobuf/gogoproto/gogo.proto";
-import "google/protobuf/duration.proto";
-import "google/protobuf/timestamp.proto";
 
 message Status {
   string status = 1;
   string message = 2;
 }
 
-message Metadata {
-  int32 index = 1;
-  string session_id = 2;
-  string file_hash = 3;
-  int64 shard_file_size = 4;
-  int64 storage_length = 5;
-  string contract_id = 6;
-  string receiver = 7;
-  int64 price = 8;
-  int64 total_pay = 9;
-  google.protobuf.Timestamp start_time = 10 [
-    (gogoproto.nullable) = false,
-    (gogoproto.stdtime) = true
-  ];
-  google.protobuf.Duration contract_length = 11 [
-    (gogoproto.nullable) = false,
-    (gogoproto.stdduration) = true
-  ];
-}
-
-message Contracts {
-  bytes half_signed_escrow_contract = 1;
-  bytes half_signed_guard_contract = 2;
-}
-
 message SignedContracts {
   bytes signed_escrow_contract = 1;
-  guard.Contract guard_contract = 2;
+  guard.Contract signed_guard_contract = 2;
 }

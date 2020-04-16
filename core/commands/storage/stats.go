@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
@@ -31,7 +32,7 @@ func GetHostStatsFromDatastore(ctx context.Context, node *core.IpfsNode, nodeId 
 }
 
 func GetHostStatStorageKey(pid string) ds.Key {
-	return newKeyHelper(HostStatStorePrefix, pid)
+	return helper.NewKeyHelper(HostStatStorePrefix, pid)
 }
 
 // SaveHostStatsIntoDatastore overwrites host storage stats based on node id

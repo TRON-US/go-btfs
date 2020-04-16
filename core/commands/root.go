@@ -2,9 +2,10 @@ package commands
 
 import (
 	"errors"
-	"github.com/TRON-US/go-btfs/core/commands/store"
-	"github.com/TRON-US/go-btfs/core/commands/store/challenge"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload"
+
+	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
@@ -155,7 +156,7 @@ var rootSubcommands = map[string]*cmds.Command{
 	"shutdown":  daemonShutdownCmd,
 	"cid":       CidCmd,
 	"rm":        RmCmd,
-	"storage":   store.StorageCmd,
+	"storage":   storage.StorageCmd,
 	"metadata":  MetadataCmd,
 	"guard":     GuardCmd,
 	"wallet":    WalletCmd,

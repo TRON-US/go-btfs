@@ -91,17 +91,22 @@ func (r *P2PRemoteCall) CallGet(ctx context.Context, api string, args []interfac
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("fail to read response body: %s", err)
+		var tmp IoError = fmt.Errorf("fail to read response body: %s", err)
+		return nil, tmp
 	}
 	if resp.StatusCode != http.StatusOK {
 		e := &ErrorMessage{}
 		if err = json.Unmarshal(body, e); err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf(e.Message)
+		var tmp BusinessError = fmt.Errorf(e.Message)
+		return nil, tmp
 	}
 	return body, nil
 }
+
+type IoError error
+type BusinessError error
 
 func (r *P2PRemoteCall) CallPost() {
 }
