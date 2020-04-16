@@ -35,15 +35,6 @@ import (
 
 var log = logging.Logger("core/commands/store/upload")
 
-var checkPaymentBo = func() *backoff.ExponentialBackOff {
-	bo := backoff.NewExponentialBackOff()
-	bo.InitialInterval = 10 * time.Second
-	bo.MaxElapsedTime = 5 * time.Minute
-	bo.Multiplier = 1.5
-	bo.MaxInterval = 60 * time.Second
-	return bo
-}()
-
 var StorageUploadInitCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Initialize storage handshake with inquiring client.",
@@ -220,9 +211,12 @@ the shard and replies back to client for the next challenge step.`,
 		go checkPaymentFromClient(req.Context, paidIn, signedContractID, cfg)
 		paid := <-paidIn
 		if !paid {
-			return errors.New("contract is not paid:" + escrowContract.ContractId)
+			return fmt.Errorf("contract is not paid: %s", escrowContract.ContractId)
 		}
-		downloadShardFromClient(n, api, contract, req.Arguments[1], shardHash)
+		err = downloadShardFromClient(n, api, contract, req.Arguments[1], shardHash)
+		if err != nil {
+			return err
+		}
 		in := &guardPb.ReadyForChallengeRequest{
 			RenterPid:   guardContractMeta.RenterPid,
 			FileHash:    guardContractMeta.FileHash,
@@ -236,7 +230,11 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		in.Signature = sign
-		err = grpc.GuardClient(cfg.Services.GuardDomain).WithContext(req.Context,
+		// Need to renew another 5 mins due to downloading shard could have already made
+		// req.Context obsolete
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		err = grpc.GuardClient(cfg.Services.GuardDomain).WithContext(ctx,
 			func(ctx context.Context, client guardPb.GuardServiceClient) error {
 				_, err = client.ReadyForChallenge(ctx, in)
 				if err != nil {
@@ -251,6 +249,15 @@ the shard and replies back to client for the next challenge step.`,
 		return nil
 	},
 }
+
+var checkPaymentBo = func() *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 10 * time.Second
+	bo.MaxElapsedTime = 5 * time.Minute
+	bo.Multiplier = 1.5
+	bo.MaxInterval = 60 * time.Second
+	return bo
+}()
 
 // call escrow service to check if payment is received or not
 func checkPaymentFromClient(ctx context.Context, paidIn chan bool,
@@ -274,11 +281,29 @@ func checkPaymentFromClient(ctx context.Context, paidIn chan bool,
 	}
 }
 
+var downloadShardBo = func(maxTime time.Duration) *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 10 * time.Second
+	bo.MaxElapsedTime = maxTime
+	bo.Multiplier = 1.5
+	bo.MaxInterval = 30 * time.Minute
+	return bo
+}
+
 func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI,
-	guardContract *guardPb.Contract,
-	fileHash string, shardHash string) {
-	// Need to compute a time that's fair for small vs large files
-	// TODO: use backoff to achieve pause/resume cases for host downloads
+	guardContract *guardPb.Contract, fileHash string, shardHash string) error {
+	// Get + pin to make sure it does not get accidentally deleted
+	// Sharded scheme as special pin logic to add
+	// file root dag + shard root dag + metadata full dag + only this shard dag
+	fileCid, err := cidlib.Parse(fileHash)
+	if err != nil {
+		return err
+	}
+	shardCid, err := cidlib.Parse(shardHash)
+	if err != nil {
+		return err
+	}
+	// Need to compute a time to download shard that's fair for small vs large files
 	low := 30 * time.Second
 	high := 5 * time.Minute
 	scaled := time.Duration(float64(guardContract.ShardFileSize) / float64(units.GiB) * float64(high))
@@ -287,23 +312,26 @@ func downloadShardFromClient(n *core.IpfsNode, api coreiface.CoreAPI,
 	} else if scaled > high {
 		scaled = high
 	}
-	ctx, _ := context.WithTimeout(context.Background(), scaled)
+	// Also need to account for renter going up and down, to give an overall retry time limit
+	lowRetry := 30 * time.Minute
+	highRetry := 24 * time.Hour
+	scaledRetry := time.Duration(float64(guardContract.ShardFileSize) / float64(units.GiB) * float64(highRetry))
+	if scaledRetry < lowRetry {
+		scaledRetry = lowRetry
+	} else if scaledRetry > highRetry {
+		scaledRetry = highRetry
+	}
 	expir := uint64(guardContract.RentEnd.Unix())
-	// Get + pin to make sure it does not get accidentally deleted
-	// Sharded scheme as special pin logic to add
-	// file root dag + shard root dag + metadata full dag + only this shard dag
-	fileCid, err := cidlib.Parse(fileHash)
+	// based on small and large file sizes
+	err = backoff.Retry(func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), scaled)
+		defer cancel()
+		_, err = storage.NewStorageChallengeResponse(ctx, n, api, fileCid, shardCid, "", true, expir)
+		return err
+	}, downloadShardBo(scaledRetry))
 	if err != nil {
-		return
-	}
-	shardCid, err := cidlib.Parse(shardHash)
-	if err != nil {
-		return
-	}
-	_, err = storage.NewStorageChallengeResponse(ctx, n, api, fileCid, shardCid, "", true, expir)
-	if err != nil {
-		log.Errorf("failed to download shard %s from file %s with contract id %s: [%v]",
+		return fmt.Errorf("failed to download shard %s from file %s with contract id %s: [%v]",
 			guardContract.ShardHash, guardContract.FileHash, guardContract.ContractId, err)
-		return
 	}
+	return nil
 }
