@@ -17,6 +17,10 @@ import (
 	"github.com/shirou/gopsutil/disk"
 )
 
+const (
+	localInfoOnlyOptionName = "local-only"
+)
+
 // Storage Stats
 //
 // Includes sub-commands: info, sync
@@ -91,7 +95,10 @@ var storageStatsInfoCmd = &cmds.Command{
 		ShortDescription: `
 This command get node stats in the network from the local node data store.`,
 	},
-	Arguments:  []cmds.Argument{},
+	Arguments: []cmds.Argument{},
+	Options: []cmds.Option{
+		cmds.BoolOption(localInfoOnlyOptionName, "l", "Return only the locally available disk stats without querying/returning the network stats.").WithDefault(false),
+	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -104,9 +111,15 @@ This command get node stats in the network from the local node data store.`,
 			return err
 		}
 
-		hs, err := storage.GetHostStatsFromDatastore(req.Context, n, n.Identity.Pretty())
-		if err != nil {
-			return err
+		local, _ := req.Options[localInfoOnlyOptionName].(bool)
+		var hs *nodepb.StorageStat_Host
+		if !local {
+			hs, err = storage.GetHostStatsFromDatastore(req.Context, n, n.Identity.Pretty())
+			if err != nil {
+				return err
+			}
+		} else {
+			hs = &nodepb.StorageStat_Host{}
 		}
 
 		// Refresh latest repo stats
