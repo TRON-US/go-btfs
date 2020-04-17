@@ -81,8 +81,8 @@ $ make install
 go: downloading github.com/tron-us/go-btfs-common v0.2.28
 go: extracting github.com/tron-us/go-btfs-common v0.2.28
 go: finding github.com/tron-us/go-btfs-common v0.2.28
-go version go1.13.1 darwin/amd64
-bin/check_go_version 1.13
+go version go1.14.1 darwin/amd64
+bin/check_go_version 1.14
 bash patching.sh
 go install  "-asmflags=all='-trimpath='" "-gcflags=all='-trimpath='" -ldflags="-X "github.com/TRON-US/go-btfs".CurrentCommit=e4848946d" ./cmd/btfs
 ```
@@ -99,10 +99,10 @@ $ sudo yum install patch   // Required for building from source
 $ sudo yum install gcc     // Required for building from source
 ```
 
-Building BTFS from source requires Go 1.13 or higher. To install from the terminal:
+Building BTFS from source requires Go 1.14 or higher. To install from the terminal:
 ```
 $ cd /tmp
-$ GO_PACKAGE=go1.13.linux-amd64.tar.gz
+$ GO_PACKAGE=go1.14.linux-amd64.tar.gz
 $ wget https://golang.org/dl/$GO_PACKAGE
 $ sudo tar -xvf $GO_PACKAGE
 $ sudo mv go /usr/local
@@ -117,7 +117,7 @@ $ export PATH=$PATH:$GOPATH/bin
 $ export GO111MODULE=on
 ```
 
-Verify the Go version is 1.13 or higher:
+Verify the Go version is 1.14 or higher:
 ```
 $ go version
 ```
@@ -141,7 +141,7 @@ $ docker image build -t btfs_docker .   // Builds the docker image and tags "btf
 A successful build should have an output like:
 ```
 Sending build context to Docker daemon  2.789MB
-Step 1/37 : FROM golang:1.13-stretch
+Step 1/37 : FROM golang:1.14-stretch
  ---> 4fe257ac564c
 Step 2/37 : MAINTAINER TRON-US <support@tron.network>
  ---> Using cache

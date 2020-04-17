@@ -29,8 +29,6 @@ By default it shows local host node information.`,
 			if !cfg.Experimental.StorageClientEnabled {
 				return fmt.Errorf("storage client api not enabled")
 			}
-		} else if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
 		}
 
 		n, err := cmdenv.GetNode(env)

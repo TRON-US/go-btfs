@@ -123,7 +123,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
-	github.com/shirou/gopsutil v2.19.11+incompatible
+	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tron-us/go-btfs-common v0.3.7
@@ -149,7 +149,7 @@ require (
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
-go 1.13
+go 1.14
 
 replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1.0
 
