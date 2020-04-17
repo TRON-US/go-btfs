@@ -50,7 +50,7 @@ storage location, a specified path as a parameter need to be passed.
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
-		} else if home, err := Home(); err == nil && home != ""{
+		} else if home, err := Home(); err == nil && home != "" {
 			originPath = home
 		} else {
 			return fmt.Errorf("can not find the original stored path")
@@ -95,7 +95,7 @@ func WriteProperties() error {
 }
 
 func MoveFolder() error {
-    // make dir does not contain .btfs, but move need to specify .btfs
+	// make dir does not contain .btfs, but move need to specify .btfs
 	err := os.Rename(filepath.Join(originPath, storeDir), filepath.Join(storePath, storeDir))
 	if err != nil {
 		return err
@@ -186,7 +186,7 @@ func getPropertiesPath() {
 	filePath = filepath.Join(propertiesPath, fileName)
 }
 
-func SetEnvVariables () {
+func SetEnvVariables() {
 	if CheckExist(filePath) {
 		btfsPath = ReadProperties(filePath)
 		if btfsPath != "" {

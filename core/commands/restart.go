@@ -36,8 +36,8 @@ And if specified a new btfs path, it will be applied.
 			return err
 		}
 
-        if err := path.WriteProperties(); err != nil {
-        	return err
+		if err := path.WriteProperties(); err != nil {
+			return err
 		}
 
 		err := backoff.Retry(func() error {
