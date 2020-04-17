@@ -6,6 +6,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/store/contracts"
 	"github.com/TRON-US/go-btfs/core/commands/store/hosts"
 	"github.com/TRON-US/go-btfs/core/commands/store/info"
+	"github.com/TRON-US/go-btfs/core/commands/store/path"
 	"github.com/TRON-US/go-btfs/core/commands/store/stats"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload"
 
@@ -27,5 +28,6 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"challenge": challenge.StorageChallengeCmd,
 		"stats":     stats.StorageStatsCmd,
 		"contracts": contracts.StorageContractsCmd,
+		"path":      path.PathCmd,
 	},
 }
