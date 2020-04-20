@@ -23,6 +23,7 @@ const (
 	rssPayPayinRequestSignedStatus           = "pay:payin-req-signed"
 	rssGuardStatus                           = "guard"
 	rssGuardFileMetaSignedStatus             = "guard:file-meta-signed"
+	rssGuardQuestionsSignedStatus            = "guard:questions-signed"
 	rssWaitUploadStatus                      = "wait-upload"
 	rssWaitUploadReqSignedStatus             = "wait-upload:req-signed"
 	rssCompleteStatus                        = "complete"
@@ -35,6 +36,7 @@ const (
 	rssToPayPayinRequestSignedEvent           = "to-pay:payin-req-signed-event"
 	rssToGuardEvent                           = "to-guard-event"
 	rssToGuardFileMetaSignedEvent             = "to-guard:file-meta-signed-event"
+	rssToGuardQuestionsSignedEvent            = "to-guard:questions-signed-event"
 	rssToWaitUploadEvent                      = "to-wait-upload-event"
 	rssToWaitUploadReqSignedEvent             = "to-wait-upload-signed-event"
 	rssToCompleteEvent                        = "to-complete-event"
@@ -57,8 +59,8 @@ var (
 		{Name: rssToPayPayinRequestSignedEvent, Src: []string{rssPayStatus}, Dst: rssPayPayinRequestSignedStatus},
 		{Name: rssToGuardEvent, Src: []string{rssPayPayinRequestSignedStatus}, Dst: rssGuardStatus},
 		{Name: rssToGuardFileMetaSignedEvent, Src: []string{rssGuardStatus}, Dst: rssGuardFileMetaSignedStatus},
-		//{Name: rssToGuardQuestionsSignedEvent, Src: []string{rssGuardFileMetaSignedStatus}, Dst: rssGuardQuestionsSignedStatus},
-		{Name: rssToWaitUploadEvent, Src: []string{rssGuardFileMetaSignedStatus}, Dst: rssWaitUploadStatus},
+		{Name: rssToGuardQuestionsSignedEvent, Src: []string{rssGuardFileMetaSignedStatus}, Dst: rssGuardQuestionsSignedStatus},
+		{Name: rssToWaitUploadEvent, Src: []string{rssGuardQuestionsSignedStatus}, Dst: rssWaitUploadStatus},
 		{Name: rssToWaitUploadReqSignedEvent, Src: []string{rssWaitUploadStatus}, Dst: rssWaitUploadReqSignedStatus},
 		{Name: rssToCompleteEvent, Src: []string{rssWaitUploadReqSignedStatus}, Dst: rssCompleteStatus},
 	}

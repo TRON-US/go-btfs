@@ -93,7 +93,7 @@ func doGuard(rss *RenterSession, res *escrowpb.SignedPayinResult, fileSize int64
 	if err != nil {
 		return err
 	}
-	qs, err := PrepFileChallengeQuestions(rss, fsStatus, rss.hash)
+	qs, err := PrepFileChallengeQuestions(rss, fsStatus, rss.hash, offlineSigning, fsStatus.RenterPid)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,8 @@ func submitFileStatus(ctx context.Context, cfg *config.Config,
 }
 
 // PrepFileChallengeQuestions checks and prepares all shard questions in one setting
-func PrepFileChallengeQuestions(rss *RenterSession, fsStatus *guardpb.FileStoreStatus, fileHash string) (
+func PrepFileChallengeQuestions(rss *RenterSession, fsStatus *guardpb.FileStoreStatus,
+	fileHash string, offlineSigning bool, renterPid string) (
 	[]*guardpb.ShardChallengeQuestions, error) {
 	var shardHashes []cidlib.Cid
 	var hostIDs []string
@@ -215,13 +216,13 @@ func PrepFileChallengeQuestions(rss *RenterSession, fsStatus *guardpb.FileStoreS
 	if err != nil {
 		return nil, err
 	}
-	return PrepCustomFileChallengeQuestions(rss, cid, shardHashes, hostIDs, questionsPerShard)
+	return PrepCustomFileChallengeQuestions(rss, cid, shardHashes, hostIDs, questionsPerShard, offlineSigning, renterPid)
 }
 
 // PrepCustomFileChallengeQuestions is the inner version of PrepFileChallengeQuestions without
 // using a real guard file contracts, but rather custom parameters (mostly for manual testing)
-func PrepCustomFileChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardHashes []cidlib.Cid,
-	hostIDs []string, questionsPerShard int) ([]*guardpb.ShardChallengeQuestions, error) {
+func PrepCustomFileChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardHashes []cidlib.Cid, hostIDs []string,
+	questionsPerShard int, offlineSigning bool, renterPid string) ([]*guardpb.ShardChallengeQuestions, error) {
 	// safety check
 	if len(hostIDs) < len(shardHashes) {
 		return nil, fmt.Errorf("hosts list must be at least %d", len(shardHashes))
@@ -231,7 +232,7 @@ func PrepCustomFileChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, s
 	qc := make(chan questionRes)
 	for i, sh := range shardHashes {
 		go func(shardIndex int, shardHash cidlib.Cid, hostID string) {
-			qs, err := PrepShardChallengeQuestions(rss, fileHash, shardHash, hostID, questionsPerShard)
+			qs, err := PrepShardChallengeQuestions(rss, fileHash, shardHash, hostID, questionsPerShard, renterPid)
 			qc <- questionRes{
 				qs:  qs,
 				err: err,
@@ -246,8 +247,54 @@ func PrepCustomFileChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, s
 		}
 		questions[res.i] = res.qs
 	}
-
-	return questions, nil
+	fileQuestions := &guardpb.FileChallengeQuestions{
+		FileHash:       rss.hash,
+		ShardQuestions: questions,
+	}
+	cb := make(chan []byte)
+	questionsChanMaps.Set(rss.ssId, cb)
+	if offlineSigning {
+		bytes, err := proto.Marshal(fileQuestions)
+		if err != nil {
+			return nil, err
+		}
+		err = rss.saveOfflineSigning(&renterpb.OfflineSigning{Raw: bytes})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		go func() {
+			if bytes, err := func() ([]byte, error) {
+				for _, sq := range fileQuestions.ShardQuestions {
+					sig, err := crypto.Sign(rss.ctxParams.n.PrivateKey, sq)
+					if err != nil {
+						return nil, err
+					}
+					sq.PreparerSignature = sig
+				}
+				bytes, err := proto.Marshal(fileQuestions)
+				if err != nil {
+					return nil, err
+				}
+				return bytes, nil
+			}(); err != nil {
+				_ = rss.to(rssErrorStatus, err)
+				return
+			} else {
+				cb <- bytes
+			}
+		}()
+	}
+	signBytes := <-cb
+	fileMetaChanMaps.Remove(rss.ssId)
+	if err := rss.to(rssToGuardQuestionsSignedEvent); err != nil {
+		return nil, err
+	}
+	f := new(guardpb.FileChallengeQuestions)
+	if err := proto.Unmarshal(signBytes, f); err != nil {
+		return nil, err
+	}
+	return f.ShardQuestions, nil
 }
 
 type questionRes struct {
@@ -259,7 +306,7 @@ type questionRes struct {
 // PrepShardChallengeQuestions checks and prepares an amount of random challenge questions
 // and returns the necessary guard proto struct
 func PrepShardChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardHash cidlib.Cid,
-	hostID string, numQuestions int) (*guardpb.ShardChallengeQuestions, error) {
+	hostID string, numQuestions int, renterPid string) (*guardpb.ShardChallengeQuestions, error) {
 	ctx := rss.ctx
 	node := rss.ctxParams.n
 	api := rss.ctxParams.api
@@ -296,32 +343,14 @@ func PrepShardChallengeQuestions(rss *RenterSession, fileHash cidlib.Cid, shardH
 		}
 		shardQuestions = append(shardQuestions, q)
 	}
-	sq := &guardpb.ShardChallengeQuestions{
+	return &guardpb.ShardChallengeQuestions{
 		FileHash:      fileHash.String(),
 		ShardHash:     sh,
-		PreparerPid:   node.Identity.Pretty(),
+		PreparerPid:   renterPid,
 		QuestionCount: int32(numQuestions),
 		Questions:     shardQuestions,
 		PrepareTime:   time.Now(),
-	}
-	cb := make(chan []byte)
-	questionsChanMaps.Set(rss.ssId, cb)
-	errChan := make(chan error)
-	go func() {
-		sig, err := crypto.Sign(node.PrivateKey, sq)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		errChan <- nil
-		cb <- sig
-	}()
-	if err := <-errChan; err != nil {
-		return nil, err
-	}
-	sig := <-cb
-	sq.PreparerSignature = sig
-	return sq, nil
+	}, nil
 }
 
 // SendChallengeQuestions combines all shard questions in a file and sends to guard service

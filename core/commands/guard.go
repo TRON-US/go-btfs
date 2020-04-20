@@ -116,7 +116,8 @@ to the guard service.`,
 		if err != nil {
 			return err
 		}
-		questions, err := upload.PrepCustomFileChallengeQuestions(rss, rootHash, shardHashes, hostIDs, qCount)
+		questions, err := upload.PrepCustomFileChallengeQuestions(rss, rootHash, shardHashes, hostIDs, qCount, false,
+			n.Identity.Pretty())
 		if err != nil {
 			return err
 		}

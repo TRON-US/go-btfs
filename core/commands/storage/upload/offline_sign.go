@@ -60,6 +60,8 @@ to the upload session.`,
 			cm = payinReqChanMaps
 		case rssGuardStatus:
 			cm = fileMetaChanMaps
+		case rssGuardFileMetaSignedStatus:
+			cm = questionsChanMaps
 		case rssWaitUploadStatus:
 			cm = waitUploadChanMap
 		default:
