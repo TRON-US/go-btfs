@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs-cmds"
-	logging "github.com/ipfs/go-log"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,6 +11,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/TRON-US/go-btfs-cmds"
+
+	logging "github.com/ipfs/go-log"
 )
 
 const (

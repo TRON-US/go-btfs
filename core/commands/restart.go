@@ -1,11 +1,14 @@
 package commands
 
 import (
-	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/core/commands/store/path"
-	"github.com/cenkalti/backoff/v3"
 	"os/exec"
 	"time"
+
+	"github.com/TRON-US/go-btfs-cmds"
+
+	"github.com/TRON-US/go-btfs/core/commands/store/path"
+
+	"github.com/cenkalti/backoff/v3"
 )
 
 var daemonStartup = func() *backoff.ExponentialBackOff {
@@ -16,7 +19,6 @@ var daemonStartup = func() *backoff.ExponentialBackOff {
 	bo.MaxInterval = 2 * time.Second
 	return bo
 }()
-
 var restartCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Restart the daemon.",
