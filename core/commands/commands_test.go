@@ -225,8 +225,7 @@ func TestCommands(t *testing.T) {
 		"/storage/upload/init",
 		"/storage/upload/recvcontract",
 		"/storage/upload/status",
-		//TODO
-		//"/storage/upload/repair",
+		"/storage/upload/repair",
 		"/storage/upload/getcontractbatch",
 		"/storage/upload/signcontractbatch",
 		"/storage/upload/getunsigned",
