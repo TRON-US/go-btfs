@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime/pprof"
 	"strings"
@@ -81,7 +82,34 @@ func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
 // - output the response
 // - if anything fails, print error, maybe with help
 func main() {
+	c := make(chan os.Signal)
+	signal.Notify(c)
+	stop <- true
 	os.Exit(mainRet())
+}
+
+var (
+	// stop is a channel that tells the service to stop.  As seen
+	// later we will make a highly destructive deathblow endpoint
+	// so that in test we can conclude the test and turn the service off.
+	stop chan bool
+	// testMode is a bool that allows for deathpunch endpoint to exist or
+	// not exist... we don't want that running in production ;)
+	testMode bool = false
+)
+
+// runMain - entry-point to perform external testing of service, this is
+// where go test will enter main.  we have to setup test mode in here, as
+// well as the stop channel so we can stop the service
+func runMain() {
+	// start the stop channel
+	stop = make(chan bool)
+	// put the service in "testMode"
+	testMode = true
+	// run the main entry point
+	go main()
+	// watch for the stop channel
+	<-stop
 }
 
 func mainRet() int {
