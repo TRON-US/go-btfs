@@ -15,7 +15,6 @@ require (
 	github.com/TRON-US/go-mfs v0.2.2
 	github.com/TRON-US/go-unixfs v0.5.9
 	github.com/TRON-US/interface-go-btfs-core v0.5.4
-	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
@@ -122,6 +121,7 @@ require (
 	github.com/pierrec/lz4 v2.2.6+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
+	github.com/prometheus/common v0.4.0
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/stretchr/testify v1.4.0

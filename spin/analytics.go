@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	config "github.com/TRON-US/go-btfs-config"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
@@ -92,7 +92,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.BtfsVersion = BTFSVersion
 		dc.pn.OsType = runtime.GOOS
 		dc.pn.ArchType = runtime.GOARCH
-		if storageMax, err := storage.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil, true); err == nil {
+		if storageMax, err := helper.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil, true); err == nil {
 			dc.pn.StorageVolumeCap = storageMax
 		} else {
 			log.Warning(err.Error())
@@ -128,7 +128,7 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	runtime.ReadMemStats(&m)
 	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)
 	defer cancel()
-	ns, err := storage.GetHostStorageConfig(ctx, node)
+	ns, err := helper.GetHostStorageConfig(ctx, node)
 	if err != nil {
 		res = append(res, fmt.Errorf("failed to get node storage config: %s", err.Error()))
 	} else {

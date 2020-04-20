@@ -226,7 +226,6 @@ func TestCommands(t *testing.T) {
 		"/storage/upload/recvcontract",
 		"/storage/upload/status",
 		"/storage/upload/repair",
-		"/storage/upload/offline",
 		"/storage/upload/getcontractbatch",
 		"/storage/upload/signcontractbatch",
 		"/storage/upload/getunsigned",
