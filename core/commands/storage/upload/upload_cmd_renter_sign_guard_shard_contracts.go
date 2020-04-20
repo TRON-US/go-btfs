@@ -32,7 +32,14 @@ type ContractParams struct {
 	TotalPay      int64
 }
 
-func renterSignGuardContract(rss *RenterSession, params *ContractParams, offlineSigning bool) ([]byte, error) {
+type RepairParams struct {
+	RenterStart time.Time
+	RenterEnd   time.Time
+}
+
+func renterSignGuardContract(rss *RenterSession, params *ContractParams, offlineSigning bool,
+	rp *RepairParams) ([]byte,
+	error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(rss.ctxParams.cfg)
 	if err != nil {
 		return nil, err
@@ -55,6 +62,11 @@ func renterSignGuardContract(rss *RenterSession, params *ContractParams, offline
 	cont := &guardpb.Contract{
 		ContractMeta:   *gm,
 		LastModifyTime: time.Now(),
+	}
+	if rp != nil {
+		cont.State = guardpb.Contract_RENEWED
+		cont.RentStart = rp.RenterStart
+		cont.RentEnd = rp.RenterEnd
 	}
 	cont.RenterPid = params.RenterPid
 	cont.PreparerPid = params.RenterPid

@@ -17,20 +17,18 @@ const (
 type HostsProvider struct {
 	cp *ContextParams
 	sync.Mutex
-	mode    string
-	current int
-	hosts   []*hubpb.Host
-	filter  func() bool
+	mode      string
+	current   int
+	hosts     []*hubpb.Host
+	blacklist []string
 }
 
-func getHostsProvider(cp *ContextParams) *HostsProvider {
+func getHostsProvider(cp *ContextParams, blacklist []string) *HostsProvider {
 	p := &HostsProvider{
-		cp:      cp,
-		mode:    cp.cfg.Experimental.HostsSyncMode,
-		current: -1,
-		filter: func() bool {
-			return false
-		},
+		cp:        cp,
+		mode:      cp.cfg.Experimental.HostsSyncMode,
+		current:   -1,
+		blacklist: blacklist,
 	}
 	p.init()
 	return p
@@ -53,9 +51,15 @@ func (p *HostsProvider) AddIndex() (int, error) {
 
 func (p *HostsProvider) NextValidHost(price int64) (string, error) {
 	needHigherPrice := false
+LOOP:
 	for true {
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index]
+			for _, h := range p.blacklist {
+				if h == host.NodeId {
+					break LOOP
+				}
+			}
 			id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				needHigherPrice = true

@@ -106,13 +106,6 @@ func getShardId(ssId string, shardHash string, index int) (contractId string) {
 	return fmt.Sprintf("%s:%s:%d", ssId, shardHash, index)
 }
 
-func splitContractId(contractId string) (ssId string, shardHash string) {
-	splits := strings.Split(contractId, ":")
-	ssId = splits[0]
-	shardHash = splits[1]
-	return
-}
-
 // ExtractSessionIDFromContractID takes the first segment separated by ","
 // and returns it as the session id. If in an old format, i.e. did not
 // have a session id, return an error.
