@@ -2,8 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"github.com/prometheus/common/log"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/mitchellh/go-homedir"
+	"github.com/prometheus/common/log"
 )
 
 const (

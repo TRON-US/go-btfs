@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/cenkalti/backoff/v3"
 
 	path "github.com/TRON-US/go-btfs/core/commands/storage"
-
-	"github.com/cenkalti/backoff/v3"
 )
 
 var daemonStartup = func() *backoff.ExponentialBackOff {
