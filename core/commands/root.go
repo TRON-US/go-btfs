@@ -154,6 +154,7 @@ var rootSubcommands = map[string]*cmds.Command{
 	"urlstore":  urlStoreCmd,
 	"version":   VersionCmd,
 	"shutdown":  daemonShutdownCmd,
+	"restart":   restartCmd,
 	"cid":       CidCmd,
 	"rm":        RmCmd,
 	"storage":   storage.StorageCmd,
