@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/common/log"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -113,13 +114,18 @@ Mode options include:` + hub.AllModeHelpText,
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	api, err := coreapi.NewCoreAPI(node)
-	if err != nil {
-		return err
-	}
 	nodes, err := hub.QueryHosts(ctx, node, mode)
 	if err != nil {
 		return err
+	}
+	return helper.SaveHostsIntoDatastore(ctx, node, mode, nodes)
+}
+
+func asyncSort(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) {
+	api, err := coreapi.NewCoreAPI(n)
+	if err != nil {
+		log.Errorf("failed to sort the hosts: %v", err)
+		return
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -144,5 +150,5 @@ func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
 	}
 	wg.Wait()
 	gs = append(gs, bs...)
-	return helper.SaveHostsIntoDatastore(ctx, node, mode, gs)
+	helper.SaveHostsIntoDatastore(ctx, n, mode, nodes)
 }
