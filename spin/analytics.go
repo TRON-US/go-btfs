@@ -60,6 +60,10 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
+func isAnalyticsEnabled(cfg *config.Config) bool {
+	return cfg.Experimental.StorageHostEnabled || cfg.Experimental.Analytics
+}
+
 // Analytics starts the process to collect data and starts the GoRoutine for constant collection
 func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) {
 	if node == nil {
@@ -75,7 +79,10 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 	dc.pn = new(nodepb.Node)
 	dc.config = configuration
 
-	if dc.config.Experimental.Analytics {
+	if isAnalyticsEnabled(dc.config) {
+		if dc.config.Experimental.Analytics != dc.config.Experimental.StorageHostEnabled {
+			fmt.Println("Experimental.Analytics is override by Experimental.StorageHostEnabled")
+		}
 		infoStats, err := cpu.Info()
 		if err == nil {
 			dc.pn.CpuInfo = infoStats[0].ModelName
@@ -262,7 +269,7 @@ func (dc *dcWrap) collectionAgent(node *core.IpfsNode) {
 		}
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection
-		if config.Experimental.StorageHostEnabled || config.Experimental.Analytics {
+		if isAnalyticsEnabled(config) {
 			dc.sendData(node, config)
 		}
 	}
