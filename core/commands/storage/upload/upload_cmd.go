@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
+	"github.com/cenkalti/backoff/v3"
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	cmap "github.com/orcaman/concurrent-map"
@@ -91,6 +93,18 @@ Use status command to check for completion:
 		ctxParams, err := ExtractContextParams(req, env)
 		if err != nil {
 			return err
+		}
+		err = backoff.Retry(func() error {
+			peersLen := len(ctxParams.n.PeerHost.Network().Peers())
+			if peersLen <= 0 {
+				err = errors.New("failed to find any peer in table")
+				log.Error(err)
+				return err
+			}
+			return nil
+		}, waitingForPeersBo)
+		if err != nil {
+			return errors.New("please check your network")
 		}
 		fileHash := req.Arguments[0]
 		renterId := ctxParams.n.Identity
