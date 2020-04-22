@@ -6,18 +6,20 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
-	"github.com/prometheus/common/log"
 )
 
 const (
 	storeDir = ".btfs"
-	fileName = "path.properties"
+	defaultPath = "~/.btfs"
+	fileName = "~/.btfs.properties"
 )
+
+var log = logging.Logger("core/commands")
 
 var btfsPath string
 var filePath string
@@ -44,7 +46,6 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("path is not defined")
 		}
 
-		defaultPath := "~/.btfs"
 		if btfsPath != "" {
 			if btfsPath != StorePath {
 				OriginPath = filepath.Join(btfsPath, storeDir)
@@ -63,7 +64,7 @@ storage location, a specified path as a parameter need to be passed.
 				return fmt.Errorf("mkdir: %s", err)
 			}
 		} else if CheckDirEmpty(filepath.Join(StorePath, storeDir)) == false {
-			return fmt.Errorf("path is occupied")
+			return fmt.Errorf("path is invalid")
 		}
 
 		restartCmd := exec.Command("btfs", "restart")
@@ -75,7 +76,6 @@ storage location, a specified path as a parameter need to be passed.
 }
 
 func init() {
-	GetPropertiesPath()
 	SetEnvVariables()
 }
 
@@ -97,7 +97,7 @@ func WriteProperties() error {
 
 func MoveFolder() error {
 	// make dir does not contain .btfs, but move need to specify .btfs
-	err := os.Rename(filepath.Join(OriginPath), filepath.Join(StorePath, storeDir))
+	err := os.Rename(OriginPath, filepath.Join(StorePath, storeDir))
 	if err != nil {
 		return err
 	}
@@ -114,41 +114,20 @@ func ReadProperties(filePath string) string {
 
 func CheckDirEmpty(dirname string) bool {
 	dir, _ := ioutil.ReadDir(dirname)
-	if len(dir) == 0 {
-		return true
-	} else {
-		return false
-	}
-}
-
-func GetPropertiesPath() {
-	var propertiesPath string
-	if propertiesHome, err := homedir.Expand("~/btfs"); err == nil {
-		if "windows" == runtime.GOOS {
-			propertiesPath = propertiesHome
-		} else {
-			propertiesPath = filepath.Join(propertiesHome, "bin")
-		}
-	}
-
-	if CheckExist(propertiesPath) == false {
-		err := os.MkdirAll(propertiesPath, os.ModePerm)
-		if err != nil {
-			log.Errorf("Failed to create folders %s", err)
-			return
-		}
-	}
-	filePath = filepath.Join(propertiesPath, fileName)
+	return len(dir) == 0
 }
 
 func SetEnvVariables() {
-	if CheckExist(filePath) {
-		btfsPath = ReadProperties(filePath)
-		if btfsPath != "" {
-			newPath := filepath.Join(btfsPath, storeDir)
-			err := os.Setenv("BTFS_PATH", newPath)
-			if err != nil {
-				log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+	if propertiesHome, err := homedir.Expand(fileName); err == nil {
+		filePath = propertiesHome
+		if CheckExist(filePath) {
+			btfsPath = ReadProperties(filePath)
+			if btfsPath != "" {
+				newPath := filepath.Join(btfsPath, storeDir)
+				err := os.Setenv("BTFS_PATH", newPath)
+				if err != nil {
+					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+				}
 			}
 		}
 	}
