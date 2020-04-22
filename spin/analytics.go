@@ -81,7 +81,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 
 	if isAnalyticsEnabled(dc.config) {
 		if dc.config.Experimental.Analytics != dc.config.Experimental.StorageHostEnabled {
-			fmt.Println("Experimental.Analytics is override by Experimental.StorageHostEnabled")
+			fmt.Println("Experimental.Analytics is overridden by Experimental.StorageHostEnabled")
 		}
 		infoStats, err := cpu.Info()
 		if err == nil {
