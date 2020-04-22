@@ -47,6 +47,15 @@ var handleShardBo = func() *backoff.ExponentialBackOff {
 	return bo
 }()
 
+var waitingForPeersBo = func() *backoff.ExponentialBackOff {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 1 * time.Second
+	bo.MaxElapsedTime = 300 * time.Second
+	bo.Multiplier = 1.2
+	bo.MaxInterval = 5 * time.Second
+	return bo
+}()
+
 const (
 	uploadPriceOptionName            = "price"
 	replicationFactorOptionName      = "replication-factor"
@@ -130,6 +139,19 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
+		err = backoff.Retry(func() error {
+			peersLen := len(n.PeerHost.Network().Peers())
+			if peersLen <= 0 {
+				err = errors.New("failed to find any peer in table")
+				log.Error(err)
+				return err
+			}
+			return nil
+		}, waitingForPeersBo)
+		if err != nil {
+			return errors.New("please check your network")
+		}
+
 		// get core api
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
@@ -199,7 +221,7 @@ Use status command to check for completion:
 				return fmt.Errorf("custom mode hosts length must match shard hashes length")
 			}
 		}
-		hp := helper.GetHostProvider(req.Context, n, mode, api, hostIDs)
+		hp := helper.GetHostProvider(ss.Context, n, mode, api, hostIDs)
 		for shardIndex, shardHash := range shardHashes {
 			go func(i int, h string, f *ds.Session) {
 				backoff.Retry(func() error {

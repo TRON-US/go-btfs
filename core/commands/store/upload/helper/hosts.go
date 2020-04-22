@@ -79,6 +79,7 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 				needHigherPrice = true
 				continue
 			}
+
 			if err := p.api.Swarm().Connect(p.ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
