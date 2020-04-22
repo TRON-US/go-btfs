@@ -12,6 +12,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/hub"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	logging "github.com/ipfs/go-log"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -21,6 +22,8 @@ const (
 	hostInfoModeOptionName = "host-info-mode"
 	hostSyncModeOptionName = "host-sync-mode"
 )
+
+var log = logging.Logger("hosts")
 
 var StorageHostsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -113,13 +116,19 @@ Mode options include:` + hub.AllModeHelpText,
 }
 
 func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
-	api, err := coreapi.NewCoreAPI(node)
-	if err != nil {
-		return err
-	}
 	nodes, err := hub.QueryHosts(ctx, node, mode)
 	if err != nil {
 		return err
+	}
+	go sortHosts(ctx, node, nodes, mode)
+	return storage.SaveHostsIntoDatastore(ctx, node, mode, nodes)
+}
+
+func sortHosts(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) {
+	api, err := coreapi.NewCoreAPI(n)
+	if err != nil {
+		log.Errorf("failed to sort the hosts: %v", err)
+		return
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -144,5 +153,9 @@ func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
 	}
 	wg.Wait()
 	gs = append(gs, bs...)
-	return storage.SaveHostsIntoDatastore(ctx, node, mode, gs)
+	err = storage.SaveHostsIntoDatastore(ctx, n, mode, nodes)
+	if err != nil {
+		log.Errorf("failed to sort the hosts: %v", err)
+		return
+	}
 }
