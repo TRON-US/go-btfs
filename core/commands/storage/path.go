@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	storeDir = ".btfs"
+	storeDir    = ".btfs"
 	defaultPath = "~/.btfs"
-	fileName = "~/.btfs.properties"
+	fileName    = "~/.btfs.properties"
 )
 
-var log = logging.Logger("core/commands")
+var log = logging.Logger("core/commands/path")
 
 var btfsPath string
 var filePath string

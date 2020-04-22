@@ -25,6 +25,7 @@ import (
 
 	"github.com/ipfs/go-datastore"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/prometheus/common/log"
 )
 
 const (
