@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/common/log"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -15,8 +14,11 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
+	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
+
+var hostsLog = logging.Logger("hosts")
 
 const (
 	hostInfoModeOptionName = "host-info-mode"
@@ -118,13 +120,14 @@ func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
 	if err != nil {
 		return err
 	}
+	go sortHosts(ctx, node, nodes, mode)
 	return helper.SaveHostsIntoDatastore(ctx, node, mode, nodes)
 }
 
-func asyncSort(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) {
+func sortHosts(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) {
 	api, err := coreapi.NewCoreAPI(n)
 	if err != nil {
-		log.Errorf("failed to sort the hosts: %v", err)
+		hostsLog.Errorf("failed to sort the hosts: %v", err)
 		return
 	}
 	var wg sync.WaitGroup
@@ -150,5 +153,9 @@ func asyncSort(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode 
 	}
 	wg.Wait()
 	gs = append(gs, bs...)
-	helper.SaveHostsIntoDatastore(ctx, n, mode, nodes)
+	err = helper.SaveHostsIntoDatastore(ctx, n, mode, nodes)
+	if err != nil {
+		hostsLog.Errorf("failed to sort the hosts: %v", err)
+		return
+	}
 }

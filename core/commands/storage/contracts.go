@@ -24,9 +24,11 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/ipfs/go-datastore"
+	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/prometheus/common/log"
 )
+
+var contractsLog = logging.Logger("hosts")
 
 const (
 	contractsListOrderOptionName  = "order"
@@ -394,13 +396,13 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 			}
 			sign, err := crypto.Sign(n.PrivateKey, in.Data)
 			if err != nil {
-				log.Error("sign contractID error:", err)
+				contractsLog.Error("sign contractID error:", err)
 				return err
 			}
 			in.Signature = sign
 			sb, err := client.GetPayOutStatusBatch(ctx, in)
 			if err != nil {
-				log.Error("get payout status batch error:", err)
+				contractsLog.Error("get payout status batch error:", err)
 				return err
 			}
 			if len(sb.Status) != len(cs) {
@@ -423,7 +425,7 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 					}
 				}
 				if s.ErrorMsg != "" {
-					log.Debug("got payout status error message:", s.ErrorMsg)
+					contractsLog.Debug("got payout status error message:", s.ErrorMsg)
 				}
 
 				results = append(results, &nodepb.Contracts_Contract{
