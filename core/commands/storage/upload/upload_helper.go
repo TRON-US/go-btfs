@@ -66,6 +66,14 @@ var (
 		bo.MaxInterval = 30 * time.Minute
 		return bo
 	}
+	waitingForPeersBo = func() *backoff.ExponentialBackOff {
+		bo := backoff.NewExponentialBackOff()
+		bo.InitialInterval = 1 * time.Second
+		bo.MaxElapsedTime = 300 * time.Second
+		bo.Multiplier = 1.2
+		bo.MaxInterval = 5 * time.Second
+		return bo
+	}()
 )
 
 type ContextParams struct {
