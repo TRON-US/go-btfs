@@ -276,20 +276,32 @@ Use status command to check for completion:
 					if err != nil {
 						return fmt.Errorf("fail to sign guard contract and marshal: [%v] ", err)
 					}
-					_, err = remote.P2PCall(req.Context, n, hostPid, "/storage/upload/init",
-						ss.Id,
-						fileHash,
-						h,
-						price,
-						halfSignedEscrowContract,
-						halfSignGuardContract,
-						storageLength,
-						shardSize,
-						i,
-						n.Identity.Pretty(), //TODO: offline
-					)
-					if err != nil {
+					errChan := make(chan error)
+					go func() {
+						_, err = remote.P2PCall(req.Context, n, hostPid, "/storage/upload/init",
+							ss.Id,
+							fileHash,
+							h,
+							price,
+							halfSignedEscrowContract,
+							halfSignGuardContract,
+							storageLength,
+							shardSize,
+							i,
+							n.Identity.Pretty(), //TODO: offline
+						)
+						if err != nil {
+							errChan <- err
+						} else {
+							errChan <- nil
+						}
+					}()
+					tick := time.Tick(30 * time.Second)
+					select {
+					case err = <-errChan:
 						return err
+					case <-tick:
+						return errors.New("host timeout")
 					}
 					//TODO: retry when recv contract timeout
 					return nil

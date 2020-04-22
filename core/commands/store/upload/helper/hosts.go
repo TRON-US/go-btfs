@@ -3,6 +3,7 @@ package helper
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -75,6 +76,7 @@ func (p *HostProvider) NextValidHost(price int64) (string, error) {
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index]
 			id, err := peer.IDB58Decode(host.NodeId)
+			fmt.Println("index", index, "id", id)
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				needHigherPrice = true
 				continue
