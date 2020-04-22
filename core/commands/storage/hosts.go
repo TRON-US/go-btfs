@@ -120,7 +120,8 @@ func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
 	if err != nil {
 		return err
 	}
-	go sortHosts(ctx, node, nodes, mode)
+	nc, _ := helper.NewGoContext(context.Background())
+	go sortHosts(nc, node, nodes, mode)
 	return helper.SaveHostsIntoDatastore(ctx, node, mode, nodes)
 }
 
