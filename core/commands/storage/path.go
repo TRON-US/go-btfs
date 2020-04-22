@@ -113,7 +113,10 @@ func ReadProperties(filePath string) string {
 }
 
 func CheckDirEmpty(dirname string) bool {
-	dir, _ := ioutil.ReadDir(dirname)
+	dir, err := ioutil.ReadDir(dirname)
+	if err != nil {
+		log.Errorf("Read directory fail: [%v]\n", err)
+	}
 	return len(dir) == 0
 }
 
