@@ -3,6 +3,7 @@ package corehttp
 import (
 	"context"
 	"fmt"
+	"github.com/TRON-US/go-btfs/namesys/resolve"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,18 +17,20 @@ import (
 	"github.com/TRON-US/go-mfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/Workiva/go-datastructures/cache"
 	"github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
 	dag "github.com/ipfs/go-merkledag"
-	"github.com/ipfs/go-path"
+	ipfspath "github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
 	routing "github.com/libp2p/go-libp2p-core/routing"
 	"github.com/multiformats/go-multibase"
 )
 
 const (
-	ipfsPathPrefix = "/btfs/"
-	ipnsPathPrefix = "/btns/"
+	ipfsPathPrefix                           = "/btfs/"
+	ipnsPathPrefix                           = "/btns/"
+	GatewayReedSolomonDirectoryCacheCapacity = 10
 )
 
 // gatewayHandler is a HTTP handler that serves BTFS objects (accessible by default at /btfs/<path>)
@@ -35,18 +38,30 @@ const (
 type gatewayHandler struct {
 	config GatewayConfig
 	api    coreiface.CoreAPI
+	rsDirs cache.Cache
+	//rsDirs   map[string]ReedSolomonDirectory
 }
 
-func newGatewayHandler(c GatewayConfig, api coreiface.CoreAPI) *gatewayHandler {
+type ReedSolomonDirectory struct {
+	rootPath ipath.Resolved
+	rootDir  files.Directory
+}
+
+func (d ReedSolomonDirectory) Size() uint64 {
+	return uint64(1)
+}
+
+func newGatewayHandler(c GatewayConfig, api coreiface.CoreAPI, dirs cache.Cache) *gatewayHandler {
 	i := &gatewayHandler{
 		config: c,
 		api:    api,
+		rsDirs: dirs,
 	}
 	return i
 }
 
 func parseIpfsPath(p string) (cid.Cid, string, error) {
-	rootPath, err := path.ParsePath(p)
+	rootPath, err := ipfspath.ParsePath(p)
 	if err != nil {
 		return cid.Cid{}, "", err
 	}
@@ -62,7 +77,7 @@ func parseIpfsPath(p string) (cid.Cid, string, error) {
 		return cid.Cid{}, "", err
 	}
 
-	return rootCid, path.Join(rsegs[2:]), nil
+	return rootCid, ipfspath.Join(rsegs[2:]), nil
 }
 
 func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -161,37 +176,96 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Resolve path to the final DAG node for the ETag
-	resolvedPath, err := i.api.ResolvePath(r.Context(), parsedPath)
-	switch err {
-	case nil:
-	case coreiface.ErrOffline:
-		webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusServiceUnavailable)
-		return
-	default:
-		webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusNotFound)
-		return
+	var (
+		resolvedPath              ipath.Resolved
+		rootPath                  string
+		escapedRootPath           string
+		resolvedRootPath          ipath.Resolved
+		dr                        files.Node
+		err                       error
+		isReedSolomonSubdirOrFile bool
+	)
+	top, err := i.isTopLevelEntryPath(r, parsedPath.String())
+	if err != nil {
+		switch err {
+		case nil:
+		case coreiface.ErrOffline:
+			webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusServiceUnavailable)
+			return
+		default:
+			webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusNotFound)
+			return
+		}
+	}
+	if !top {
+		// Check if the `parsedPath` is part of Reed-Solomon enconded directory object.
+		// If yes, put a new entry to the Reed-Solomon directory cache if not exist and
+		// get the files.Node of the `parsedPath`.
+		k := strings.SplitN(parsedPath.String(), "/", 4)[2]
+		v, isPresent, err := i.cacheEntryFor(k)
+		if err != nil {
+			internalWebError(w, err)
+			return
+		}
+		var rootDir files.Directory
+		escapedRootPath, err = getDirRootPath(escapedURLPath)
+		if err != nil {
+			webError(w, "invalid btfs path without slashes", err, http.StatusBadRequest)
+			return
+		}
+		if isPresent {
+			resolvedRootPath, rootDir = v.rootPath, v.rootDir
+		} else {
+			rootPath, err = getDirRootPath(parsedPath.String())
+			if err != nil {
+				webError(w, "invalid btfs path without slashes", err, http.StatusBadRequest)
+				return
+			}
+
+			var rootDr files.Node
+			resolvedRootPath, rootDr, err = i.resolveAndGetFilesNode(context.Background(), w, r, ipath.New(rootPath), escapedRootPath)
+			if err != nil {
+				return
+			}
+			ok := false
+			rootDir, ok = rootDr.(files.Directory)
+			if !ok {
+				log.Warningf("expected directory type for %s", escapedRootPath)
+			}
+		}
+		if isPresent || rootDir != nil && rootDir.IsReedSolomon() {
+			if !isPresent {
+				// Put the current Reed-Solomon directory entry to the cache
+				i.rsDirs.Put(k, ReedSolomonDirectory{rootPath: resolvedRootPath, rootDir: rootDir})
+			}
+			// Get the files.Node of the `parsedPath`.
+			dr, err = findNode(rootDir, parsedPath.String())
+			if err != nil {
+				internalWebError(w, err)
+				return
+			}
+			isReedSolomonSubdirOrFile = true
+		}
 	}
 
-	dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath)
-	if err != nil {
-		webError(w, "btfs cat "+escapedURLPath, err, http.StatusNotFound)
-		return
+	if !isReedSolomonSubdirOrFile {
+		resolvedPath, dr, err = i.resolveAndGetFilesNode(r.Context(), w, r, parsedPath, escapedURLPath)
+		if err != nil {
+			return
+		}
 	}
 
 	unixfsGetMetric.WithLabelValues(parsedPath.Namespace()).Observe(time.Since(begin).Seconds())
 
 	defer dr.Close()
 
-	// Check etag send back to us
-	etag := "\"" + resolvedPath.Cid().String() + "\""
-	if r.Header.Get("If-None-Match") == etag || r.Header.Get("If-None-Match") == "W/"+etag {
-		w.WriteHeader(http.StatusNotModified)
-		return
+	// Check etag send back to us.
+	if isReedSolomonSubdirOrFile {
+		// Set root path prefix for paths for the entity tag.
+		i.setupEntityTag(w, r, resolvedRootPath, rootPath)
+	} else {
+		i.setupEntityTag(w, r, resolvedPath, urlPath)
 	}
-
-	i.addUserHeaders(w) // ok, _now_ write user's headers.
-	w.Header().Set("X-IPFS-Path", urlPath)
-	w.Header().Set("Etag", etag)
 
 	// Suborigin header, sandboxes apps from each other in the browser (even
 	// though they are served from the same gateway domain).
@@ -257,40 +331,43 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	idx, err := i.api.Unixfs().Get(r.Context(), ipath.Join(resolvedPath, "index.html"))
-	switch err.(type) {
-	case nil:
-		dirwithoutslash := urlPath[len(urlPath)-1] != '/'
-		goget := r.URL.Query().Get("go-get") == "1"
-		if dirwithoutslash && !goget {
-			// See comment above where originalUrlPath is declared.
-			http.Redirect(w, r, originalUrlPath+"/", 302)
+	if !isReedSolomonSubdirOrFile {
+		idx, err := i.api.Unixfs().Get(r.Context(), ipath.Join(resolvedPath, "index.html"))
+		switch err.(type) {
+		case nil:
+			dirwithoutslash := urlPath[len(urlPath)-1] != '/'
+			goget := r.URL.Query().Get("go-get") == "1"
+			if dirwithoutslash && !goget {
+				// See comment above where originalUrlPath is declared.
+				http.Redirect(w, r, originalUrlPath+"/", 302)
+				return
+			}
+
+			f, ok := idx.(files.File)
+			if !ok {
+				internalWebError(w, files.ErrNotReader)
+				return
+			}
+
+			// write to request
+			http.ServeContent(w, r, "index.html", modtime, f)
+			return
+		case resolver.ErrNoLink:
+			// no index.html; noop
+		default:
+			internalWebError(w, err)
 			return
 		}
-
-		f, ok := idx.(files.File)
-		if !ok {
-			internalWebError(w, files.ErrNotReader)
-			return
-		}
-
-		// write to request
-		http.ServeContent(w, r, "index.html", modtime, f)
-		return
-	case resolver.ErrNoLink:
-		// no index.html; noop
-	default:
-		internalWebError(w, err)
-		return
 	}
 
 	if r.Method == "HEAD" {
 		return
 	}
 
-	// storage for directory listing
+	// storage for directory list
 	var dirListing []directoryItem
 	dirit := dir.Entries()
+	dirit.BreadthFirstTraversal()
 	for dirit.Next() {
 		// See comment above where originalUrlPath is declared.
 		s, err := dirit.Node().Size()
@@ -307,12 +384,31 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Put the current Reed-Solomon directory entry to the cache
+	// if it is Reed-Solomon root directory.
+	if !isReedSolomonSubdirOrFile && dir.IsReedSolomon() {
+		dr, err := i.api.Unixfs().Get(context.Background(), resolvedPath)
+		if err != nil {
+			webError(w, "btfs cat "+escapedURLPath, err, http.StatusNotFound)
+			return
+		}
+		ok := false
+		dir, ok = dr.(files.Directory)
+		if !ok {
+			internalWebError(w, fmt.Errorf("expected directory type for %s", escapedURLPath))
+			return
+		}
+
+		i.rsDirs.Put(strings.SplitN(parsedPath.String(), "/", 4)[2],
+			ReedSolomonDirectory{rootPath: resolvedPath, rootDir: dir})
+	}
+
 	// construct the correct back link
 	// https://github.com/ipfs/go-ipfs/issues/1365
 	var backLink string = prefix + urlPath
 
 	// don't go further up than /btfs/$hash/
-	pathSplit := path.SplitList(backLink)
+	pathSplit := ipfspath.SplitList(backLink)
 	switch {
 	// keep backlink
 	case len(pathSplit) == 3: // url: /btfs/$hash
@@ -335,7 +431,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		if len(pathSplit) > 5 {
 			// also strip the trailing segment, because it's a backlink
 			backLinkParts := pathSplit[3 : len(pathSplit)-2]
-			backLink += path.Join(backLinkParts) + "/"
+			backLink += ipfspath.Join(backLinkParts) + "/"
 		}
 	}
 
@@ -568,6 +664,78 @@ func (i *gatewayHandler) addUserHeaders(w http.ResponseWriter) {
 	}
 }
 
+func (i *gatewayHandler) cacheEntryFor(p string) (*ReedSolomonDirectory, bool, error) {
+	v := i.rsDirs.Get(p)
+	if v[0] == nil {
+		return nil, false, nil
+	}
+	d, ok := v[0].(ReedSolomonDirectory)
+	if !ok {
+		return nil, false, fmt.Errorf("expected ReedSolomonDirectory cache item type")
+	}
+	return &d, true, nil
+}
+
+func (i *gatewayHandler) resolveAndGetFilesNode(
+	ctx context.Context, w http.ResponseWriter, r *http.Request, pp ipath.Path, escPath string) (ipath.Resolved, files.Node, error) {
+	// Resolve path to the final DAG node for the ETag
+	resolvedPath, err := i.api.ResolvePath(ctx, pp)
+	switch err {
+	case nil:
+	case coreiface.ErrOffline:
+		webError(w, "btfs resolve -r "+escPath, err, http.StatusServiceUnavailable)
+		return nil, nil, err
+	default:
+		webError(w, "btfs resolve -r "+escPath, err, http.StatusNotFound)
+		return nil, nil, err
+	}
+
+	dr, err := i.api.Unixfs().Get(ctx, resolvedPath)
+	if err != nil {
+		webError(w, "btfs cat "+escPath, err, http.StatusNotFound)
+		return nil, nil, err
+	}
+
+	return resolvedPath, dr, nil
+}
+
+func (i *gatewayHandler) isTopLevelEntryPath(r *http.Request, path string) (bool, error) {
+	path = gopath.Clean(path)
+	parts := strings.Split(path, "/")
+
+	var (
+		ipfpath *ipfspath.Path
+		err     error
+	)
+	switch parts[1] {
+	case "btfs":
+		return len(parts) == 3 && parts[2] != "", nil
+	case "btns":
+		ipfpath, err = i.api.ResolveIpnsPath(r.Context(), ipath.New(path))
+		if err == resolve.ErrNoNamesys {
+			return false, coreiface.ErrOffline
+		} else if err != nil {
+			return false, err
+		}
+		return len(ipfpath.Segments()) == 2 && ipfpath.Segments()[1] != "", nil
+	default:
+		return false, fmt.Errorf("unsupported path namespace: [%s]", parts[1])
+	}
+}
+
+func (i *gatewayHandler) setupEntityTag(
+	w http.ResponseWriter, r *http.Request, resolvedPath ipath.Resolved, urlPath string) {
+	etag := "\"" + resolvedPath.Cid().String() + "\""
+	if r.Header.Get("If-None-Match") == etag || r.Header.Get("If-None-Match") == "W/"+etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	i.addUserHeaders(w) // ok, _now_ write user's headers.
+	w.Header().Set("X-IPFS-Path", urlPath)
+	w.Header().Set("Etag", etag)
+}
+
 func webError(w http.ResponseWriter, message string, err error, defaultCode int) {
 	if _, ok := err.(resolver.ErrNoLink); ok {
 		webErrorWithCode(w, message, err, http.StatusNotFound)
@@ -598,4 +766,17 @@ func getFilename(s string) string {
 		return ""
 	}
 	return gopath.Base(s)
+}
+
+func getDirRootPath(path string) (string, error) {
+	path = gopath.Clean(path)
+	idx := 1
+	for j := 0; j < 2; j++ {
+		idx += strings.Index(path[idx:], "/")
+		if idx < 0 {
+			return "", fmt.Errorf("root path can not be found from the given string [%s]", path)
+		}
+		idx++
+	}
+	return path[:idx-1], nil
 }

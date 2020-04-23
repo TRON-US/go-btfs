@@ -2,6 +2,7 @@ package corehttp
 
 import (
 	"fmt"
+	"github.com/Workiva/go-datastructures/cache"
 	"net"
 	"net/http"
 	"sort"
@@ -91,7 +92,7 @@ func GatewayOption(writable bool, paths ...string) ServeOption {
 			Headers:      headers,
 			Writable:     writable,
 			PathPrefixes: cfg.Gateway.PathPrefixes,
-		}, api)
+		}, api, cache.New(GatewayReedSolomonDirectoryCacheCapacity))
 
 		for _, p := range paths {
 			mux.Handle(p+"/", gateway)
