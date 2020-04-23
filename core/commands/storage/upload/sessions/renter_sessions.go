@@ -137,7 +137,6 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 	} else {
 		msg = ""
 	}
-	fmt.Printf("session: %s enter status: %s\n", rs.SsId, e.Dst)
 	switch e.Dst {
 	case RssErrorStatus:
 		msg = e.Args[0].(error).Error()
@@ -197,8 +196,8 @@ func (rs *RenterSession) GetCompleteShardsNum() (int, int, error) {
 	return completeNum, errorNum, nil
 }
 
-func (rs *RenterSession) To(status string, args ...interface{}) error {
-	return rs.fsm.Event(status, args...)
+func (rs *RenterSession) To(event string, args ...interface{}) error {
+	return rs.fsm.Event(event, args...)
 }
 
 func (rs *RenterSession) SaveOfflineMeta(meta *renterpb.OfflineMeta) error {

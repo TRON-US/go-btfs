@@ -12,7 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-func UploadShard(rss *sessions.RenterSession, hp *helper.HostsProvider, price int64, shardSize int64,
+func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price int64, shardSize int64,
 	storageLength int,
 	offlineSigning bool, renterId peer.ID, fileSize int64, shardIndexes []int, rp *RepairParams) {
 	for index, shardHash := range rss.ShardHashes {
@@ -26,7 +26,9 @@ func UploadShard(rss *sessions.RenterSession, hp *helper.HostsProvider, price in
 				}
 				host, err := hp.NextValidHost(price)
 				if err != nil {
-					_ = rss.To(sessions.RssErrorStatus, err)
+					err = rss.To(sessions.RssToErrorEvent, err)
+					//ignore err, just print error log
+					log.Error("err", err)
 					return nil
 				}
 				contractId := helper.NewContractID(rss.SsId)

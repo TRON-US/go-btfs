@@ -1,7 +1,10 @@
 package upload
 
 import (
+	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
@@ -11,6 +14,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
+	"github.com/cenkalti/backoff/v3"
 	"github.com/google/uuid"
 	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -100,6 +104,16 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
+		err = backoff.Retry(func() error {
+			peersLen := len(ctxParams.N.PeerHost.Network().Peers())
+			if peersLen <= 0 {
+				err = errors.New("failed to find any peer in table")
+				log.Error(err)
+				return err
+			}
+			return nil
+		}, helper.WaitingForPeersBo)
+
 		fileHash := req.Arguments[0]
 		renterId := ctxParams.N.Identity
 		offlineSigning := false
@@ -119,6 +133,18 @@ Use status command to check for completion:
 			return err
 		}
 		hp := helper.GetHostsProvider(ctxParams, make([]string, 0))
+		if mode, ok := req.Options[hostSelectModeOptionName].(string); ok {
+			var hostIDs []string
+			if mode == "custom" {
+				if hosts, ok := req.Options[hostSelectionOptionName].(string); ok {
+					hostIDs = strings.Split(hosts, ",")
+				}
+				if len(hostIDs) != len(shardHashes) {
+					return fmt.Errorf("custom mode hosts length must match shard hashes length")
+				}
+				hp = helper.GetCustomizedHostsProvider(ctxParams, hostIDs)
+			}
+		}
 		rss, err := sessions.GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
 		if err != nil {
 			return err

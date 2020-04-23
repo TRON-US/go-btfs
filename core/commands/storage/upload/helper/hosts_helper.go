@@ -2,6 +2,7 @@ package helper
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
@@ -12,7 +13,55 @@ import (
 
 const (
 	numHosts = 100
+	failMsg  = "failed to find more valid hosts, please try again later"
 )
+
+type IHostsProvider interface {
+	NextValidHost(price int64) (string, error)
+}
+
+type CustomizedHostsProvider struct {
+	cp      *ContextParams
+	current int
+	hosts   []string
+	sync.Mutex
+}
+
+func (p *CustomizedHostsProvider) NextValidHost(price int64) (string, error) {
+	for true {
+		if index, err := p.AddIndex(); err == nil {
+			id, err := peer.IDB58Decode(p.hosts[index])
+			if err != nil {
+				continue
+			}
+			if err := p.cp.Api.Swarm().Connect(p.cp.Ctx, peer.AddrInfo{ID: id}); err != nil {
+				continue
+			}
+			return p.hosts[index], nil
+		} else {
+			break
+		}
+	}
+	return "", errors.New(failMsg)
+}
+
+func GetCustomizedHostsProvider(cp *ContextParams, hosts []string) IHostsProvider {
+	return &CustomizedHostsProvider{
+		cp:      cp,
+		current: -1,
+		hosts:   hosts,
+	}
+}
+
+func (p *CustomizedHostsProvider) AddIndex() (int, error) {
+	p.Lock()
+	defer p.Unlock()
+	p.current++
+	if p.current >= len(p.hosts) {
+		return -1, errors.New("Index exceeds array bounds.")
+	}
+	return p.current, nil
+}
 
 type HostsProvider struct {
 	cp *ContextParams
@@ -23,7 +72,7 @@ type HostsProvider struct {
 	blacklist []string
 }
 
-func GetHostsProvider(cp *ContextParams, blacklist []string) *HostsProvider {
+func GetHostsProvider(cp *ContextParams, blacklist []string) IHostsProvider {
 	p := &HostsProvider{
 		cp:        cp,
 		mode:      cp.Cfg.Experimental.HostsSyncMode,
@@ -73,7 +122,7 @@ LOOP:
 			break
 		}
 	}
-	msg := "failed to find more valid hosts, please try again later"
+	msg := failMsg
 	if needHigherPrice {
 		msg += " or raise price"
 	}
