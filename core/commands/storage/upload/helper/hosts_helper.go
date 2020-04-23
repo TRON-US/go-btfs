@@ -2,7 +2,6 @@ package helper
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"

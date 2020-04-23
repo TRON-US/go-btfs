@@ -27,8 +27,10 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				host, err := hp.NextValidHost(price)
 				if err != nil {
 					err = rss.To(sessions.RssToErrorEvent, err)
-					//ignore err, just print error log
-					log.Error("err", err)
+					if err != nil {
+						//ignore err, just print error log
+						log.Error("err", err)
+					}
 					return nil
 				}
 				contractId := helper.NewContractID(rss.SsId)
