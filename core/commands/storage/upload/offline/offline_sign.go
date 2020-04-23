@@ -1,8 +1,12 @@
-package upload
+package offline
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
@@ -10,7 +14,7 @@ import (
 	cmap "github.com/orcaman/concurrent-map"
 )
 
-var storageUploadSignCmd = &cmds.Command{
+var StorageUploadSignCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Return the signed data to the upload session.",
 		ShortDescription: `
@@ -27,11 +31,11 @@ to the upload session.`,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssId := req.Arguments[0]
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
-		rss, err := GetRenterSession(ctxParams, ssId, "", make([]string, 0))
+		rss, err := sessions.GetRenterSession(ctxParams, ssId, "", make([]string, 0))
 		if err != nil {
 			return err
 		}
@@ -39,38 +43,38 @@ to the upload session.`,
 		if err != nil {
 			return err
 		}
-		status, err := rss.status()
+		status, err := rss.Status()
 		if err != nil {
 			return err
 		}
 		if status.Status != req.Arguments[4] {
 			return fmt.Errorf("error status, want: %s, actual: %s", status.Status, req.Arguments[4])
 		}
-		bytes, err := stringToBytes(req.Arguments[5], Base64)
+		bytes, err := helper.StringToBytes(req.Arguments[5], helper.Base64)
 		if err != nil {
 			return err
 		}
 		var cm cmap.ConcurrentMap
 		switch req.Arguments[4] {
-		case rssSubmitStatus:
-			cm = balanceChanMaps
-		case rssSubmitBalanceReqSignedStatus:
-			cm = signedChannelCommitChanMaps
-		case rssPayStatus:
-			cm = payinReqChanMaps
-		case rssGuardStatus:
-			cm = fileMetaChanMaps
-		case rssGuardFileMetaSignedStatus:
-			cm = questionsChanMaps
-		case rssWaitUploadStatus:
-			cm = waitUploadChanMap
+		case sessions.RssSubmitStatus:
+			cm = uh.BalanceChanMaps
+		case sessions.RssSubmitBalanceReqSignedStatus:
+			cm = uh.SignedChannelCommitChanMaps
+		case sessions.RssPayStatus:
+			cm = uh.PayinReqChanMaps
+		case sessions.RssGuardStatus:
+			cm = uh.FileMetaChanMaps
+		case sessions.RssGuardFileMetaSignedStatus:
+			cm = uh.QuestionsChanMaps
+		case sessions.RssWaitUploadStatus:
+			cm = uh.WaitUploadChanMap
 		default:
 			return errors.New("wrong status:" + req.Arguments[4])
 		}
 		if bc, ok := cm.Get(ssId); ok {
 			bc.(chan []byte) <- bytes
 		}
-		return rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		return rss.SaveOfflineSigning(&renterpb.OfflineSigning{
 			Sig: bytes,
 		})
 	},

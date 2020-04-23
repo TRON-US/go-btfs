@@ -9,6 +9,9 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -47,25 +50,25 @@ the shard and replies back to client for the next challenge step.`,
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
-		if !ctxParams.cfg.Experimental.StorageHostEnabled {
+		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
 		}
-		settings, err := helper.GetHostStorageConfig(ctxParams.ctx, ctxParams.n)
+		settings, err := helper.GetHostStorageConfig(ctxParams.Ctx, ctxParams.N)
 		if err != nil {
 			return err
 		}
 		if uint64(price) < settings.StoragePriceAsk {
 			return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
 		}
-		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.n)
+		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
 			return fmt.Errorf("fail to get peer ID from request")
 		}
@@ -123,21 +126,21 @@ the shard and replies back to client for the next challenge step.`,
 
 		// Sign on the contract
 		signedEscrowContractBytes, err := signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
-			ctxParams.n.PrivateKey)
+			ctxParams.N.PrivateKey)
 		if err != nil {
 			return err
 		}
-		signedGuardContractBytes, err := signGuardContractAndMarshal(&guardContractMeta, halfSignedGuardContract, ctxParams.n.PrivateKey)
+		signedGuardContractBytes, err := signGuardContractAndMarshal(&guardContractMeta, halfSignedGuardContract, ctxParams.N.PrivateKey)
 		if err != nil {
 			return err
 		}
 		go func() {
 			tmp := func() error {
-				shard, err := GetHostShard(ctxParams, escrowContract.ContractId)
+				shard, err := sessions.GetHostShard(ctxParams, escrowContract.ContractId)
 				if err != nil {
 					return err
 				}
-				_, err = remote.P2PCall(ctxParams.ctx, ctxParams.n, requestPid, "/storage/upload/recvcontract",
+				_, err = remote.P2PCall(ctxParams.Ctx, ctxParams.N, requestPid, "/storage/upload/recvcontract",
 					ssId,
 					shardHash,
 					shardIndex,
@@ -148,7 +151,7 @@ the shard and replies back to client for the next challenge step.`,
 					return err
 				}
 				// check payment
-				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.n.PrivateKey)
+				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.N.PrivateKey)
 				if err != nil {
 					return err
 				}
@@ -165,7 +168,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				err = shard.contract(signedEscrowContractBytes, tmp)
+				err = shard.Contract(signedEscrowContractBytes, tmp)
 				if err != nil {
 					return err
 				}
@@ -181,7 +184,7 @@ the shard and replies back to client for the next challenge step.`,
 					HostPid:     guardContractMeta.HostPid,
 					PrepareTime: guardContractMeta.RentStart,
 				}
-				sign, err := crypto.Sign(ctxParams.n.PrivateKey, in)
+				sign, err := crypto.Sign(ctxParams.N.PrivateKey, in)
 				if err != nil {
 					return err
 				}
@@ -190,7 +193,7 @@ the shard and replies back to client for the next challenge step.`,
 				// req.Context obsolete
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
-				err = grpc.GuardClient(ctxParams.cfg.Services.GuardDomain).WithContext(ctx,
+				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
 						_, err = client.ReadyForChallenge(ctx, in)
 						if err != nil {
@@ -201,7 +204,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				if err := shard.complete(); err != nil {
+				if err := shard.Complete(); err != nil {
 					return err
 				}
 				return nil
@@ -221,7 +224,7 @@ func signEscrowContractAndMarshal(contract *escrowpb.EscrowContract, signedContr
 		return nil, err
 	}
 	if signedContract == nil {
-		signedContract = newSignedContract(contract)
+		signedContract = escrow.NewSignedContract(contract)
 	}
 	signedContract.SellerSignature = sig
 	signedBytes, err := proto.Marshal(signedContract)
@@ -250,7 +253,7 @@ func signGuardContractAndMarshal(meta *guardpb.ContractMeta, cont *guardpb.Contr
 }
 
 // call escrow service to check if payment is received or not
-func checkPaymentFromClient(ctxParams *ContextParams, paidIn chan bool, contractID *escrowpb.SignedContractID) {
+func checkPaymentFromClient(ctxParams *uh.ContextParams, paidIn chan bool, contractID *escrowpb.SignedContractID) {
 	var err error
 	paid := false
 	err = backoff.Retry(func() error {
@@ -263,14 +266,14 @@ func checkPaymentFromClient(ctxParams *ContextParams, paidIn chan bool, contract
 			return nil
 		}
 		return errors.New("reach max retry times")
-	}, checkPaymentBo)
+	}, uh.CheckPaymentBo)
 	if err != nil {
 		log.Error("Check escrow IsPaidin failed", err)
 		paidIn <- paid
 	}
 }
 
-func downloadShardFromClient(ctxParams *ContextParams, guardContract *guardpb.Contract, fileHash string,
+func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb.Contract, fileHash string,
 	shardHash string) error {
 
 	// Get + pin to make sure it does not get accidentally deleted
@@ -307,9 +310,9 @@ func downloadShardFromClient(ctxParams *ContextParams, guardContract *guardpb.Co
 	err = backoff.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), scaled)
 		defer cancel()
-		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.n, ctxParams.api, fileCid, shardCid, "", true, expir)
+		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api, fileCid, shardCid, "", true, expir)
 		return err
-	}, downloadShardBo(scaledRetry))
+	}, uh.DownloadShardBo(scaledRetry))
 
 	if err != nil {
 		return fmt.Errorf("failed to download shard %s from file %s with contract id %s: [%v]",
@@ -318,16 +321,16 @@ func downloadShardFromClient(ctxParams *ContextParams, guardContract *guardpb.Co
 	return nil
 }
 
-func isPaidin(ctxParams *ContextParams, contractID *escrowpb.SignedContractID) (bool, error) {
+func isPaidin(ctxParams *uh.ContextParams, contractID *escrowpb.SignedContractID) (bool, error) {
 	var signedPayinRes *escrowpb.SignedPayinStatus
-	ctx, _ := helper.NewGoContext(ctxParams.ctx)
-	err := grpc.EscrowClient(ctxParams.cfg.Services.EscrowDomain).WithContext(ctx,
+	ctx, _ := helper.NewGoContext(ctxParams.Ctx)
+	err := grpc.EscrowClient(ctxParams.Cfg.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			res, err := client.IsPaid(ctx, contractID)
 			if err != nil {
 				return err
 			}
-			err = VerifyEscrowRes(ctxParams.cfg, res.Status, res.EscrowSignature)
+			err = escrow.VerifyEscrowRes(ctxParams.Cfg, res.Status, res.EscrowSignature)
 			if err != nil {
 				return err
 			}

@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	cmap "github.com/orcaman/concurrent-map"
-)
-
-var (
-	guardChanMaps     = cmap.New()
-	guardContractMaps = cmap.New()
 )
 
 type ContractParams struct {
@@ -37,10 +35,10 @@ type RepairParams struct {
 	RenterEnd   time.Time
 }
 
-func renterSignGuardContract(rss *RenterSession, params *ContractParams, offlineSigning bool,
+func RenterSignGuardContract(rss *sessions.RenterSession, params *ContractParams, offlineSigning bool,
 	rp *RepairParams) ([]byte,
 	error) {
-	guardPid, escrowPid, err := getGuardAndEscrowPid(rss.ctxParams.cfg)
+	guardPid, escrowPid, err := getGuardAndEscrowPid(rss.CtxParams.Cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -71,26 +69,26 @@ func renterSignGuardContract(rss *RenterSession, params *ContractParams, offline
 	cont.RenterPid = params.RenterPid
 	cont.PreparerPid = params.RenterPid
 	bc := make(chan []byte)
-	shardId := getShardId(rss.ssId, gm.ShardHash, int(gm.ShardIndex))
-	guardChanMaps.Set(shardId, bc)
+	shardId := sessions.GetShardId(rss.SsId, gm.ShardHash, int(gm.ShardIndex))
+	uh.GuardChanMaps.Set(shardId, bc)
 	bytes, err := proto.Marshal(gm)
 	if err != nil {
 		return nil, err
 	}
-	guardContractMaps.Set(shardId, bytes)
+	uh.GuardContractMaps.Set(shardId, bytes)
 	if !offlineSigning {
 		go func() {
-			sign, err := crypto.Sign(rss.ctxParams.n.PrivateKey, gm)
+			sign, err := crypto.Sign(rss.CtxParams.N.PrivateKey, gm)
 			if err != nil {
-				_ = rss.to(rssErrorStatus, err)
+				_ = rss.To(sessions.RssErrorStatus, err)
 				return
 			}
 			bc <- sign
 		}()
 	}
 	signedBytes := <-bc
-	guardChanMaps.Remove(shardId)
-	guardContractMaps.Remove(shardId)
+	uh.GuardChanMaps.Remove(shardId)
+	uh.GuardContractMaps.Remove(shardId)
 	cont.RenterSignature = signedBytes
 	return proto.Marshal(cont)
 }
@@ -104,12 +102,12 @@ func getGuardAndEscrowPid(configuration *config.Config) (peer.ID, peer.ID, error
 	if len(guardPubKeys) == 0 {
 		return "", "", fmt.Errorf("missing guard public key in config")
 	}
-	escrowPid, err := pidFromString(escrowPubKeys[0])
+	escrowPid, err := helper.PidFromString(escrowPubKeys[0])
 	if err != nil {
 		log.Error("parse escrow config failed", escrowPubKeys[0])
 		return "", "", err
 	}
-	guardPid, err := pidFromString(guardPubKeys[0])
+	guardPid, err := helper.PidFromString(guardPubKeys[0])
 	if err != nil {
 		log.Error("parse guard config failed", guardPubKeys[1])
 		return "", "", err

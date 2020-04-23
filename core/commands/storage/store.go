@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )

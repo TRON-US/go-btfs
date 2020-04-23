@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/ledger"
@@ -276,7 +276,7 @@ func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bo
 			if err != nil {
 				return err
 			}
-			err = upload.VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			err = escrow.VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
 			if err != nil {
 				return err
 			}

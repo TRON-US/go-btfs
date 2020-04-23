@@ -3,21 +3,20 @@ package upload
 import (
 	"fmt"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	cmap "github.com/orcaman/concurrent-map"
 )
 
-var (
-	escrowChanMaps     = cmap.New()
-	escrowContractMaps = cmap.New()
-)
-
-func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
+func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
 	offlineSigning bool, offSignPid peer.ID,
 	contractId string) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
@@ -29,17 +28,17 @@ func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex i
 		return nil, fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
 	bc := make(chan []byte)
-	shardId := getShardId(rss.ssId, shardHash, shardIndex)
-	escrowChanMaps.Set(shardId, bc)
+	shardId := sessions.GetShardId(rss.SsId, shardHash, shardIndex)
+	uh.EscrowChanMaps.Set(shardId, bc)
 	bytes, err := proto.Marshal(escrowContract)
 	if err != nil {
 		return nil, err
 	}
-	escrowContractMaps.Set(shardId, bytes)
+	uh.EscrowContractMaps.Set(shardId, bytes)
 	if !offlineSigning {
 		errChan := make(chan error)
 		go func() {
-			sign, err := crypto.Sign(rss.ctxParams.n.PrivateKey, escrowContract)
+			sign, err := crypto.Sign(rss.CtxParams.N.PrivateKey, escrowContract)
 			if err != nil {
 				errChan <- err
 				return
@@ -53,8 +52,8 @@ func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex i
 		}
 	}
 	renterSignBytes := <-bc
-	escrowChanMaps.Remove(shardId)
-	escrowContractMaps.Remove(shardId)
+	uh.EscrowChanMaps.Remove(shardId)
+	uh.EscrowContractMaps.Remove(shardId)
 	renterSignedEscrowContract, err := signContractAndMarshalOffSign(escrowContract, renterSignBytes, nil)
 	if err != nil {
 		return nil, err
@@ -62,7 +61,7 @@ func renterSignEscrowContract(rss *RenterSession, shardHash string, shardIndex i
 	return renterSignedEscrowContract, nil
 }
 
-func newContract(rss *RenterSession, hostPid peer.ID, totalPay int64, customizedSchedule bool, period int,
+func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, customizedSchedule bool, period int,
 	pid peer.ID, contractId string) (*escrowpb.EscrowContract, error) {
 	var err error
 	payerPubKey, err := pid.ExtractPublicKey()
@@ -73,10 +72,10 @@ func newContract(rss *RenterSession, hostPid peer.ID, totalPay int64, customized
 	if err != nil {
 		return nil, err
 	}
-	if len(rss.ctxParams.cfg.Services.GuardPubKeys) == 0 {
+	if len(rss.CtxParams.Cfg.Services.GuardPubKeys) == 0 {
 		return nil, fmt.Errorf("No Services.GuardPubKeys are set in config")
 	}
-	authPubKey, err := convertToPubKey(rss.ctxParams.cfg.Services.GuardPubKeys[0])
+	authPubKey, err := helper.ConvertToPubKey(rss.CtxParams.Cfg.Services.GuardPubKeys[0])
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +93,7 @@ func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, si
 	signedContract *escrowpb.SignedEscrowContract) ([]byte, error) {
 
 	if signedContract == nil {
-		signedContract = newSignedContract(unsignedContract)
+		signedContract = escrow.NewSignedContract(unsignedContract)
 	}
 	signedContract.BuyerSignature = signedBytes
 	result, err := proto.Marshal(signedContract)
@@ -102,10 +101,4 @@ func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, si
 		return nil, err
 	}
 	return result, nil
-}
-
-func newSignedContract(contract *escrowpb.EscrowContract) *escrowpb.SignedEscrowContract {
-	return &escrowpb.SignedEscrowContract{
-		Contract: contract,
-	}
 }

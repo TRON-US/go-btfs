@@ -3,6 +3,9 @@ package upload
 import (
 	"fmt"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
@@ -20,21 +23,21 @@ This command print upload and payment status by the time queried.`,
 		// check and get session info from sessionMap
 		ssId := req.Arguments[0]
 
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := helper.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
 
 		// check if checking request from host or client
-		if !ctxParams.cfg.Experimental.StorageClientEnabled && !ctxParams.cfg.Experimental.StorageHostEnabled {
+		if !ctxParams.Cfg.Experimental.StorageClientEnabled && !ctxParams.Cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage client/host api not enabled")
 		}
 
-		session, err := GetRenterSession(ctxParams, ssId, "", make([]string, 0))
+		session, err := sessions.GetRenterSession(ctxParams, ssId, "", make([]string, 0))
 		if err != nil {
 			return err
 		}
-		sessionStatus, err := session.status()
+		sessionStatus, err := session.Status()
 		if err != nil {
 			return err
 		}
@@ -44,16 +47,16 @@ This command print upload and payment status by the time queried.`,
 		// get shards info from session
 		shards := make(map[string]*ShardStatus)
 		status.FileHash = sessionStatus.Hash
-		for i, h := range session.shardHashes {
-			shard, err := GetRenterShard(ctxParams, ssId, h, i)
+		for i, h := range session.ShardHashes {
+			shard, err := sessions.GetRenterShard(ctxParams, ssId, h, i)
 			if err != nil {
 				return err
 			}
-			st, err := shard.status()
+			st, err := shard.Status()
 			if err != nil {
 				return err
 			}
-			contracts, err := shard.contracts()
+			contracts, err := shard.Contracts()
 			if err != nil {
 				return err
 			}
@@ -69,7 +72,7 @@ This command print upload and payment status by the time queried.`,
 				c.Price = contracts.SignedGuardContract.Price
 				c.Host = contracts.SignedGuardContract.HostPid
 			}
-			shards[getShardId(ssId, h, i)] = c
+			shards[sessions.GetShardId(ssId, h, i)] = c
 		}
 		status.Shards = shards
 		return res.Emit(status)

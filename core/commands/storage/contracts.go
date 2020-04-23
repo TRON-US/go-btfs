@@ -11,7 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/rm"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
@@ -251,14 +251,14 @@ func getKey(role string) string {
 }
 
 func Save(d datastore.Datastore, cs []*nodepb.Contracts_Contract, role string) error {
-	return upload.Save(d, getKey(role), &contractspb.Contracts{
+	return sessions.Save(d, getKey(role), &contractspb.Contracts{
 		Contracts: cs,
 	})
 }
 
 func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Contract, error) {
 	cs := &contractspb.Contracts{}
-	err := upload.Get(d, getKey(role), cs)
+	err := sessions.Get(d, getKey(role), cs)
 	if err != nil && err != datastore.ErrNotFound {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Cont
 
 func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
 	role string) error {
-	cs, err := upload.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
+	cs, err := sessions.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
 	if err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 	if len(updated) > 0 {
 		// save and retrieve updated signed contracts
 		var stale []string
-		cs, stale, err = upload.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
+		cs, stale, err = sessions.SaveShardsContracts(n.Repo.Datastore(), cs, updated, n.Identity.Pretty(), role)
 		if err != nil {
 			return err
 		}

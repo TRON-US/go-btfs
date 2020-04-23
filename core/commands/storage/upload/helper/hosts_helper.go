@@ -1,4 +1,4 @@
-package upload
+package helper
 
 import (
 	"errors"
@@ -23,10 +23,10 @@ type HostsProvider struct {
 	blacklist []string
 }
 
-func getHostsProvider(cp *ContextParams, blacklist []string) *HostsProvider {
+func GetHostsProvider(cp *ContextParams, blacklist []string) *HostsProvider {
 	p := &HostsProvider{
 		cp:        cp,
-		mode:      cp.cfg.Experimental.HostsSyncMode,
+		mode:      cp.Cfg.Experimental.HostsSyncMode,
 		current:   -1,
 		blacklist: blacklist,
 	}
@@ -35,7 +35,7 @@ func getHostsProvider(cp *ContextParams, blacklist []string) *HostsProvider {
 }
 
 func (p *HostsProvider) init() (err error) {
-	p.hosts, err = helper.GetHostsFromDatastore(p.cp.ctx, p.cp.n, p.mode, numHosts)
+	p.hosts, err = helper.GetHostsFromDatastore(p.cp.Ctx, p.cp.N, p.mode, numHosts)
 	return err
 }
 
@@ -65,7 +65,7 @@ LOOP:
 				needHigherPrice = true
 				continue
 			}
-			if err := p.cp.api.Swarm().Connect(p.cp.ctx, peer.AddrInfo{ID: id}); err != nil {
+			if err := p.cp.Api.Swarm().Connect(p.cp.Ctx, peer.AddrInfo{ID: id}); err != nil {
 				continue
 			}
 			return host.NodeId, nil

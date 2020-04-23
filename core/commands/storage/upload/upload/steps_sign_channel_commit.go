@@ -3,6 +3,9 @@ package upload
 import (
 	"fmt"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -14,12 +17,6 @@ import (
 
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	pb "github.com/libp2p/go-libp2p-core/crypto/pb"
-	cmap "github.com/orcaman/concurrent-map"
-)
-
-var (
-	unsignedChannelCommitMaps   = cmap.New()
-	signedChannelCommitChanMaps = cmap.New()
 )
 
 // fork from ic, use RawFull rather than Raw
@@ -35,10 +32,10 @@ func marshalPublicKey(k ic.PubKey) ([]byte, error) {
 	return proto.Marshal(pbmes)
 }
 
-func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEscrowContract,
+func NewContractRequest(rss *sessions.RenterSession, signedContracts []*escrowpb.SignedEscrowContract,
 	totalPrice int64, offlineSigning bool) (*escrowpb.EscrowContractRequest, error) {
-	conf := rss.ctxParams.cfg
-	ssId := rss.ssId
+	conf := rss.CtxParams.Cfg
+	ssId := rss.SsId
 	escrowPubKey, err := newContractRequestHelper(conf)
 	if err != nil {
 		return nil, err
@@ -53,15 +50,15 @@ func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEs
 		Amount:    0,
 		PayerId:   0,
 	}
-	unsignedChannelCommitMaps.Set(ssId, cc)
+	uh.UnsignedChannelCommitMaps.Set(ssId, cc)
 	cb := make(chan []byte)
-	signedChannelCommitChanMaps.Set(ssId, cb)
+	uh.SignedChannelCommitChanMaps.Set(ssId, cb)
 	if offlineSigning {
 		raw, err := marshalPublicKey(escrowPubKey)
 		if err != nil {
 			return nil, err
 		}
-		err = rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		err = rss.SaveOfflineSigning(&renterpb.OfflineSigning{
 			Raw:   raw,
 			Price: totalPrice,
 		})
@@ -93,12 +90,12 @@ func NewContractRequest(rss *RenterSession, signedContracts []*escrowpb.SignedEs
 				cb <- bs
 				return nil
 			}(); err != nil {
-				_ = rss.to(rssErrorStatus, err)
+				_ = rss.To(sessions.RssErrorStatus, err)
 			}
 		}()
 	}
 	signedBytes := <-cb
-	if err := rss.to(rssToSubmitLedgerChannelCommitSignedEvent); err != nil {
+	if err := rss.To(sessions.RssToSubmitLedgerChannelCommitSignedEvent); err != nil {
 		return nil, err
 	}
 	var signedChannelCommit ledgerpb.SignedChannelCommit
@@ -118,7 +115,7 @@ func newContractRequestHelper(configuration *config.Config) (ic.PubKey, error) {
 		return nil, fmt.Errorf("No Services.EscrowPubKeys are set in config")
 	}
 	var escrowPubKey ic.PubKey
-	escrowPubKey, err := convertToPubKey(configuration.Services.EscrowPubKeys[0])
+	escrowPubKey, err := helper.ConvertToPubKey(configuration.Services.EscrowPubKeys[0])
 	if err != nil {
 		return nil, err
 	}

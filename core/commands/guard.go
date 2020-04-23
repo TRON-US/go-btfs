@@ -7,7 +7,9 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	"github.com/TRON-US/go-btfs/core/hub"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -103,7 +105,7 @@ to the guard service.`,
 			}
 		}
 
-		ctxParams, err := upload.ExtractContextParams(req, env)
+		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
@@ -112,7 +114,7 @@ to the guard service.`,
 		for _, c := range shardHashes {
 			hashStrs = append(hashStrs, c.String())
 		}
-		rss, err := upload.GetRenterSession(ctxParams, req.Arguments[1], req.Arguments[0], hashStrs)
+		rss, err := sessions.GetRenterSession(ctxParams, req.Arguments[1], req.Arguments[0], hashStrs)
 		if err != nil {
 			return err
 		}

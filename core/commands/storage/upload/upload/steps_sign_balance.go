@@ -5,28 +5,24 @@ import (
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	config "github.com/TRON-US/go-btfs-config"
-	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"github.com/tron-us/protobuf/proto"
-
-	cmap "github.com/orcaman/concurrent-map"
 )
 
-var (
-	balanceChanMaps = cmap.New()
-)
-
-func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error {
+func checkBalance(rss *sessions.RenterSession, offlineSigning bool, totalPay int64) error {
 	bc := make(chan []byte)
-	balanceChanMaps.Set(rss.ssId, bc)
+	uh.BalanceChanMaps.Set(rss.SsId, bc)
 	if offlineSigning {
-		err := rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		err := rss.SaveOfflineSigning(&renterpb.OfflineSigning{
 			Raw: make([]byte, 0),
 		})
 		if err != nil {
@@ -35,7 +31,7 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 	} else {
 		go func() {
 			if err := func() error {
-				privKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+				privKey, err := rss.CtxParams.Cfg.Identity.DecodePrivateKey("")
 				if err != nil {
 					return err
 				}
@@ -50,16 +46,16 @@ func checkBalance(rss *RenterSession, offlineSigning bool, totalPay int64) error
 				bc <- signedBytes
 				return nil
 			}(); err != nil {
-				_ = rss.to(rssErrorStatus, err)
+				_ = rss.To(sessions.RssErrorStatus, err)
 				return
 			}
 		}()
 	}
 	signedBytes := <-bc
-	if err := rss.to(rssToSubmitBalanceReqSignedEvent); err != nil {
+	if err := rss.To(sessions.RssToSubmitBalanceReqSignedEvent); err != nil {
 		return err
 	}
-	balance, err := balanceHelper(rss.ctxParams.ctx, rss.ctxParams.cfg, signedBytes)
+	balance, err := balanceHelper(rss.CtxParams.Ctx, rss.CtxParams.Cfg, signedBytes)
 	if err != nil {
 		return err
 	}
@@ -86,7 +82,7 @@ func balanceHelper(ctx context.Context, configuration *config.Config, signedByte
 			if err != nil {
 				return err
 			}
-			err = VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			err = escrow.VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
 			if err != nil {
 				return err
 			}
@@ -97,16 +93,4 @@ func balanceHelper(ctx context.Context, configuration *config.Config, signedByte
 		return 0, err
 	}
 	return balance, nil
-}
-
-func VerifyEscrowRes(configuration *config.Config, message proto.Message, sig []byte) error {
-	escrowPubkey, err := convertPubKeyFromString(configuration.Services.EscrowPubKeys[0])
-	if err != nil {
-		return err
-	}
-	ok, err := crypto.Verify(escrowPubkey, message, sig)
-	if err != nil || !ok {
-		return fmt.Errorf("verify escrow failed %v", err)
-	}
-	return nil
 }
