@@ -9,9 +9,23 @@ GOTAGS ?=
 unexport GOFLAGS
 GOFLAGS ?=
 GOTFLAGS ?=
+TEST_COVERAGE_OUTPUT ?= tests_coverage
+
+#select explicit list of packages to test
+COVERPKG_LIST := $(shell cat coverpkg_list.txt)
+
+MY_FILE := test_pkgs.txt
+MY_PKGS := $(shell cat ${MY_FILE})
+
+#select packages that dont contain a test dir to avoid build errors
+NON_TEST_PKGS := $(shell go list ./... | grep -v "/test")
 
 # Try to make building as reproducible as possible by stripping the go path.
 GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
+
+#GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=$(COVERPKG_LIST)"
+GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out"
+#GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
 
 ifeq ($(tarball-is),1)
 	GOFLAGS += -mod=vendor
@@ -46,8 +60,18 @@ $(GOCC) build $(go-flags-with-tags) -o /dev/null "$(call go-pkg-name,$<)"
 endef
 
 test_go_test: $$(DEPS_GO)
-	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
+#	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
+	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) $(MY_PKGS)
 .PHONY: test_go_test
+
+#Used to display coverage per function an total at the end
+test_coverage_output:
+	$(GOCC) tool cover -func="$(TEST_COVERAGE_OUTPUT).out"
+
+#Generates an html report of the unit tests coverage
+test_coverage_html:
+	$(GOCC) tool cover -html="$(TEST_COVERAGE_OUTPUT).out" -o "$(TEST_COVERAGE_OUTPUT).html"
+.PHONY: test_coverage_html
 
 test_go_build: $$(TEST_GO_BUILD)
 
