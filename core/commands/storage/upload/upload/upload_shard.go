@@ -108,12 +108,12 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 						switch err.(type) {
 						case remote.IoError:
 							// NOP
-							log.Error("io error", err)
+							log.Debug("io error", err)
 						case remote.BusinessError:
-							log.Error("write remote.BusinessError", h, err)
+							log.Debug("write remote.BusinessError", h, err)
 							cb <- err
 						default:
-							log.Error("write default err", h, err)
+							log.Debug("write default err", h, err)
 							cb <- err
 						}
 					}
