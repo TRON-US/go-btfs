@@ -18,6 +18,7 @@ github.com/TRON-US/go-btfs/core/commands/storage
 github.com/TRON-US/go-btfs/core/commands/storage/challenge
 github.com/TRON-US/go-btfs/core/commands/storage/helper
 github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow
+github.com/TRON-US/go-btfs/core/commands/storage/upload/guard
 github.com/TRON-US/go-btfs/core/commands/storage/upload/helper
 github.com/TRON-US/go-btfs/core/commands/storage/upload/offline
 github.com/TRON-US/go-btfs/core/commands/storage/upload/upload

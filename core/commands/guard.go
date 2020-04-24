@@ -7,9 +7,9 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/guard"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	"github.com/TRON-US/go-btfs/core/hub"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -118,7 +118,7 @@ to the guard service.`,
 		if err != nil {
 			return err
 		}
-		questions, err := upload.PrepCustomFileChallengeQuestions(rss, rootHash, shardHashes, hostIDs, qCount, false,
+		questions, err := guard.PrepCustomFileChallengeQuestions(rss, rootHash, shardHashes, hostIDs, qCount, false,
 			n.Identity.Pretty())
 		if err != nil {
 			return err
@@ -132,6 +132,6 @@ to the guard service.`,
 			cfg.Services.GuardDomain = gu
 		}
 		// send to guard
-		return upload.SendChallengeQuestions(req.Context, cfg, rootHash, questions)
+		return guard.SendChallengeQuestions(req.Context, cfg, rootHash, questions)
 	},
 }
