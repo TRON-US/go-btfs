@@ -1,4 +1,4 @@
-package upload
+package sessions
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -13,6 +14,7 @@ import (
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/ipfs/go-datastore"
+	logging "github.com/ipfs/go-log"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -29,6 +31,8 @@ const (
 	rshErrorStatus     = "error"
 	rshToContractEvent = "to-contract"
 )
+
+var log = logging.Logger("sessions")
 
 var (
 	renterShardFsmEvents = fsm.Events{
@@ -47,25 +51,25 @@ type RenterShard struct {
 	ds     datastore.Datastore
 }
 
-func GetRenterShard(ctxParams *ContextParams, ssId string, hash string, index int) (*RenterShard, error) {
-	shardId := getShardId(ssId, hash, index)
-	k := fmt.Sprintf(renterShardsInMemKey, ctxParams.n.Identity.Pretty(), shardId)
+func GetRenterShard(ctxParams *uh.ContextParams, ssId string, hash string, index int) (*RenterShard, error) {
+	shardId := GetShardId(ssId, hash, index)
+	k := fmt.Sprintf(renterShardsInMemKey, ctxParams.N.Identity.Pretty(), shardId)
 	var rs *RenterShard
 	if tmp, ok := renterShardsInMem.Get(k); ok {
 		rs = tmp.(*RenterShard)
 	} else {
-		ctx, _ := helper.NewGoContext(ctxParams.ctx)
+		ctx, _ := helper.NewGoContext(ctxParams.Ctx)
 		rs = &RenterShard{
-			peerId: ctxParams.n.Identity.Pretty(),
+			peerId: ctxParams.N.Identity.Pretty(),
 			ssId:   ssId,
 			hash:   hash,
 			index:  index,
 			ctx:    ctx,
-			ds:     ctxParams.n.Repo.Datastore(),
+			ds:     ctxParams.N.Repo.Datastore(),
 		}
 		renterShardsInMem.Set(k, rs)
 	}
-	status, err := rs.status()
+	status, err := rs.Status()
 	if err != nil {
 		return nil, err
 	}
@@ -85,9 +89,9 @@ func (rs *RenterShard) enterState(e *fsm.Event) {
 	}
 }
 
-func (rs *RenterShard) status() (*shardpb.Status, error) {
+func (rs *RenterShard) Status() (*shardpb.Status, error) {
 	status := new(shardpb.Status)
-	shardId := getShardId(rs.ssId, rs.hash, rs.index)
+	shardId := GetShardId(rs.ssId, rs.hash, rs.index)
 	k := fmt.Sprintf(renterShardStatusKey, rs.peerId, shardId)
 	err := Get(rs.ds, k, status)
 	if err == datastore.ErrNotFound {
@@ -102,7 +106,7 @@ func (rs *RenterShard) status() (*shardpb.Status, error) {
 	return status, nil
 }
 
-func getShardId(ssId string, shardHash string, index int) (contractId string) {
+func GetShardId(ssId string, shardHash string, index int) (contractId string) {
 	return fmt.Sprintf("%s:%s:%d", ssId, shardHash, index)
 }
 
@@ -128,7 +132,7 @@ func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContra
 		SignedEscrowContract: signedEscrowContract,
 		SignedGuardContract:  signedGuardContract,
 	}
-	shardId := getShardId(rs.ssId, rs.hash, rs.index)
+	shardId := GetShardId(rs.ssId, rs.hash, rs.index)
 	return Batch(rs.ds, []string{
 		fmt.Sprintf(renterShardStatusKey, rs.peerId, shardId),
 		fmt.Sprintf(renterShardContractsKey, rs.peerId, shardId),
@@ -137,13 +141,13 @@ func (rs *RenterShard) doContract(signedEscrowContract []byte, signedGuardContra
 	})
 }
 
-func (rs *RenterShard) contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
+func (rs *RenterShard) Contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
 	return rs.fsm.Event(rshToContractEvent, signedEscrowContract, signedGuardContract)
 }
 
-func (rs *RenterShard) contracts() (*shardpb.SignedContracts, error) {
+func (rs *RenterShard) Contracts() (*shardpb.SignedContracts, error) {
 	contracts := &shardpb.SignedContracts{}
-	err := Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, getShardId(rs.ssId, rs.hash, rs.index)), contracts)
+	err := Get(rs.ds, fmt.Sprintf(renterShardContractsKey, rs.peerId, GetShardId(rs.ssId, rs.hash, rs.index)), contracts)
 	if err == datastore.ErrNotFound {
 		return contracts, nil
 	}

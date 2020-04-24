@@ -1,4 +1,4 @@
-package upload
+package helper
 
 import (
 	"encoding/base64"
@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-func convertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {
+func ConvertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {
 	raw, err := base64.StdEncoding.DecodeString(pubKeyStr)
 	if err != nil {
 		return nil, err
@@ -16,16 +16,16 @@ func convertPubKeyFromString(pubKeyStr string) (ic.PubKey, error) {
 	return ic.UnmarshalPublicKey(raw)
 }
 
-func convertToPubKey(pubKeyStr string) (ic.PubKey, error) {
-	pubKey, err := convertPubKeyFromString(pubKeyStr)
+func ConvertToPubKey(pubKeyStr string) (ic.PubKey, error) {
+	pubKey, err := ConvertPubKeyFromString(pubKeyStr)
 	if err != nil {
 		return nil, err
 	}
 	return pubKey, nil
 }
 
-func pidFromString(key string) (peer.ID, error) {
-	pubKey, err := convertPubKeyFromString(key)
+func PidFromString(key string) (peer.ID, error) {
+	pubKey, err := ConvertPubKeyFromString(key)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +37,7 @@ const (
 	Base64
 )
 
-func bytesToString(data []byte, encoding int) (string, error) {
+func BytesToString(data []byte, encoding int) (string, error) {
 	switch encoding {
 	case Text:
 		return string(data), nil
@@ -48,7 +48,7 @@ func bytesToString(data []byte, encoding int) (string, error) {
 	}
 }
 
-func stringToBytes(str string, encoding int) ([]byte, error) {
+func StringToBytes(str string, encoding int) ([]byte, error) {
 	switch encoding {
 	case Text:
 		return []byte(str), nil

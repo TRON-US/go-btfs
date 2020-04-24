@@ -3,17 +3,22 @@ package upload
 import (
 	"context"
 	"errors"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	"strings"
+	"time"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-	"github.com/libp2p/go-libp2p-core/peer"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/tron-us/go-btfs-common/crypto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
-	"strings"
-	"time"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-var storageUploadRepairCmd = &cmds.Command{
+var StorageUploadRepairCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Repair specific shards of a file.",
 		ShortDescription: `
@@ -27,25 +32,25 @@ This command repairs the given shards of a file.`,
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
 		fileHash := req.Arguments[0]
 		metaReq := &guardpb.CheckFileStoreMetaRequest{
 			FileHash:     fileHash,
-			RenterPid:    ctxParams.n.Identity.String(),
-			RequesterPid: ctxParams.n.Identity.String(),
+			RenterPid:    ctxParams.N.Identity.String(),
+			RequesterPid: ctxParams.N.Identity.String(),
 			RequestTime:  time.Now().UTC(),
 		}
-		sig, err := crypto.Sign(ctxParams.n.PrivateKey, metaReq)
+		sig, err := crypto.Sign(ctxParams.N.PrivateKey, metaReq)
 		if err != nil {
 			return err
 		}
 		metaReq.Signature = sig
 		ctx, _ := helper.NewGoContext(req.Context)
 		var meta *guardpb.FileStoreStatus
-		err = grpc.GuardClient(ctxParams.cfg.Services.GuardDomain).WithContext(ctx, func(ctx context.Context,
+		err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx, func(ctx context.Context,
 			client guardpb.GuardServiceClient) error {
 			meta, err = client.CheckFileStoreMeta(ctx, metaReq)
 			if err != nil {
@@ -60,7 +65,7 @@ This command repairs the given shards of a file.`,
 		if len(contracts) <= 0 {
 			return errors.New("length of contracts is 0")
 		}
-		ssId, _ := splitContractId(contracts[0].ContractId)
+		ssId, _ := uh.SplitContractId(contracts[0].ContractId)
 		shardIndexes := make([]int, 0)
 		i := 0
 		shardHashes := strings.Split(req.Arguments[1], ",")
@@ -70,17 +75,17 @@ This command repairs the given shards of a file.`,
 				i++
 			}
 		}
-		rss, err := GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
+		rss, err := sessions.GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
 		if err != nil {
 			return err
 		}
-		hp := getHostsProvider(ctxParams, strings.Split(req.Arguments[3], ","))
+		hp := uh.GetHostsProvider(ctxParams, strings.Split(req.Arguments[3], ","))
 		m := contracts[0].ContractMeta
 		renterPid, err := peer.IDB58Decode(req.Arguments[2])
 		if err != nil {
 			return err
 		}
-		rss.uploadShard(hp, m.Price, m.ShardFileSize, -1, false, renterPid, -1,
+		UploadShard(rss, hp, m.Price, m.ShardFileSize, -1, false, renterPid, -1,
 			shardIndexes, &RepairParams{
 				RenterStart: m.RentStart,
 				RenterEnd:   m.RentEnd,

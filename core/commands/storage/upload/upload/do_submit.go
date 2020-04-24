@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+
 	config "github.com/TRON-US/go-btfs-config"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
-
 	"github.com/tron-us/protobuf/proto"
 )
 
-func submit(rss *RenterSession, fileSize int64, offlineSigning bool) error {
-	if err := rss.to(rssToSubmitEvent); err != nil {
+func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) error {
+	if err := rss.To(sessions.RssToSubmitEvent); err != nil {
 		return err
 	}
 	res, err := doSubmit(rss, offlineSigning)
@@ -22,8 +24,8 @@ func submit(rss *RenterSession, fileSize int64, offlineSigning bool) error {
 	return pay(rss, res, fileSize, offlineSigning)
 }
 
-func doSubmit(rss *RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {
-	bs, t, err := prepareContracts(rss, rss.shardHashes)
+func doSubmit(rss *sessions.RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {
+	bs, t, err := prepareContracts(rss, rss.ShardHashes)
 	if err != nil {
 		return nil, err
 	}
@@ -39,22 +41,22 @@ func doSubmit(rss *RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitCo
 	for _, c := range req.Contract {
 		amount += c.Contract.Amount
 	}
-	submitContractRes, err := submitContractToEscrow(rss.ctx, rss.ctxParams.cfg, req)
+	submitContractRes, err := submitContractToEscrow(rss.Ctx, rss.CtxParams.Cfg, req)
 	if err != nil {
 		return nil, err
 	}
 	return submitContractRes, nil
 }
 
-func prepareContracts(rss *RenterSession, shardHashes []string) ([]*escrowpb.SignedEscrowContract, int64, error) {
+func prepareContracts(rss *sessions.RenterSession, shardHashes []string) ([]*escrowpb.SignedEscrowContract, int64, error) {
 	var signedContracts []*escrowpb.SignedEscrowContract
 	var totalPrice int64
 	for i, hash := range shardHashes {
-		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, hash, i)
+		shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, hash, i)
 		if err != nil {
 			return nil, 0, err
 		}
-		c, err := shard.contracts()
+		c, err := shard.Contracts()
 		if err != nil {
 			return nil, 0, err
 		}
@@ -85,7 +87,7 @@ func submitContractToEscrow(ctx context.Context, configuration *config.Config,
 				return fmt.Errorf("escrow reponse is nil")
 			}
 			// verify
-			err = VerifyEscrowRes(configuration, response.Result, response.EscrowSignature)
+			err = escrow.VerifyEscrowRes(configuration, response.Result, response.EscrowSignature)
 			if err != nil {
 				return fmt.Errorf("verify escrow failed %v", err)
 			}

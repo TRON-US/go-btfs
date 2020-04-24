@@ -6,6 +6,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -14,7 +16,6 @@ import (
 
 	"github.com/cenkalti/backoff/v3"
 	"github.com/gogo/protobuf/proto"
-	cmap "github.com/orcaman/concurrent-map"
 )
 
 const (
@@ -25,33 +26,29 @@ func getSuccessThreshold(totalShards int) int {
 	return int(math.Min(float64(totalShards), thresholdContractsNums))
 }
 
-var (
-	waitUploadChanMap = cmap.New()
-)
-
-func waitUpload(rss *RenterSession, offlineSigning bool, renterId string) error {
-	threshold := getSuccessThreshold(len(rss.shardHashes))
-	if err := rss.to(rssToWaitUploadEvent); err != nil {
+func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId string) error {
+	threshold := getSuccessThreshold(len(rss.ShardHashes))
+	if err := rss.To(sessions.RssToWaitUploadEvent); err != nil {
 		return err
 	}
 	req := &guardpb.CheckFileStoreMetaRequest{
-		FileHash:     rss.hash,
+		FileHash:     rss.Hash,
 		RenterPid:    renterId,
 		RequesterPid: renterId,
 		RequestTime:  time.Now().UTC(),
 	}
-	payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+	payerPrivKey, err := rss.CtxParams.Cfg.Identity.DecodePrivateKey("")
 	if err != nil {
 		return err
 	}
 	cb := make(chan []byte)
-	waitUploadChanMap.Set(rss.ssId, cb)
+	helper.WaitUploadChanMap.Set(rss.SsId, cb)
 	if offlineSigning {
 		raw, err := proto.Marshal(req)
 		if err != nil {
 			return err
 		}
-		err = rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		err = rss.SaveOfflineSigning(&renterpb.OfflineSigning{
 			Raw: raw,
 		})
 		if err != nil {
@@ -61,25 +58,25 @@ func waitUpload(rss *RenterSession, offlineSigning bool, renterId string) error 
 		go func() {
 			sign, err := crypto.Sign(payerPrivKey, req)
 			if err != nil {
-				_ = rss.to(rssErrorStatus, err)
+				_ = rss.To(sessions.RssErrorStatus, err)
 				return
 			}
 			cb <- sign
 		}()
 	}
 	sign := <-cb
-	waitUploadChanMap.Remove(rss.ssId)
-	if err := rss.to(rssToWaitUploadReqSignedEvent); err != nil {
+	helper.WaitUploadChanMap.Remove(rss.SsId)
+	if err := rss.To(sessions.RssToWaitUploadReqSignedEvent); err != nil {
 		return err
 	}
 	req.Signature = sign
 	err = backoff.Retry(func() error {
 		select {
-		case <-rss.ctx.Done():
+		case <-rss.Ctx.Done():
 			return errors.New("context closed")
 		default:
 		}
-		err = grpc.GuardClient(rss.ctxParams.cfg.Services.GuardDomain).WithContext(rss.ctx,
+		err = grpc.GuardClient(rss.CtxParams.Cfg.Services.GuardDomain).WithContext(rss.Ctx,
 			func(ctx context.Context, client guardpb.GuardServiceClient) error {
 				meta, err := client.CheckFileStoreMeta(ctx, req)
 				if err != nil {
@@ -98,11 +95,11 @@ func waitUpload(rss *RenterSession, offlineSigning bool, renterId string) error 
 				return errors.New("uploading")
 			})
 		return err
-	}, waitUploadBo)
+	}, helper.WaitUploadBo)
 	if err != nil {
 		return err
 	}
-	if err := rss.to(rssToCompleteEvent); err != nil {
+	if err := rss.To(sessions.RssToCompleteEvent); err != nil {
 		return err
 	}
 	return nil

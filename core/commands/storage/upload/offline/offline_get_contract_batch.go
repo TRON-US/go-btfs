@@ -1,7 +1,11 @@
-package upload
+package offline
 
 import (
 	"fmt"
+
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
@@ -12,7 +16,7 @@ const (
 	contractsTypeGuard = "guard"
 )
 
-var storageUploadGetContractBatchCmd = &cmds.Command{
+var StorageUploadGetContractBatchCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Get all the contracts from the upload session	(From BTFS SDK application's perspective).",
 		ShortDescription: `
@@ -28,18 +32,18 @@ the contracts to the caller.`,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssId := req.Arguments[0]
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
-		if !ctxParams.cfg.Experimental.StorageClientEnabled {
+		if !ctxParams.Cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
-		rss, err := GetRenterSession(ctxParams, ssId, "", make([]string, 0))
+		rss, err := sessions.GetRenterSession(ctxParams, ssId, "", make([]string, 0))
 		if err != nil {
 			return err
 		}
-		status, err := rss.status()
+		status, err := rss.Status()
 		if err != nil {
 			return err
 		}
@@ -49,16 +53,16 @@ the contracts to the caller.`,
 		}
 		contracts := make([]*contract, 0)
 		var cm cmap.ConcurrentMap
-		if cm = escrowContractMaps; req.Arguments[4] == contractsTypeGuard {
-			cm = guardContractMaps
+		if cm = uh.EscrowContractMaps; req.Arguments[4] == contractsTypeGuard {
+			cm = uh.GuardContractMaps
 		}
 		for i, h := range status.ShardHashes {
-			shardId := getShardId(ssId, h, i)
+			shardId := sessions.GetShardId(ssId, h, i)
 			c := &contract{
 				Key: shardId,
 			}
 			if bytes, ok := cm.Get(shardId); ok {
-				c.ContractData, err = bytesToString(bytes.([]byte), Base64)
+				c.ContractData, err = helper.BytesToString(bytes.([]byte), helper.Base64)
 			} else {
 				return res.Emit(&getContractBatchRes{
 					Contracts: make([]*contract, 0),

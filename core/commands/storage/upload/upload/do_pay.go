@@ -2,34 +2,32 @@ package upload
 
 import (
 	"context"
-	config "github.com/TRON-US/go-btfs-config"
-	renterpb "github.com/TRON-US/go-btfs/protos/renter"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
+
+	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"github.com/tron-us/protobuf/proto"
-
-	cmap "github.com/orcaman/concurrent-map"
 )
 
-var (
-	payinReqChanMaps = cmap.New()
-)
-
-func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool) error {
-	if err := rss.to(rssToPayEvent); err != nil {
+func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool) error {
+	if err := rss.To(sessions.RssToPayEvent); err != nil {
 		return err
 	}
 	bc := make(chan []byte)
-	payinReqChanMaps.Set(rss.ssId, bc)
+	uh.PayinReqChanMaps.Set(rss.SsId, bc)
 	if offlineSigning {
 		raw, err := proto.Marshal(result)
 		if err != nil {
 			return err
 		}
-		err = rss.saveOfflineSigning(&renterpb.OfflineSigning{
+		err = rss.SaveOfflineSigning(&renterpb.OfflineSigning{
 			Raw: raw,
 		})
 		if err != nil {
@@ -39,7 +37,7 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 		go func() {
 			if err := func() error {
 				chanState := result.Result.BuyerChannelState
-				payerPrivKey, err := rss.ctxParams.cfg.Identity.DecodePrivateKey("")
+				payerPrivKey, err := rss.CtxParams.Cfg.Identity.DecodePrivateKey("")
 				if err != nil {
 					return err
 				}
@@ -64,22 +62,22 @@ func pay(rss *RenterSession, result *escrowpb.SignedSubmitContractResult, fileSi
 				bc <- bs
 				return nil
 			}(); err != nil {
-				_ = rss.to(rssErrorStatus, err)
+				_ = rss.To(sessions.RssErrorStatus, err)
 				return
 			}
 		}()
 	}
 	signed := <-bc
-	payinReqChanMaps.Remove(rss.ssId)
+	uh.PayinReqChanMaps.Remove(rss.SsId)
 	signedPayInRequest := new(escrowpb.SignedPayinRequest)
 	err := proto.Unmarshal(signed, signedPayInRequest)
 	if err != nil {
 		return err
 	}
-	if err := rss.to(rssToPayPayinRequestSignedEvent); err != nil {
+	if err := rss.To(sessions.RssToPayPayinRequestSignedEvent); err != nil {
 		return err
 	}
-	payinRes, err := payInToEscrow(rss.ctx, rss.ctxParams.cfg, signedPayInRequest)
+	payinRes, err := payInToEscrow(rss.Ctx, rss.CtxParams.Cfg, signedPayInRequest)
 	if err != nil {
 		return err
 	}
@@ -95,7 +93,7 @@ func payInToEscrow(ctx context.Context, configuration *config.Config, signedPayi
 				log.Error(err)
 				return err
 			}
-			err = VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
+			err = escrow.VerifyEscrowRes(configuration, res.Result, res.EscrowSignature)
 			if err != nil {
 				log.Error(err)
 				return err

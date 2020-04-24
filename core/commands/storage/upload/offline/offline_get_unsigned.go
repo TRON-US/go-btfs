@@ -1,12 +1,16 @@
-package upload
+package offline
 
 import (
 	"errors"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
-var storageUploadGetUnsignedCmd = &cmds.Command{
+var StorageUploadGetUnsignedCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Get the input data for upload signing.",
 		ShortDescription: `
@@ -22,11 +26,11 @@ This command obtains the upload signing input data for from the upload session
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssId := req.Arguments[0]
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
-		rss, err := GetRenterSession(ctxParams, ssId, "", make([]string, 0))
+		rss, err := sessions.GetRenterSession(ctxParams, ssId, "", make([]string, 0))
 		if err != nil {
 			return err
 		}
@@ -34,19 +38,19 @@ This command obtains the upload signing input data for from the upload session
 		if err != nil {
 			return err
 		}
-		rssStatus, err := rss.status()
+		rssStatus, err := rss.Status()
 		if err != nil {
 			return err
 		}
 		if req.Arguments[4] != rssStatus.Status {
 			return errors.New("unexpected session status from SDK during communication in upload signing")
 		}
-		signing, err := rss.offlineSigning()
+		signing, err := rss.OfflineSigning()
 		if err != nil {
 			return err
 		}
 
-		rawString, err := bytesToString(signing.Raw, Base64)
+		rawString, err := helper.BytesToString(signing.Raw, helper.Base64)
 		if err != nil {
 			return err
 		}

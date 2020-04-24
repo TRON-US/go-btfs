@@ -1,10 +1,11 @@
-package upload
+package sessions
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -49,18 +50,18 @@ type HostShard struct {
 	ds         datastore.Datastore
 }
 
-func GetHostShard(ctxParams *ContextParams, contractId string) (*HostShard, error) {
-	k := fmt.Sprintf(hostShardsInMemKey, ctxParams.n.Identity.Pretty(), contractId)
+func GetHostShard(ctxParams *uh.ContextParams, contractId string) (*HostShard, error) {
+	k := fmt.Sprintf(hostShardsInMemKey, ctxParams.N.Identity.Pretty(), contractId)
 	var hs *HostShard
 	if tmp, ok := hostShardsInMem.Get(k); ok {
 		hs = tmp.(*HostShard)
 	} else {
-		ctx, _ := helper.NewGoContext(ctxParams.ctx)
+		ctx, _ := helper.NewGoContext(ctxParams.Ctx)
 		hs = &HostShard{
-			peerId:     ctxParams.n.Identity.Pretty(),
+			peerId:     ctxParams.N.Identity.Pretty(),
 			contractId: contractId,
 			ctx:        ctx,
-			ds:         ctxParams.n.Repo.Datastore(),
+			ds:         ctxParams.N.Repo.Datastore(),
 		}
 		hostShardsInMem.Set(k, hs)
 	}
@@ -116,11 +117,11 @@ func (hs *HostShard) doContract(signedEscrowContract []byte, signedGuardContract
 	})
 }
 
-func (hs *HostShard) contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
+func (hs *HostShard) Contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
 	return hs.fsm.Event(hshToContractEvent, signedEscrowContract, signedGuardContract)
 }
 
-func (hs *HostShard) complete() error {
+func (hs *HostShard) Complete() error {
 	return hs.fsm.Event(hshToCompleteEvent)
 }
 

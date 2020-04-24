@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -26,7 +28,7 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		contractId, err := doRecv(req, env)
 		if contractId != "" {
-			if ch, ok := shardErrChanMap.Get(contractId); ok {
+			if ch, ok := ShardErrChanMap.Get(contractId); ok {
 				go func() {
 					ch.(chan error) <- err
 				}()
@@ -41,11 +43,11 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 
 func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err error) {
 	ssID := req.Arguments[0]
-	ctxParams, err := ExtractContextParams(req, env)
+	ctxParams, err := helper.ExtractContextParams(req, env)
 	if err != nil {
 		return
 	}
-	requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.n)
+	requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 	if !ok {
 		err = errors.New("failed to get remote peer id")
 		return
@@ -81,11 +83,11 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	if err != nil {
 		return
 	}
-	shard, err := GetRenterShard(ctxParams, ssID, shardHash, index)
+	shard, err := sessions.GetRenterShard(ctxParams, ssID, shardHash, index)
 	if err != nil {
 		return
 	}
-	err = shard.contract(escrowContractBytes, guardContract)
+	err = shard.Contract(escrowContractBytes, guardContract)
 	if err != nil {
 		return
 	}

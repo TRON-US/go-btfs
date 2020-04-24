@@ -2,15 +2,21 @@ package upload
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/offline"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
 	"github.com/cenkalti/backoff/v3"
 	"github.com/google/uuid"
+	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -25,10 +31,14 @@ const (
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
+
+	uploadPriceOptionName   = "price"
+	storageLengthOptionName = "storage-length"
 )
 
 var (
-	shardErrChanMap = cmap.New()
+	ShardErrChanMap = cmap.New()
+	log             = logging.Logger("upload")
 )
 
 var StorageUploadCmd = &cmds.Command{
@@ -65,11 +75,11 @@ Use status command to check for completion:
 		"init":              StorageUploadInitCmd,
 		"recvcontract":      StorageUploadRecvContractCmd,
 		"status":            StorageUploadStatusCmd,
-		"repair":            storageUploadRepairCmd,
-		"getcontractbatch":  storageUploadGetContractBatchCmd,
-		"signcontractbatch": storageUploadSignContractBatchCmd,
-		"getunsigned":       storageUploadGetUnsignedCmd,
-		"sign":              storageUploadSignCmd,
+		"repair":            StorageUploadRepairCmd,
+		"getcontractbatch":  offline.StorageUploadGetContractBatchCmd,
+		"signcontractbatch": offline.StorageUploadSignContractBatchCmd,
+		"getunsigned":       offline.StorageUploadGetUnsignedCmd,
+		"sign":              offline.StorageUploadSignCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
@@ -90,24 +100,22 @@ Use status command to check for completion:
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		ssId := uuid.New().String()
-		ctxParams, err := ExtractContextParams(req, env)
+		ctxParams, err := helper.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
 		err = backoff.Retry(func() error {
-			peersLen := len(ctxParams.n.PeerHost.Network().Peers())
+			peersLen := len(ctxParams.N.PeerHost.Network().Peers())
 			if peersLen <= 0 {
 				err = errors.New("failed to find any peer in table")
 				log.Error(err)
 				return err
 			}
 			return nil
-		}, waitingForPeersBo)
-		if err != nil {
-			return errors.New("please check your network")
-		}
+		}, helper.WaitingForPeersBo)
+
 		fileHash := req.Arguments[0]
-		renterId := ctxParams.n.Identity
+		renterId := ctxParams.N.Identity
 		offlineSigning := false
 		if len(req.Arguments) > 1 {
 			renterId, err = peer.IDB58Decode(req.Arguments[1])
@@ -116,16 +124,28 @@ Use status command to check for completion:
 			}
 			offlineSigning = true
 		}
-		shardHashes, fileSize, shardSize, err := getShardHashes(ctxParams, fileHash)
+		shardHashes, fileSize, shardSize, err := helper.GetShardHashes(ctxParams, fileHash)
 		if err != nil {
 			return err
 		}
-		price, storageLength, err := getPriceAndMinStorageLength(ctxParams)
+		price, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
 		if err != nil {
 			return err
 		}
-		hp := getHostsProvider(ctxParams, make([]string, 0))
-		rss, err := GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
+		hp := helper.GetHostsProvider(ctxParams, make([]string, 0))
+		if mode, ok := req.Options[hostSelectModeOptionName].(string); ok {
+			var hostIDs []string
+			if mode == "custom" {
+				if hosts, ok := req.Options[hostSelectionOptionName].(string); ok {
+					hostIDs = strings.Split(hosts, ",")
+				}
+				if len(hostIDs) != len(shardHashes) {
+					return fmt.Errorf("custom mode hosts length must match shard hashes length")
+				}
+				hp = helper.GetCustomizedHostsProvider(ctxParams, hostIDs)
+			}
+		}
+		rss, err := sessions.GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
 		if err != nil {
 			return err
 		}
@@ -134,7 +154,7 @@ Use status command to check for completion:
 			if err != nil {
 				return err
 			}
-			err = rss.saveOfflineMeta(&renterpb.OfflineMeta{
+			err = rss.SaveOfflineMeta(&renterpb.OfflineMeta{
 				OfflinePeerId:    req.Arguments[1],
 				OfflineNonceTs:   offNonceTimestamp,
 				OfflineSignature: req.Arguments[3],
@@ -144,10 +164,10 @@ Use status command to check for completion:
 			}
 		}
 		shardIndexes := make([]int, 0)
-		for i, _ := range rss.shardHashes {
+		for i, _ := range rss.ShardHashes {
 			shardIndexes = append(shardIndexes, i)
 		}
-		rss.uploadShard(hp, price, shardSize, storageLength, offlineSigning, renterId, fileSize, shardIndexes, nil)
+		UploadShard(rss, hp, price, shardSize, storageLength, offlineSigning, renterId, fileSize, shardIndexes, nil)
 		seRes := &Res{
 			ID: ssId,
 		}
