@@ -9,13 +9,12 @@ require (
 	github.com/TRON-US/go-btfs-api v0.1.0
 	github.com/TRON-US/go-btfs-chunker v0.2.8
 	github.com/TRON-US/go-btfs-cmds v0.1.6
-	github.com/TRON-US/go-btfs-config v0.5.0
+	github.com/TRON-US/go-btfs-config v0.5.1
 	github.com/TRON-US/go-btfs-files v0.1.6
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.2.2
 	github.com/TRON-US/go-unixfs v0.5.9
 	github.com/TRON-US/interface-go-btfs-core v0.5.4
-	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
@@ -78,6 +77,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2
 	github.com/jbenet/goprocess v0.1.3
 	github.com/klauspost/reedsolomon v1.9.2
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/libp2p/go-eventbus v0.0.3 // indirect
 	github.com/libp2p/go-libp2p v0.2.0
 	github.com/libp2p/go-libp2p-autonat-svc v0.1.0
@@ -124,7 +124,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v2.20.3+incompatible
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tron-us/go-btfs-common v0.3.7
 	github.com/tron-us/go-common/v2 v2.0.5
@@ -139,9 +139,9 @@ require (
 	go.uber.org/dig v1.7.0 // indirect
 	go.uber.org/fx v1.9.0
 	go.uber.org/goleak v0.10.0 // indirect
-	go.uber.org/zap v1.10.0
+	go.uber.org/zap v1.14.0
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
-	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd
+	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.7

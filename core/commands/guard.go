@@ -5,11 +5,14 @@ import (
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/storage"
-	"github.com/TRON-US/go-btfs/core/guard"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/guard"
+	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/hub"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	cconfig "github.com/tron-us/go-btfs-common/config"
 
 	"github.com/ipfs/go-cid"
@@ -53,7 +56,8 @@ Sends all shard challenge questions under a reed-solomon encoded file
 to the guard service.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("file-hash", true, false, "File hash to generate the questions from.").EnableStdin(),
+		cmds.StringArg("file-hash", true, false, "File hash to generate the questions from."),
+		cmds.StringArg("session-id", true, false, "Session id to generate the questions from."),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(guardUrlOptionName, "u", "Guard service url including protocol and port. Default: reads from BTFS config."),
@@ -84,7 +88,7 @@ to the guard service.`,
 		if err != nil {
 			return err
 		}
-		shardHashes, _, err := storage.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
+		shardHashes, _, err := helper.CheckAndGetReedSolomonShardHashes(req.Context, n, api, rootHash)
 		if err != nil {
 			return err
 		}
@@ -92,7 +96,7 @@ to the guard service.`,
 		if hl, found := req.Options[guardHostsOptionName].(string); found {
 			hostIDs = strings.Split(hl, ",")
 		} else {
-			hosts, err := storage.GetHostsFromDatastore(req.Context, n, hub.HubModeAll, len(shardHashes))
+			hosts, err := helper.GetHostsFromDatastore(req.Context, n, hub.HubModeAll, len(shardHashes))
 			if err != nil {
 				return err
 			}
@@ -101,9 +105,21 @@ to the guard service.`,
 			}
 		}
 
+		ctxParams, err := uh.ExtractContextParams(req, env)
+		if err != nil {
+			return err
+		}
 		qCount, _ := req.Options[guardQuestionCountPerShardOptionName].(int)
-		questions, err := guard.PrepCustomFileChallengeQuestions(req.Context, n, api, nil,
-			rootHash, shardHashes, hostIDs, qCount)
+		hashStrs := make([]string, 0)
+		for _, c := range shardHashes {
+			hashStrs = append(hashStrs, c.String())
+		}
+		rss, err := sessions.GetRenterSession(ctxParams, req.Arguments[1], req.Arguments[0], hashStrs)
+		if err != nil {
+			return err
+		}
+		questions, err := guard.PrepCustomFileChallengeQuestions(rss, rootHash, shardHashes, hostIDs, qCount, false,
+			n.Identity.Pretty())
 		if err != nil {
 			return err
 		}

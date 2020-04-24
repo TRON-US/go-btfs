@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	config "github.com/TRON-US/go-btfs-config"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
@@ -60,6 +60,10 @@ func durationToSeconds(duration time.Duration) uint64 {
 	return uint64(duration.Nanoseconds() / int64(time.Second/time.Nanosecond))
 }
 
+func isAnalyticsEnabled(cfg *config.Config) bool {
+	return cfg.Experimental.StorageHostEnabled || cfg.Experimental.Analytics
+}
+
 // Analytics starts the process to collect data and starts the GoRoutine for constant collection
 func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) {
 	if node == nil {
@@ -75,7 +79,10 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 	dc.pn = new(nodepb.Node)
 	dc.config = configuration
 
-	if dc.config.Experimental.Analytics {
+	if isAnalyticsEnabled(dc.config) {
+		if dc.config.Experimental.Analytics != dc.config.Experimental.StorageHostEnabled {
+			fmt.Println("Experimental.Analytics is overridden by Experimental.StorageHostEnabled")
+		}
 		infoStats, err := cpu.Info()
 		if err == nil {
 			dc.pn.CpuInfo = infoStats[0].ModelName
@@ -92,7 +99,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.BtfsVersion = BTFSVersion
 		dc.pn.OsType = runtime.GOOS
 		dc.pn.ArchType = runtime.GOARCH
-		if storageMax, err := storage.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil, true); err == nil {
+		if storageMax, err := helper.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil, true); err == nil {
 			dc.pn.StorageVolumeCap = storageMax
 		} else {
 			log.Warning(err.Error())
@@ -128,7 +135,7 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	runtime.ReadMemStats(&m)
 	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)
 	defer cancel()
-	ns, err := storage.GetHostStorageConfig(ctx, node)
+	ns, err := helper.GetHostStorageConfig(ctx, node)
 	if err != nil {
 		res = append(res, fmt.Errorf("failed to get node storage config: %s", err.Error()))
 	} else {
@@ -262,7 +269,7 @@ func (dc *dcWrap) collectionAgent(node *core.IpfsNode) {
 		}
 		// check config for explicit consent to data collect
 		// consent can be changed without reinitializing data collection
-		if config.Experimental.Analytics {
+		if isAnalyticsEnabled(config) {
 			dc.sendData(node, config)
 		}
 	}
