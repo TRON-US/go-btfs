@@ -107,7 +107,15 @@ the shard and replies back to client for the next challenge step.`,
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
 		// get renter's public key
-		payerPubKey, err := crypto.GetPubKeyFromPeerId(req.Arguments[9])
+		pid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
+		if !ok {
+			return fmt.Errorf("fail to get peer ID from request")
+		}
+		var peerId string
+		if peerId = pid.String(); len(req.Arguments) >= 10 {
+			peerId = req.Arguments[9]
+		}
+		payerPubKey, err := crypto.GetPubKeyFromPeerId(peerId)
 		if err != nil {
 			return err
 		}

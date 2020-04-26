@@ -99,11 +99,23 @@ Use status command to check for completion:
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ssId := uuid.New().String()
 		ctxParams, err := helper.ExtractContextParams(req, env)
 		if err != nil {
 			return err
 		}
+		renterId := ctxParams.N.Identity
+		offlineSigning := false
+		if len(req.Arguments) > 1 {
+			if len(req.Arguments) < 4 {
+				return fmt.Errorf("not enough arguments, expect: %v, actual:%v", 4, len(req.Arguments))
+			}
+			renterId, err = peer.IDB58Decode(req.Arguments[1])
+			if err != nil {
+				return err
+			}
+			offlineSigning = true
+		}
+		ssId := uuid.New().String()
 		err = backoff.Retry(func() error {
 			peersLen := len(ctxParams.N.PeerHost.Network().Peers())
 			if peersLen <= 0 {
@@ -115,15 +127,6 @@ Use status command to check for completion:
 		}, helper.WaitingForPeersBo)
 
 		fileHash := req.Arguments[0]
-		renterId := ctxParams.N.Identity
-		offlineSigning := false
-		if len(req.Arguments) > 1 {
-			renterId, err = peer.IDB58Decode(req.Arguments[1])
-			if err != nil {
-				return err
-			}
-			offlineSigning = true
-		}
 		shardHashes, fileSize, shardSize, err := helper.GetShardHashes(ctxParams, fileHash)
 		if err != nil {
 			return err
