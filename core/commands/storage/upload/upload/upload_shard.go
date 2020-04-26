@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -92,7 +93,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					return err
 				}
 				go func() {
-					_, err := remote.P2PCall(rss.CtxParams.Ctx, rss.CtxParams.N, hostPid, "/storage/upload/init",
+					ctx, _ := context.WithTimeout(rss.Ctx, 10*time.Second)
+					_, err := remote.P2PCall(ctx, rss.CtxParams.N, hostPid, "/storage/upload/init",
 						rss.SsId,
 						rss.Hash,
 						h,
@@ -118,8 +120,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 						}
 					}
 				}()
-				// host needs to send recv in 30 seconds, or the contract will be invalid.
-				tick := time.Tick(30 * time.Second)
+				// host needs to send recv in 10 seconds, or the contract will be invalid.
+				tick := time.Tick(10 * time.Second)
 				select {
 				case err = <-cb:
 					ShardErrChanMap.Remove(contractId)

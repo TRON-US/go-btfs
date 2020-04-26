@@ -137,6 +137,7 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 	} else {
 		msg = ""
 	}
+	fmt.Printf("session: %s entered state: %s, msg: %s\n", rs.SsId, e.Dst, msg)
 	switch e.Dst {
 	case RssErrorStatus:
 		msg = e.Args[0].(error).Error()
