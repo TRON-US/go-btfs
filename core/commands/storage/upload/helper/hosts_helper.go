@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	numHosts = 200
+	numHosts = 100
 	failMsg  = "failed to find more valid hosts, please try again later"
 )
 
