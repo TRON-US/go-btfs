@@ -62,7 +62,7 @@ func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResul
 				bc <- bs
 				return nil
 			}(); err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			}
 		}()

@@ -90,7 +90,7 @@ func NewContractRequest(rss *sessions.RenterSession, signedContracts []*escrowpb
 				cb <- bs
 				return nil
 			}(); err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 			}
 		}()
 	}

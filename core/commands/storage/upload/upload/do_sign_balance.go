@@ -46,7 +46,7 @@ func checkBalance(rss *sessions.RenterSession, offlineSigning bool, totalPay int
 				bc <- signedBytes
 				return nil
 			}(); err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			}
 		}()
