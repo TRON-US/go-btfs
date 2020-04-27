@@ -80,7 +80,7 @@ func RenterSignGuardContract(rss *sessions.RenterSession, params *ContractParams
 		go func() {
 			sign, err := crypto.Sign(rss.CtxParams.N.PrivateKey, gm)
 			if err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			}
 			bc <- sign

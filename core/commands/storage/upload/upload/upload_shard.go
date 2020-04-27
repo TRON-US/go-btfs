@@ -129,7 +129,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 			}, helper.HandleShardBo)
 			if err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 			}
 		}(shardIndexes[index], shardHash)
 	}
@@ -147,11 +147,11 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				if completeNum == numShards {
 					err := Submit(rss, fileSize, offlineSigning)
 					if err != nil {
-						_ = rss.To(sessions.RssErrorStatus, err)
+						_ = rss.To(sessions.RssToErrorEvent, err)
 					}
 					return
 				} else if errorNum > 0 {
-					_ = rss.To(sessions.RssErrorStatus, errors.New("there are some error shards"))
+					_ = rss.To(sessions.RssToErrorEvent, errors.New("there are some error shards"))
 					log.Error("session:", rss.SsId, ",errorNum:", errorNum)
 					return
 				}
