@@ -118,7 +118,7 @@ LOOP:
 			host := p.hosts[index]
 			for _, h := range p.blacklist {
 				if h == host.NodeId {
-					break LOOP
+					continue LOOP
 				}
 			}
 			id, err := peer.IDB58Decode(host.NodeId)
