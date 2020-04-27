@@ -67,6 +67,8 @@ github.com/TRON-US/go-unixfs v0.5.9/go.mod h1:TM3bRAMBsIbCj+oYN3e2dpnDe3ebrWRpQ1
 github.com/TRON-US/interface-go-btfs-core v0.5.4 h1:rGtjXV8pRM0ap56XsI/lwB4vGUytS7mRrih0lmx+KJA=
 github.com/TRON-US/interface-go-btfs-core v0.5.4/go.mod h1:wZWJikVV3ShW7fClZP8/Gv8gYFg4ZowePkKBp0HY9Xc=
 github.com/VictoriaMetrics/fastcache v1.5.3/go.mod h1:+jv9Ckb+za/P1ZRg/sulP5Ni1v49daAVERr0H3CuscE=
+github.com/Workiva/go-datastructures v1.0.52 h1:PLSK6pwn8mYdaoaCZEMsXBpBotr4HHn9abU0yMQt0NI=
+github.com/Workiva/go-datastructures v1.0.52/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc h1:cAKDfWh5VpdgMhJosfJnn5/FoN2SRZ4p7fJNX58YPaU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
