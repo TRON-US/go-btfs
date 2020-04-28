@@ -90,6 +90,9 @@ This command contracts stats based on role from network(hub) to local node data 
 		if err != nil {
 			return err
 		}
+		if role != nodepb.ContractStat_HOST {
+			return fmt.Errorf("only host contract sync is supported currently")
+		}
 		return SyncContracts(req.Context, n, req, env, role.String())
 	},
 }
