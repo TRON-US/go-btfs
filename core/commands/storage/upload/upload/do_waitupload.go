@@ -58,7 +58,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 		go func() {
 			sign, err := crypto.Sign(payerPrivKey, req)
 			if err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			}
 			cb <- sign

@@ -69,7 +69,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 				}
 				return sig, nil
 			}(); err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			} else {
 				cb <- sig
