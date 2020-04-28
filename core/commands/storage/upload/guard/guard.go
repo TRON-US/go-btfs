@@ -106,7 +106,7 @@ func PrepCustomFileChallengeQuestions(rss *sessions.RenterSession, fileHash cidl
 				}
 				return bytes, nil
 			}(); err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			} else {
 				cb <- bytes
