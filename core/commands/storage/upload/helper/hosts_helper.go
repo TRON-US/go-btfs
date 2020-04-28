@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	numHosts = 200
-	failMsg  = "failed to find more valid hosts, please try again later"
+	minimumHosts = 30
+	failMsg      = "failed to find more valid hosts, please try again later"
 )
 
 type IHostsProvider interface {
@@ -90,7 +90,7 @@ func GetHostsProvider(cp *ContextParams, blacklist []string) IHostsProvider {
 }
 
 func (p *HostsProvider) init() (err error) {
-	p.hosts, err = helper.GetHostsFromDatastore(p.cp.Ctx, p.cp.N, p.mode, numHosts)
+	p.hosts, err = helper.GetHostsFromDatastore(p.cp.Ctx, p.cp.N, p.mode, minimumHosts)
 	return err
 }
 
