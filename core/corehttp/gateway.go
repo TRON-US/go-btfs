@@ -2,7 +2,6 @@ package corehttp
 
 import (
 	"fmt"
-	"github.com/Workiva/go-datastructures/cache"
 	"net"
 	"net/http"
 	"sort"
@@ -10,6 +9,7 @@ import (
 	version "github.com/TRON-US/go-btfs"
 	core "github.com/TRON-US/go-btfs/core"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
+	"github.com/Workiva/go-datastructures/cache"
 
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"

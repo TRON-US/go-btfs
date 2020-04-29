@@ -39,7 +39,6 @@ type gatewayHandler struct {
 	config GatewayConfig
 	api    coreiface.CoreAPI
 	rsDirs cache.Cache
-	//rsDirs   map[string]ReedSolomonDirectory
 }
 
 type ReedSolomonDirectory struct {
@@ -48,6 +47,8 @@ type ReedSolomonDirectory struct {
 }
 
 func (d ReedSolomonDirectory) Size() uint64 {
+	// Returns one since this Size() is used by the cache.Cache
+	// to indicate one directory entry in the cache.
 	return uint64(1)
 }
 
@@ -183,7 +184,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		resolvedRootPath          ipath.Resolved
 		dr                        files.Node
 		err                       error
-		isReedSolomonSubdirOrFile bool
+		isReedSolomonSubdirOrFile bool // Is ReedSolomon non-root subdirectory or file?
 	)
 	top, err := i.isTopLevelEntryPath(r, parsedPath.String())
 	if err != nil {
@@ -233,7 +234,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 				log.Warningf("expected directory type for %s", escapedRootPath)
 			}
 		}
-		if isPresent || rootDir != nil && rootDir.IsReedSolomon() {
+		if isPresent || (rootDir != nil && rootDir.IsReedSolomon()) {
 			if !isPresent {
 				// Put the current Reed-Solomon directory entry to the cache
 				i.rsDirs.Put(k, ReedSolomonDirectory{rootPath: resolvedRootPath, rootDir: rootDir})
