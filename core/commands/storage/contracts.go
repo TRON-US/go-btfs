@@ -316,7 +316,8 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 		}
 		_, err := rm.RmDag(ctx, stale, n, req, env, true)
 		if err != nil {
-			return err
+			// may have been cleaned up already, ignore
+			contractsLog.Error("stale contracts clean up error:", err)
 		}
 	}
 	if len(cs) > 0 {
