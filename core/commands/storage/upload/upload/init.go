@@ -29,10 +29,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-const (
-	challengerPid = "16Uiu2HAm3Mw7YsZS3f5KH8VS4fnmdKxgQ1NNPugX7DpM5TQZP9uw"
-)
-
 var StorageUploadInitCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Initialize storage handshake with inquiring client.",
@@ -162,17 +158,6 @@ the shard and replies back to client for the next challenge step.`,
 				)
 				if err != nil {
 					return err
-				}
-
-				// swarm connect to renter and challenge-node
-				for i := 0; i < 3; i++ {
-					ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-					go func() {
-						ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: requestPid})
-					}()
-					go func() {
-						ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: challengerPid})
-					}()
 				}
 
 				// check payment
@@ -331,10 +316,22 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 		scaledRetry = highRetry
 	}
 	expir := uint64(guardContract.RentEnd.Unix())
+
+	renterPid, err := peer.IDB58Decode(guardContract.PreparerPid)
+	if err != nil {
+		return err
+	}
 	// based on small and large file sizes
 	err = backoff.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), scaled)
 		defer cancel()
+
+		go func() {
+			swarmCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+		}()
+
 		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api, fileCid, shardCid, "", true, expir)
 		return err
 	}, uh.DownloadShardBo(scaledRetry))

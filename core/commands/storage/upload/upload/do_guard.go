@@ -41,6 +41,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 		contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
 		contracts.SignedGuardContract.LastModifyTime = time.Now()
 		cts = append(cts, contracts.SignedGuardContract)
+		selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)
 	}
 	fsStatus, err := newFileStatus(cts, rss.CtxParams.Cfg, cts[0].ContractMeta.RenterPid, rss.Hash, fileSize)
 	if err != nil {
@@ -103,22 +104,22 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 	}
 	go func() {
 		for {
-			tick := time.Tick(10 * time.Second)
 			select {
 			case <-rss.Ctx.Done():
 				return
-			case <-tick:
+			default:
 				wg := sync.WaitGroup{}
 				for _, h := range selectedHosts {
 					wg.Add(1)
 					go func(host string) {
-						ctx, _ := context.WithTimeout(context.Background(), 7*time.Second)
+						ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 						id, _ := peer.IDB58Decode(host)
 						rss.CtxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: id})
 						wg.Done()
 					}(h)
 				}
 				wg.Wait()
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}()

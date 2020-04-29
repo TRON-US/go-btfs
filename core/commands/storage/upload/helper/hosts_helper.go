@@ -50,7 +50,7 @@ func GetCustomizedHostsProvider(cp *ContextParams, hosts []string) IHostsProvide
 	return &CustomizedHostsProvider{
 		cp:      cp,
 		current: -1,
-		hosts:   append(hosts, hosts...),
+		hosts:   hosts,
 	}
 }
 
