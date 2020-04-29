@@ -89,7 +89,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 					}
 				}
 				log.Infof("%d shards uploaded.", num)
-				if num >= int(threshold) {
+				if num >= threshold {
 					return nil
 				}
 				return errors.New("uploading")
