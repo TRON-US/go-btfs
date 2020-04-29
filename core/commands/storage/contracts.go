@@ -117,7 +117,7 @@ This command get contracts stats based on role from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		contracts, err := ListContracts(n.Repo.Datastore(), cr.String())
+		contracts, err := ListContracts(n.Repo.Datastore(), n.Identity.Pretty(), cr.String())
 		if err != nil {
 			return err
 		}
@@ -215,7 +215,7 @@ This command get contracts list based on role from the local node data store.`,
 			return fmt.Errorf("invalid filter option: %s", filterOpt)
 		}
 		size, _ := req.Options[contractsListSizeOptionName].(int)
-		contracts, err := ListContracts(n.Repo.Datastore(), cr.String())
+		contracts, err := ListContracts(n.Repo.Datastore(), n.Identity.Pretty(), cr.String())
 		if err != nil {
 			return err
 		}
@@ -259,13 +259,36 @@ func Save(d datastore.Datastore, cs []*nodepb.Contracts_Contract, role string) e
 	})
 }
 
-func ListContracts(d datastore.Datastore, role string) ([]*nodepb.Contracts_Contract, error) {
+func ListContracts(d datastore.Datastore, peerId, role string) ([]*nodepb.Contracts_Contract, error) {
 	cs := &contractspb.Contracts{}
 	err := sessions.Get(d, getKey(role), cs)
 	if err != nil && err != datastore.ErrNotFound {
 		return nil, err
 	}
-	return cs.Contracts, nil
+	// Because of buggy data in the past, we need to filter out non-host or non-renter contracts
+	// It's also possible that user has switched keys manually, so we remove those as well.
+	var fcs []*nodepb.Contracts_Contract
+	filtered := false
+	for _, c := range cs.Contracts {
+		if role == nodepb.ContractStat_HOST.String() && c.HostId != peerId {
+			filtered = true
+			continue
+		}
+		if role == nodepb.ContractStat_RENTER.String() && c.RenterId != peerId {
+			filtered = true
+			continue
+		}
+		fcs = append(fcs, c)
+	}
+	// No change
+	if !filtered {
+		return cs.Contracts, nil
+	}
+	err = Save(d, fcs, role)
+	if err != nil {
+		return nil, err
+	}
+	return fcs, nil
 }
 
 func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
