@@ -26,6 +26,11 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
+)
+
+const (
+	challengerPid = "16Uiu2HAm3Mw7YsZS3f5KH8VS4fnmdKxgQ1NNPugX7DpM5TQZP9uw"
 )
 
 var StorageUploadInitCmd = &cmds.Command{
@@ -158,6 +163,18 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
+
+				// swarm connect to renter and challenge-node
+				for i := 0; i < 3; i++ {
+					ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+					go func() {
+						ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: requestPid})
+					}()
+					go func() {
+						ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: challengerPid})
+					}()
+				}
+
 				// check payment
 				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.N.PrivateKey)
 				if err != nil {
