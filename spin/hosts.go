@@ -17,6 +17,7 @@ const (
 	hostStatsSyncPeriod    = 30 * time.Minute
 	hostSettingsSyncPeriod = 60 * time.Minute
 	hostSyncTimeout        = 30 * time.Second
+	hostSortTimeout        = 5 * time.Minute
 )
 
 func Hosts(node *core.IpfsNode, env cmds.Environment) {
@@ -29,9 +30,13 @@ func Hosts(node *core.IpfsNode, env cmds.Environment) {
 	if cfg.Experimental.HostsSyncEnabled {
 		m := cfg.Experimental.HostsSyncMode
 		fmt.Printf("Storage host info will be synced at [%s] mode\n", m)
-		go periodicHostSync(hostSyncPeriod, hostSyncTimeout, "hosts",
+		go periodicHostSync(hostSyncPeriod, hostSyncTimeout+hostSortTimeout, "hosts",
 			func(ctx context.Context) error {
-				return storage.SyncHosts(ctx, node, m)
+				nodes, err := storage.SyncHosts(ctx, node, m)
+				if err != nil {
+					return err
+				}
+				return storage.SortHosts(ctx, node, nodes, m)
 			})
 	}
 	if cfg.Experimental.StorageHostEnabled {
