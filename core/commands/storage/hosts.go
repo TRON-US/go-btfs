@@ -111,25 +111,27 @@ Mode options include:` + hub.AllModeHelpText,
 		if err != nil {
 			return err
 		}
-		return SyncHosts(req.Context, n, mode)
+		_, err = SyncHosts(req.Context, n, mode)
+		return err
 	},
 }
 
-func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) error {
+func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.Host, error) {
 	nodes, err := hub.QueryHosts(ctx, node, mode)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	nc, _ := helper.NewGoContext(context.Background())
-	go sortHosts(nc, node, nodes, mode)
-	return helper.SaveHostsIntoDatastore(ctx, node, mode, nodes)
+	err = helper.SaveHostsIntoDatastore(ctx, node, mode, nodes)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
 
-func sortHosts(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) {
+func SortHosts(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) error {
 	api, err := coreapi.NewCoreAPI(n)
 	if err != nil {
-		hostsLog.Errorf("failed to sort the hosts: %v", err)
-		return
+		return fmt.Errorf("failed to sort the hosts: %v", err)
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -156,7 +158,7 @@ func sortHosts(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode 
 	gs = append(gs, bs...)
 	err = helper.SaveHostsIntoDatastore(ctx, n, mode, nodes)
 	if err != nil {
-		hostsLog.Errorf("failed to sort the hosts: %v", err)
-		return
+		return fmt.Errorf("failed to sort the hosts: %v", err)
 	}
+	return nil
 }
