@@ -30,7 +30,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					terr := rss.To(sessions.RssToErrorEvent, err)
 					if terr != nil {
 						// Ignore err, just print error log
-						log.Errorf("original err: %s, transition err: %s", err.Error(), terr.Error())
+						log.Debugf("original err: %s, transition err: %s", err.Error(), terr.Error())
 					}
 					return nil
 				}
