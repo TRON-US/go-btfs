@@ -26,6 +26,7 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 var StorageUploadInitCmd = &cmds.Command{
@@ -158,6 +159,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
+
 				// check payment
 				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.N.PrivateKey)
 				if err != nil {
@@ -314,10 +316,22 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 		scaledRetry = highRetry
 	}
 	expir := uint64(guardContract.RentEnd.Unix())
+
+	renterPid, err := peer.IDB58Decode(guardContract.PreparerPid)
+	if err != nil {
+		return err
+	}
 	// based on small and large file sizes
 	err = backoff.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), scaled)
 		defer cancel()
+
+		go func() {
+			swarmCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+		}()
+
 		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api, fileCid, shardCid, "", true, expir)
 		return err
 	}, uh.DownloadShardBo(scaledRetry))

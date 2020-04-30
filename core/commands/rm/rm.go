@@ -28,7 +28,8 @@ func RmDag(ctx context.Context, hashes []string, n *core.IpfsNode, req *cmds.Req
 		p := path.New(b)
 		node, err := api.ResolveNode(ctx, p)
 		if err != nil {
-			return nil, err
+			results = append(results, fmt.Sprintf("Error resolving root %s: %v", b, err))
+			continue
 		}
 
 		_, pinned, err := n.Pinning.IsPinned(node.Cid())
@@ -39,14 +40,16 @@ func RmDag(ctx context.Context, hashes []string, n *core.IpfsNode, req *cmds.Req
 			// Since we are removing a file, we need to set recursive flag to true
 			err = api.Pin().Rm(ctx, p, options.Pin.RmRecursive(true), options.Pin.RmForce(force))
 			if err != nil {
-				return nil, err
+				results = append(results, fmt.Sprintf("Error removing root %s pin: %v", b, err))
+				continue
 			}
 		}
 
 		// Rm all child links
 		err = rmAllDags(ctx, api, node, &results, map[string]bool{})
 		if err != nil {
-			return nil, err
+			results = append(results, fmt.Sprintf("Error removing root %s child objects: %v", b, err))
+			continue
 		}
 	}
 
@@ -63,7 +66,7 @@ func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *
 		// Resolve, recurse, then finally remove
 		rn, err := api.ResolveNode(ctx, path.IpfsPath(nl.Cid))
 		if err != nil {
-			*res = append(*res, fmt.Sprintf("Error resolving object %s", nl.Cid))
+			*res = append(*res, fmt.Sprintf("Error resolving object %s: %v", nl.Cid, err))
 			continue // continue with other nodes
 		}
 		if err := rmAllDags(ctx, api, rn, res, removed); err != nil {
@@ -72,7 +75,7 @@ func rmAllDags(ctx context.Context, api coreiface.CoreAPI, node ipld.Node, res *
 	}
 	ncid := node.Cid()
 	if err := api.Dag().Remove(ctx, ncid); err != nil {
-		*res = append(*res, fmt.Sprintf("Error removing object %s", ncid))
+		*res = append(*res, fmt.Sprintf("Error removing object %s: %v", ncid, err))
 		return err
 	} else {
 		*res = append(*res, fmt.Sprintf("Removed %s", ncid))

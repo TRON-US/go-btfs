@@ -137,7 +137,6 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 	} else {
 		msg = ""
 	}
-	fmt.Printf("session: %s entered state: %s, msg: %s\n", rs.SsId, e.Dst, msg)
 	switch e.Dst {
 	case RssErrorStatus:
 		msg = e.Args[0].(error).Error()
@@ -145,6 +144,7 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 	case RssCompleteStatus:
 		rs.Cancel()
 	}
+	fmt.Printf("[%s] session: %s entered state: %s, msg: %s\n", time.Now().Format(time.RFC3339), rs.SsId, e.Dst, msg)
 	err := Save(rs.CtxParams.N.Repo.Datastore(), fmt.Sprintf(RenterSessionStatusKey, rs.PeerId, rs.SsId),
 		&renterpb.RenterSessionStatus{
 			Status:      e.Dst,

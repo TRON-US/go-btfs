@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	hostShardPrefix       = "/btfs/%s/renter/shards/"
+	hostShardPrefix       = "/btfs/%s/host/shards/"
 	hostShardKey          = hostShardPrefix + "%s/"
 	hostShardsInMemKey    = hostShardKey
 	hostShardStatusKey    = hostShardKey + "status"
