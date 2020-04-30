@@ -72,8 +72,9 @@ func init() {
 	for _, s := range rssFsmEvents {
 		src = append(src, s.Src...)
 	}
+	// all status can point to error, including error
 	rssFsmEvents = append(rssFsmEvents, fsm.EventDesc{
-		Name: RssToErrorEvent, Src: src, Dst: RssErrorStatus,
+		Name: RssToErrorEvent, Src: append(src, RssErrorStatus), Dst: RssErrorStatus,
 	})
 }
 
