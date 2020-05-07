@@ -133,6 +133,16 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
+		// Verify price
+		storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
+		totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
+		if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
+			fmt.Println("escrowContract.Amount", escrowContract.Amount)
+			fmt.Println("guardContractMeta.Amount", guardContractMeta.Amount)
+			fmt.Println("totalPay", totalPay)
+			return errors.New("invalid contract")
+		}
+
 		// Sign on the contract
 		signedEscrowContractBytes, err := signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
 			ctxParams.N.PrivateKey)
