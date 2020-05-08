@@ -137,9 +137,6 @@ the shard and replies back to client for the next challenge step.`,
 		storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
 		totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
 		if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
-			fmt.Println("escrowContract.Amount", escrowContract.Amount)
-			fmt.Println("guardContractMeta.Amount", guardContractMeta.Amount)
-			fmt.Println("totalPay", totalPay)
 			return errors.New("invalid contract")
 		}
 
