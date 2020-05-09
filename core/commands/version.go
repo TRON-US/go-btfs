@@ -6,6 +6,7 @@ import (
 	"io"
 	"runtime"
 	"runtime/debug"
+	"syscall"
 
 	version "github.com/TRON-US/go-btfs"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
@@ -28,6 +29,30 @@ const (
 	versionAllOptionName    = "all"
 )
 
+func convertInt8ToStr(array []int8) string {
+	var str string
+	for _, v := range array {
+		str += string(int(v))
+	}
+	return str
+}
+
+func getSystemVersionString() string {
+	var systemVersion = runtime.GOARCH + "/" + runtime.GOOS
+	var uname syscall.Utsname
+
+	// get system version from uname when available
+	if err := syscall.Uname(&uname); err == nil {
+		systemVersion = fmt.Sprintf("%s %s %s",
+			convertInt8ToStr(uname.Sysname[:]),
+			convertInt8ToStr(uname.Release[:]),
+			convertInt8ToStr(uname.Version[:]))
+	}
+
+	return systemVersion
+}
+
+
 var VersionCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "Show btfs version information.",
@@ -48,7 +73,7 @@ var VersionCmd = &cmds.Command{
 			Version: version.CurrentVersionNumber,
 			Commit:  version.CurrentCommit,
 			Repo:    fmt.Sprint(fsrepo.RepoVersion),
-			System:  runtime.GOARCH + "/" + runtime.GOOS, //TODO: Precise version here
+			System:  getSystemVersionString(),
 			Golang:  runtime.Version(),
 		})
 	},
