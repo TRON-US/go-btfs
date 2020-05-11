@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
@@ -27,6 +28,8 @@ import (
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
+
+var once sync.Once
 
 var StorageUploadInitCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -54,6 +57,12 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
+		go once.Do(func() {
+			for {
+				ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+				ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: "16Uiu2HAm3Mw7YsZS3f5KH8VS4fnmdKxgQ1NNPugX7DpM5TQZP9uw"})
+			}
+		})
 		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
