@@ -144,7 +144,11 @@ the challenge request back to the caller.`,
 			return err
 		}
 		fmt.Println("done response...")
-		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
+		err = cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
+		if err != nil {
+			fmt.Println("emit err", err)
+		}
+		return err
 	},
 	Type: StorageChallengeRes{},
 }
