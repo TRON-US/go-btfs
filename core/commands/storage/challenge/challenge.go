@@ -143,7 +143,8 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
-		fmt.Println("done response...")
+		id, _ := remote.GetStreamRequestRemotePeerID(req, n)
+		fmt.Println("done response...", id)
 		err = cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
 		if err != nil {
 			fmt.Println("emit err", err)
