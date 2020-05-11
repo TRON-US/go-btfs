@@ -34,7 +34,7 @@ var (
 		bo := backoff.NewExponentialBackOff()
 		bo.InitialInterval = 5 * time.Second
 		bo.MaxElapsedTime = 24 * time.Hour
-		bo.Multiplier = 1.5
+		bo.Multiplier = 1
 		bo.MaxInterval = 5 * time.Minute
 		return bo
 	}()
