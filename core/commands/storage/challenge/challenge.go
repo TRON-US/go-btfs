@@ -3,6 +3,7 @@ package challenge
 import (
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
@@ -13,6 +14,8 @@ import (
 
 	cidlib "github.com/ipfs/go-cid"
 )
+
+var count int32
 
 var StorageChallengeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -143,12 +146,12 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
-		id, _ := remote.GetStreamRequestRemotePeerID(req, n)
-		fmt.Println("done response...", id)
 		err = cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
 		if err != nil {
 			fmt.Println("emit err", err)
 		}
+		atomic.AddInt32(&count, 1)
+		fmt.Println("done response...", "count", atomic.LoadInt32(&count))
 		return err
 	},
 	Type: StorageChallengeRes{},
