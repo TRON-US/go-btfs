@@ -61,6 +61,7 @@ the shard and replies back to client for the next challenge step.`,
 			for {
 				ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 				ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: "16Uiu2HAm3Mw7YsZS3f5KH8VS4fnmdKxgQ1NNPugX7DpM5TQZP9uw"})
+				time.Sleep(500 * time.Millisecond)
 			}
 		})
 		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
