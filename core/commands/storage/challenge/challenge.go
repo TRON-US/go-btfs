@@ -101,6 +101,7 @@ the challenge request back to the caller.`,
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		fmt.Println("do response...")
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -142,6 +143,7 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
+		fmt.Println("done response...")
 		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
 	},
 	Type: StorageChallengeRes{},
