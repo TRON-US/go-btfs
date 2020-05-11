@@ -133,6 +133,13 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
+		// Verify price
+		storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
+		totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
+		if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
+			return errors.New("invalid contract")
+		}
+
 		// Sign on the contract
 		signedEscrowContractBytes, err := signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
 			ctxParams.N.PrivateKey)
@@ -327,9 +334,18 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 		defer cancel()
 
 		go func() {
-			swarmCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			defer cancel()
-			ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+			for {
+				select {
+				case <-ctx.Done():
+					break
+				}
+				swarmCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
+				err := ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+				if err == nil {
+					return
+				}
+			}
 		}()
 
 		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api, fileCid, shardCid, "", true, expir)

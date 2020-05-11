@@ -43,6 +43,12 @@ This command print upload and payment status by the time queried.`,
 		}
 		status.Status = sessionStatus.Status
 		status.Message = sessionStatus.Message
+		info, err := session.GetAdditionalInfo()
+		if err == nil {
+			status.AdditionalInfo = info.Info
+		} else {
+			// NOP
+		}
 
 		// get shards info from session
 		shards := make(map[string]*ShardStatus)
@@ -81,10 +87,11 @@ This command print upload and payment status by the time queried.`,
 }
 
 type StatusRes struct {
-	Status   string
-	Message  string
-	FileHash string
-	Shards   map[string]*ShardStatus
+	Status         string
+	Message        string
+	AdditionalInfo string
+	FileHash       string
+	Shards         map[string]*ShardStatus
 }
 
 type ShardStatus struct {
