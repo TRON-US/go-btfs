@@ -198,9 +198,9 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				fmt.Println("do downloadShardFromClient...")
+				fmt.Println("do downloadShardFromClient...", "shard", shardHash, "file", req.Arguments[1])
 				err = downloadShardFromClient(ctxParams, halfSignedGuardContract, req.Arguments[1], shardHash)
-				fmt.Println("done downloadShardFromClient...")
+				fmt.Println("done downloadShardFromClient...", "shard", shardHash, "file", req.Arguments[1])
 				if err != nil {
 					return err
 				}
@@ -221,7 +221,7 @@ the shard and replies back to client for the next challenge step.`,
 				// req.Context obsolete
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
-				fmt.Println("do upload to guard...")
+				fmt.Println("do upload to guard...", "shard", shardHash, "file", req.Arguments[1])
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
 						_, err = client.ReadyForChallenge(ctx, in)
@@ -230,7 +230,7 @@ the shard and replies back to client for the next challenge step.`,
 						}
 						return nil
 					})
-				fmt.Println("done upload to guard...", "err", err)
+				fmt.Println("done upload to guard...", "err", err, "shard", shardHash, "file", req.Arguments[1])
 				if err != nil {
 					return err
 				}
