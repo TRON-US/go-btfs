@@ -42,7 +42,7 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 	Arguments: append([]cmds.Argument{
 		cmds.StringArg("peer-id", true, false, "Host Peer ID to send challenge requests."),
 	}, StorageChallengeResponseCmd.Arguments...), // append pass-through arguments
-	RunTimeout: 5 * time.Second, // TODO: consider slow networks?
+	RunTimeout: 5 * time.Second,                  // TODO: consider slow networks?
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -104,7 +104,7 @@ the challenge request back to the caller.`,
 	},
 	RunTimeout: 3 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		fmt.Println("do response...")
+		fmt.Println("do response...", "shard", req.Arguments[2], "file", req.Arguments[1])
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -151,7 +151,7 @@ the challenge request back to the caller.`,
 			fmt.Println("emit err", err)
 		}
 		atomic.AddInt32(&count, 1)
-		fmt.Println("done response...", "count", atomic.LoadInt32(&count))
+		fmt.Println("done response...", "shard", req.Arguments[2], "file", req.Arguments[1])
 		return err
 	},
 	Type: StorageChallengeRes{},
