@@ -88,6 +88,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 				for _, c := range meta.Contracts {
 					m[c.State.String()]++
 					if c.State == guardpb.Contract_UPLOADED {
+						fmt.Println("host", c.HostPid, "state", c.State)
 						num++
 					}
 					shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, c.ShardHash, int(c.ShardIndex))
