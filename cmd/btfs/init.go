@@ -33,8 +33,8 @@ const (
 	bitsOptionName         = "bits"
 	emptyRepoOptionName    = "empty-repo"
 	profileOptionName      = "profile"
+	keyTypeDefault         = "BIP39"
 	keyTypeOptionName      = "key"
-	keyTypeDefault         = "Secp256k1"
 	importKeyOptionName    = "import"
 	rmOnUnpinOptionName    = "rm-on-unpin"
 	seedOptionName         = "seed"
@@ -130,49 +130,50 @@ environment variable:
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
 
-		finalImportKey, error := generateKey(importKey, keyType, seedPhrase)
-		if error == nil {
-			return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, finalImportKey, rmOnUnpin)
+		finalImportKey, mnemonic, err := generateKey(importKey, keyType, seedPhrase)
+		if err == nil {
+			return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, finalImportKey, mnemonic, rmOnUnpin)
 		} else {
-			return error
+			return err
 		}
 	},
 }
 
-func generateKey(importKey string, keyType string, seedPhrase string) (string, error) {
+func generateKey(importKey string, keyType string, seedPhrase string) (string, string, error) {
 	mnemonicLen := len(strings.Split(seedPhrase, ","))
 	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-	if importKey != "" && keyType != "" {
-		return "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+	if importKey != "" && strings.ToLower(keyType) != "secp256k1" {
+		return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 	} else if seedPhrase != "" {
 		if mnemonicLen != mnemonicLength {
-			return "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
+			return "", "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
 		}
 		if err := !bip39.IsMnemonicValid(mnemonic); err {
-			return "", fmt.Errorf("Entered seed phrase is not valid")
+			return "", "", fmt.Errorf("Entered seed phrase is not valid")
 		}
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
-		importKey = generatePrivKeyUsingBIP39(mnemonic)
-	}
-
-	if keyType == "" {
-		keyType = keyTypeDefault
-	} else if keyType == "BIP39" {
+		return generatePrivKeyUsingBIP39(mnemonic)
+	} else if keyType == "" || keyType == "BIP39" {
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
-		importKey = generatePrivKeyUsingBIP39("")
+		return generatePrivKeyUsingBIP39("")
+	} else {
+		return importKey, mnemonic, nil
 	}
-	return importKey, nil
 }
 
 var errRepoExists = errors.New(`btfs configuration file already exists!
 Reinitializing would overwrite your keys.
 `)
 
-func generatePrivKeyUsingBIP39(mnemonic string) string {
+func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
 	if mnemonic == "" {
 		entropy, _ := bip39.NewEntropy(defaultEntropy)
 		mnemonic, _ = bip39.NewMnemonic(entropy)
+	}
+
+	if !bip39.IsMnemonicValid(mnemonic) {
+		return "", "", fmt.Errorf("invalid mnemonic: %s", mnemonic)
 	}
 
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
@@ -195,7 +196,7 @@ func generatePrivKeyUsingBIP39(mnemonic string) string {
 	fmt.Println("Tron private key: ", importKey)
 	fmt.Println("Master public key: ", publicKey)
 
-	return importKey
+	return importKey, mnemonic, nil
 }
 
 func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
@@ -205,11 +206,11 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 	}
 
 	// the last argument (false) refers to the configuration variable Experimental.RemoveOnUnpin
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", false)
+	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", "", false)
 }
 
 func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,
-	keyType string, importKey string, rmOnUnpin bool) error {
+	keyType string, importKey string, mnemonic string, rmOnUnpin bool) error {
 	if _, err := fmt.Fprintf(out, "initializing BTFS node at %s\n", repoRoot); err != nil {
 		return err
 	}
@@ -224,7 +225,7 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 
 	if conf == nil {
 		var err error
-		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey, rmOnUnpin)
+		conf, err = config.Init(out, nBitsForKeypair, keyType, importKey, mnemonic, rmOnUnpin)
 		if err != nil {
 			return err
 		}

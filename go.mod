@@ -157,3 +157,5 @@ replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1
 replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.1.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.4.1
+
+replace github.com/TRON-US/go-btfs-config => ../go-btfs-config
