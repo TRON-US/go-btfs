@@ -1,13 +1,13 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"io"
-	"strconv"
-
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
+	"io"
+	"strconv"
 )
 
 var WalletCmd = &cmds.Command{
@@ -19,10 +19,13 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":     walletInitCmd,
-		"deposit":  walletDepositCmd,
-		"withdraw": walletWithdrawCmd,
-		"balance":  walletBalanceCmd,
+		"init":         walletInitCmd,
+		"deposit":      walletDepositCmd,
+		"withdraw":     walletWithdrawCmd,
+		"balance":      walletBalanceCmd,
+		"password":     walletPasswordCmd,
+		"keys":         walletKeysCmd,
+		"transactions": walletTransactionsCmd,
 	},
 }
 
@@ -170,6 +173,99 @@ var walletBalanceCmd = &cmds.Command{
 			fmt.Fprint(w, out.Message)
 			return nil
 		}),
+	},
+	Type: MessageOutput{},
+}
+
+var walletPasswordCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet password",
+		ShortDescription: "set password for BTFS wallet",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("password", true, false, "password of BTFS wallet."),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		if cfg.Identity.Password == "" {
+			cfg.Identity.Password = req.Arguments[0]
+			err := n.Repo.SetConfig(cfg)
+			if err != nil {
+				return err
+			}
+		} else {
+			return errors.New("Password had been set. Can't be set again.")
+		}
+		return cmds.EmitOnce(res, &MessageOutput{"Password set."})
+	},
+	Type: MessageOutput{},
+}
+
+const passwordOptionName = "password"
+
+var walletKeysCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet keys",
+		ShortDescription: "get keys of BTFS wallet",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("password", false, false, "password of BTFS wallet."),
+	},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password of BTFS wallet"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		password, _ := req.Options[passwordOptionName].(string)
+		if password != cfg.Identity.Password {
+			return errors.New("Wrong password. Please try again.")
+		}
+		return cmds.EmitOnce(res, &Keys{
+			PrivateKey: cfg.Identity.PrivKey,
+			Mnemonic:   cfg.Identity.Mnemonic,
+		})
+	},
+	Type: Keys{},
+}
+
+type Keys struct {
+	PrivateKey string
+	Mnemonic   string
+}
+
+var walletTransactionsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet transactions",
+		ShortDescription: "get transactions of BTFS wallet",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("type", true, false,
+			"Type of transacttions [escrow|from-in-app-wallet|to-in-app-wallet]."),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		_, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		switch req.Arguments[0] {
+		case "escrow":
+		case "from-in-app-wallet":
+		case "to-in-app-wallet":
+		}
+		return cmds.EmitOnce(res, &MessageOutput{
+		})
 	},
 	Type: MessageOutput{},
 }
