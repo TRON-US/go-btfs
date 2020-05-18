@@ -13,9 +13,6 @@ const (
 
 var collectClients map[int]interface{}
 
-// Output channel to LogClient
-var logOutputChan = make(chan []logclient.Entry, 1000)
-
 func init() {
 	collectClients = make(map[int]interface{})
 }
