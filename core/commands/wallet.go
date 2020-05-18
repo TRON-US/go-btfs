@@ -29,6 +29,7 @@ withdraw and query balance of token used in BTFS.`,
 		"password":     walletPasswordCmd,
 		"keys":         walletKeysCmd,
 		"transactions": walletTransactionsCmd,
+		"status":       walletStatusCmd,
 	},
 }
 
@@ -284,4 +285,31 @@ type Transaction struct {
 	From     string
 	To       string
 	Status   string
+}
+
+var walletStatusCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet status",
+		ShortDescription: "get status of BTFS wallet",
+	},
+	Arguments: []cmds.Argument{},
+	Options:   []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+		status := "new"
+		if cfg.Identity.Password != "" {
+			status = "initialized"
+		}
+		return cmds.EmitOnce(res, &Result{
+			Status: status,
+		})
+	},
+	Type: &Result{},
+}
+
+type Result struct {
+	Status string
 }
