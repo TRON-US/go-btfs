@@ -252,9 +252,8 @@ var walletTransactionsCmd = &cmds.Command{
 		Tagline:          "BTFS wallet transactions",
 		ShortDescription: "get transactions of BTFS wallet",
 	},
-	Arguments: []cmds.Argument{
-	},
-	Options: []cmds.Option{},
+	Arguments: []cmds.Argument{},
+	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		return cmds.EmitOnce(res, mockTxs())
 	},
