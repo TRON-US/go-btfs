@@ -26,6 +26,7 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 var StorageUploadInitCmd = &cmds.Command{
@@ -107,7 +108,15 @@ the shard and replies back to client for the next challenge step.`,
 		escrowContract := halfSignedEscrowContract.GetContract()
 		guardContractMeta := halfSignedGuardContract.ContractMeta
 		// get renter's public key
-		payerPubKey, err := crypto.GetPubKeyFromPeerId(req.Arguments[9])
+		pid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
+		if !ok {
+			return fmt.Errorf("fail to get peer ID from request")
+		}
+		var peerId string
+		if peerId = pid.String(); len(req.Arguments) >= 10 {
+			peerId = req.Arguments[9]
+		}
+		payerPubKey, err := crypto.GetPubKeyFromPeerId(peerId)
 		if err != nil {
 			return err
 		}
@@ -122,6 +131,13 @@ the shard and replies back to client for the next challenge step.`,
 		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, s)
 		if !ok || err != nil {
 			return fmt.Errorf("can't verify guard contract: %v", err)
+		}
+
+		// Verify price
+		storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
+		totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
+		if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
+			return errors.New("invalid contract")
 		}
 
 		// Sign on the contract
@@ -150,6 +166,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
+
 				// check payment
 				signedContractID, err := signContractID(escrowContract.ContractId, ctxParams.N.PrivateKey)
 				if err != nil {
@@ -306,10 +323,22 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 		scaledRetry = highRetry
 	}
 	expir := uint64(guardContract.RentEnd.Unix())
+
+	renterPid, err := peer.IDB58Decode(guardContract.PreparerPid)
+	if err != nil {
+		return err
+	}
 	// based on small and large file sizes
 	err = backoff.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), scaled)
 		defer cancel()
+
+		go func() {
+			swarmCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+		}()
+
 		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api, fileCid, shardCid, "", true, expir)
 		return err
 	}, uh.DownloadShardBo(scaledRetry))

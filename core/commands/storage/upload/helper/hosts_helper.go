@@ -1,8 +1,10 @@
 package helper
 
 import (
+	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
@@ -11,8 +13,8 @@ import (
 )
 
 const (
-	numHosts = 100
-	failMsg  = "failed to find more valid hosts, please try again later"
+	minimumHosts = 30
+	failMsg      = "failed to find more valid hosts, please try again later"
 )
 
 type IHostsProvider interface {
@@ -69,21 +71,26 @@ type HostsProvider struct {
 	current   int
 	hosts     []*hubpb.Host
 	blacklist []string
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 func GetHostsProvider(cp *ContextParams, blacklist []string) IHostsProvider {
+	ctx, cancel := context.WithTimeout(cp.Ctx, 10*time.Minute)
 	p := &HostsProvider{
 		cp:        cp,
 		mode:      cp.Cfg.Experimental.HostsSyncMode,
 		current:   -1,
 		blacklist: blacklist,
+		ctx:       ctx,
+		cancel:    cancel,
 	}
 	p.init()
 	return p
 }
 
 func (p *HostsProvider) init() (err error) {
-	p.hosts, err = helper.GetHostsFromDatastore(p.cp.Ctx, p.cp.N, p.mode, numHosts)
+	p.hosts, err = helper.GetHostsFromDatastore(p.cp.Ctx, p.cp.N, p.mode, minimumHosts)
 	return err
 }
 
@@ -101,11 +108,17 @@ func (p *HostsProvider) NextValidHost(price int64) (string, error) {
 	needHigherPrice := false
 LOOP:
 	for true {
+		select {
+		case <-p.ctx.Done():
+			p.cancel()
+			return "", errors.New(failMsg)
+		default:
+		}
 		if index, err := p.AddIndex(); err == nil {
 			host := p.hosts[index]
 			for _, h := range p.blacklist {
 				if h == host.NodeId {
-					break LOOP
+					continue LOOP
 				}
 			}
 			id, err := peer.IDB58Decode(host.NodeId)
@@ -113,7 +126,11 @@ LOOP:
 				needHigherPrice = true
 				continue
 			}
-			if err := p.cp.Api.Swarm().Connect(p.cp.Ctx, peer.AddrInfo{ID: id}); err != nil {
+			ctx, _ := context.WithTimeout(p.ctx, 3*time.Second)
+			if err := p.cp.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: id}); err != nil {
+				p.Lock()
+				p.hosts = append(p.hosts, host)
+				p.Unlock()
 				continue
 			}
 			return host.NodeId, nil

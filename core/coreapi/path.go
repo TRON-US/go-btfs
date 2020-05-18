@@ -37,12 +37,8 @@ func (api *CoreAPI) ResolvePath(ctx context.Context, p path.Path) (path.Resolved
 	if _, ok := p.(path.Resolved); ok {
 		return p.(path.Resolved), nil
 	}
-	if err := p.IsValid(); err != nil {
-		return nil, err
-	}
 
-	ipath := ipfspath.Path(p.String())
-	ipath, err := resolve.ResolveIPNS(ctx, api.namesys, ipath)
+	ipath, err := api.ResolveIpnsPath(ctx, p)
 	if err == resolve.ErrNoNamesys {
 		return nil, coreiface.ErrOffline
 	} else if err != nil {
@@ -65,7 +61,7 @@ func (api *CoreAPI) ResolvePath(ctx context.Context, p path.Path) (path.Resolved
 		ResolveOnce: resolveOnce,
 	}
 
-	node, rest, err := r.ResolveToLastNode(ctx, ipath)
+	node, rest, err := r.ResolveToLastNode(ctx, *ipath)
 	if err != nil {
 		return nil, err
 	}
@@ -75,5 +71,18 @@ func (api *CoreAPI) ResolvePath(ctx context.Context, p path.Path) (path.Resolved
 		return nil, err
 	}
 
-	return path.NewResolvedPath(ipath, node, root, gopath.Join(rest...)), nil
+	return path.NewResolvedPath(*ipath, node, root, gopath.Join(rest...)), nil
+}
+
+func (api *CoreAPI) ResolveIpnsPath(ctx context.Context, p path.Path) (*ipfspath.Path, error) {
+	if err := p.IsValid(); err != nil {
+		return nil, err
+	}
+
+	ipath := ipfspath.Path(p.String())
+	ipath, err := resolve.ResolveIPNS(ctx, api.namesys, ipath)
+	if err != nil {
+		return nil, err
+	}
+	return &ipath, nil
 }

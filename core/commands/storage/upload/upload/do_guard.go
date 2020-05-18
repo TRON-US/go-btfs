@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/guard"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
@@ -25,6 +27,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 		return err
 	}
 	cts := make([]*guardpb.Contract, 0)
+	selectedHosts := make([]string, 0)
 	for i, h := range rss.ShardHashes {
 		shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, h, i)
 		if err != nil {
@@ -38,6 +41,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 		contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
 		contracts.SignedGuardContract.LastModifyTime = time.Now()
 		cts = append(cts, contracts.SignedGuardContract)
+		selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)
 	}
 	fsStatus, err := newFileStatus(cts, rss.CtxParams.Cfg, cts[0].ContractMeta.RenterPid, rss.Hash, fileSize)
 	if err != nil {
@@ -69,7 +73,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 				}
 				return sig, nil
 			}(); err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			} else {
 				cb <- sig
@@ -98,6 +102,27 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
+	go func() {
+		for {
+			select {
+			case <-rss.Ctx.Done():
+				return
+			default:
+				wg := sync.WaitGroup{}
+				for _, h := range selectedHosts {
+					wg.Add(1)
+					go func(host string) {
+						ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+						id, _ := peer.IDB58Decode(host)
+						rss.CtxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: id})
+						wg.Done()
+					}(h)
+				}
+				wg.Wait()
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
 	return waitUpload(rss, offlineSigning, fsStatus.RenterPid)
 }
 

@@ -58,7 +58,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 		go func() {
 			sign, err := crypto.Sign(payerPrivKey, req)
 			if err != nil {
-				_ = rss.To(sessions.RssErrorStatus, err)
+				_ = rss.To(sessions.RssToErrorEvent, err)
 				return
 			}
 			cb <- sign
@@ -89,7 +89,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 					}
 				}
 				log.Infof("%d shards uploaded.", num)
-				if num >= int(threshold) {
+				if num >= threshold {
 					return nil
 				}
 				return errors.New("uploading")
