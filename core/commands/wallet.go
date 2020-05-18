@@ -3,11 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io"
+	"math/rand"
+	"strconv"
+	"time"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
-	"io"
-	"strconv"
 )
 
 var WalletCmd = &cmds.Command{
@@ -250,22 +253,36 @@ var walletTransactionsCmd = &cmds.Command{
 		ShortDescription: "get transactions of BTFS wallet",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("type", true, false,
-			"Type of transacttions [escrow|from-in-app-wallet|to-in-app-wallet]."),
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		_, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		switch req.Arguments[0] {
-		case "escrow":
-		case "from-in-app-wallet":
-		case "to-in-app-wallet":
-		}
-		return cmds.EmitOnce(res, &MessageOutput{
-		})
+		return cmds.EmitOnce(res, mockTxs())
 	},
-	Type: MessageOutput{},
+	Type: []*Transaction{},
+}
+
+func mockTxs() []*Transaction {
+	txs := make([]*Transaction, 0)
+	size := rand.Intn(24) + 5
+	as := []string{"BTT Wallet", "BTFS Wallet", "TYJe9S6BU8ScjPgqESsxufvd4Y1sHiDUfV", "TLnJBLvSohT8k5gaG8vXBRfPYLFiAHuJqJ"}
+	ss := []string{"Pending", "Success", "Failed"}
+	for i := 0; i < size; i++ {
+		asi := rand.Intn(4)
+		txs = append(txs, &Transaction{
+			Datetime: time.Now().Add(time.Duration(-rand.Intn(1000)) * time.Hour),
+			Amount:   rand.Int63n(100000000),
+			From:     as[asi],
+			To:       as[(asi+1)%4],
+			Status:   ss[rand.Intn(3)],
+		})
+	}
+	return txs
+}
+
+type Transaction struct {
+	Datetime time.Time
+	Amount   int64
+	From     string
+	To       string
+	Status   string
 }
