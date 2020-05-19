@@ -6,11 +6,20 @@ import (
 	gologging "github.com/ipfs/go-log"
 )
 
+var logCollectEnabled bool
+
+func init() {
+	logCollectEnabled = u.GetenvBool("LOG_COLLECT") // TODO: add to .btfs/config file
+}
+
 func Logger(system string) *gologging.ZapEventLogger {
-	logCollect := u.GetenvBool("LOG_COLLECT") // TODO: add to .btfs/config file
-	if logCollect {
+	if logCollectEnabled {
 		return gologging.LoggerWithOutChannel(system, logclient.LogOutputChan)
 	} else {
 		return gologging.Logger(system)
 	}
+}
+
+func LogCollectEnabled() bool {
+	return logCollectEnabled
 }

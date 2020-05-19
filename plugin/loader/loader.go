@@ -282,6 +282,10 @@ func injectTracerPlugin(pl plugin.PluginTracer) error {
 }
 
 func injectCollectPlugin(pl plugin.PluginCollect, params ...interface{}) error {
+	if !logging.LogCollectEnabled() {
+		return nil
+	}
+
 	collectClient, err := pl.InitCollect(params)
 	if err != nil {
 		return err
