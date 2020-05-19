@@ -3,7 +3,9 @@ package sessions
 import (
 	"context"
 	"fmt"
+	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 	"strings"
+	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
@@ -20,11 +22,12 @@ import (
 )
 
 const (
-	renterShardPrefix       = "/btfs/%s/renter/shards/"
-	renterShardKey          = renterShardPrefix + "%s/"
-	renterShardsInMemKey    = renterShardKey
-	renterShardStatusKey    = renterShardKey + "status"
-	renterShardContractsKey = renterShardKey + "contracts"
+	renterShardPrefix            = "/btfs/%s/renter/shards/"
+	renterShardKey               = renterShardPrefix + "%s/"
+	renterShardsInMemKey         = renterShardKey
+	renterShardStatusKey         = renterShardKey + "status"
+	renterShardContractsKey      = renterShardKey + "contracts"
+	renterShardAdditionalInfoKey = renterShardKey + "additional-info"
 
 	rshInitStatus      = "init"
 	rshContractStatus  = "contract"
@@ -249,4 +252,20 @@ func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
 		//staleHashes = append(staleHashes, ish)
 	}
 	return scs, staleHashes, nil
+}
+
+func (rs *RenterShard) UpdateAdditionalInfo(info string) error {
+	shardId := GetShardId(rs.ssId, rs.hash, rs.index)
+	return Save(rs.ds, fmt.Sprintf(renterShardAdditionalInfoKey, rs.peerId, shardId),
+		&renterpb.RenterSessionAdditionalInfo{
+			Info:        info,
+			LastUpdated: time.Now(),
+		})
+}
+
+func (rs *RenterShard) GetAdditionalInfo() (*shardpb.AdditionalInfo, error) {
+	pb := &shardpb.AdditionalInfo{}
+	shardId := GetShardId(rs.ssId, rs.hash, rs.index)
+	err := Get(rs.ds, fmt.Sprintf(renterShardAdditionalInfoKey, rs.peerId, shardId), pb)
+	return pb, err
 }

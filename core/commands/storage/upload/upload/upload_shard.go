@@ -107,21 +107,11 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 						renterId,
 					)
 					if err != nil {
-						switch err.(type) {
-						case remote.IoError:
-							// NOP
-							log.Debug("io error", err)
-						case remote.BusinessError:
-							log.Debug("write remote.BusinessError", h, err)
-							cb <- err
-						default:
-							log.Debug("write default err", h, err)
-							cb <- err
-						}
+						cb <- err
 					}
 				}()
-				// host needs to send recv in 10 seconds, or the contract will be invalid.
-				tick := time.Tick(10 * time.Second)
+				// host needs to send recv in 30 seconds, or the contract will be invalid.
+				tick := time.Tick(30 * time.Second)
 				select {
 				case err = <-cb:
 					ShardErrChanMap.Remove(contractId)
@@ -131,7 +121,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 			}, helper.HandleShardBo)
 			if err != nil {
-				_ = rss.To(sessions.RssToErrorEvent, err)
+				_ = rss.To(sessions.RssToErrorEvent,
+					errors.New("timeout: failed to setup contract in "+helper.HandleShardBo.MaxElapsedTime.String()))
 			}
 		}(shardIndexes[index], shardHash)
 	}
