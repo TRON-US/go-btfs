@@ -3,15 +3,16 @@ package commands
 import (
 	"errors"
 	"fmt"
-	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 	"io"
 	"math/rand"
 	"strconv"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
+	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var WalletCmd = &cmds.Command{
