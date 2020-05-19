@@ -2,7 +2,6 @@ package collect
 
 import (
 	"fmt"
-	"github.com/TRON-US/go-btfs-collect-client/logclient"
 )
 
 const (
