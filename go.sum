@@ -46,6 +46,8 @@ github.com/TRON-US/go-btfs-chunker v0.2.8/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14J
 github.com/TRON-US/go-btfs-cmds v0.1.6 h1:r1JCcAfWxGHpFxZpmlQN3NTEqbN9BRmX4ximfmBh2ok=
 github.com/TRON-US/go-btfs-cmds v0.1.6/go.mod h1:rtki4vmPzq7qmjdzThJELFpSpxTiORoXreHlExdI6eg=
 github.com/TRON-US/go-btfs-collect-client v0.0.1/go.mod h1:BV2W6GMyfvDKLuFo4PkYEtHQJMTe9+JJNu1PsjHxh2Y=
+github.com/TRON-US/go-btfs-collect-client v0.0.2 h1:m1j6pLr7pfvehr1IKG/XnaK2MjhZq14FWe8T96sZiUo=
+github.com/TRON-US/go-btfs-collect-client v0.0.2/go.mod h1:BV2W6GMyfvDKLuFo4PkYEtHQJMTe9+JJNu1PsjHxh2Y=
 github.com/TRON-US/go-btfs-config v0.5.5 h1:/llbIvNar+AkeTbv0uCCy3fzumdjicXiWgwAF2PaLCM=
 github.com/TRON-US/go-btfs-config v0.5.5/go.mod h1:045+FmBpTIWNy34ISzjtPaEf6afBq6wVQtviNmAnF5g=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
