@@ -16,6 +16,8 @@ import (
 	"sync"
 
 	version "github.com/TRON-US/go-btfs"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
@@ -29,9 +31,6 @@ import (
 	"github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 	"github.com/TRON-US/go-btfs/spin"
-
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	"github.com/hashicorp/go-multierror"

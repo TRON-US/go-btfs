@@ -15,8 +15,8 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/protobuf/proto"
 
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/ipfs/go-datastore"
-	logging "github.com/ipfs/go-log"
 	"github.com/looplab/fsm"
 	cmap "github.com/orcaman/concurrent-map"
 )

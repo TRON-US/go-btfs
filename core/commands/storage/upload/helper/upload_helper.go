@@ -15,11 +15,11 @@ import (
 	iface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
-	logging "github.com/ipfs/go-log"
 )
 
 const (

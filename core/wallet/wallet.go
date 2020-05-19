@@ -18,8 +18,8 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"github.com/tron-us/protobuf/proto"
 
+	"github.com/TRON-US/go-btfs/logging"
 	eth "github.com/ethereum/go-ethereum/crypto"
-	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
 

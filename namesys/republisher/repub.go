@@ -9,10 +9,10 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	path "github.com/ipfs/go-path"
 
+	"github.com/TRON-US/go-btfs/logging"
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	pb "github.com/ipfs/go-ipns/pb"
-	logging "github.com/ipfs/go-log"
 	goprocess "github.com/jbenet/goprocess"
 	gpctx "github.com/jbenet/goprocess/context"
 	ic "github.com/libp2p/go-libp2p-core/crypto"

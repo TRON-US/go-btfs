@@ -5,7 +5,7 @@ import (
 	"io"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	logging "github.com/ipfs/go-log"
+	gologging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
 )
 
@@ -61,7 +61,7 @@ the event log.
 			subsystem = "*"
 		}
 
-		if err := logging.SetLogLevel(subsystem, level); err != nil {
+		if err := gologging.SetLogLevel(subsystem, level); err != nil {
 			return err
 		}
 
@@ -88,7 +88,7 @@ subsystems of a running daemon.
 `,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		return cmds.EmitOnce(res, &stringList{logging.GetSubsystems()})
+		return cmds.EmitOnce(res, &stringList{gologging.GetSubsystems()})
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, list *stringList) error {

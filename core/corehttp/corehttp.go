@@ -12,7 +12,7 @@ import (
 	"time"
 
 	core "github.com/TRON-US/go-btfs/core"
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/jbenet/goprocess"
 	periodicproc "github.com/jbenet/goprocess/periodic"
 	ma "github.com/multiformats/go-multiaddr"

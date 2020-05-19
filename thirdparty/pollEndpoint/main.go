@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
 )
