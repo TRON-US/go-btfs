@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
-
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
+	"strings"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/ledger"
@@ -47,7 +47,7 @@ type Wallet struct {
 }
 
 // withdraw from ledger to tron
-func WalletWithdraw(configuration *config.Config, amount int64) error {
+func WalletWithdraw(configuration *config.Config, n *core.IpfsNode, amount int64) error {
 	err := Init(configuration)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 	}
 
 	// Doing withdraw request.
-	channelId, id, err := Withdraw(hostWallet.ledgerAddress, hostWallet.tronAddress, amount, hostWallet.privateKey)
+	channelId, id, err := Withdraw(n, hostWallet.ledgerAddress, hostWallet.tronAddress, amount, hostWallet.privateKey)
 	if err != nil {
 		log.Error("Failed to Withdraw, ERR[%v]\n", err)
 		return err
@@ -85,7 +85,16 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 	return nil
 }
 
-func WalletDeposit(configuration *config.Config, amount int64, runDaemon bool) error {
+const (
+	InAppWallet = "BTFS Wallet"
+	BttWallet   = "BTT Wallet"
+
+	StatusPending = "Pending"
+	StatusSuccess = "Success"
+	StatusFailed  = "Failed"
+)
+
+func WalletDeposit(configuration *config.Config, n *core.IpfsNode, amount int64, runDaemon bool) error {
 	err := Init(configuration)
 	if err != nil {
 		return err
@@ -100,7 +109,7 @@ func WalletDeposit(configuration *config.Config, amount int64, runDaemon bool) e
 		return errors.New(fmt.Sprintf("deposit amount should between %d ~ %d", DepositMinAmount, DepositMaxAmount))
 	}
 
-	prepareResponse, err := Deposit(hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon)
+	prepareResponse, err := Deposit(n, hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon)
 	if err != nil {
 		log.Error("Failed to Deposit, ERR[%v]\n", err)
 		return err
