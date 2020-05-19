@@ -2,9 +2,9 @@ package upload
 
 import (
 	"fmt"
-
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	"github.com/ipfs/go-datastore"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
@@ -66,12 +66,17 @@ This command print upload and payment status by the time queried.`,
 			if err != nil {
 				return err
 			}
+			additionalInfo, err := shard.GetAdditionalInfo()
+			if err != nil && err != datastore.ErrNotFound {
+				return err
+			}
 			c := &ShardStatus{
-				ContractID: "",
-				Price:      0,
-				Host:       "",
-				Status:     st.Status,
-				Message:    st.Message,
+				ContractID:     "",
+				Price:          0,
+				Host:           "",
+				Status:         st.Status,
+				Message:        st.Message,
+				AdditionalInfo: additionalInfo.Info,
 			}
 			if contracts.SignedGuardContract != nil {
 				c.ContractID = contracts.SignedGuardContract.ContractId
@@ -95,9 +100,10 @@ type StatusRes struct {
 }
 
 type ShardStatus struct {
-	ContractID string
-	Price      int64
-	Host       string
-	Status     string
-	Message    string
+	ContractID     string
+	Price          int64
+	Host           string
+	Status         string
+	Message        string
+	AdditionalInfo string
 }

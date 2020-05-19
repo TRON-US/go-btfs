@@ -25,6 +25,10 @@ message Status {
   string message = 2;
 }
 
+message AdditionalInfo {
+  string info = 1;
+}
+
 message SignedContracts {
   bytes signed_escrow_contract = 1;
   guard.Contract signed_guard_contract = 2;
