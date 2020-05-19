@@ -3,14 +3,11 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io"
-	"math/rand"
-	"strconv"
-	"time"
-
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
+	"io"
+	"strconv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
@@ -279,30 +276,4 @@ var walletTransactionsCmd = &cmds.Command{
 		return cmds.EmitOnce(res, txs)
 	},
 	Type: []*walletpb.Transaction{},
-}
-
-func mockTxs() []*Transaction {
-	txs := make([]*Transaction, 0)
-	size := rand.Intn(24) + 5
-	as := []string{"BTT Wallet", "BTFS Wallet", "TYJe9S6BU8ScjPgqESsxufvd4Y1sHiDUfV", "TLnJBLvSohT8k5gaG8vXBRfPYLFiAHuJqJ"}
-	ss := []string{"Pending", "Success", "Failed"}
-	for i := 0; i < size; i++ {
-		asi := rand.Intn(4)
-		txs = append(txs, &Transaction{
-			Datetime: time.Now().Add(time.Duration(-rand.Intn(1000)) * time.Hour),
-			Amount:   rand.Int63n(100000000),
-			From:     as[asi],
-			To:       as[(asi+1)%4],
-			Status:   ss[rand.Intn(3)],
-		})
-	}
-	return txs
-}
-
-type Transaction struct {
-	Datetime time.Time
-	Amount   int64
-	From     string
-	To       string
-	Status   string
 }
