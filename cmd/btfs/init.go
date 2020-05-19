@@ -168,8 +168,14 @@ Reinitializing would overwrite your keys.
 
 func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
 	if mnemonic == "" {
-		entropy, _ := bip39.NewEntropy(defaultEntropy)
-		mnemonic, _ = bip39.NewMnemonic(entropy)
+		entropy, err := bip39.NewEntropy(defaultEntropy)
+		if err != nil {
+			return "", "", err
+		}
+		mnemonic, err = bip39.NewMnemonic(entropy)
+		if err != nil {
+			return "", "", err
+		}
 	}
 
 	if !bip39.IsMnemonicValid(mnemonic) {

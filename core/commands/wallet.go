@@ -29,7 +29,6 @@ withdraw and query balance of token used in BTFS.`,
 		"password":     walletPasswordCmd,
 		"keys":         walletKeysCmd,
 		"transactions": walletTransactionsCmd,
-		"status":       walletStatusCmd,
 	},
 }
 
@@ -195,18 +194,18 @@ var walletPasswordCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		if cfg.UI.Wallet.Initialized {
+			return errors.New("Already init, cannot set pasword again.")
+		}
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		if cfg.Identity.Password == "" {
-			cfg.Identity.Password = req.Arguments[0]
-			err := n.Repo.SetConfig(cfg)
-			if err != nil {
-				return err
-			}
-		} else {
-			return errors.New("Password had been set. Can't be set again.")
+		cfg.Identity.Password = req.Arguments[0]
+		cfg.UI.Wallet.Initialized = true
+		err = n.Repo.SetConfig(cfg)
+		if err != nil {
+			return err
 		}
 		return cmds.EmitOnce(res, &MessageOutput{"Password set."})
 	},
@@ -220,9 +219,7 @@ var walletKeysCmd = &cmds.Command{
 		Tagline:          "BTFS wallet keys",
 		ShortDescription: "get keys of BTFS wallet",
 	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("password", false, false, "password of BTFS wallet."),
-	},
+	Arguments: []cmds.Argument{},
 	Options: []cmds.Option{
 		cmds.StringOption(passwordOptionName, "p", "password of BTFS wallet"),
 	},
@@ -230,6 +227,9 @@ var walletKeysCmd = &cmds.Command{
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
+		}
+		if !cfg.UI.Wallet.Initialized {
+			return errors.New("Wallet not init yet.")
 		}
 		password, _ := req.Options[passwordOptionName].(string)
 		if password != cfg.Identity.Password {
@@ -285,31 +285,4 @@ type Transaction struct {
 	From     string
 	To       string
 	Status   string
-}
-
-var walletStatusCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "BTFS wallet status",
-		ShortDescription: "get status of BTFS wallet",
-	},
-	Arguments: []cmds.Argument{},
-	Options:   []cmds.Option{},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		status := "new"
-		if cfg.Identity.Password != "" {
-			status = "initialized"
-		}
-		return cmds.EmitOnce(res, &Result{
-			Status: status,
-		})
-	},
-	Type: &Result{},
-}
-
-type Result struct {
-	Status string
 }

@@ -172,7 +172,7 @@ NOTE: For security reasons, this command will omit your private key. If you woul
 			return err
 		}
 
-		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag} {
+		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag, config.Password} {
 			err = scrubValue(cfg, []string{config.IdentityTag, k})
 			if err != nil {
 				return err
