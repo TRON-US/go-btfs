@@ -172,9 +172,11 @@ NOTE: For security reasons, this command will omit your private key. If you woul
 			return err
 		}
 
-		err = scrubValue(cfg, []string{config.IdentityTag, config.PrivKeyTag})
-		if err != nil {
-			return err
+		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag, config.PasswordTag} {
+			err = scrubValue(cfg, []string{config.IdentityTag, k})
+			if err != nil {
+				return err
+			}
 		}
 
 		return cmds.EmitOnce(res, &cfg)
@@ -225,11 +227,9 @@ func scrubValue(m map[string]interface{}, key []string) error {
 	}
 
 	todel, _, ok := find(cur, key[len(key)-1])
-	if !ok {
-		return fmt.Errorf("%s, not found", strings.Join(key, "."))
+	if ok {
+		delete(cur, todel)
 	}
-
-	delete(cur, todel)
 	return nil
 }
 

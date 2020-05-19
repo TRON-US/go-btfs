@@ -9,6 +9,7 @@ import (
 	version "github.com/TRON-US/go-btfs"
 	core "github.com/TRON-US/go-btfs/core"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
+	"github.com/Workiva/go-datastructures/cache"
 
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	id "github.com/libp2p/go-libp2p/p2p/protocol/identify"
@@ -91,7 +92,7 @@ func GatewayOption(writable bool, paths ...string) ServeOption {
 			Headers:      headers,
 			Writable:     writable,
 			PathPrefixes: cfg.Gateway.PathPrefixes,
-		}, api)
+		}, api, cache.New(GatewayReedSolomonDirectoryCacheCapacity))
 
 		for _, p := range paths {
 			mux.Handle(p+"/", gateway)
