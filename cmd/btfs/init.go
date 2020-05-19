@@ -185,14 +185,32 @@ func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := bip39.NewSeed(mnemonic, "")
 
-	masterKey, _ := bip32.NewMasterKey(seed)
+	masterKey, err := bip32.NewMasterKey(seed)
+	if err != nil {
+		return "", "", err
+	}
 	publicKey := masterKey.PublicKey()
 
-	childKey, _ := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
-	childKey2, _ := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
-	childKey3, _ := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
-	childKey4, _ := childKey3.NewChildKey(0)
-	childKey5, _ := childKey4.NewChildKey(0)
+	childKey, err := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
+	if err != nil {
+		return "", "", err
+	}
+	childKey2, err := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
+	if err != nil {
+		return "", "", err
+	}
+	childKey3, err := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
+	if err != nil {
+		return "", "", err
+	}
+	childKey4, err := childKey3.NewChildKey(0)
+	if err != nil {
+		return "", "", err
+	}
+	childKey5, err := childKey4.NewChildKey(0)
+	if err != nil {
+		return "", "", err
+	}
 
 	encoding := childKey5.Key
 	importKey := hex.EncodeToString(encoding)
