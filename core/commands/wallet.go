@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 	"io"
 	"math/rand"
 	"strconv"
@@ -88,7 +89,12 @@ var walletDepositCmd = &cmds.Command{
 		}
 		runDaemon = currentNode.IsDaemon
 
-		err = wallet.WalletDeposit(cfg, amount, runDaemon)
+		// get node
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		err = wallet.WalletDeposit(cfg, n, amount, runDaemon)
 		if err != nil {
 			log.Error("wallet deposit failed, ERR: ", err)
 			return err
@@ -129,7 +135,12 @@ var walletWithdrawCmd = &cmds.Command{
 			return err
 		}
 
-		err = wallet.WalletWithdraw(cfg, amount)
+		// get node
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		err = wallet.WalletWithdraw(cfg, n, amount)
 		if err != nil {
 			log.Error("wallet withdraw failed, ERR: ", err)
 			return err
@@ -256,9 +267,17 @@ var walletTransactionsCmd = &cmds.Command{
 	Arguments: []cmds.Argument{},
 	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		return cmds.EmitOnce(res, mockTxs())
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		txs, err := wallet.GetTransactions(n.Repo.Datastore(), n.Identity.Pretty())
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, txs)
 	},
-	Type: []*Transaction{},
+	Type: []*walletpb.Transaction{},
 }
 
 func mockTxs() []*Transaction {
