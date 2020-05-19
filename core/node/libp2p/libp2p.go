@@ -3,7 +3,7 @@ package libp2p
 import (
 	"time"
 
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"

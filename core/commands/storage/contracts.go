@@ -23,8 +23,8 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/ipfs/go-datastore"
-	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 )
 

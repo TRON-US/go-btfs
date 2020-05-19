@@ -5,13 +5,14 @@ import (
 	"os"
 	"strings"
 
+	collect "github.com/TRON-US/go-btfs/collect"
 	coredag "github.com/TRON-US/go-btfs/core/coredag"
 	plugin "github.com/TRON-US/go-btfs/plugin"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
+	"github.com/TRON-US/go-btfs/logging"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipld "github.com/ipfs/go-ipld-format"
-	logging "github.com/ipfs/go-log"
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
@@ -169,7 +170,7 @@ func (loader *PluginLoader) Initialize() error {
 }
 
 // Inject hooks all the plugins into the appropriate subsystems.
-func (loader *PluginLoader) Inject() error {
+func (loader *PluginLoader) Inject(params ...interface{}) error {
 	if err := loader.transition(loaderInitialized, loaderInjecting); err != nil {
 		return err
 	}
@@ -191,6 +192,13 @@ func (loader *PluginLoader) Inject() error {
 		}
 		if pl, ok := pl.(plugin.PluginDatastore); ok {
 			err := injectDatastorePlugin(pl)
+			if err != nil {
+				loader.state = loaderFailed
+				return err
+			}
+		}
+		if pl, ok := pl.(plugin.PluginCollect); ok {
+			err := injectCollectPlugin(pl, params)
 			if err != nil {
 				loader.state = loaderFailed
 				return err
@@ -271,4 +279,12 @@ func injectTracerPlugin(pl plugin.PluginTracer) error {
 	}
 	opentracing.SetGlobalTracer(tracer)
 	return nil
+}
+
+func injectCollectPlugin(pl plugin.PluginCollect, params ...interface{}) error {
+	collectClient, err := pl.InitCollect(params)
+	if err != nil {
+		return err
+	}
+	return collect.AddCollectClient(pl.Name(), collectClient)
 }

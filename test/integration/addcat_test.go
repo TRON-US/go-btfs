@@ -18,7 +18,7 @@ import (
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
 
 	files "github.com/TRON-US/go-btfs-files"
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	random "github.com/jbenet/go-random"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	testutil "github.com/libp2p/go-libp2p-testing/net"
