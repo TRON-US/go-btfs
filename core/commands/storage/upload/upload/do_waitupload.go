@@ -2,6 +2,7 @@ package upload
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math"
 	"time"
@@ -83,10 +84,24 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 					return err
 				}
 				num := 0
+				m := make(map[string]int)
 				for _, c := range meta.Contracts {
+					m[c.State.String()]++
 					if c.State == guardpb.Contract_UPLOADED {
 						num++
 					}
+					shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, c.ShardHash, int(c.ShardIndex))
+					if err != nil {
+						return err
+					}
+					err = shard.UpdateAdditionalInfo(c.State.String())
+					if err != nil {
+						return err
+					}
+				}
+				bytes, err := json.Marshal(m)
+				if err == nil {
+					rss.UpdateAdditionalInfo(string(bytes))
 				}
 				log.Infof("%d shards uploaded.", num)
 				if num >= threshold {

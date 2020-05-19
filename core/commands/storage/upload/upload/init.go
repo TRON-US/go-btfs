@@ -334,9 +334,18 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 		defer cancel()
 
 		go func() {
-			swarmCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			defer cancel()
-			ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+			for {
+				select {
+				case <-ctx.Done():
+					break
+				}
+				swarmCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
+				err := ctxParams.Api.Swarm().Connect(swarmCtx, peer.AddrInfo{ID: renterPid})
+				if err == nil {
+					return
+				}
+			}
 		}()
 
 		_, err = challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api, fileCid, shardCid, "", true, expir)

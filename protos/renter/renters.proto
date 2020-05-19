@@ -31,6 +31,14 @@ message RenterSessionStatus {
   string hash = 5;
 }
 
+message RenterSessionAdditionalInfo {
+  string info = 1;
+  google.protobuf.Timestamp last_updated = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdtime) = true
+  ];
+}
+
 message OfflineMeta {
   string offline_peer_id = 1;
   uint64 offline_nonce_ts = 2;

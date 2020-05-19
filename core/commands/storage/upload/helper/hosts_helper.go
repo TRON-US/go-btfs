@@ -36,6 +36,7 @@ func (p *CustomizedHostsProvider) NextValidHost(price int64) (string, error) {
 				continue
 			}
 			if err := p.cp.Api.Swarm().Connect(p.cp.Ctx, peer.AddrInfo{ID: id}); err != nil {
+				p.hosts = append(p.hosts, p.hosts[index])
 				continue
 			}
 			return p.hosts[index], nil

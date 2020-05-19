@@ -110,8 +110,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 						cb <- err
 					}
 				}()
-				// host needs to send recv in 10 seconds, or the contract will be invalid.
-				tick := time.Tick(10 * time.Second)
+				// host needs to send recv in 30 seconds, or the contract will be invalid.
+				tick := time.Tick(30 * time.Second)
 				select {
 				case err = <-cb:
 					ShardErrChanMap.Remove(contractId)
