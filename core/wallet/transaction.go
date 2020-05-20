@@ -12,7 +12,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
-	"github.com/gogo/protobuf/proto"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	exPb "github.com/tron-us/go-btfs-common/protos/exchange"
 	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
@@ -20,6 +19,7 @@ import (
 	corePb "github.com/tron-us/go-btfs-common/protos/protocol/core"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 )
 
