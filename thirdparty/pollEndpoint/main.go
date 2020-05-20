@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	gologging "github.com/ipfs/go-log"
 	logging "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
@@ -44,7 +43,7 @@ func main() {
 	}
 
 	if *verbose { // lower log level
-		gologging.SetDebugLogging()
+		logging.SetDebugLogging()
 	}
 
 	// construct url to dial

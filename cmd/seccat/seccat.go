@@ -19,7 +19,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	gologging "github.com/ipfs/go-log"
+	logging "github.com/ipfs/go-log"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"
@@ -96,7 +96,7 @@ func main() {
 	args := parseArgs()
 	verbose = args.verbose
 	if args.debug {
-		gologging.SetDebugLogging()
+		logging.SetDebugLogging()
 	}
 
 	go func() {

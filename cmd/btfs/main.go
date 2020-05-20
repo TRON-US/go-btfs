@@ -28,7 +28,6 @@ import (
 	"github.com/TRON-US/go-btfs-collect-client/logclient"
 	"github.com/TRON-US/go-btfs-config"
 	u "github.com/ipfs/go-ipfs-util"
-	gologging "github.com/ipfs/go-log"
 	loggables "github.com/libp2p/go-libp2p-loggables"
 	ma "github.com/multiformats/go-multiaddr"
 	madns "github.com/multiformats/go-multiaddr-dns"
@@ -94,7 +93,7 @@ func main() {
 
 func mainRet() int {
 	rand.Seed(time.Now().UnixNano())
-	ctx := gologging.ContextWithLoggable(context.Background(), loggables.Uuid("session"))
+	ctx := logging.ContextWithLoggable(context.Background(), loggables.Uuid("session"))
 	var err error
 
 	// we'll call this local helper to output errors.
@@ -197,7 +196,7 @@ func checkDebug(req *cmds.Request) {
 	debug, _ := req.Options["debug"].(bool)
 	if debug || os.Getenv("IPFS_LOGGING") == "debug" {
 		u.Debug = true
-		gologging.SetDebugLogging()
+		logging.SetDebugLogging()
 	}
 	if u.GetenvBool("DEBUG") {
 		u.Debug = true
