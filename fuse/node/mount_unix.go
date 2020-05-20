@@ -13,7 +13,7 @@ import (
 	mount "github.com/TRON-US/go-btfs/fuse/mount"
 	rofs "github.com/TRON-US/go-btfs/fuse/readonly"
 
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 )
 
 var log = logging.Logger("node")

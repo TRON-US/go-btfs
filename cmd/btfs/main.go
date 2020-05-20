@@ -17,10 +17,10 @@ import (
 	core "github.com/TRON-US/go-btfs/core"
 	corecmds "github.com/TRON-US/go-btfs/core/commands"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
-	"github.com/TRON-US/go-btfs/logging"
 	loader "github.com/TRON-US/go-btfs/plugin/loader"
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
+	logging "github.com/ipfs/go-log"
 
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/cli"

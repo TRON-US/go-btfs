@@ -15,8 +15,8 @@ import (
 	path "github.com/ipfs/go-path"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
-	"github.com/TRON-US/go-btfs/logging"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log"
 )
 
 var log = logging.Logger("tarfmt")

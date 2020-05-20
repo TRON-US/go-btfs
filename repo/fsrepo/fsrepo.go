@@ -19,12 +19,12 @@ import (
 
 	config "github.com/TRON-US/go-btfs-config"
 	serialize "github.com/TRON-US/go-btfs-config/serialize"
-	"github.com/TRON-US/go-btfs/logging"
 	ds "github.com/ipfs/go-datastore"
 	measure "github.com/ipfs/go-ds-measure"
 	filestore "github.com/ipfs/go-filestore"
 	lockfile "github.com/ipfs/go-fs-lock"
 	util "github.com/ipfs/go-ipfs-util"
+	logging "github.com/ipfs/go-log"
 	homedir "github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 )

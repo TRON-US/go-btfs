@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
 )
 

@@ -10,9 +10,9 @@ import (
 	plugin "github.com/TRON-US/go-btfs/plugin"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	"github.com/TRON-US/go-btfs/logging"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log"
 	opentracing "github.com/opentracing/opentracing-go"
 )
 

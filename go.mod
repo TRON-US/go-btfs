@@ -164,4 +164,4 @@ replace go.uber.org/zap => github.com/TRON-US/zap v1.50.1
 
 replace github.com/ipfs/go-log/v2 => github.com/TRON-US/go-log/v2 v2.5.1
 
-replace github.com/ipfs/go-log => github.com/TRON-US/go-log v1.5.1
+replace github.com/ipfs/go-log => github.com/TRON-US/go-log v1.5.2
