@@ -184,16 +184,17 @@ var walletBalanceCmd = &cmds.Command{
 		}
 		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, lederBalance)
 		log.Info(s)
+		return cmds.EmitOnce(res, &BalanceResponse{
+			BtfsWalletBalance: tronBalance,
+			BttWalletBalance:  lederBalance,
+		})
+	},
+	Type: BalanceResponse{},
+}
 
-		return cmds.EmitOnce(res, &MessageOutput{s})
-	},
-	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *MessageOutput) error {
-			fmt.Fprint(w, out.Message)
-			return nil
-		}),
-	},
-	Type: MessageOutput{},
+type BalanceResponse struct {
+	BtfsWalletBalance int64
+	BttWalletBalance  int64
 }
 
 var walletPasswordCmd = &cmds.Command{
