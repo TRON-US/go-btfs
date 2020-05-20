@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/TRON-US/go-btfs-api"
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 )
 
 type Call interface {

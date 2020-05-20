@@ -61,8 +61,8 @@ github.com/TRON-US/go-ipld-format v0.1.0 h1:/JlZFthx4haJJMW456sNiupIGH717f0/7Po4
 github.com/TRON-US/go-ipld-format v0.1.0/go.mod h1:2Wr3LYadP0zd+8lHcwbUZ5zBvemRmWj10e5gwo0xEl8=
 github.com/TRON-US/go-libp2p-core v0.4.1 h1:vOTph4f42uxr2r2oAyCogIUxsHl2b5vWen2fiA0LCQ4=
 github.com/TRON-US/go-libp2p-core v0.4.1/go.mod h1:B9V1MQtCLGp+jUXNdKJzNllFSsVSMuex1+5/fyWgYl0=
-github.com/TRON-US/go-log v1.5.1 h1:mo6fEm+HWSbIHKEQFZxBhlR1v6mxjsxoNFBzAssRNAY=
-github.com/TRON-US/go-log v1.5.1/go.mod h1:N/cUX5IDNhWBEJ4V+qbsxQQsD2cdtUcZXzvJ8hQ4b2w=
+github.com/TRON-US/go-log v1.5.2 h1:gM/oKoT9iFsLuQ93MgfMTlic+FfC2r6sPpc7SEDJkvo=
+github.com/TRON-US/go-log v1.5.2/go.mod h1:Z7/9WnFW0J6CTENxkhWsFJ2zYbPUIYcWkqS08nrvwRQ=
 github.com/TRON-US/go-log/v2 v2.5.1 h1:ymcCEmphsfT54jSHeE+PXz5/mfJ7UYOvInFmYotCXG0=
 github.com/TRON-US/go-log/v2 v2.5.1/go.mod h1:SOJdCmgFw0N+XirGv2TrOuBTb1+Kf1kmausLNAvXtJY=
 github.com/TRON-US/go-mfs v0.2.2 h1:EUlDvvSo8HKso4oy05Ce8ZG6arASAdirV2BzAYfKTsM=

@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 )
 
 var log = logging.Logger("seccat")

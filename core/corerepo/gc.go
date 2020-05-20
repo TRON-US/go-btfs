@@ -10,10 +10,10 @@ import (
 	gc "github.com/TRON-US/go-btfs/pin/gc"
 	repo "github.com/TRON-US/go-btfs/repo"
 
-	"github.com/TRON-US/go-btfs/logging"
 	mfs "github.com/TRON-US/go-mfs"
 	humanize "github.com/dustin/go-humanize"
 	cid "github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log"
 )
 
 var log = logging.Logger("corerepo")
