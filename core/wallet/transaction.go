@@ -13,13 +13,14 @@ import (
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	"github.com/gogo/protobuf/proto"
-	ds "github.com/ipfs/go-datastore"
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	exPb "github.com/tron-us/go-btfs-common/protos/exchange"
 	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 	tronPb "github.com/tron-us/go-btfs-common/protos/protocol/api"
 	corePb "github.com/tron-us/go-btfs-common/protos/protocol/core"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
+
+	ds "github.com/ipfs/go-datastore"
 )
 
 var (
