@@ -20,13 +20,14 @@ import (
 	loader "github.com/TRON-US/go-btfs/plugin/loader"
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
+	logging "github.com/ipfs/go-log"
 
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/cli"
 	"github.com/TRON-US/go-btfs-cmds/http"
+	"github.com/TRON-US/go-btfs-collect-client/logclient"
 	"github.com/TRON-US/go-btfs-config"
 	u "github.com/ipfs/go-ipfs-util"
-	logging "github.com/ipfs/go-log"
 	loggables "github.com/libp2p/go-libp2p-loggables"
 	ma "github.com/multiformats/go-multiaddr"
 	madns "github.com/multiformats/go-multiaddr-dns"
@@ -68,7 +69,13 @@ func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 
-	if err := plugins.Inject(); err != nil {
+	config, err := loadConfig(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	cid := config.Identity.PeerID
+
+	if err := plugins.Inject(cid, logclient.LogOutputChan); err != nil {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 	return plugins, nil
