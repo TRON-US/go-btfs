@@ -3,11 +3,12 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io"
+	"strconv"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
-	"io"
-	"strconv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
@@ -46,7 +47,7 @@ var walletInitCmd = &cmds.Command{
 			return err
 		}
 
-		wallet.Init(cfg)
+		wallet.Init(req.Context, cfg)
 		return nil
 	},
 	Encoders: cmds.EncoderMap{
@@ -58,6 +59,8 @@ var walletInitCmd = &cmds.Command{
 	Type: MessageOutput{},
 }
 
+const asyncOptionName = "async"
+
 var walletDepositCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet deposit",
@@ -67,7 +70,9 @@ var walletDepositCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("amount", true, false, "amount to deposit."),
 	},
-	Options: []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.BoolOption(asyncOptionName, "a", "Deposit asynchronously."),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -78,6 +83,8 @@ var walletDepositCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+
+		async, _ := req.Options[asyncOptionName].(bool)
 
 		runDaemon := false
 		currentNode, err := cmdenv.GetNode(env)
@@ -92,7 +99,7 @@ var walletDepositCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		err = wallet.WalletDeposit(cfg, n, amount, runDaemon)
+		err = wallet.WalletDeposit(req.Context, cfg, n, amount, runDaemon, async)
 		if err != nil {
 			log.Error("wallet deposit failed, ERR: ", err)
 			return err
@@ -138,7 +145,7 @@ var walletWithdrawCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		err = wallet.WalletWithdraw(cfg, n, amount)
+		err = wallet.WalletWithdraw(req.Context, cfg, n, amount)
 		if err != nil {
 			log.Error("wallet withdraw failed, ERR: ", err)
 			return err
@@ -170,7 +177,7 @@ var walletBalanceCmd = &cmds.Command{
 			return err
 		}
 
-		tronBalance, lederBalance, err := wallet.GetBalance(cfg)
+		tronBalance, lederBalance, err := wallet.GetBalance(req.Context, cfg)
 		if err != nil {
 			log.Error("wallet get balance failed, ERR: ", err)
 			return err
