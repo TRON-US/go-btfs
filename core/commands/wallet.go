@@ -207,19 +207,18 @@ var walletPasswordCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
 		if err != nil {
 			return err
 		}
 		if cfg.UI.Wallet.Initialized {
 			return errors.New("Already init, cannot set pasword again.")
 		}
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
 		cfg.Identity.Password = req.Arguments[0]
-		cfg.UI.Wallet.Initialized = true
 		err = n.Repo.SetConfig(cfg)
 		if err != nil {
 			return err
@@ -245,10 +244,10 @@ var walletKeysCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if !cfg.UI.Wallet.Initialized {
-			return errors.New("Wallet not init yet.")
-		}
 		password, _ := req.Options[passwordOptionName].(string)
+		if cfg.Identity.Password == "" {
+			return errors.New("Please set password first.")
+		}
 		if password != cfg.Identity.Password {
 			return errors.New("Wrong password. Please try again.")
 		}
