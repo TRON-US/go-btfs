@@ -69,7 +69,7 @@ func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 
-	cid := "dummyid"
+	cid := "uninitialized"
 	if err := plugins.Inject(cid, logclient.LogOutputChan); err != nil {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
