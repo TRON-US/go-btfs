@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/TRON-US/go-btfs/namesys"
 	"github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
-
-	"github.com/TRON-US/go-btfs/namesys"
 )
 
 var log = logging.Logger("nsresolv")

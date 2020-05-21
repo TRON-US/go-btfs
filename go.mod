@@ -9,6 +9,7 @@ require (
 	github.com/TRON-US/go-btfs-api v0.1.0
 	github.com/TRON-US/go-btfs-chunker v0.2.8
 	github.com/TRON-US/go-btfs-cmds v0.1.6
+	github.com/TRON-US/go-btfs-collect-client v0.0.2
 	github.com/TRON-US/go-btfs-config v0.5.5
 	github.com/TRON-US/go-btfs-files v0.1.7
 	github.com/TRON-US/go-eccrypto v0.0.1
@@ -63,7 +64,7 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-ipld-git v0.0.2
 	github.com/ipfs/go-ipns v0.0.1
-	github.com/ipfs/go-log v0.0.1
+	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-merkledag v0.2.3
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/ipfs/go-metrics-prometheus v0.0.2
@@ -123,6 +124,7 @@ require (
 	github.com/pierrec/lz4 v2.2.6+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
+	github.com/prometheus/common v0.4.0
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/stretchr/testify v1.5.1
@@ -140,7 +142,7 @@ require (
 	go.uber.org/dig v1.7.0 // indirect
 	go.uber.org/fx v1.9.0
 	go.uber.org/goleak v0.10.0 // indirect
-	go.uber.org/zap v1.14.0
+	go.uber.org/zap v1.14.1
 	go4.org v0.0.0-20190313082347-94abd6928b1d // indirect
 	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
@@ -157,3 +159,9 @@ replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.1
 replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.1.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.4.1
+
+replace go.uber.org/zap => github.com/TRON-US/zap v1.50.1
+
+replace github.com/ipfs/go-log/v2 => github.com/TRON-US/go-log/v2 v2.5.1
+
+replace github.com/ipfs/go-log => github.com/TRON-US/go-log v1.5.2

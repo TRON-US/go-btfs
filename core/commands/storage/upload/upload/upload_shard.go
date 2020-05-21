@@ -121,7 +121,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 			}, helper.HandleShardBo)
 			if err != nil {
-				_ = rss.To(sessions.RssToErrorEvent, err)
+				_ = rss.To(sessions.RssToErrorEvent,
+					errors.New("timeout: failed to setup contract in "+helper.HandleShardBo.MaxElapsedTime.String()))
 			}
 		}(shardIndexes[index], shardHash)
 	}
