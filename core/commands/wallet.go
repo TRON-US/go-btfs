@@ -177,16 +177,16 @@ var walletBalanceCmd = &cmds.Command{
 			return err
 		}
 
-		tronBalance, lederBalance, err := wallet.GetBalance(req.Context, cfg)
+		tronBalance, ledgerBalance, err := wallet.GetBalance(req.Context, cfg)
 		if err != nil {
 			log.Error("wallet get balance failed, ERR: ", err)
 			return err
 		}
-		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, lederBalance)
+		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, ledgerBalance)
 		log.Info(s)
 		return cmds.EmitOnce(res, &BalanceResponse{
 			BtfsWalletBalance: tronBalance,
-			BttWalletBalance:  lederBalance,
+			BttWalletBalance:  ledgerBalance,
 		})
 	},
 	Type: BalanceResponse{},
