@@ -216,8 +216,6 @@ func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
 	importKey := hex.EncodeToString(encoding)
 
 	// Display mnemonic and keys
-	fmt.Println("Mnemonic: ", mnemonic)
-	fmt.Println("Tron private key: ", importKey)
 	fmt.Println("Master public key: ", publicKey)
 
 	return importKey, mnemonic, nil
