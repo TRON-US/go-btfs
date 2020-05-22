@@ -204,7 +204,7 @@ var walletPasswordCmd = &cmds.Command{
 			return err
 		}
 		if cfg.UI.Wallet.Initialized {
-			return errors.New("Already init, cannot set pasword again.")
+			return errors.New("Already init, cannot set password again.")
 		}
 		cfg.Identity.EncryptedMnemonic = wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
 		cfg.Identity.EncryptedPrivKey = wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.PrivKey)
