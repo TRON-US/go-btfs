@@ -1,17 +1,14 @@
 package commands
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"strconv"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
-	"github.com/tron-us/go-btfs-common/crypto"
-
-	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var WalletCmd = &cmds.Command{
@@ -209,17 +206,8 @@ var walletPasswordCmd = &cmds.Command{
 		if cfg.UI.Wallet.Initialized {
 			return errors.New("Already init, cannot set pasword again.")
 		}
-		sum256 := sha256.Sum256([]byte(req.Arguments[0]))
-		encryptedMnemonic, err := crypto.Encrypt(sum256[:], []byte(cfg.Identity.Mnemonic))
-		if err != nil {
-			return err
-		}
-		encryptedPrivKey, err := crypto.Encrypt(sum256[:], []byte(cfg.Identity.PrivKey))
-		if err != nil {
-			return err
-		}
-		cfg.Identity.EncryptedMnemonic = encryptedMnemonic
-		cfg.Identity.EncryptedPrivKey = encryptedPrivKey
+		cfg.Identity.EncryptedMnemonic = wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
+		cfg.Identity.EncryptedPrivKey = wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.PrivKey)
 		err = n.Repo.SetConfig(cfg)
 		if err != nil {
 			return err
