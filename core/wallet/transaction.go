@@ -8,19 +8,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
-	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
-
 	escrowPb "github.com/tron-us/go-btfs-common/protos/escrow"
 	exPb "github.com/tron-us/go-btfs-common/protos/exchange"
 	ledgerPb "github.com/tron-us/go-btfs-common/protos/ledger"
 	tronPb "github.com/tron-us/go-btfs-common/protos/protocol/api"
 	corePb "github.com/tron-us/go-btfs-common/protos/protocol/core"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
-
-	"github.com/gogo/protobuf/proto"
-	ds "github.com/ipfs/go-datastore"
 )
 
 var (
@@ -31,11 +24,10 @@ var (
 )
 
 // Do the deposit action, integrate exchange's PrepareDeposit and Deposit API.
-func Deposit(ctx context.Context, n *core.IpfsNode, ledgerAddr []byte, amount int64,
-	privateKey *ecdsa.PrivateKey, runDaemon bool, async bool) (*exPb.PrepareDepositResponse, error) {
+func Deposit(ledgerAddr []byte, amount int64, privateKey *ecdsa.PrivateKey, runDaemon bool) (*exPb.PrepareDepositResponse, error) {
 	log.Debug("Deposit begin!")
 	//PrepareDeposit
-	prepareResponse, err := PrepareDeposit(ctx, ledgerAddr, amount)
+	prepareResponse, err := PrepareDeposit(ledgerAddr, amount)
 	if err != nil {
 		log.Error(fmt.Sprintf("PrepareDeposit error, reasons: [%v]", err))
 		return nil, err
@@ -47,7 +39,7 @@ func Deposit(ctx context.Context, n *core.IpfsNode, ledgerAddr []byte, amount in
 	log.Debug(fmt.Sprintf("PrepareDeposit success, id: [%d]", prepareResponse.GetId()))
 
 	//Do the DepositRequest.
-	depositResponse, err := DepositRequest(ctx, prepareResponse, privateKey)
+	depositResponse, err := DepositRequest(prepareResponse, privateKey)
 	if err != nil {
 		log.Error(fmt.Sprintf("Deposit error, reasons: [%v]", err))
 		return prepareResponse, err
@@ -58,20 +50,10 @@ func Deposit(ctx context.Context, n *core.IpfsNode, ledgerAddr []byte, amount in
 	}
 	log.Debug(fmt.Sprintf("Call Deposit API success, id: [%d]", prepareResponse.GetId()))
 
-	err = PersistTx(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(),
-		amount, BttWallet, InAppWallet, StatusPending)
-	if err != nil {
-		log.Error(fmt.Sprintf("Record deposit tx failed, reasons: [%v]", err))
-		return nil, err
-	}
-
-	if runDaemon && async {
-		go ConfirmDepositProcess(context.Background(), n, prepareResponse, privateKey)
+	if runDaemon {
+		go ConfirmDepositProcess(prepareResponse, privateKey)
 	} else {
-		err := ConfirmDepositProcess(ctx, n, prepareResponse, privateKey)
-		if err != nil {
-			return nil, err
-		}
+		ConfirmDepositProcess(prepareResponse, privateKey)
 	}
 	// Doing confirm deposit.
 
@@ -80,8 +62,9 @@ func Deposit(ctx context.Context, n *core.IpfsNode, ledgerAddr []byte, amount in
 }
 
 // Call exchange's PrepareDeposit API.
-func PrepareDeposit(ctx context.Context, ledgerAddr []byte, amount int64) (*exPb.PrepareDepositResponse, error) {
+func PrepareDeposit(ledgerAddr []byte, amount int64) (*exPb.PrepareDepositResponse, error) {
 	// Prepare to Deposit.
+	ctx := context.Background()
 	var err error
 	var prepareResponse *exPb.PrepareDepositResponse
 	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
@@ -102,7 +85,7 @@ func PrepareDeposit(ctx context.Context, ledgerAddr []byte, amount int64) (*exPb
 }
 
 // Call exchange's Deposit API
-func DepositRequest(ctx context.Context, prepareResponse *exPb.PrepareDepositResponse, privateKey *ecdsa.PrivateKey) (*exPb.DepositResponse, error) {
+func DepositRequest(prepareResponse *exPb.PrepareDepositResponse, privateKey *ecdsa.PrivateKey) (*exPb.DepositResponse, error) {
 	// Sign Tron Transaction.
 	tronTransaction := prepareResponse.GetTronTransaction()
 	for range tronTransaction.GetRawData().GetContract() {
@@ -113,6 +96,7 @@ func DepositRequest(ctx context.Context, prepareResponse *exPb.PrepareDepositRes
 		tronTransaction.Signature = append(tronTransaction.GetSignature(), signature)
 	}
 
+	ctx := context.Background()
 	var err error
 	var depositResponse *exPb.DepositResponse
 	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
@@ -133,8 +117,8 @@ func DepositRequest(ctx context.Context, prepareResponse *exPb.PrepareDepositRes
 }
 
 // Continuous call ConfirmDeposit until it responses a FAILED or SUCCESS.
-func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareResponse *exPb.PrepareDepositResponse,
-	privateKey *ecdsa.PrivateKey) error {
+func ConfirmDepositProcess(prepareResponse *exPb.PrepareDepositResponse, privateKey *ecdsa.PrivateKey) {
+	ctx := context.Background()
 	log.Debug(fmt.Sprintf("[Id:%d] ConfirmDepositProcess begin.", prepareResponse.GetId()))
 
 	// Continuous call ConfirmDeposit until it responses a FAILED or SUCCESS.
@@ -147,23 +131,18 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 		}
 		log.Debug(fmt.Sprintf("[Id:%d] ConfirmDeposit begin.", prepareResponse.GetId()))
 
-		confirmDepositResponse, err := ConfirmDeposit(ctx, prepareResponse.GetId())
+		confirmDepositResponse, err := ConfirmDeposit(prepareResponse.GetId())
 		if err != nil {
 			log.Error(fmt.Sprintf("[Id:%d]ConfirmDeposit error: %v", prepareResponse.GetId(), err))
 			continue
 		}
 		if confirmDepositResponse.GetResponse().GetCode() == exPb.Response_TRANSACTION_PENDING {
 			log.Debug(fmt.Sprintf("[Id:%d]TronTransaction is PENDING.", prepareResponse.GetId()))
-
-			err := UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), StatusPending)
-			if err != nil {
-				log.Error(fmt.Sprintf("[Id:%d]Update tx status error: %v", prepareResponse.GetId(), err))
-			}
 			continue
 		}
 		if confirmDepositResponse.GetResponse().GetCode() == exPb.Response_TRANSACTION_FAILED {
 			log.Info(fmt.Sprintf("[Id:%d]TronTransaction is FAILED, deposit failed.", prepareResponse.GetId()))
-			return UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), StatusFailed)
+			return
 		}
 		if confirmDepositResponse.GetResponse().GetCode() == exPb.Response_SUCCESS {
 			signSuccessChannelState := confirmDepositResponse.GetSuccessChannelState()
@@ -171,17 +150,12 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 				toSignature, err := Sign(signSuccessChannelState.GetChannel(), privateKey)
 				if err != nil {
 					log.Error(fmt.Sprintf("[Id:%d] Sign SuccessChannelState error: %v", prepareResponse.GetId(), err))
-					return err
+					return
 				}
 				signSuccessChannelState.ToSignature = toSignature
-
-				err = UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), StatusSuccess)
-				if err != nil {
-					log.Error(fmt.Sprintf("[Id:%d]Update tx status error: %v", prepareResponse.GetId(), err))
-					return err
-				}
 			} else {
-				return fmt.Errorf("[Id:%d] SignSuccessChannelState is nil", prepareResponse.GetId())
+				log.Error(fmt.Sprintf("[Id:%d] SignSuccessChannelState is nil", prepareResponse.GetId()))
+				return
 			}
 
 			err = grpc.EscrowClient(escrowService).WithContext(ctx,
@@ -194,24 +168,22 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 					return nil
 				})
 			if err != nil {
-				return err
+				return
 			}
 
 			log.Info(fmt.Sprintf("[Id:%d] Close SuccessChannelState succeed.", prepareResponse.GetId()))
-			return nil
+			return
 		}
 	}
 	if time.Now().UnixNano()/1e6 >= (prepareResponse.GetTronTransaction().GetRawData().GetExpiration() + 240*1000) {
-		err := fmt.Errorf("[Id:%d] Didn't get the tron transaction results until the expiration time.",
-			prepareResponse.GetId())
-		log.Error(err)
-		return err
+		log.Error(fmt.Sprintf("[Id:%d] Didn't get the tron transaction results until the expiration time.",
+			prepareResponse.GetId()))
 	}
-	return nil
 }
 
 // Call exchange's ConfirmDeposit API.
-func ConfirmDeposit(ctx context.Context, logId int64) (*exPb.ConfirmDepositResponse, error) {
+func ConfirmDeposit(logId int64) (*exPb.ConfirmDepositResponse, error) {
+	ctx := context.Background()
 	var err error
 	var confirmDepositResponse *exPb.ConfirmDepositResponse
 	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
@@ -233,12 +205,11 @@ func ConfirmDeposit(ctx context.Context, logId int64) (*exPb.ConfirmDepositRespo
 // Do the withdraw action, integrate exchange's PrepareWithdraw and Withdraw API, return channel id and error.
 // If Withdraw succeed, with return channel id and logInfo id, error is nil; otherwise will return error, channel id
 // and logInfo id is 0.
-func Withdraw(ctx context.Context, n *core.IpfsNode, ledgerAddr, externalAddr []byte, amount int64,
-	privateKey *ecdsa.PrivateKey) (int64, int64, error) {
+func Withdraw(ledgerAddr, externalAddr []byte, amount int64, privateKey *ecdsa.PrivateKey) (int64, int64, error) {
 	log.Debug("Withdraw begin!")
 	outTxId := time.Now().UnixNano()
 	//PrepareWithdraw
-	prepareResponse, err := PrepareWithdraw(ctx, ledgerAddr, externalAddr, amount, outTxId)
+	prepareResponse, err := PrepareWithdraw(ledgerAddr, externalAddr, amount, outTxId)
 	if err != nil {
 		log.Error(fmt.Sprintf("Prepare withdraw error, reasons: [%v]", err))
 		return 0, 0, err
@@ -262,6 +233,7 @@ func Withdraw(ctx context.Context, n *core.IpfsNode, ledgerAddr, externalAddr []
 		return 0, 0, err
 	}
 
+	ctx := context.Background()
 	var channelId *ledgerPb.ChannelID
 	err = grpc.EscrowClient(escrowService).WithContext(ctx,
 		func(ctx context.Context, client escrowPb.EscrowServiceClient) error {
@@ -283,41 +255,23 @@ func Withdraw(ctx context.Context, n *core.IpfsNode, ledgerAddr, externalAddr []
 	log.Debug(fmt.Sprintf("CreateChannel success, channelId: [%d]", channelId.GetId()))
 
 	//Do the WithdrawRequest.
-	withdrawResponse, err := WithdrawRequest(ctx, channelId, ledgerAddr, amount, prepareResponse, privateKey)
+	withdrawResponse, err := WithdrawRequest(channelId, ledgerAddr, amount, prepareResponse, privateKey)
 	if err != nil {
 		log.Error(fmt.Sprintf("Withdraw error, reasons: [%v]", err))
 		return 0, 0, err
 	}
-
-	err = PersistTx(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), amount,
-		InAppWallet, BttWallet, StatusPending)
-	if err != nil {
-		log.Error(fmt.Sprintf("Persist tx error, reasons: [%v]", err))
-		return 0, 0, err
-	}
-
 	if withdrawResponse.Response.Code != exPb.Response_SUCCESS {
 		log.Error(fmt.Sprintf("Withdraw failed, reasons: [%s]", string(withdrawResponse.Response.ReturnMessage)))
-
-		err := UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), StatusFailed)
-		if err != nil {
-			log.Error(fmt.Sprintf("Update tx status error, reasons: [%v]", err))
-			return 0, 0, err
-		}
 		return 0, 0, errors.New(string(withdrawResponse.Response.ReturnMessage))
 	}
 	log.Debug("Withdraw end!")
-	err = UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), StatusSuccess)
-	if err != nil {
-		log.Error(fmt.Sprintf("Update tx status error, reasons: [%v]", err))
-		return 0, 0, err
-	}
 	return channelId.Id, prepareResponse.GetId(), nil
 }
 
 // Call exchange's Withdraw API
-func PrepareWithdraw(ctx context.Context, ledgerAddr, externalAddr []byte, amount, outTxId int64) (
+func PrepareWithdraw(ledgerAddr, externalAddr []byte, amount, outTxId int64) (
 	*exPb.PrepareWithdrawResponse, error) {
+	ctx := context.Background()
 	var err error
 	var prepareResponse *exPb.PrepareWithdrawResponse
 	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
@@ -341,8 +295,9 @@ func PrepareWithdraw(ctx context.Context, ledgerAddr, externalAddr []byte, amoun
 }
 
 // Call exchange's PrepareWithdraw API
-func WithdrawRequest(ctx context.Context, channelId *ledgerPb.ChannelID, ledgerAddr []byte, amount int64,
-	prepareResponse *exPb.PrepareWithdrawResponse, privateKey *ecdsa.PrivateKey) (*exPb.WithdrawResponse, error) {
+func WithdrawRequest(channelId *ledgerPb.ChannelID, ledgerAddr []byte,
+	amount int64, prepareResponse *exPb.PrepareWithdrawResponse, privateKey *ecdsa.PrivateKey) (*exPb.WithdrawResponse,
+	error) {
 	//make signed success channel state.
 	successChannelState := &ledgerPb.ChannelState{
 		Id:       channelId,
@@ -388,6 +343,7 @@ func WithdrawRequest(ctx context.Context, channelId *ledgerPb.ChannelID, ledgerA
 		return nil, err
 	}
 
+	ctx := context.Background()
 	var withdrawResponse *exPb.WithdrawResponse
 	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
 		func(ctx context.Context, client exPb.ExchangeClient) error {
@@ -412,7 +368,8 @@ func WithdrawRequest(ctx context.Context, channelId *ledgerPb.ChannelID, ledgerA
 }
 
 //Get the token balance on tron blockchain
-func GetTokenBalance(ctx context.Context, addr []byte, tokenId string) (int64, error) {
+func GetTokenBalance(addr []byte, tokenId string) (int64, error) {
+	ctx := context.Background()
 	var tokenBalance int64 = 0
 	err := grpc.SolidityClient(solidityService).WithContext(ctx,
 		func(ctx context.Context, client tronPb.WalletSolidityClient) error {
@@ -433,53 +390,4 @@ func GetTokenBalance(ctx context.Context, addr []byte, tokenId string) (int64, e
 		return 0, err
 	}
 	return tokenBalance, nil
-}
-
-var (
-	walletTransactionKeyPrefix = "/btfs/%s/wallet/transactions/"
-	walletTransactionKey       = walletTransactionKeyPrefix + "%d/"
-)
-
-func PersistTx(d ds.Datastore, peerId string, txId int64, amount int64,
-	from string, to string, status string) error {
-	return sessions.Save(d, fmt.Sprintf(walletTransactionKey, peerId, txId),
-		&walletpb.Transaction{
-			Id:         txId,
-			TimeCreate: time.Now(),
-			Amount:     amount,
-			From:       from,
-			To:         to,
-			Status:     status,
-		})
-}
-
-func UpdateStatus(d ds.Datastore, peerId string, txId int64, status string) error {
-	key := fmt.Sprintf(walletTransactionKey, peerId, txId)
-	s := &walletpb.Transaction{}
-	err := sessions.Get(d, key, s)
-	if err != nil {
-		return err
-	}
-	if s.Status != status {
-		s.Status = status
-		return sessions.Save(d, key, s)
-	}
-	return nil
-}
-
-func GetTransactions(d ds.Datastore, peerId string) ([]*walletpb.Transaction, error) {
-	list, err := sessions.List(d, fmt.Sprintf(walletTransactionKeyPrefix, peerId))
-	if err != nil {
-		return nil, err
-	}
-	txs := make([]*walletpb.Transaction, 0)
-	for _, bytes := range list {
-		tx := new(walletpb.Transaction)
-		err := proto.Unmarshal(bytes, tx)
-		if err != nil {
-			return nil, err
-		}
-		txs = append(txs, tx)
-	}
-	return txs, nil
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
-	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 	"github.com/tron-us/go-btfs-common/crypto"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -24,13 +23,12 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":         walletInitCmd,
-		"deposit":      walletDepositCmd,
-		"withdraw":     walletWithdrawCmd,
-		"balance":      walletBalanceCmd,
-		"password":     walletPasswordCmd,
-		"keys":         walletKeysCmd,
-		"transactions": walletTransactionsCmd,
+		"init":     walletInitCmd,
+		"deposit":  walletDepositCmd,
+		"withdraw": walletWithdrawCmd,
+		"balance":  walletBalanceCmd,
+		"password": walletPasswordCmd,
+		"keys":     walletKeysCmd,
 	},
 }
 
@@ -52,7 +50,7 @@ var walletInitCmd = &cmds.Command{
 			return err
 		}
 
-		wallet.Init(req.Context, cfg)
+		wallet.Init(cfg)
 		return nil
 	},
 	Encoders: cmds.EncoderMap{
@@ -64,8 +62,6 @@ var walletInitCmd = &cmds.Command{
 	Type: MessageOutput{},
 }
 
-const asyncOptionName = "async"
-
 var walletDepositCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet deposit",
@@ -75,16 +71,17 @@ var walletDepositCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("amount", true, false, "amount to deposit."),
 	},
-	Options: []cmds.Option{
-		cmds.BoolOption(asyncOptionName, "a", "Deposit asynchronously."),
-	},
+	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
+		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
 		}
 
-		async, _ := req.Options[asyncOptionName].(bool)
+		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
+		if err != nil {
+			return err
+		}
 
 		runDaemon := false
 		currentNode, err := cmdenv.GetNode(env)
@@ -94,16 +91,7 @@ var walletDepositCmd = &cmds.Command{
 		}
 		runDaemon = currentNode.IsDaemon
 
-		// get node
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		cfg, err := n.Repo.Config()
-		if err != nil {
-			return err
-		}
-		err = wallet.WalletDeposit(req.Context, cfg, n, amount, runDaemon, async)
+		err = wallet.WalletDeposit(cfg, amount, runDaemon)
 		if err != nil {
 			log.Error("wallet deposit failed, ERR: ", err)
 			return err
@@ -134,19 +122,17 @@ var walletWithdrawCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		cfg, err := cmdenv.GetConfig(env)
+		if err != nil {
+			return err
+		}
+
 		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
 		if err != nil {
 			return err
 		}
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		cfg, err := n.Repo.Config()
-		if err != nil {
-			return err
-		}
-		err = wallet.WalletWithdraw(req.Context, cfg, n, amount)
+
+		err = wallet.WalletWithdraw(cfg, amount)
 		if err != nil {
 			log.Error("wallet withdraw failed, ERR: ", err)
 			return err
@@ -182,7 +168,7 @@ var walletBalanceCmd = &cmds.Command{
 			return err
 		}
 
-		tronBalance, ledgerBalance, err := wallet.GetBalance(req.Context, cfg)
+		tronBalance, ledgerBalance, err := wallet.GetBalance(cfg)
 		if err != nil {
 			log.Error("wallet get balance failed, ERR: ", err)
 			return err
@@ -279,25 +265,4 @@ var walletKeysCmd = &cmds.Command{
 type Keys struct {
 	PrivateKey string
 	Mnemonic   string
-}
-
-var walletTransactionsCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "BTFS wallet transactions",
-		ShortDescription: "get transactions of BTFS wallet",
-	},
-	Arguments: []cmds.Argument{},
-	Options:   []cmds.Option{},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		txs, err := wallet.GetTransactions(n.Repo.Datastore(), n.Identity.Pretty())
-		if err != nil {
-			return err
-		}
-		return cmds.EmitOnce(res, txs)
-	},
-	Type: []*walletpb.Transaction{},
 }
