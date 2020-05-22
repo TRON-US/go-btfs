@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
+	"github.com/tron-us/go-btfs-common/crypto"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
@@ -218,7 +220,17 @@ var walletPasswordCmd = &cmds.Command{
 		if cfg.UI.Wallet.Initialized {
 			return errors.New("Already init, cannot set pasword again.")
 		}
-		cfg.Identity.Password = req.Arguments[0]
+		sum256 := sha256.Sum256([]byte(req.Arguments[0]))
+		encryptedMnemonic, err := crypto.Encrypt(sum256[:], []byte(cfg.Identity.Mnemonic))
+		if err != nil {
+			return err
+		}
+		encryptedPrivKey, err := crypto.Encrypt(sum256[:], []byte(cfg.Identity.PrivKey))
+		if err != nil {
+			return err
+		}
+		cfg.Identity.EncryptedMnemonic = encryptedMnemonic
+		cfg.Identity.EncryptedPrivKey = encryptedPrivKey
 		err = n.Repo.SetConfig(cfg)
 		if err != nil {
 			return err
@@ -228,33 +240,35 @@ var walletPasswordCmd = &cmds.Command{
 	Type: MessageOutput{},
 }
 
-const passwordOptionName = "password"
-
 var walletKeysCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet keys",
 		ShortDescription: "get keys of BTFS wallet",
 	},
 	Arguments: []cmds.Argument{},
-	Options: []cmds.Option{
-		cmds.StringOption(passwordOptionName, "p", "password of BTFS wallet"),
-	},
+	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		password, _ := req.Options[passwordOptionName].(string)
-		if cfg.Identity.Password == "" {
-			return errors.New("Please set password first.")
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
 		}
-		if password != cfg.Identity.Password {
-			return errors.New("Wrong password. Please try again.")
+		var keys *Keys
+		if !cfg.UI.Wallet.Initialized {
+			keys = &Keys{
+				PrivateKey: cfg.Identity.PrivKey,
+				Mnemonic:   cfg.Identity.Mnemonic,
+			}
+		} else {
+			keys = &Keys{
+				PrivateKey: cfg.Identity.EncryptedPrivKey,
+				Mnemonic:   cfg.Identity.EncryptedMnemonic,
+			}
 		}
-		return cmds.EmitOnce(res, &Keys{
-			PrivateKey: cfg.Identity.PrivKey,
-			Mnemonic:   cfg.Identity.Mnemonic,
-		})
+		return cmds.EmitOnce(res, keys)
 	},
 	Type: Keys{},
 }
