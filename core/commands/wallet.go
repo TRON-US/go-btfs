@@ -138,7 +138,7 @@ var walletWithdrawCmd = &cmds.Command{
 		err = wallet.WalletWithdraw(cfg, amount)
 		if err != nil {
 			if strings.Contains(err.Error(), "Please withdraw at least") {
-				err = errors.New("Please withdraw at least 1000,000,000µ(=1000BTT)")
+				err = errors.New("Please withdraw at least 1,000,000,000µ(=1000BTT)")
 			}
 			return err
 		}
