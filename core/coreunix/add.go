@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	util "github.com/ipfs/go-ipfs-util"
 	"io"
 	gopath "path"
 	"strconv"
+	"time"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-btfs-files"
@@ -374,6 +376,12 @@ func (adder *Adder) AddAllAndPin(file files.Node) (ipld.Node, error) {
 		}
 	}()
 
+	if util.GetenvBool("LOG_TEST") {
+		for i := 0; i < 20; i++ {
+			log.Errorf("Error log testing while adding, count=%d", i)
+			time.Sleep(time.Second * 2)
+		}
+	}
 	if err := adder.addFileNode("", file, true); err != nil {
 		return nil, err
 	}

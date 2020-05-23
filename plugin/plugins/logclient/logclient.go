@@ -39,11 +39,17 @@ const (
 	DEFAULT_COLLECTION_DEST = "loki"
 )
 
+type InitCollectParams struct {
+	Cid       string
+	HValue    string
+	InputChan chan []logclient.Entry
+}
+
 // Initalize a log collecter and set it as the global tracer in opentracing api
 func (lcp *logclientPlugin) InitCollect(params ...interface{}) (*logclient.LogClient, error) {
-	cid, inputChan := findParams(params)
-	if cid == "" || inputChan == nil {
-		return nil, fmt.Errorf("zero parameter value: cid [%s], input channel [%v]", cid, inputChan)
+	p := findParams(params)
+	if p.Cid == "" || p.HValue == "" || p.InputChan == nil {
+		return nil, fmt.Errorf("zero parameter value: cid [%s], input channel [%v]", p.Cid, p.InputChan)
 	}
 	// init configuration
 	url := os.Getenv("LOG_COLLECTOR_URL") // TODO: add a domain to .btfs/config file
@@ -56,7 +62,8 @@ func (lcp *logclientPlugin) InitCollect(params ...interface{}) (*logclient.LogCl
 	}
 	labels := make(model.LabelSet)
 	labels["job"] = "btfsnode"
-	labels["instance"] = model.LabelValue(cid)
+	labels["instance"] = model.LabelValue(p.Cid)
+	labels["hValue"] = model.LabelValue(p.HValue)
 	conf := &logclient.Configuration{
 		Labels:             labels.String(),
 		URL:                url,
@@ -70,7 +77,7 @@ func (lcp *logclientPlugin) InitCollect(params ...interface{}) (*logclient.LogCl
 	// Open operators
 	// if a channel is given, pass it to NewLogClient()
 
-	logc, err := logclient.NewLogClient(conf, inputChan)
+	logc, err := logclient.NewLogClient(conf, p.InputChan)
 	if err != nil {
 		return nil, errors.Errorf("error: failed to create LogClient: %s\n", err)
 	}
@@ -78,26 +85,12 @@ func (lcp *logclientPlugin) InitCollect(params ...interface{}) (*logclient.LogCl
 	return logc, nil
 }
 
-func findParams(val interface{}) (string, chan []logclient.Entry) {
+func findParams(val interface{}) *InitCollectParams {
 	switch val := val.(type) {
-	case chan []logclient.Entry:
-		return "", val
-	case string:
-		return val, nil
+	case *InitCollectParams:
+		return val
 	case []interface{}:
-		var cid string
-		var channel chan []logclient.Entry
-		for i := 0; i < len(val); i++ {
-			ci, ch := findParams(val[i])
-			if ci != "" && ch != nil {
-				return ci, ch
-			} else if ci != "" {
-				cid = ci
-			} else if ch != nil {
-				channel = ch
-			}
-		}
-		return cid, channel
+		return findParams(val[0])
 	}
-	return "", nil
+	return nil
 }

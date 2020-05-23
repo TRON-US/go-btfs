@@ -18,6 +18,7 @@ import (
 	corecmds "github.com/TRON-US/go-btfs/core/commands"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	loader "github.com/TRON-US/go-btfs/plugin/loader"
+	pllogclient "github.com/TRON-US/go-btfs/plugin/plugins/logclient"
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	logging "github.com/ipfs/go-log"
@@ -46,7 +47,7 @@ const (
 	heapProfile        = "ipfs.memprof"
 )
 
-func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
+func loadPlugins(req *cmds.Request, repoPath string) (*loader.PluginLoader, error) {
 	pluginpath := filepath.Join(repoPath, "plugins")
 
 	plugins, err := loader.NewPluginLoader()
@@ -69,8 +70,28 @@ func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 
-	cid := "uninitialized"
-	if err := plugins.Inject(cid, logclient.LogOutputChan); err != nil {
+	if logging.LogCollectEnabled() {
+		cid := "uninitialized"
+		hValue, hasHValue := req.Options[hValueKwd].(string)
+		if !hasHValue {
+			hValue = "notapplicable"
+		}
+		if fsrepo.IsInitialized(repoPath) {
+			config, err := loadConfig(repoPath)
+			if err != nil {
+				return nil, err
+			}
+			cid = config.Identity.PeerID
+		}
+		err = plugins.Inject(&pllogclient.InitCollectParams{
+			Cid:       cid,
+			HValue:    hValue,
+			InputChan: logclient.LogOutputChan,
+		})
+	} else {
+		err = plugins.Inject()
+	}
+	if err != nil {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 	return plugins, nil
@@ -141,7 +162,7 @@ func mainRet() int {
 		}
 		log.Debugf("config path is %s", repoPath)
 
-		plugins, err := loadPlugins(repoPath)
+		plugins, err := loadPlugins(req, repoPath)
 		if err != nil {
 			return nil, err
 		}
