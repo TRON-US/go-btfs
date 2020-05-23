@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var WalletCmd = &cmds.Command{
@@ -91,6 +93,9 @@ var walletDepositCmd = &cmds.Command{
 		err = wallet.WalletDeposit(cfg, amount, runDaemon)
 		if err != nil {
 			log.Error("wallet deposit failed, ERR: ", err)
+			if strings.Contains(err.Error(), "Please deposit at least") {
+				err = errors.New("Please deposit at least 10,000,000(=10BTT)")
+			}
 			return err
 		}
 		s := fmt.Sprintf("BTFS wallet deposit submitted. Please wait one minute for the transaction to confirm.")
@@ -132,6 +137,9 @@ var walletWithdrawCmd = &cmds.Command{
 		err = wallet.WalletWithdraw(cfg, amount)
 		if err != nil {
 			log.Error("wallet withdraw failed, ERR: ", err)
+			if strings.Contains(err.Error(), "Please withdraw at least") {
+				err = errors.New("Please withdraw at least 1000,000,000(=1000BTT)")
+			}
 			return err
 		}
 
