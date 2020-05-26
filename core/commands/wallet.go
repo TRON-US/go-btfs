@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 	"io"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
+	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 )
 
 var WalletCmd = &cmds.Command{
@@ -68,7 +68,7 @@ var walletDepositCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet deposit",
 		ShortDescription: "BTFS wallet deposit from block chain to ledger.",
-		Options:          "unit is µ (=0.0000001BTT)",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
@@ -106,7 +106,7 @@ var walletDepositCmd = &cmds.Command{
 		err = wallet.WalletDeposit(req.Context, cfg, n, amount, runDaemon, async)
 		if err != nil {
 			if strings.Contains(err.Error(), "Please deposit at least") {
-				err = errors.New("Please deposit at least 10,000,000µ(=10BTT)")
+				err = errors.New("Please deposit at least 10,000,000µBTT(=10BTT)")
 			}
 			return err
 		}
@@ -129,7 +129,7 @@ var walletWithdrawCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet withdraw",
 		ShortDescription: "BTFS wallet withdraw from ledger to block chain.",
-		Options:          "unit is µ (=0.000001BTT)",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
@@ -154,8 +154,7 @@ var walletWithdrawCmd = &cmds.Command{
 		err = wallet.WalletWithdraw(req.Context, cfg, n, amount)
 		if err != nil {
 			if strings.Contains(err.Error(), "Please withdraw at least") {
-				err = errors.New("Please withdraw at least 1,000,000,000µ(=1000BTT)")
-
+				err = errors.New("Please withdraw at least 1,000,000,000µBTT(=1000BTT)")
 			}
 			return err
 		}
@@ -176,7 +175,7 @@ var walletBalanceCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet balance",
 		ShortDescription: "Query BTFS wallet balance in ledger and block chain.",
-		Options:          "unit is µ (=0.000001BTT)",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{},
@@ -200,16 +199,16 @@ var walletBalanceCmd = &cmds.Command{
 		log.Info(s)
 
 		return cmds.EmitOnce(res, &BalanceResponse{
-			BtfsWalletBalance: fmt.Sprintf("%dµ", tronBalance),
-			BttWalletBalance:  fmt.Sprintf("%dµ", ledgerBalance),
+			BtfsWalletBalance: uint64(tronBalance),
+			BttWalletBalance:  uint64(ledgerBalance),
 		})
 	},
 	Type: BalanceResponse{},
 }
 
 type BalanceResponse struct {
-	BtfsWalletBalance string
-	BttWalletBalance  string
+	BtfsWalletBalance uint64
+	BttWalletBalance  uint64
 }
 
 var walletPasswordCmd = &cmds.Command{
@@ -233,12 +232,16 @@ var walletPasswordCmd = &cmds.Command{
 		if cfg.UI.Wallet.Initialized {
 			return errors.New("Already init, cannot set pasword again.")
 		}
-		cfg.Identity.EncryptedMnemonic = wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
-		cfg.Identity.EncryptedPrivKey = wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.PrivKey)
-		err = n.Repo.SetConfig(cfg)
+		cipherMnemonic, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
 		if err != nil {
 			return err
 		}
+		cipherPrivKey, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.PrivKey)
+		if err != nil {
+			return err
+		}
+		cfg.Identity.EncryptedMnemonic = cipherMnemonic
+		cfg.Identity.EncryptedPrivKey = cipherPrivKey
 		return cmds.EmitOnce(res, &MessageOutput{"Password set."})
 	},
 	Type: MessageOutput{},
