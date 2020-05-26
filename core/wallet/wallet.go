@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core"
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
@@ -26,12 +27,12 @@ import (
 var log = logging.Logger("core/wallet")
 
 var (
-	WithdrawMinAmount int64  = 1
-	WithdrawMaxAmount int64  = 1000000000000
-	DepositMinAmount  int64  = 1
-	DepositMaxAmount  int64  = 1000000000000
-	TokenId           string = "1002000"
-	TokenIdDev        string = "1002508"
+	WithdrawMinAmount int64 = 1
+	WithdrawMaxAmount int64 = 1000000000000
+	DepositMinAmount  int64 = 1
+	DepositMaxAmount  int64 = 1000000000000
+	TokenId                 = "1002000"
+	TokenIdDev              = "1002508"
 	hostWallet        Wallet
 
 	escrowService   string
@@ -47,8 +48,8 @@ type Wallet struct {
 }
 
 // withdraw from ledger to tron
-func WalletWithdraw(configuration *config.Config, amount int64) error {
-	err := Init(configuration)
+func WalletWithdraw(ctx context.Context, configuration *config.Config, n *core.IpfsNode, amount int64) error {
+	err := Init(ctx, configuration)
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,6 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 		return errors.New(fmt.Sprintf("withdraw amount should between %d ~ %d", WithdrawMinAmount, WithdrawMaxAmount))
 	}
 
-	ctx := context.Background()
 	// get ledger balance before withdraw
 	ledgerBalance, err := Balance(ctx, configuration)
 	if err != nil {
@@ -75,9 +75,8 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 	}
 
 	// Doing withdraw request.
-	channelId, id, err := Withdraw(hostWallet.ledgerAddress, hostWallet.tronAddress, amount, hostWallet.privateKey)
+	channelId, id, err := Withdraw(ctx, n, hostWallet.ledgerAddress, hostWallet.tronAddress, amount, hostWallet.privateKey)
 	if err != nil {
-		log.Error("Failed to Withdraw, ERR[%v]\n", err)
 		return err
 	}
 
@@ -85,8 +84,18 @@ func WalletWithdraw(configuration *config.Config, amount int64) error {
 	return nil
 }
 
-func WalletDeposit(configuration *config.Config, amount int64, runDaemon bool) error {
-	err := Init(configuration)
+const (
+	InAppWallet = "BTFS Wallet"
+	BttWallet   = "BTT Wallet"
+
+	StatusPending = "Pending"
+	StatusSuccess = "Success"
+	StatusFailed  = "Failed"
+)
+
+func WalletDeposit(ctx context.Context, configuration *config.Config, n *core.IpfsNode,
+	amount int64, runDaemon bool, async bool) error {
+	err := Init(ctx, configuration)
 	if err != nil {
 		return err
 	}
@@ -100,7 +109,7 @@ func WalletDeposit(configuration *config.Config, amount int64, runDaemon bool) e
 		return errors.New(fmt.Sprintf("deposit amount should between %d ~ %d", DepositMinAmount, DepositMaxAmount))
 	}
 
-	prepareResponse, err := Deposit(hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon)
+	prepareResponse, err := Deposit(ctx, n, hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon, async)
 	if err != nil {
 		log.Error("Failed to Deposit, ERR[%v]\n", err)
 		return err
@@ -111,8 +120,8 @@ func WalletDeposit(configuration *config.Config, amount int64, runDaemon bool) e
 }
 
 //GetBalance both on ledger and Tron.
-func GetBalance(configuration *config.Config) (int64, int64, error) {
-	err := Init(configuration)
+func GetBalance(ctx context.Context, configuration *config.Config) (int64, int64, error) {
+	err := Init(ctx, configuration)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -122,7 +131,6 @@ func GetBalance(configuration *config.Config) (int64, int64, error) {
 		return 0, 0, errors.New("wallet is not initialized")
 	}
 
-	ctx := context.Background()
 	// get tron balance
 	tokenId := TokenId
 	if strings.Contains(configuration.Services.EscrowDomain, "dev") ||
@@ -131,7 +139,7 @@ func GetBalance(configuration *config.Config) (int64, int64, error) {
 	}
 	fmt.Println("token id:", tokenId)
 
-	tronBalance, err := GetTokenBalance(hostWallet.tronAddress, tokenId)
+	tronBalance, err := GetTokenBalance(ctx, hostWallet.tronAddress, tokenId)
 	if err != nil {
 		return 0, 0,
 			errors.New(fmt.Sprintf("Failed to get exchange tron balance, reason: %v", err))
@@ -153,8 +161,8 @@ func GetBalance(configuration *config.Config) (int64, int64, error) {
 
 // activate account on tron block chain
 // using wallet tronAddress 41***
-func ActivateAccount(configuration *config.Config) error {
-	err := Init(configuration)
+func ActivateAccount(ctx context.Context, configuration *config.Config) error {
+	err := Init(ctx, configuration)
 	if err != nil {
 		return err
 	}
@@ -164,7 +172,6 @@ func ActivateAccount(configuration *config.Config) error {
 		return errors.New("wallet is not initialized")
 	}
 
-	ctx := context.Background()
 	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
 		func(ctx context.Context, client exPb.ExchangeClient) error {
 			response, err := client.ActivateAccountOnChain(ctx,
@@ -182,7 +189,7 @@ func ActivateAccount(configuration *config.Config) error {
 	return nil
 }
 
-func Init(configuration *config.Config) error {
+func Init(ctx context.Context, configuration *config.Config) error {
 	if configuration == nil {
 		fmt.Println("Init wallet, configuration is nil")
 		log.Error("init wallet failed, input nil configuration")
