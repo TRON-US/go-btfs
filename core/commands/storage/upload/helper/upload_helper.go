@@ -81,13 +81,13 @@ type ContextParams struct {
 }
 
 func ExtractContextParams(req *cmds.Request, env cmds.Environment) (*ContextParams, error) {
-	// get config settings
-	cfg, err := cmdenv.GetConfig(env)
+	// get node
+	n, err := cmdenv.GetNode(env)
 	if err != nil {
 		return nil, err
 	}
-	// get node
-	n, err := cmdenv.GetNode(env)
+	// get config settings
+	cfg, err := n.Repo.Config()
 	if err != nil {
 		return nil, err
 	}

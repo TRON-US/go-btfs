@@ -83,8 +83,27 @@ Set the value of the 'Datastore.Path' key:
 
 		// This is a temporary fix until we move the private key out of the config file
 		switch strings.ToLower(key) {
-		case "identity", "identity.privkey":
-			return errors.New("cannot show or change private key through API")
+		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid":
+			return fmt.Errorf("cannot show or change %s through API", key)
+		case "ui.wallet.initialized":
+			n, err := cmdenv.GetNode(env)
+			if err != nil {
+				return err
+			}
+			cfg, err := n.Repo.Config()
+			if err != nil {
+				return err
+			}
+			if cfg.Identity.EncryptedPrivKey != "" {
+				//NOP
+			}
+			if cfg.Identity.EncryptedMnemonic != "" {
+				cfg.Identity.Mnemonic = ""
+			}
+			err = n.Repo.SetConfig(cfg)
+			if err != nil {
+				return err
+			}
 		default:
 		}
 
@@ -172,7 +191,7 @@ NOTE: For security reasons, this command will omit your private key. If you woul
 			return err
 		}
 
-		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag, config.PasswordTag} {
+		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag} {
 			err = scrubValue(cfg, []string{config.IdentityTag, k})
 			if err != nil {
 				return err

@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"strconv"
-	"time"
+	"strings"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var WalletCmd = &cmds.Command{
@@ -22,13 +22,12 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":         walletInitCmd,
-		"deposit":      walletDepositCmd,
-		"withdraw":     walletWithdrawCmd,
-		"balance":      walletBalanceCmd,
-		"password":     walletPasswordCmd,
-		"keys":         walletKeysCmd,
-		"transactions": walletTransactionsCmd,
+		"init":     walletInitCmd,
+		"deposit":  walletDepositCmd,
+		"withdraw": walletWithdrawCmd,
+		"balance":  walletBalanceCmd,
+		"password": walletPasswordCmd,
+		"keys":     walletKeysCmd,
 	},
 }
 
@@ -41,9 +40,12 @@ var walletInitCmd = &cmds.Command{
 	Arguments: []cmds.Argument{},
 	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			fmt.Println("get config failed")
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
 			return err
 		}
 
@@ -63,6 +65,7 @@ var walletDepositCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet deposit",
 		ShortDescription: "BTFS wallet deposit from block chain to ledger.",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
@@ -90,7 +93,9 @@ var walletDepositCmd = &cmds.Command{
 
 		err = wallet.WalletDeposit(cfg, amount, runDaemon)
 		if err != nil {
-			log.Error("wallet deposit failed, ERR: ", err)
+			if strings.Contains(err.Error(), "Please deposit at least") {
+				err = errors.New("Please deposit at least 10,000,000µBTT(=10BTT)")
+			}
 			return err
 		}
 		s := fmt.Sprintf("BTFS wallet deposit submitted. Please wait one minute for the transaction to confirm.")
@@ -112,6 +117,7 @@ var walletWithdrawCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet withdraw",
 		ShortDescription: "BTFS wallet withdraw from ledger to block chain.",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
@@ -131,7 +137,9 @@ var walletWithdrawCmd = &cmds.Command{
 
 		err = wallet.WalletWithdraw(cfg, amount)
 		if err != nil {
-			log.Error("wallet withdraw failed, ERR: ", err)
+			if strings.Contains(err.Error(), "Please withdraw at least") {
+				err = errors.New("Please withdraw at least 1,000,000,000µBTT(=1000BTT)")
+			}
 			return err
 		}
 
@@ -151,33 +159,39 @@ var walletBalanceCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet balance",
 		ShortDescription: "Query BTFS wallet balance in ledger and block chain.",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{},
 	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
 		if err != nil {
 			return err
 		}
 
-		tronBalance, lederBalance, err := wallet.GetBalance(cfg)
+		tronBalance, ledgerBalance, err := wallet.GetBalance(cfg)
 		if err != nil {
 			log.Error("wallet get balance failed, ERR: ", err)
 			return err
 		}
-		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, lederBalance)
+		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, ledgerBalance)
 		log.Info(s)
+		return cmds.EmitOnce(res, &BalanceResponse{
+			BtfsWalletBalance: uint64(tronBalance),
+			BttWalletBalance:  uint64(ledgerBalance),
+		})
+	},
+	Type: BalanceResponse{},
+}
 
-		return cmds.EmitOnce(res, &MessageOutput{s})
-	},
-	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *MessageOutput) error {
-			fmt.Fprint(w, out.Message)
-			return nil
-		}),
-	},
-	Type: MessageOutput{},
+type BalanceResponse struct {
+	BtfsWalletBalance uint64
+	BttWalletBalance  uint64
 }
 
 var walletPasswordCmd = &cmds.Command{
@@ -190,19 +204,27 @@ var walletPasswordCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if cfg.UI.Wallet.Initialized {
-			return errors.New("Already init, cannot set pasword again.")
-		}
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		cfg.Identity.Password = req.Arguments[0]
-		cfg.UI.Wallet.Initialized = true
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		if cfg.UI.Wallet.Initialized {
+			return errors.New("Already init, cannot set password again.")
+		}
+		cipherMnemonic, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
+		if err != nil {
+			return err
+		}
+		cipherPrivKey, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.PrivKey)
+		if err != nil {
+			return err
+		}
+		cfg.Identity.EncryptedMnemonic = cipherMnemonic
+		cfg.Identity.EncryptedPrivKey = cipherPrivKey
 		err = n.Repo.SetConfig(cfg)
 		if err != nil {
 			return err
@@ -212,33 +234,35 @@ var walletPasswordCmd = &cmds.Command{
 	Type: MessageOutput{},
 }
 
-const passwordOptionName = "password"
-
 var walletKeysCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet keys",
 		ShortDescription: "get keys of BTFS wallet",
 	},
 	Arguments: []cmds.Argument{},
-	Options: []cmds.Option{
-		cmds.StringOption(passwordOptionName, "p", "password of BTFS wallet"),
-	},
+	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		var keys *Keys
 		if !cfg.UI.Wallet.Initialized {
-			return errors.New("Wallet not init yet.")
+			keys = &Keys{
+				PrivateKey: cfg.Identity.PrivKey,
+				Mnemonic:   cfg.Identity.Mnemonic,
+			}
+		} else {
+			keys = &Keys{
+				PrivateKey: cfg.Identity.EncryptedPrivKey,
+				Mnemonic:   cfg.Identity.EncryptedMnemonic,
+			}
 		}
-		password, _ := req.Options[passwordOptionName].(string)
-		if password != cfg.Identity.Password {
-			return errors.New("Wrong password. Please try again.")
-		}
-		return cmds.EmitOnce(res, &Keys{
-			PrivateKey: cfg.Identity.PrivKey,
-			Mnemonic:   cfg.Identity.Mnemonic,
-		})
+		return cmds.EmitOnce(res, keys)
 	},
 	Type: Keys{},
 }
@@ -246,43 +270,4 @@ var walletKeysCmd = &cmds.Command{
 type Keys struct {
 	PrivateKey string
 	Mnemonic   string
-}
-
-var walletTransactionsCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "BTFS wallet transactions",
-		ShortDescription: "get transactions of BTFS wallet",
-	},
-	Arguments: []cmds.Argument{},
-	Options:   []cmds.Option{},
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		return cmds.EmitOnce(res, mockTxs())
-	},
-	Type: []*Transaction{},
-}
-
-func mockTxs() []*Transaction {
-	txs := make([]*Transaction, 0)
-	size := rand.Intn(24) + 5
-	as := []string{"BTT Wallet", "BTFS Wallet", "TYJe9S6BU8ScjPgqESsxufvd4Y1sHiDUfV", "TLnJBLvSohT8k5gaG8vXBRfPYLFiAHuJqJ"}
-	ss := []string{"Pending", "Success", "Failed"}
-	for i := 0; i < size; i++ {
-		asi := rand.Intn(4)
-		txs = append(txs, &Transaction{
-			Datetime: time.Now().Add(time.Duration(-rand.Intn(1000)) * time.Hour),
-			Amount:   rand.Int63n(100000000),
-			From:     as[asi],
-			To:       as[(asi+1)%4],
-			Status:   ss[rand.Intn(3)],
-		})
-	}
-	return txs
-}
-
-type Transaction struct {
-	Datetime time.Time
-	Amount   int64
-	From     string
-	To       string
-	Status   string
 }
