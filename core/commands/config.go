@@ -94,15 +94,17 @@ Set the value of the 'Datastore.Path' key:
 			if err != nil {
 				return err
 			}
-			if cfg.Identity.EncryptedPrivKey != "" {
-				//NOP
-			}
-			if cfg.Identity.EncryptedMnemonic != "" {
-				cfg.Identity.Mnemonic = ""
-			}
-			err = n.Repo.SetConfig(cfg)
-			if err != nil {
-				return err
+			if len(req.Arguments) > 1 && req.Arguments[1] == "true" {
+				if cfg.Identity.EncryptedPrivKey != "" {
+					//NOP
+				}
+				if cfg.Identity.EncryptedMnemonic != "" {
+					cfg.Identity.Mnemonic = ""
+				}
+				err = n.Repo.SetConfig(cfg)
+				if err != nil {
+					return err
+				}
 			}
 		default:
 		}
