@@ -85,27 +85,6 @@ Set the value of the 'Datastore.Path' key:
 		switch strings.ToLower(key) {
 		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid":
 			return fmt.Errorf("cannot show or change %s through API", key)
-		case "ui.wallet.initialized":
-			n, err := cmdenv.GetNode(env)
-			if err != nil {
-				return err
-			}
-			cfg, err := n.Repo.Config()
-			if err != nil {
-				return err
-			}
-			if len(req.Arguments) > 1 && req.Arguments[1] == "true" {
-				if cfg.Identity.EncryptedPrivKey != "" {
-					//NOP
-				}
-				if cfg.Identity.EncryptedMnemonic != "" {
-					cfg.Identity.Mnemonic = ""
-				}
-				err = n.Repo.SetConfig(cfg)
-				if err != nil {
-					return err
-				}
-			}
 		default:
 		}
 
@@ -133,6 +112,20 @@ Set the value of the 'Datastore.Path' key:
 				output, err = setConfig(r, key, value == "true")
 			} else {
 				output, err = setConfig(r, key, value)
+			}
+			switch strings.ToLower(output.Key) {
+			case "ui.wallet.initialized":
+				if output.Value.(bool) {
+					if f, err := getConfig(r, "Identity.EncryptedMnemonic"); err == nil {
+						if f.Value.(string) != "" {
+							err := r.SetConfigKey("Identity.Mnemonic", "")
+							if err != nil {
+								return err
+							}
+						}
+					}
+				}
+			default:
 			}
 		} else {
 			output, err = getConfig(r, key)
