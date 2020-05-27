@@ -113,6 +113,9 @@ Set the value of the 'Datastore.Path' key:
 			} else {
 				output, err = setConfig(r, key, value)
 			}
+			if err != nil {
+				return err
+			}
 			switch strings.ToLower(output.Key) {
 			case "ui.wallet.initialized":
 				if output.Value.(bool) {
