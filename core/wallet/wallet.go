@@ -129,7 +129,6 @@ func GetBalance(configuration *config.Config) (int64, int64, error) {
 		strings.Contains(configuration.Services.EscrowDomain, "staging") {
 		tokenId = TokenIdDev
 	}
-	fmt.Println("token id:", tokenId)
 
 	tronBalance, err := GetTokenBalance(hostWallet.tronAddress, tokenId)
 	if err != nil {
@@ -236,10 +235,6 @@ func Init(configuration *config.Config) error {
 	}
 
 	hostWallet.ledgerAddress = ledgerAddress
-	//elliptic.Marshal(elliptic.P256(), privateKey.PublicKey.X, privateKey.PublicKey.Y)
-	fmt.Println("wallet ledger address:\n", hex.EncodeToString(hostWallet.ledgerAddress))
-	fmt.Println("wallet tron address:\n", hex.EncodeToString(hostWallet.tronAddress))
-
 	return nil
 }
 
