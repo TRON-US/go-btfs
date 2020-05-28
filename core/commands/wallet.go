@@ -199,8 +199,8 @@ var walletBalanceCmd = &cmds.Command{
 		log.Info(s)
 
 		return cmds.EmitOnce(res, &BalanceResponse{
-			BtfsWalletBalance: uint64(tronBalance),
-			BttWalletBalance:  uint64(ledgerBalance),
+			BtfsWalletBalance: uint64(ledgerBalance),
+			BttWalletBalance:  uint64(tronBalance),
 		})
 	},
 	Type: BalanceResponse{},
