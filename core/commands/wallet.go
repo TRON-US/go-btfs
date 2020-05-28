@@ -242,6 +242,10 @@ var walletPasswordCmd = &cmds.Command{
 		}
 		cfg.Identity.EncryptedMnemonic = cipherMnemonic
 		cfg.Identity.EncryptedPrivKey = cipherPrivKey
+		err = n.Repo.SetConfig(cfg)
+		if err != nil {
+			return err
+		}
 		return cmds.EmitOnce(res, &MessageOutput{"Password set."})
 	},
 	Type: MessageOutput{},
