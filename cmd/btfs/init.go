@@ -138,7 +138,7 @@ func generateKey(importKey string, keyType string, seedPhrase string) (string, s
 	mnemonicLen := len(strings.Split(seedPhrase, ","))
 	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-	if importKey != "" && strings.ToLower(keyType) != "secp256k1" {
+	if importKey != "" && keyType != "" && strings.ToLower(keyType) != "secp256k1" {
 		return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 	} else if seedPhrase != "" {
 		if mnemonicLen != mnemonicLength {
