@@ -116,19 +116,13 @@ Set the value of the 'Datastore.Path' key:
 			if err != nil {
 				return err
 			}
-			switch strings.ToLower(output.Key) {
-			case "ui.wallet.initialized":
-				if output.Value.(bool) {
-					if f, err := getConfig(r, "Identity.EncryptedMnemonic"); err == nil {
-						if f.Value.(string) != "" {
-							err := r.SetConfigKey("Identity.Mnemonic", "")
-							if err != nil {
-								return err
-							}
-						}
+			if f, err := getConfig(r, "UI.Wallet.Initialized"); err == nil {
+				if f.Value.(bool) == true {
+					err := r.SetConfigKey("Identity.Mnemonic", "")
+					if err != nil {
+						return err
 					}
 				}
-			default:
 			}
 		} else {
 			output, err = getConfig(r, key)
