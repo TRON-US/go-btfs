@@ -130,12 +130,7 @@ environment variable:
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
 
-		finalImportKey, mnemonic, err := generateKey(importKey, keyType, seedPhrase)
-		if err == nil {
-			return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, finalImportKey, mnemonic, rmOnUnpin)
-		} else {
-			return err
-		}
+		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, seedPhrase, rmOnUnpin)
 	},
 }
 
@@ -143,7 +138,7 @@ func generateKey(importKey string, keyType string, seedPhrase string) (string, s
 	mnemonicLen := len(strings.Split(seedPhrase, ","))
 	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-	if importKey != "" && strings.ToLower(keyType) != "secp256k1" {
+	if importKey != "" && keyType != "" && strings.ToLower(keyType) != "secp256k1" {
 		return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 	} else if seedPhrase != "" {
 		if mnemonicLen != mnemonicLength {
@@ -233,6 +228,12 @@ func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
 
 func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,
 	keyType string, importKey string, mnemonic string, rmOnUnpin bool) error {
+
+	importKey, mnemonic, err := generateKey(importKey, keyType, mnemonic)
+	if err != nil {
+		return err
+	}
+
 	if _, err := fmt.Fprintf(out, "initializing BTFS node at %s\n", repoRoot); err != nil {
 		return err
 	}
