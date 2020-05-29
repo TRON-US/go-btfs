@@ -149,7 +149,7 @@ func generateKey(importKey string, keyType string, seedPhrase string) (string, s
 		}
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
 		return generatePrivKeyUsingBIP39(mnemonic)
-	} else if keyType == "" || keyType == "BIP39" {
+	} else if (keyType == "" && importKey == "") || keyType == "BIP39" {
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
 		return generatePrivKeyUsingBIP39("")
 	} else {
