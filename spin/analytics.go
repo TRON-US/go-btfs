@@ -15,11 +15,11 @@ import (
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
-	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
 	"github.com/shirou/gopsutil/cpu"
 )

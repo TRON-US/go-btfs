@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	"strings"
 
 	pin "github.com/TRON-US/go-btfs/pin"
@@ -17,6 +17,7 @@ import (
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	ipld "github.com/ipfs/go-ipld-format"
+	gologging "github.com/ipfs/go-log"
 	"github.com/ipfs/go-verifcid"
 )
 
@@ -72,7 +73,7 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 			}
 			return
 		}
-		emark.Append(logging.LoggableMap{
+		emark.Append(gologging.LoggableMap{
 			"blackSetSize": fmt.Sprintf("%d", gcs.Len()),
 		})
 		emark.Done()
@@ -120,7 +121,7 @@ func GC(ctx context.Context, bs bstore.GCBlockstore, dstor dstore.Datastore, pn 
 				break loop
 			}
 		}
-		esweep.Append(logging.LoggableMap{
+		esweep.Append(gologging.LoggableMap{
 			"whiteSetSize": fmt.Sprintf("%d", removed),
 		})
 		esweep.Done()

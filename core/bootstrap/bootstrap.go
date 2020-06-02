@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	logging "github.com/ipfs/go-log"
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/jbenet/goprocess"
 	"github.com/jbenet/goprocess/context"
 	"github.com/jbenet/goprocess/periodic"

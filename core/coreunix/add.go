@@ -11,6 +11,7 @@ import (
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/go-btfs/logging"
 	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-mfs"
 	"github.com/TRON-US/go-unixfs"
@@ -25,7 +26,6 @@ import (
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	"github.com/ipfs/go-ipfs-posinfo"
 	ipld "github.com/ipfs/go-ipld-format"
-	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
 )
 
