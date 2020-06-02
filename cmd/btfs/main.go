@@ -69,7 +69,12 @@ func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
 
-	cid := "uninitialized"
+	config, err := loadConfig(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	cid := config.Identity.PeerID
+
 	if err := plugins.Inject(cid, logclient.LogOutputChan); err != nil {
 		return nil, fmt.Errorf("error initializing plugins: %s", err)
 	}
