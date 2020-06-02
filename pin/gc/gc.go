@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	logging "github.com/ipfs/go-log"
 	"strings"
 
 	pin "github.com/TRON-US/go-btfs/pin"
@@ -17,6 +16,7 @@ import (
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log"
 	"github.com/ipfs/go-verifcid"
 )
 
