@@ -19,7 +19,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"

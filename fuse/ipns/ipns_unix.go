@@ -21,9 +21,9 @@ import (
 
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"
-	"github.com/TRON-US/go-btfs/logging"
 	mfs "github.com/TRON-US/go-mfs"
 	cid "github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )

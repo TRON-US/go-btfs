@@ -13,7 +13,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/unixfs"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 )
 
 var log = logging.Logger("core/commands")

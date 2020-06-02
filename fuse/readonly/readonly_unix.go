@@ -18,8 +18,8 @@ import (
 
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"
-	"github.com/TRON-US/go-btfs/logging"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log"
 	lgbl "github.com/libp2p/go-libp2p-loggables"
 )
 

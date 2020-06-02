@@ -14,7 +14,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/logging"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	"github.com/TRON-US/interface-go-btfs-core"
@@ -25,6 +24,7 @@ import (
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	"github.com/ipfs/go-ipfs-exchange-offline"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log"
 	dag "github.com/ipfs/go-merkledag"
 	mh "github.com/multiformats/go-multihash"
 )

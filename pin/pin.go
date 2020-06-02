@@ -13,10 +13,10 @@ import (
 	"github.com/TRON-US/go-btfs/dagutils"
 	mdag "github.com/ipfs/go-merkledag"
 
-	"github.com/TRON-US/go-btfs/logging"
 	cid "github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	ipld "github.com/ipfs/go-ipld-format"
+	logging "github.com/ipfs/go-log"
 )
 
 const (

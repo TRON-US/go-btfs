@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/TRON-US/go-btfs/logging"
+	logging "github.com/ipfs/go-log"
 	goprocess "github.com/jbenet/goprocess"
 )
 
