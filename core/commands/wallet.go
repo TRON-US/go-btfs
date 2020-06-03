@@ -4,14 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
+
+	"github.com/cenkalti/backoff/v3"
 )
 
 var WalletCmd = &cmds.Command{
@@ -30,6 +34,7 @@ withdraw and query balance of token used in BTFS.`,
 		"password":     walletPasswordCmd,
 		"keys":         walletKeysCmd,
 		"transactions": walletTransactionsCmd,
+		"import":       walletImportCmd,
 	},
 }
 
@@ -316,4 +321,52 @@ type Transaction struct {
 	From     string
 	To       string
 	Status   string
+}
+
+const privateKeyOptionName = "privateKey"
+const mnemonicOptionName = "mnemonic"
+
+var walletImportCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet import",
+		ShortDescription: "import BTFS wallet",
+	},
+	Arguments: []cmds.Argument{},
+	Options: []cmds.Option{
+		cmds.StringOption(privateKeyOptionName, "p", "Private Key to import."),
+		cmds.StringOption(mnemonicOptionName, "m", "Mnemonic to import."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		privKey, _ := req.Options[privateKeyOptionName].(string)
+		mnemonic, _ := req.Options[mnemonicOptionName].(string)
+		err = wallet.ImportKeys(n, privKey, mnemonic)
+		if err != nil {
+			return err
+		}
+		go func() error {
+			shutdownCmd := exec.Command("btfs", "shutdown")
+			if err := shutdownCmd.Run(); err != nil {
+				log.Errorf("shutdown error, %v", err)
+				return err
+			}
+			err = backoff.Retry(func() error {
+				daemonCmd := exec.Command("btfs", "daemon")
+				if err := daemonCmd.Run(); err != nil {
+					return err
+				}
+				return nil
+			}, daemonStartup)
+			if err != nil {
+				log.Errorf("start damon error, %v", err)
+				return err
+			}
+			return nil
+		}()
+		return nil
+	},
 }
