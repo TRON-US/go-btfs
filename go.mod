@@ -131,7 +131,7 @@ require (
 	github.com/tron-us/go-common/v2 v2.0.5
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
-	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2efcore/commands/storage/store.go
+	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-sysinfo v0.0.0-20190219211824-4a357d4b90b1
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
