@@ -36,6 +36,7 @@ github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIO
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/Stebalien/go-bitfield v0.0.1 h1:X3kbSSPUaJK60wV2hjOPZwmpljr6VGCqdq4cBLhbQBo=
 github.com/Stebalien/go-bitfield v0.0.1/go.mod h1:GNjFpasyUVkHMsfEOk8EFLJ9syQ6SI+XWrX9Wf2XH0s=
+<<<<<<< HEAD
 github.com/TRON-US/go-btfs-api v0.3.0 h1:oTnzpvYC8t6ppCRg2lCMkWiKq3SpL6r861+UUGvs+gg=
 github.com/TRON-US/go-btfs-api v0.3.0/go.mod h1:surmr8ztnpbVY7y2H7dbb7npNXfdaV0UH6cFwhtJPw0=
 github.com/TRON-US/go-btfs-chunker v0.3.0 h1:06/rAYKtC3BQRYVxMtEKvqFFHhSB+XKcqt3JZ0CjD4o=
@@ -56,6 +57,26 @@ github.com/TRON-US/go-car v0.2.1 h1:36Kl0lHgQFgxL7pzXEaZqWtMl0kDJMCeRffstIw6U5Y=
 github.com/TRON-US/go-car v0.2.1/go.mod h1:MreqMtdHSHYBlTajE8g3WxZZ8jtOmZZTN5TOLKGCEOk=
 github.com/TRON-US/go-cid v0.2.0 h1:VDEI5AkDI3tC31BpPFGTS6AZGYOUxGuHhAavH4Dnuhg=
 github.com/TRON-US/go-cid v0.2.0/go.mod h1:plgt+Y5MnOey4vO4UlUazGqdbEXuFYitED67FexhXog=
+=======
+github.com/TRON-US/go-btfs-api v0.1.0 h1:YRS/RF2lSWlUJE2CaCnfpNsUu/OEpic1AXnGBX/PXQc=
+github.com/TRON-US/go-btfs-api v0.1.0/go.mod h1:XoXb4w+3ZF665lSdbhCDnINII2lEdwi4pAItlpdZVHI=
+github.com/TRON-US/go-btfs-chunker v0.2.2/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
+github.com/TRON-US/go-btfs-chunker v0.2.3/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
+github.com/TRON-US/go-btfs-chunker v0.2.4/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
+github.com/TRON-US/go-btfs-chunker v0.2.8 h1:oUSEhjIZlJ52AVCXna4UqZEStH+xPEBCcZbWpTyAols=
+github.com/TRON-US/go-btfs-chunker v0.2.8/go.mod h1:Wj0oyybAWtu5lpcAc90QQ3bhJ14JRXD50PqxP25wmnI=
+github.com/TRON-US/go-btfs-cmds v0.2.1 h1:FRuuPO5J3sQFyihtc+nn+7xtNnRoXycpIY5HR7yz9v4=
+github.com/TRON-US/go-btfs-cmds v0.2.1/go.mod h1:b1puslIW6bD50zr1gWasJSbnC7ZIJ2AwdQrUnyZ6ud4=
+github.com/TRON-US/go-btfs-config v0.5.12 h1:p4A0LlplSdoWUgWkNN9l6rVc/VA7hlqByNidmhTKEhY=
+github.com/TRON-US/go-btfs-config v0.5.12/go.mod h1:045+FmBpTIWNy34ISzjtPaEf6afBq6wVQtviNmAnF5g=
+github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
+github.com/TRON-US/go-btfs-files v0.1.7 h1:Yce1ycvUWPtvQ+Iv3stKqQXYymxhx/XyRZT0jJzdgVI=
+github.com/TRON-US/go-btfs-files v0.1.7/go.mod h1:I8LeoFulha712BW03zGgmDdNwa0qbAPwfMIglzw0fnE=
+github.com/TRON-US/go-btfs-files v0.2.0 h1:JZ+F0gX8iPmUf1OlrdOdsA8GMGxCHhwQ03jEWWEgVLE=
+github.com/TRON-US/go-btfs-files v0.2.0/go.mod h1:Qx+rTOIC0xl3ZkosGcEoB4hqExZmTONErPys8K5suEc=
+github.com/TRON-US/go-cid v0.1.0 h1:54gblgLGL2S3mJX3m3GyTdKVqJVUcG+kCkCqWjZvrdM=
+github.com/TRON-US/go-cid v0.1.0/go.mod h1:Rq2SnJvLEaPmL3B1JUHtVQ0b/GtkDtpY9BxDR537NPU=
+>>>>>>> 37331e4b4... go mod tidy
 github.com/TRON-US/go-eccrypto v0.0.1 h1:+/5Uid61UGysbxv6Cv6gx4ru1gEiJOlir/P7ElAe7A0=
 github.com/TRON-US/go-eccrypto v0.0.1/go.mod h1:QZqTUSKP9MdYh+0LPsnVKvXV/Q2f9Qb6V4ejvUmHVvI=
 github.com/TRON-US/go-graphsync v0.1.2 h1:NXoz+4xSflQt0Yym1S40syP8xdr2f2+EvYLVWwghP6w=
@@ -155,6 +176,10 @@ github.com/cpuguy83/go-md2man v1.0.10/go.mod h1:SmD6nW6nTyfqj6ABTjUi3V3JVMnlJmwc
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
 github.com/crackcomm/go-gitignore v0.0.0-20170627025303-887ab5e44cc3 h1:HVTnpeuvF6Owjd5mniCL8DEXo7uYXdQEmOP4FJbV5tg=
 github.com/crackcomm/go-gitignore v0.0.0-20170627025303-887ab5e44cc3/go.mod h1:p1d6YEZWvFzEh4KLyvBcVSnrfNDDvK2zfK/4x2v/4pE=
+<<<<<<< HEAD
+=======
+github.com/creack/pty v1.1.7/go.mod h1:lj5s0c3V2DBrqTV7llrYr5NG6My20zk30Fl46Y7DoTY=
+>>>>>>> 37331e4b4... go mod tidy
 github.com/cskr/pubsub v1.0.2 h1:vlOzMhl6PFn60gRlTQQsIfVwaPB/B/8MziK8FhEPt/0=
 github.com/cskr/pubsub v1.0.2/go.mod h1:/8MzYXk/NJAz782G8RPkFzXTZVu63VotefPnR9TIRis=
 github.com/davecgh/go-spew v0.0.0-20171005155431-ecdeabc65495/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -397,6 +422,7 @@ github.com/ipfs/go-ipld-cbor v0.0.4/go.mod h1:BkCduEx3XBCO6t2Sfo5BaHzuok7hbhdMm9
 github.com/ipfs/go-ipld-git v0.0.3 h1:/YjkjCyo5KYRpW+suby8Xh9Cm/iH9dAgGV6qyZ1dGus=
 github.com/ipfs/go-ipld-git v0.0.3/go.mod h1:RuvMXa9qtJpDbqngyICCU/d+cmLFXxLsbIclmD0Lcr0=
 github.com/ipfs/go-log v0.0.1/go.mod h1:kL1d2/hzSpI0thNYjiKfjanbVNU+IIGA/WnNESY9leM=
+<<<<<<< HEAD
 github.com/ipfs/go-log v1.0.1/go.mod h1:HuWlQttfN6FWNHRhlY5yMk/lW7evQC0HHGOxEwMRR8I=
 github.com/ipfs/go-log v1.0.2/go.mod h1:1MNjMxe0u6xvJZgeqbJ8vdo2TKaGwZ1a0Bpza+sr2Sk=
 github.com/ipfs/go-log v1.0.3/go.mod h1:OsLySYkwIbiSUR/yBTdv1qPtcE4FW3WPWk/ewz9Ru+A=
@@ -407,6 +433,13 @@ github.com/ipfs/go-log/v2 v2.0.2/go.mod h1:O7P1lJt27vWHhOwQmcFEvlmo49ry2VY2+JfBW
 github.com/ipfs/go-log/v2 v2.0.3/go.mod h1:O7P1lJt27vWHhOwQmcFEvlmo49ry2VY2+JfBWFaa9+0=
 github.com/ipfs/go-log/v2 v2.0.5 h1:fL4YI+1g5V/b1Yxr1qAiXTMg1H8z9vx/VmJxBuQMHvU=
 github.com/ipfs/go-log/v2 v2.0.5/go.mod h1:eZs4Xt4ZUJQFM3DlanGhy7TkwwawCZcSByscwkWG+dw=
+=======
+github.com/ipfs/go-log v1.0.3 h1:Gg7SUYSZ7BrqaKMwM+hRgcAkKv4QLfzP4XPQt5Sx/OI=
+github.com/ipfs/go-log v1.0.3/go.mod h1:OsLySYkwIbiSUR/yBTdv1qPtcE4FW3WPWk/ewz9Ru+A=
+github.com/ipfs/go-log/v2 v2.0.3 h1:Q2gXcBoCALyLN/pUQlz1qgu0x3uFV6FzP9oXhpfyJpc=
+github.com/ipfs/go-log/v2 v2.0.3/go.mod h1:O7P1lJt27vWHhOwQmcFEvlmo49ry2VY2+JfBWFaa9+0=
+github.com/ipfs/go-merkledag v0.0.3/go.mod h1:Oc5kIXLHokkE1hWGMBHw+oxehkAaTOqtEb7Zbh6BhLA=
+>>>>>>> 37331e4b4... go mod tidy
 github.com/ipfs/go-merkledag v0.0.6/go.mod h1:QYPdnlvkOg7GnQRofu9XZimC5ZW5Wi3bKys/4GQQfto=
 github.com/ipfs/go-merkledag v0.2.3/go.mod h1:SQiXrtSts3KGNmgOzMICy5c0POOpUNQLvB3ClKnBAlk=
 github.com/ipfs/go-merkledag v0.2.4/go.mod h1:SQiXrtSts3KGNmgOzMICy5c0POOpUNQLvB3ClKnBAlk=
@@ -1059,11 +1092,16 @@ golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392/go.mod h1:/lpIB1dKB+9EgE3
 golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+<<<<<<< HEAD
 golang.org/x/crypto v0.0.0-20200115085410-6d4e4cb37c7d/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5 h1:Q7tZBpemrlsc2I7IyODzhtallWRSm4Q0d09pL6XbQtU=
 golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+=======
+golang.org/x/crypto v0.0.0-20200115085410-6d4e4cb37c7d h1:2+ZP7EfsZV7Vvmx3TIqSlSzATMkTAKqM14YGFPoSKjI=
+golang.org/x/crypto v0.0.0-20200115085410-6d4e4cb37c7d/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+>>>>>>> 37331e4b4... go mod tidy
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/lint v0.0.0-20180702182130-06c8688daad7/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
