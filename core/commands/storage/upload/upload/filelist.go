@@ -23,7 +23,7 @@ var FilelistCmd = &cmds.Command{
 		ShortDescription: `
 The command helps renter to retrieve the file information for storage, includes file hash, 
 file size, rent start and rent end. Especially for renewing the contract for a new extended 
-duration, renter can check files with the command and find the desired file to renew.
+duration, renter can check files with the command and find the desired file to renew. 
 `,
 	},
 	Arguments: []cmds.Argument{
