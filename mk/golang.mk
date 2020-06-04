@@ -1,3 +1,5 @@
+SHELL := /bin/bash # Use bash syntax
+
 # golang utilities
 GO_MIN_VERSION = 1.14
 export GO111MODULE=on
@@ -10,6 +12,7 @@ unexport GOFLAGS
 GOFLAGS ?=
 GOTFLAGS ?=
 TEST_COVERAGE_OUTPUT ?= tests_coverage
+TEST_FILE_DIR ?= /tmp
 
 #select explicit list of packages to test
 COVERPKG_LIST := $(shell cat coverpkg_list.txt)
@@ -102,6 +105,11 @@ test_go_lint: test/bin/golangci-lint
 .PHONY: test_go_lint
 
 test_go: $(TEST_GO)
+
+test_build_special_exe:
+	cd ./cmd/btfs && \
+	$(GOCC) test -coverpkg=./... -c *.go -tags testrunmain -o $(TEST_FILE_DIR)/test-special-exe
+.PHONY: test_build_special_exe
 
 check_go_version:
 	@$(GOCC) version
