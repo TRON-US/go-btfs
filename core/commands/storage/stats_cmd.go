@@ -12,6 +12,8 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+
+	"github.com/shirou/gopsutil/disk"
 )
 
 const (
@@ -65,23 +67,22 @@ func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode, env
 	if err != nil {
 		return err
 	}
-	//cfgRoot, err := cmdenv.GetConfigRoot(env)
-	//if err != nil {
-	//	return err
-	//}
-	//du, err := disk.Usage(cfgRoot)
-	//if err != nil {
-	//	return err
-	//}
+	cfgRoot, err := cmdenv.GetConfigRoot(env)
+	if err != nil {
+		return err
+	}
+	du, err := disk.Usage(cfgRoot)
+	if err != nil {
+		return err
+	}
 	hs := &nodepb.StorageStat_Host{
-		Online:      cfg.Experimental.StorageHostEnabled,
-		Uptime:      sr.Uptime,
-		Score:       sr.Score,
-		StorageUsed: int64(stat.RepoSize),
-		StorageCap:  int64(stat.StorageMax),
-		//go-btfs-common version of v0.3.7 is obsolete, below 2 fields have removed
-		//StorageDiskTotal:     int64(du.Total),
-		//StorageDiskAvailable: int64(du.Free),
+		Online:               cfg.Experimental.StorageHostEnabled,
+		Uptime:               sr.Uptime,
+		Score:                sr.Score,
+		StorageUsed:          int64(stat.RepoSize),
+		StorageCap:           int64(stat.StorageMax),
+		StorageDiskTotal:     int64(du.Total),
+		StorageDiskAvailable: int64(du.Free),
 	}
 	return SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
 }
@@ -126,20 +127,20 @@ This command get node stats in the network from the local node data store.`,
 			return err
 		}
 
-		//cfgRoot, err := cmdenv.GetConfigRoot(env)
-		//if err != nil {
-		//	return err
-		//}
-		//du, err := disk.Usage(cfgRoot)
-		//if err != nil {
-		//	return err
-		//}
+		cfgRoot, err := cmdenv.GetConfigRoot(env)
+		if err != nil {
+			return err
+		}
+		du, err := disk.Usage(cfgRoot)
+		if err != nil {
+			return err
+		}
 
 		hs.Online = cfg.Experimental.StorageHostEnabled
 		hs.StorageUsed = int64(stat.RepoSize)
 		hs.StorageCap = int64(stat.StorageMax)
-		//hs.StorageDiskTotal = int64(du.Total)
-		//hs.StorageDiskAvailable = int64(du.Free)
+		hs.StorageDiskTotal = int64(du.Total)
+		hs.StorageDiskAvailable = int64(du.Free)
 
 		// Only host stats for now
 		return cmds.EmitOnce(res, &nodepb.StorageStat{
