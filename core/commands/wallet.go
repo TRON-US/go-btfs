@@ -7,15 +7,17 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+<<<<<<< HEAD
 
 	"github.com/cenkalti/backoff/v3"
+=======
+>>>>>>> a6d38ef8c... BTFS-1984 Wallet BE: Implement transfer function to on-chain public address
 )
 
 var WalletCmd = &cmds.Command{
@@ -34,7 +36,11 @@ withdraw and query balance of token used in BTFS.`,
 		"password":     walletPasswordCmd,
 		"keys":         walletKeysCmd,
 		"transactions": walletTransactionsCmd,
+<<<<<<< HEAD
 		"import":       walletImportCmd,
+=======
+		"transfer":     walletTransferCmd,
+>>>>>>> a6d38ef8c... BTFS-1984 Wallet BE: Implement transfer function to on-chain public address
 	},
 }
 
@@ -312,15 +318,47 @@ var walletTransactionsCmd = &cmds.Command{
 		}
 		return cmds.EmitOnce(res, txs)
 	},
-	Type: []*walletpb.Transaction{},
+	Type: []*walletpb.TransactionV1{},
 }
 
-type Transaction struct {
-	Datetime time.Time
-	Amount   int64
-	From     string
-	To       string
-	Status   string
+var walletTransferCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "Send to another BTT wallet",
+		ShortDescription: "Send to another BTT wallet from current BTT wallet",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("to", true, false, "address of another BTFS wallet to transfer to."),
+		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer."),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		amount, err := strconv.ParseInt(req.Arguments[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		ret, err := wallet.TransferBTT(req.Context, n, cfg, nil, "", req.Arguments[0], amount)
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, &TransferResult{
+			Result:  ret.Result,
+			Message: ret.Message,
+		})
+	},
+	Type: &TransferResult{},
+}
+
+type TransferResult struct {
+	Result  bool
+	Message string
 }
 
 const privateKeyOptionName = "privateKey"

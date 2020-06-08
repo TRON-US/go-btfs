@@ -116,8 +116,8 @@ require (
 	github.com/shirou/gopsutil v2.20.5+incompatible
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	github.com/tron-us/go-btfs-common v0.3.7
-	github.com/tron-us/go-common/v2 v2.0.5
+	github.com/tron-us/go-btfs-common v0.4.8
+	github.com/tron-us/go-common/v2 v2.1.1
 	github.com/tron-us/protobuf v1.3.4
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-sysinfo v0.0.0-20190219211824-4a357d4b90b1
