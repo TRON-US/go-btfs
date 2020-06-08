@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -58,7 +60,7 @@ func Deposit(ctx context.Context, n *core.IpfsNode, ledgerAddr []byte, amount in
 	}
 	log.Debug(fmt.Sprintf("Call Deposit API success, id: [%d]", prepareResponse.GetId()))
 
-	err = PersistTx(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(),
+	err = PersistTx(n.Repo.Datastore(), n.Identity.Pretty(), strconv.FormatInt(prepareResponse.GetId(), 10),
 		amount, BttWallet, InAppWallet, StatusPending)
 	if err != nil {
 		log.Error(fmt.Sprintf("Record deposit tx failed, reasons: [%v]", err))
@@ -289,7 +291,7 @@ func Withdraw(ctx context.Context, n *core.IpfsNode, ledgerAddr, externalAddr []
 		return 0, 0, err
 	}
 
-	err = PersistTx(n.Repo.Datastore(), n.Identity.Pretty(), prepareResponse.GetId(), amount,
+	err = PersistTx(n.Repo.Datastore(), n.Identity.Pretty(), strconv.FormatInt(prepareResponse.GetId(), 10), amount,
 		InAppWallet, BttWallet, StatusPending)
 	if err != nil {
 		log.Error(fmt.Sprintf("Persist tx error, reasons: [%v]", err))
@@ -436,14 +438,17 @@ func GetTokenBalance(ctx context.Context, addr []byte, tokenId string) (int64, e
 }
 
 var (
-	walletTransactionKeyPrefix = "/btfs/%s/wallet/transactions/"
-	walletTransactionKey       = walletTransactionKeyPrefix + "%d/"
+	walletTransactionKeyPrefix = "/btfs/%v/wallet/transactions/"
+	walletTransactionKey       = walletTransactionKeyPrefix + "%v/"
+
+	walletTransactionV1KeyPrefix = "/btfs/%v/wallet/v1/transactions/"
+	walletTransactionV1Key       = walletTransactionV1KeyPrefix + "%v/"
 )
 
-func PersistTx(d ds.Datastore, peerId string, txId int64, amount int64,
+func PersistTx(d ds.Datastore, peerId string, txId string, amount int64,
 	from string, to string, status string) error {
-	return sessions.Save(d, fmt.Sprintf(walletTransactionKey, peerId, txId),
-		&walletpb.Transaction{
+	return sessions.Save(d, fmt.Sprintf(walletTransactionV1Key, peerId, txId),
+		&walletpb.TransactionV1{
 			Id:         txId,
 			TimeCreate: time.Now(),
 			Amount:     amount,
@@ -454,8 +459,8 @@ func PersistTx(d ds.Datastore, peerId string, txId int64, amount int64,
 }
 
 func UpdateStatus(d ds.Datastore, peerId string, txId int64, status string) error {
-	key := fmt.Sprintf(walletTransactionKey, peerId, txId)
-	s := &walletpb.Transaction{}
+	key := fmt.Sprintf(walletTransactionV1Key, peerId, txId)
+	s := &walletpb.TransactionV1{}
 	err := sessions.Get(d, key, s)
 	if err != nil {
 		return err
@@ -467,19 +472,64 @@ func UpdateStatus(d ds.Datastore, peerId string, txId int64, status string) erro
 	return nil
 }
 
-func GetTransactions(d ds.Datastore, peerId string) ([]*walletpb.Transaction, error) {
+func GetTransactions(d ds.Datastore, peerId string) ([]*walletpb.TransactionV1, error) {
+	txs := make(TxSlice, 0)
+	v0Txs, err := loadV0Txs(d, peerId)
+	if err != nil || v0Txs == nil {
+		//ignore, NOP
+		err = nil
+	}
+	txs = append(txs, v0Txs...)
+	list, err := sessions.List(d, fmt.Sprintf(walletTransactionV1KeyPrefix, peerId))
+	if err != nil {
+		return nil, err
+	}
+	for _, bytes := range list {
+		tx := new(walletpb.TransactionV1)
+		err := proto.Unmarshal(bytes, tx)
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
+	}
+	sort.Sort(txs)
+	return txs, nil
+}
+
+type TxSlice []*walletpb.TransactionV1
+
+func (p TxSlice) Len() int {
+	return len(p)
+}
+
+func (p TxSlice) Less(i, j int) bool {
+	return p[i].TimeCreate.After(p[j].TimeCreate)
+}
+
+func (p TxSlice) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
+func loadV0Txs(d ds.Datastore, peerId string) ([]*walletpb.TransactionV1, error) {
 	list, err := sessions.List(d, fmt.Sprintf(walletTransactionKeyPrefix, peerId))
 	if err != nil {
 		return nil, err
 	}
-	txs := make([]*walletpb.Transaction, 0)
+	txs := make([]*walletpb.TransactionV1, 0)
 	for _, bytes := range list {
 		tx := new(walletpb.Transaction)
 		err := proto.Unmarshal(bytes, tx)
 		if err != nil {
 			return nil, err
 		}
-		txs = append(txs, tx)
+		txs = append(txs, &walletpb.TransactionV1{
+			Id:         strconv.FormatInt(tx.Id, 10),
+			TimeCreate: tx.TimeCreate,
+			Amount:     tx.Amount,
+			From:       tx.From,
+			To:         tx.To,
+			Status:     tx.Status,
+		})
 	}
 	return txs, nil
 }

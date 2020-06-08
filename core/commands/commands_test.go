@@ -261,6 +261,7 @@ func TestCommands(t *testing.T) {
 		"/wallet/keys",
 		"/wallet/password",
 		"/wallet/transactions",
+		"/wallet/transfer",
 	}
 
 	cmdSet := make(map[string]struct{})

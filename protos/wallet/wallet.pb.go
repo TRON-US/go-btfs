@@ -119,9 +119,102 @@ func (m *Transaction) GetStatus() string {
 func (*Transaction) XXX_MessageName() string {
 	return "wallet.Transaction"
 }
+
+type TransactionV1 struct {
+	Id                   string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" pg:"id"`
+	TimeCreate           time.Time `protobuf:"bytes,2,opt,name=time_create,json=timeCreate,proto3,stdtime" json:"time_create" pg:"time_create"`
+	Amount               int64     `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty" pg:"amount"`
+	From                 string    `protobuf:"bytes,4,opt,name=from,proto3" json:"from,omitempty" pg:"from"`
+	To                   string    `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty" pg:"to"`
+	Status               string    `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty" pg:"status"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-" pg:"-"`
+	XXX_unrecognized     []byte    `json:"-" pg:"-"`
+	XXX_sizecache        int32     `json:"-" pg:"-"`
+}
+
+func (m *TransactionV1) Reset()         { *m = TransactionV1{} }
+func (m *TransactionV1) String() string { return proto.CompactTextString(m) }
+func (*TransactionV1) ProtoMessage()    {}
+func (*TransactionV1) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0c953fedb813f1ad, []int{1}
+}
+func (m *TransactionV1) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TransactionV1) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TransactionV1.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TransactionV1) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TransactionV1.Merge(m, src)
+}
+func (m *TransactionV1) XXX_Size() int {
+	return m.Size()
+}
+func (m *TransactionV1) XXX_DiscardUnknown() {
+	xxx_messageInfo_TransactionV1.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TransactionV1 proto.InternalMessageInfo
+
+func (m *TransactionV1) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *TransactionV1) GetTimeCreate() time.Time {
+	if m != nil {
+		return m.TimeCreate
+	}
+	return time.Time{}
+}
+
+func (m *TransactionV1) GetAmount() int64 {
+	if m != nil {
+		return m.Amount
+	}
+	return 0
+}
+
+func (m *TransactionV1) GetFrom() string {
+	if m != nil {
+		return m.From
+	}
+	return ""
+}
+
+func (m *TransactionV1) GetTo() string {
+	if m != nil {
+		return m.To
+	}
+	return ""
+}
+
+func (m *TransactionV1) GetStatus() string {
+	if m != nil {
+		return m.Status
+	}
+	return ""
+}
+
+func (*TransactionV1) XXX_MessageName() string {
+	return "wallet.TransactionV1"
+}
 func init() {
 	proto.RegisterType((*Transaction)(nil), "wallet.Transaction")
 	golang_proto.RegisterType((*Transaction)(nil), "wallet.Transaction")
+	proto.RegisterType((*TransactionV1)(nil), "wallet.TransactionV1")
+	golang_proto.RegisterType((*TransactionV1)(nil), "wallet.TransactionV1")
 }
 
 func init() {
@@ -132,27 +225,28 @@ func init() {
 }
 
 var fileDescriptor_0c953fedb813f1ad = []byte{
-	// 308 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x90, 0xbf, 0x4e, 0x02, 0x41,
-	0x10, 0xc6, 0x9d, 0x03, 0x2f, 0xb8, 0x97, 0x50, 0x5c, 0x61, 0x36, 0x14, 0x0b, 0xb1, 0xa2, 0x61,
-	0xcf, 0x68, 0x7c, 0x01, 0x0c, 0x3d, 0x21, 0x24, 0x26, 0x36, 0x66, 0x0f, 0x8e, 0x75, 0x13, 0xee,
-	0x86, 0xdc, 0xce, 0xc5, 0xd7, 0xb0, 0xf4, 0x51, 0x2c, 0x2d, 0x29, 0x7d, 0x02, 0xff, 0xc0, 0x4b,
-	0x58, 0x9a, 0xdd, 0x85, 0xd8, 0x58, 0xed, 0x7c, 0x5f, 0xbe, 0xdf, 0x97, 0xd9, 0x61, 0x37, 0xda,
-	0xd0, 0x63, 0x93, 0xcb, 0x05, 0x96, 0x19, 0xd5, 0x58, 0x8d, 0x1a, 0x9b, 0x69, 0x1c, 0xe5, 0xb4,
-	0xb2, 0xd9, 0xa6, 0x46, 0x42, 0x9b, 0x3d, 0xa9, 0xf5, 0xba, 0xa0, 0xc3, 0x23, 0xbd, 0x99, 0xc6,
-	0x41, 0xf5, 0x2e, 0xff, 0xc1, 0x7d, 0x22, 0x6f, 0x56, 0x99, 0x46, 0x8d, 0x5e, 0xf8, 0x29, 0x90,
-	0xbd, 0xbe, 0x46, 0xd4, 0xeb, 0xe2, 0x2f, 0x45, 0xa6, 0x2c, 0x2c, 0xa9, 0x72, 0x13, 0x02, 0x17,
-	0xaf, 0xc0, 0x92, 0x79, 0xad, 0x2a, 0xab, 0x16, 0x64, 0xb0, 0x4a, 0xbb, 0x2c, 0x32, 0x4b, 0x0e,
-	0x03, 0x18, 0xb6, 0x66, 0x91, 0x59, 0xa6, 0x13, 0x96, 0x38, 0xe4, 0x61, 0x51, 0x17, 0x8a, 0x0a,
-	0x1e, 0x0d, 0x60, 0x98, 0x5c, 0xf5, 0x64, 0xa8, 0x95, 0xc7, 0x5a, 0x39, 0x3f, 0xd6, 0x8e, 0x3b,
-	0xdb, 0x8f, 0xfe, 0xc9, 0xf3, 0x67, 0x1f, 0x66, 0xcc, 0x81, 0xb7, 0x9e, 0x4b, 0xcf, 0x59, 0xac,
-	0x4a, 0x6c, 0x2a, 0xe2, 0x2d, 0x5f, 0x7d, 0x50, 0x69, 0xca, 0xda, 0xab, 0x1a, 0x4b, 0xde, 0x1e,
-	0xc0, 0xf0, 0x6c, 0xe6, 0x67, 0xb7, 0x02, 0x21, 0x3f, 0xf5, 0x4e, 0x44, 0xe8, 0x58, 0x4b, 0x8a,
-	0x1a, 0xcb, 0x63, 0xef, 0x1d, 0xd4, 0x78, 0xf2, 0xf3, 0x2d, 0x60, 0xbb, 0x13, 0xf0, 0xbe, 0x13,
-	0xf0, 0xb5, 0x13, 0xf0, 0xb2, 0x17, 0xf0, 0xb6, 0x17, 0xb0, 0xdd, 0x0b, 0x60, 0x5d, 0x83, 0xd2,
-	0xdd, 0x55, 0x86, 0xdb, 0x8d, 0x93, 0x3b, 0xff, 0x4e, 0xdd, 0xc6, 0x53, 0xb8, 0xef, 0x04, 0x7b,
-	0x93, 0xe7, 0xb1, 0xff, 0xc4, 0xf5, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf1, 0xbf, 0x38, 0x9d,
-	0x9c, 0x01, 0x00, 0x00,
+	// 328 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x92, 0x3d, 0x6e, 0xfa, 0x40,
+	0x10, 0xc5, 0xff, 0x63, 0xf8, 0x5b, 0xb0, 0x56, 0x28, 0x5c, 0x44, 0x16, 0xc5, 0x82, 0xa8, 0x68,
+	0x58, 0xe7, 0x43, 0xb9, 0x00, 0x11, 0x3d, 0x42, 0x28, 0x91, 0xd2, 0x44, 0x6b, 0x30, 0xce, 0x4a,
+	0xd8, 0x83, 0xbc, 0x63, 0xe5, 0x1a, 0x29, 0x73, 0x94, 0x28, 0x55, 0x4a, 0xca, 0x9c, 0x20, 0x1f,
+	0x70, 0x89, 0x94, 0xd1, 0xee, 0x82, 0x42, 0x91, 0x03, 0xa4, 0x9a, 0x79, 0x4f, 0xf3, 0x7b, 0x7a,
+	0x96, 0x97, 0x5d, 0x64, 0x8a, 0xee, 0xaa, 0x44, 0xcc, 0x30, 0x8f, 0xa9, 0xc4, 0x62, 0x50, 0xe9,
+	0x38, 0xc3, 0x41, 0x42, 0x0b, 0x1d, 0xaf, 0x4a, 0x24, 0xd4, 0xf1, 0xbd, 0x5c, 0x2e, 0x53, 0xda,
+	0x0d, 0x61, 0xcd, 0xd0, 0x77, 0xaa, 0x7d, 0xf2, 0x0b, 0x6e, 0x2f, 0x92, 0x6a, 0x11, 0x67, 0x98,
+	0xa1, 0x15, 0x76, 0x73, 0x64, 0xbb, 0x93, 0x21, 0x66, 0xcb, 0xf4, 0xe7, 0x8a, 0x54, 0x9e, 0x6a,
+	0x92, 0xf9, 0xca, 0x1d, 0xf4, 0x9e, 0x80, 0x05, 0xd3, 0x52, 0x16, 0x5a, 0xce, 0x48, 0x61, 0x11,
+	0xb6, 0x98, 0xa7, 0xe6, 0x11, 0x74, 0xa1, 0x5f, 0x9b, 0x78, 0x6a, 0x1e, 0x8e, 0x58, 0x60, 0x90,
+	0xdb, 0x59, 0x99, 0x4a, 0x4a, 0x23, 0xaf, 0x0b, 0xfd, 0xe0, 0xac, 0x2d, 0x5c, 0xac, 0xd8, 0xc7,
+	0x8a, 0xe9, 0x3e, 0x76, 0xd8, 0x58, 0xbf, 0x75, 0xfe, 0x3d, 0xbc, 0x77, 0x60, 0xc2, 0x0c, 0x78,
+	0x69, 0xb9, 0xf0, 0x98, 0xf9, 0x32, 0xc7, 0xaa, 0xa0, 0xa8, 0x66, 0xa3, 0x77, 0x2a, 0x0c, 0x59,
+	0x7d, 0x51, 0x62, 0x1e, 0xd5, 0xbb, 0xd0, 0x6f, 0x4e, 0xec, 0x6e, 0x2a, 0x10, 0x46, 0xff, 0xad,
+	0xe3, 0x11, 0x1a, 0x56, 0x93, 0xa4, 0x4a, 0x47, 0xbe, 0xf5, 0x76, 0xaa, 0xf7, 0x0c, 0xec, 0xe8,
+	0xa0, 0xfa, 0xd5, 0xe9, 0x41, 0xf9, 0xe6, 0x1f, 0x2f, 0x3f, 0x1c, 0x7d, 0x7d, 0x72, 0x58, 0x6f,
+	0x38, 0xbc, 0x6e, 0x38, 0x7c, 0x6c, 0x38, 0x3c, 0x6e, 0x39, 0xbc, 0x6c, 0x39, 0xac, 0xb7, 0x1c,
+	0x58, 0x4b, 0xa1, 0x30, 0x8f, 0x42, 0xb8, 0x1f, 0x3f, 0x0c, 0xae, 0xed, 0x1c, 0x9b, 0xc6, 0x63,
+	0xb8, 0x69, 0x38, 0x7b, 0x95, 0x24, 0xbe, 0xfd, 0x88, 0xf3, 0xef, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0xd0, 0xcf, 0x03, 0x8b, 0x59, 0x02, 0x00, 0x00,
 }
 
 func (m *Transaction) Marshal() (dAtA []byte, err error) {
@@ -221,6 +315,74 @@ func (m *Transaction) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *TransactionV1) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TransactionV1) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TransactionV1) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Status) > 0 {
+		i -= len(m.Status)
+		copy(dAtA[i:], m.Status)
+		i = encodeVarintWallet(dAtA, i, uint64(len(m.Status)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.To) > 0 {
+		i -= len(m.To)
+		copy(dAtA[i:], m.To)
+		i = encodeVarintWallet(dAtA, i, uint64(len(m.To)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.From) > 0 {
+		i -= len(m.From)
+		copy(dAtA[i:], m.From)
+		i = encodeVarintWallet(dAtA, i, uint64(len(m.From)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.Amount != 0 {
+		i = encodeVarintWallet(dAtA, i, uint64(m.Amount))
+		i--
+		dAtA[i] = 0x18
+	}
+	n2, err2 := github_com_tron_us_protobuf_types.StdTimeMarshalTo(m.TimeCreate, dAtA[i-github_com_tron_us_protobuf_types.SizeOfStdTime(m.TimeCreate):])
+	if err2 != nil {
+		return 0, err2
+	}
+	i -= n2
+	i = encodeVarintWallet(dAtA, i, uint64(n2))
+	i--
+	dAtA[i] = 0x12
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintWallet(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintWallet(dAtA []byte, offset int, v uint64) int {
 	offset -= sovWallet(v)
 	base := offset
@@ -253,6 +415,24 @@ func NewPopulatedTransaction(r randyWallet, easy bool) *Transaction {
 	return this
 }
 
+func NewPopulatedTransactionV1(r randyWallet, easy bool) *TransactionV1 {
+	this := &TransactionV1{}
+	this.Id = string(randStringWallet(r))
+	v2 := github_com_tron_us_protobuf_types.NewPopulatedStdTime(r, easy)
+	this.TimeCreate = *v2
+	this.Amount = int64(r.Int63())
+	if r.Intn(2) == 0 {
+		this.Amount *= -1
+	}
+	this.From = string(randStringWallet(r))
+	this.To = string(randStringWallet(r))
+	this.Status = string(randStringWallet(r))
+	if !easy && r.Intn(10) != 0 {
+		this.XXX_unrecognized = randUnrecognizedWallet(r, 7)
+	}
+	return this
+}
+
 type randyWallet interface {
 	Float32() float32
 	Float64() float64
@@ -272,9 +452,9 @@ func randUTF8RuneWallet(r randyWallet) rune {
 	return rune(ru + 61)
 }
 func randStringWallet(r randyWallet) string {
-	v2 := r.Intn(100)
-	tmps := make([]rune, v2)
-	for i := 0; i < v2; i++ {
+	v3 := r.Intn(100)
+	tmps := make([]rune, v3)
+	for i := 0; i < v3; i++ {
 		tmps[i] = randUTF8RuneWallet(r)
 	}
 	return string(tmps)
@@ -296,11 +476,11 @@ func randFieldWallet(dAtA []byte, r randyWallet, fieldNumber int, wire int) []by
 	switch wire {
 	case 0:
 		dAtA = encodeVarintPopulateWallet(dAtA, uint64(key))
-		v3 := r.Int63()
+		v4 := r.Int63()
 		if r.Intn(2) == 0 {
-			v3 *= -1
+			v4 *= -1
 		}
-		dAtA = encodeVarintPopulateWallet(dAtA, uint64(v3))
+		dAtA = encodeVarintPopulateWallet(dAtA, uint64(v4))
 	case 1:
 		dAtA = encodeVarintPopulateWallet(dAtA, uint64(key))
 		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
@@ -333,6 +513,39 @@ func (m *Transaction) Size() (n int) {
 	_ = l
 	if m.Id != 0 {
 		n += 1 + sovWallet(uint64(m.Id))
+	}
+	l = github_com_tron_us_protobuf_types.SizeOfStdTime(m.TimeCreate)
+	n += 1 + l + sovWallet(uint64(l))
+	if m.Amount != 0 {
+		n += 1 + sovWallet(uint64(m.Amount))
+	}
+	l = len(m.From)
+	if l > 0 {
+		n += 1 + l + sovWallet(uint64(l))
+	}
+	l = len(m.To)
+	if l > 0 {
+		n += 1 + l + sovWallet(uint64(l))
+	}
+	l = len(m.Status)
+	if l > 0 {
+		n += 1 + l + sovWallet(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *TransactionV1) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovWallet(uint64(l))
 	}
 	l = github_com_tron_us_protobuf_types.SizeOfStdTime(m.TimeCreate)
 	n += 1 + l + sovWallet(uint64(l))
@@ -411,6 +624,240 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeCreate", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWallet
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthWallet
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_tron_us_protobuf_types.StdTimeUnmarshal(&m.TimeCreate, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Amount", wireType)
+			}
+			m.Amount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWallet
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Amount |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field From", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWallet
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWallet
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.From = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field To", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWallet
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWallet
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.To = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWallet
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWallet
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Status = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipWallet(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TransactionV1) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowWallet
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TransactionV1: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TransactionV1: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowWallet
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthWallet
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthWallet
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TimeCreate", wireType)
