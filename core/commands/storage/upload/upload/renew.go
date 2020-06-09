@@ -81,21 +81,19 @@ and file hash need to be specified and passed on the command.
 			return err
 		}
 
-		//get render session base on ssid and hashes need to be repaired
 		rss, err := sessions.GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
 		if err != nil {
 			return err
 		}
-		hp := uh.GetHostsProvider(ctxParams, make([]string, 0))
+
 		m := contracts[0].ContractMeta
 		renterPid, err := peer.IDB58Decode(renterId)
 		if err != nil {
 			return err
 		}
 
-		//Build new contracts here
-		CreateNewContract(rss, hp, m.Price, m.ShardFileSize, m.RentEnd, int(renewPeriod), false, renterPid, -1,
-			shardIndexes, nil)
+		// Build new contracts here
+		CreateNewContracts(rss, m.Price, m.ShardFileSize, m.RentEnd, int(renewPeriod), false, renterPid, -1, shardIndexes, nil)
 
 		seRes := &Res{
 			ID: ssId,
@@ -105,8 +103,8 @@ and file hash need to be specified and passed on the command.
 	Type: Res{},
 }
 
-//create new contracts and send to Guard
-func CreateNewContract(rss *sessions.RenterSession, hp uh.IHostsProvider, price int64, shardSize int64, startTime time.Time,
+// create new contracts and send to Guard, since Proto changed will send another PR for this
+func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int64, preRentEnd time.Time,
 	storageLength int, offlineSigning bool, renterId peer.ID, fileSize int64, shardIndexes []int, rp *RepairParams) {
-
 }
+
