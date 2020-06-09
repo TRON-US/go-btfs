@@ -107,4 +107,3 @@ and file hash need to be specified and passed on the command.
 func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int64, preRentEnd time.Time,
 	storageLength int, offlineSigning bool, renterId peer.ID, fileSize int64, shardIndexes []int, rp *RepairParams) {
 }
-
