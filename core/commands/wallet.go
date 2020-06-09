@@ -24,12 +24,13 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":     walletInitCmd,
-		"deposit":  walletDepositCmd,
-		"withdraw": walletWithdrawCmd,
-		"balance":  walletBalanceCmd,
-		"password": walletPasswordCmd,
-		"keys":     walletKeysCmd,
+		"init":         walletInitCmd,
+		"deposit":      walletDepositCmd,
+		"withdraw":     walletWithdrawCmd,
+		"balance":      walletBalanceCmd,
+		"password":     walletPasswordCmd,
+		"keys":         walletKeysCmd,
+		"transactions": walletTransactionsCmd,
 	},
 }
 
