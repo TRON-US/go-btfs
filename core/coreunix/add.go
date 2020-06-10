@@ -12,7 +12,6 @@ import (
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-btfs-files"
 	"github.com/TRON-US/go-btfs-pinner"
-	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-mfs"
 	"github.com/TRON-US/go-unixfs"
 	"github.com/TRON-US/go-unixfs/importer/balanced"

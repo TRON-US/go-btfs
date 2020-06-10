@@ -12,9 +12,9 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
-	pin "github.com/TRON-US/go-btfs/pin"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	pin "github.com/TRON-US/go-btfs-pinner"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
@@ -22,7 +22,6 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
-	pin "github.com/ipfs/go-ipfs-pinner"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	verifcid "github.com/ipfs/go-verifcid"

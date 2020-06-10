@@ -9,9 +9,9 @@ import (
 	gopath "path"
 
 	core "github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/pin"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
+	"github.com/TRON-US/go-btfs-pinner"
 	"github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	ihelper "github.com/TRON-US/go-unixfs/importer/helpers"

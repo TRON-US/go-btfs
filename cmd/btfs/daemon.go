@@ -17,11 +17,9 @@ import (
 
 	version "github.com/TRON-US/go-btfs"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
-	utilmain "github.com/TRON-US/go-btfs/cmd/ipfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
-	"github.com/TRON-US/go-btfs/core/coreapi"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"

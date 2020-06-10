@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	cid "github.com/ipfs/go-cid"
-	core "github.com/ipfs/go-ipfs/core"
-	coreapi "github.com/ipfs/go-ipfs/core/coreapi"
-	namesys "github.com/ipfs/go-ipfs/namesys"
+	core "github.com/TRON-US/go-btfs/core"
+	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
+	namesys "github.com/TRON-US/go-btfs/namesys"
 	isd "github.com/jbenet/go-is-domain"
 	"github.com/libp2p/go-libp2p-core/peer"
 	mbase "github.com/multiformats/go-multibase"

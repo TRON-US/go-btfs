@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/node/helpers"
-	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-btfs/repo"
 
 	"github.com/TRON-US/go-btfs-pinner"
