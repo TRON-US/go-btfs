@@ -20,7 +20,6 @@ import (
 	util "github.com/ipfs/go-ipfs-util"
 	"github.com/ipfs/go-path/resolver"
 	peer "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-peerstore/pstoremem"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"go.uber.org/fx"
 )

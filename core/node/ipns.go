@@ -8,8 +8,8 @@ import (
 	"github.com/TRON-US/go-btfs/namesys/republisher"
 	"github.com/TRON-US/go-btfs/repo"
 
-	"github.com/ipfs/go-ipfs-util"
 	"github.com/TRON-US/go-btns"
+	"github.com/ipfs/go-ipfs-util"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-core/routing"
@@ -22,7 +22,7 @@ const DefaultIpnsCacheSize = 128
 func RecordValidator(ps peerstore.Peerstore) record.Validator {
 	return record.NamespacedValidator{
 		"pk":   record.PublicKeyValidator{},
-		"ipns": ipns.Validator{KeyBook: ps},
+		"btns": btns.Validator{KeyBook: ps},
 	}
 }
 

@@ -13,7 +13,6 @@ import (
 	"context"
 	"io"
 
-	version "github.com/TRON-US/go-btfs"
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/node"
 	"github.com/TRON-US/go-btfs/core/node/libp2p"
