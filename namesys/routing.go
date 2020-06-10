@@ -8,8 +8,8 @@ import (
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	proto "github.com/gogo/protobuf/proto"
 	cid "github.com/ipfs/go-cid"
-	ipns "github.com/ipfs/go-ipns"
-	pb "github.com/ipfs/go-ipns/pb"
+	ipns "github.com/TRON-US/go-btns"
+	pb "github.com/TRON-US/go-btns/pb"
 	logging "github.com/ipfs/go-log"
 	path "github.com/ipfs/go-path"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -59,7 +59,8 @@ func (r *IpnsResolver) resolveOnceAsync(ctx context.Context, name string, option
 	}
 
 	name = strings.TrimPrefix(name, "/btns/")
-	pid, err := peer.IDB58Decode(name)
+
+	pid, err := peer.Decode(name)
 	if err != nil {
 		log.Debugf("RoutingResolver: could not convert public key hash %s to peer ID: %s\n", name, err)
 		out <- onceResult{err: err}

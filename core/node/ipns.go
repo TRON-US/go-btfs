@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TRON-US/go-btfs/namesys"
+	"github.com/TRON-US/go-btfs/namesys/republisher"
+	"github.com/TRON-US/go-btfs/repo"
+
 	"github.com/ipfs/go-ipfs-util"
-	"github.com/ipfs/go-ipns"
+	"github.com/TRON-US/go-btns"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-core/routing"
 	"github.com/libp2p/go-libp2p-record"
-
-	"github.com/TRON-US/go-btfs/namesys"
-	"github.com/TRON-US/go-btfs/namesys/republisher"
-	"github.com/TRON-US/go-btfs/repo"
 )
 
 const DefaultIpnsCacheSize = 128

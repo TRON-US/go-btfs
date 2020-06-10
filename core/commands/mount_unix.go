@@ -35,7 +35,7 @@ You may have to create /btfs and /btns before using 'btfs mount':
 `,
 		LongDescription: `
 Mount BTFS at a read-only mountpoint on the OS. The default, /btfs and /btns,
-are set in the configuration file, but can be overriden by the options.
+are set in the configuration file, but can be overridden by the options.
 All BTFS objects will be accessible under this directory. Note that the
 root will not be listable, as it is virtual. Access known paths directly.
 

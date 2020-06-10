@@ -2,16 +2,19 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
+	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	pin "github.com/TRON-US/go-btfs/pin"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
@@ -19,6 +22,8 @@ import (
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
+	pin "github.com/ipfs/go-ipfs-pinner"
+	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	verifcid "github.com/ipfs/go-verifcid"
 )
@@ -247,7 +252,6 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 		}
 
 		pins := make([]string, 0, len(req.Arguments))
-
 		for _, b := range req.Arguments {
 			rp, err := api.ResolvePath(req.Context, path.New(b))
 			if err != nil {
@@ -376,7 +380,7 @@ Example:
 		if len(req.Arguments) > 0 {
 			err = pinLsKeys(req, typeStr, n, api, emit)
 		} else {
-			err = pinLsAll(req, typeStr, n, emit)
+			err = pinLsAll(req, typeStr, n.Pinning, n.DAG, emit)
 		}
 		if err != nil {
 			return err
@@ -392,6 +396,17 @@ Example:
 	},
 	Type: &PinLsOutputWrapper{},
 	Encoders: cmds.EncoderMap{
+		cmds.JSON: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *PinLsOutputWrapper) error {
+			stream, _ := req.Options[pinStreamOptionName].(bool)
+
+			enc := json.NewEncoder(w)
+
+			if stream {
+				return enc.Encode(out.PinLsObject)
+			}
+
+			return enc.Encode(out.PinLsList)
+		}),
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *PinLsOutputWrapper) error {
 			quiet, _ := req.Options[pinQuietOptionName].(bool)
 			stream, _ := req.Options[pinStreamOptionName].(bool)
@@ -404,7 +419,6 @@ Example:
 				}
 				return nil
 			}
-
 			for k, v := range out.PinLsList.Keys {
 				if quiet {
 					fmt.Fprintf(w, "%s\n", k)
@@ -428,7 +442,7 @@ type PinLsOutputWrapper struct {
 
 // PinLsList is a set of pins with their type
 type PinLsList struct {
-	Keys map[string]PinLsType `json:",omitempty"`
+	Keys map[string]PinLsType
 }
 
 // PinLsType contains the type of a pin
@@ -459,7 +473,7 @@ func pinLsKeys(req *cmds.Request, typeStr string, n *core.IpfsNode, api coreifac
 			return err
 		}
 
-		pinType, pinned, err := n.Pinning.IsPinnedWithType(c.Cid(), mode)
+		pinType, pinned, err := n.Pinning.IsPinnedWithType(req.Context, c.Cid(), mode)
 		if err != nil {
 			return err
 		}
@@ -488,75 +502,38 @@ func pinLsKeys(req *cmds.Request, typeStr string, n *core.IpfsNode, api coreifac
 	return nil
 }
 
-func pinLsAll(req *cmds.Request, typeStr string, n *core.IpfsNode, emit func(value interface{}) error) error {
+func pinLsAll(req *cmds.Request, typeStr string, pinning pin.Pinner, dag ipld.DAGService, emit func(value interface{}) error) error {
+	pinCh, errCh := coreapi.PinLsAll(req.Context, typeStr, pinning, dag)
+
 	enc, err := cmdenv.GetCidEncoder(req)
 	if err != nil {
 		return err
 	}
 
-	keys := cid.NewSet()
-
-	AddToResultKeys := func(keyList []cid.Cid, typeStr string) error {
-		for _, c := range keyList {
-			if keys.Visit(c) {
-				err := emit(&PinLsOutputWrapper{
-					PinLsObject: PinLsObject{
-						Type: typeStr,
-						Cid:  enc.Encode(c),
-					},
-				})
-				if err != nil {
-					return err
-				}
+	ctx := req.Context
+loop:
+	for {
+		select {
+		case p, ok := <-pinCh:
+			if !ok {
+				break loop
 			}
-		}
-		return nil
-	}
-
-	if typeStr == "direct" || typeStr == "all" {
-		err := AddToResultKeys(n.Pinning.DirectKeys(), "direct")
-		if err != nil {
-			return err
-		}
-	}
-	if typeStr == "recursive" || typeStr == "all" {
-		err := AddToResultKeys(n.Pinning.RecursiveKeys(), "recursive")
-		if err != nil {
-			return err
-		}
-	}
-	if typeStr == "indirect" || typeStr == "all" {
-		for _, k := range n.Pinning.RecursiveKeys() {
-			if pin.IsExpiredPin(k, n.Pinning.RecursiveMap(), n.Pinning.DirectMap()) {
-				continue
-			}
-			var visitErr error
-			err := dag.Walk(req.Context, dag.GetLinksWithDAG(n.DAG), k, func(c cid.Cid) bool {
-				r := keys.Visit(c)
-				if r {
-					err := emit(&PinLsOutputWrapper{
-						PinLsObject: PinLsObject{
-							Type: "indirect",
-							Cid:  enc.Encode(c),
-						},
-					})
-					if err != nil {
-						visitErr = err
-					}
-				}
-				return r
-			}, dag.SkipRoot(), dag.Concurrent())
-
-			if visitErr != nil {
-				return visitErr
-			}
-			if err != nil {
+			if err := emit(&PinLsOutputWrapper{
+				PinLsObject: PinLsObject{
+					Type: p.Type(),
+					Cid:  enc.Encode(p.Path().Cid()),
+				},
+			}); err != nil {
 				return err
 			}
+
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 
-	return nil
+	err = <-errCh
+	return err
 }
 
 const (
@@ -570,8 +547,8 @@ var updatePinCmd = &cmds.Command{
 Efficiently pins a new object based on differences from an existing one and,
 by default, removes the old pin.
 
-This commands is useful when the new pin contains many similarities or is a
-derivate of an existing one, particuarly for large objects. This allows a more
+This command is useful when the new pin contains many similarities or is a
+derivative of an existing one, particularly for large objects. This allows a more
 efficient DAG-traversal which fully skips already-pinned branches from the old
 object. As a requirement, the old object needs to be an existing recursive
 pin.
@@ -658,8 +635,10 @@ var verifyPinCmd = &cmds.Command{
 			explain:   !quiet,
 			includeOk: verbose,
 		}
-		out := pinVerify(req.Context, n, opts, enc)
-
+		out, err := pinVerify(req.Context, n, opts, enc)
+		if err != nil {
+			return err
+		}
 		return res.Emit(out)
 	},
 	Type: PinVerifyRes{},
@@ -701,13 +680,16 @@ type pinVerifyOpts struct {
 	includeOk bool
 }
 
-func pinVerify(ctx context.Context, n *core.IpfsNode, opts pinVerifyOpts, enc cidenc.Encoder) <-chan interface{} {
+func pinVerify(ctx context.Context, n *core.IpfsNode, opts pinVerifyOpts, enc cidenc.Encoder) (<-chan interface{}, error) {
 	visited := make(map[cid.Cid]PinStatus)
 
 	bs := n.Blocks.Blockstore()
 	DAG := dag.NewDAGService(bserv.New(bs, offline.Exchange(bs)))
 	getLinks := dag.GetLinksWithDAG(DAG)
-	recPins := n.Pinning.RecursiveKeys()
+	recPins, err := n.Pinning.RecursiveKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	var checkPin func(root cid.Cid) PinStatus
 	checkPin = func(root cid.Cid) PinStatus {
@@ -763,7 +745,7 @@ func pinVerify(ctx context.Context, n *core.IpfsNode, opts pinVerifyOpts, enc ci
 		}
 	}()
 
-	return out
+	return out, nil
 }
 
 // Format formats PinVerifyRes

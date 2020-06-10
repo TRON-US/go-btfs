@@ -1,7 +1,6 @@
 package loader
 
 import (
-	"github.com/TRON-US/go-btfs/plugin"
 	pluginbadgerds "github.com/TRON-US/go-btfs/plugin/plugins/badgerds"
 	pluginflatfs "github.com/TRON-US/go-btfs/plugin/plugins/flatfs"
 	pluginipldgit "github.com/TRON-US/go-btfs/plugin/plugins/git"
@@ -12,9 +11,9 @@ import (
 // This file is being generated as part of plugin build process
 // To change it, modify the plugin/loader/preload.sh
 
-var preloadPlugins = []plugin.Plugin{
-	pluginipldgit.Plugins[0],
-	pluginbadgerds.Plugins[0],
-	pluginflatfs.Plugins[0],
-	pluginlevelds.Plugins[0],
+func init() {
+	Preload(pluginipldgit.Plugins...)
+	Preload(pluginbadgerds.Plugins...)
+	Preload(pluginflatfs.Plugins...)
+	Preload(pluginlevelds.Plugins...)
 }

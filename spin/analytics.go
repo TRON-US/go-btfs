@@ -16,7 +16,7 @@ import (
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"

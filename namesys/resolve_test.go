@@ -9,7 +9,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	mockrouting "github.com/ipfs/go-ipfs-routing/mock"
-	ipns "github.com/ipfs/go-ipns"
+	ipns "github.com/TRON-US/go-btns"
 	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -26,23 +26,15 @@ func TestRoutingResolve(t *testing.T) {
 	resolver := NewIpnsResolver(d)
 	publisher := NewIpnsPublisher(d, dstore)
 
-	privk, pubk, err := test.RandTestKeyPair(ci.RSA, 512)
-	if err != nil {
-		t.Fatal(err)
-	}
+	identity := testutil.RandIdentityOrFatal(t)
 
 	h := path.FromString("/btfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
-	err = publisher.Publish(context.Background(), privk, h)
+	err := publisher.Publish(context.Background(), identity.PrivateKey(), h)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pid, err := peer.IDFromPublicKey(pubk)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	res, err := resolver.Resolve(context.Background(), pid.Pretty())
+	res, err := resolver.Resolve(context.Background(), identity.ID().Pretty())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,36 +51,28 @@ func TestPrexistingExpiredRecord(t *testing.T) {
 	resolver := NewIpnsResolver(d)
 	publisher := NewIpnsPublisher(d, dstore)
 
-	privk, pubk, err := test.RandTestKeyPair(ci.RSA, 512)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	id, err := peer.IDFromPublicKey(pubk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	identity := testutil.RandIdentityOrFatal(t)
 
 	// Make an expired record and put it in the datastore
 	h := path.FromString("/btfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
 	eol := time.Now().Add(time.Hour * -1)
 
-	entry, err := ipns.Create(privk, []byte(h), 0, eol)
+	entry, err := ipns.Create(identity.PrivateKey(), []byte(h), 0, eol)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = PutRecordToRouting(context.Background(), d, pubk, entry)
+	err = PutRecordToRouting(context.Background(), d, identity.PublicKey(), entry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Now, with an old record in the system already, try and publish a new one
-	err = publisher.Publish(context.Background(), privk, h)
+	err = publisher.Publish(context.Background(), identity.PrivateKey(), h)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = verifyCanResolve(resolver, id.Pretty(), h)
+	err = verifyCanResolve(resolver, identity.ID().Pretty(), h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,35 +85,27 @@ func TestPrexistingRecord(t *testing.T) {
 	resolver := NewIpnsResolver(d)
 	publisher := NewIpnsPublisher(d, dstore)
 
-	privk, pubk, err := test.RandTestKeyPair(ci.RSA, 512)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	id, err := peer.IDFromPublicKey(pubk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	identity := testutil.RandIdentityOrFatal(t)
 
 	// Make a good record and put it in the datastore
 	h := path.FromString("/btfs/QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN")
 	eol := time.Now().Add(time.Hour)
-	entry, err := ipns.Create(privk, []byte(h), 0, eol)
+	entry, err := ipns.Create(identity.PrivateKey(), []byte(h), 0, eol)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = PutRecordToRouting(context.Background(), d, pubk, entry)
+	err = PutRecordToRouting(context.Background(), d, identity.PublicKey(), entry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Now, with an old record in the system already, try and publish a new one
-	err = publisher.Publish(context.Background(), privk, h)
+	err = publisher.Publish(context.Background(), identity.PrivateKey(), h)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = verifyCanResolve(resolver, id.Pretty(), h)
+	err = verifyCanResolve(resolver, identity.ID().Pretty(), h)
 	if err != nil {
 		t.Fatal(err)
 	}

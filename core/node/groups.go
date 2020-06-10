@@ -12,7 +12,7 @@ import (
 
 	"github.com/tron-us/go-btfs-common/crypto"
 
-	"github.com/TRON-US/go-btfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	uio "github.com/TRON-US/go-unixfs/io"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
@@ -26,6 +26,7 @@ import (
 )
 
 var BaseLibP2P = fx.Options(
+	fx.Provide(libp2p.UserAgent),
 	fx.Provide(libp2p.PNet),
 	fx.Provide(libp2p.ConnectionManager),
 	fx.Provide(libp2p.DefaultTransports),
@@ -69,8 +70,10 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 
 	// parse PubSub config
 
-	ps := fx.Options()
+	ps, disc := fx.Options(), fx.Options()
 	if bcfg.getOpt("pubsub") || bcfg.getOpt("ipnsps") {
+		disc = fx.Provide(libp2p.TopicDiscovery())
+
 		var pubsubOptions []pubsub.Option
 		pubsubOptions = append(
 			pubsubOptions,
@@ -90,6 +93,25 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		}
 	}
 
+	autonat := fx.Options()
+
+	switch cfg.AutoNAT.ServiceMode {
+	default:
+		panic("BUG: unhandled autonat service mode")
+	case config.AutoNATServiceDisabled:
+	case config.AutoNATServiceUnset:
+		// TODO
+		//
+		// We're enabling the AutoNAT service by default on _all_ nodes
+		// for the moment.
+		//
+		// We should consider disabling it by default if the dht is set
+		// to dhtclient.
+		fallthrough
+	case config.AutoNATServiceEnabled:
+		autonat = fx.Provide(libp2p.AutoNATService(cfg.AutoNAT.Throttle))
+	}
+
 	// Gather all the options
 
 	opts := fx.Options(
@@ -102,7 +124,7 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 		fx.Invoke(libp2p.StartListening(cfg.Addresses.Swarm)),
 		fx.Invoke(libp2p.SetupDiscovery(cfg.Discovery.MDNS.Enabled, cfg.Discovery.MDNS.Interval)),
 
-		fx.Provide(libp2p.Security(!bcfg.DisableEncryptedConnections, cfg.Experimental.PreferTLS)),
+		fx.Provide(libp2p.Security(!bcfg.DisableEncryptedConnections)),
 
 		fx.Provide(libp2p.Routing),
 		fx.Provide(libp2p.BaseRouting),
@@ -110,11 +132,12 @@ func LibP2P(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 
 		maybeProvide(libp2p.BandwidthCounter, !cfg.Swarm.DisableBandwidthMetrics),
 		maybeProvide(libp2p.NatPortMap, !cfg.Swarm.DisableNatPortMap),
-		maybeProvide(libp2p.AutoRealy, cfg.Swarm.EnableAutoRelay),
+		maybeProvide(libp2p.AutoRelay, cfg.Swarm.EnableAutoRelay),
 		maybeProvide(libp2p.QUIC, cfg.Experimental.QUIC),
-		maybeInvoke(libp2p.AutoNATService(cfg.Experimental.QUIC), cfg.Swarm.EnableAutoNATService),
+		autonat,
 		connmgr,
 		ps,
+		disc,
 	)
 
 	return opts
@@ -153,7 +176,7 @@ func Identity(cfg *config.Config) fx.Option {
 		return fx.Error(errors.New("no peer ID in config! (was 'btfs init' run?)"))
 	}
 
-	id, err := peer.IDB58Decode(cid)
+	id, err := peer.Decode(cid)
 	if err != nil {
 		return fx.Error(fmt.Errorf("peer ID invalid: %s", err))
 	}
@@ -169,7 +192,7 @@ func Identity(cfg *config.Config) fx.Option {
 	if cfg.Identity.PrivKey == "" {
 		return fx.Options( // No PK (usually in tests)
 			fx.Provide(PeerID(id)),
-			fx.Provide(pstoremem.NewPeerstore),
+			fx.Provide(libp2p.Peerstore),
 		)
 	}
 
@@ -191,7 +214,7 @@ func Identity(cfg *config.Config) fx.Option {
 	return fx.Options( // Full identity
 		fx.Provide(PeerID(id)),
 		fx.Provide(PrivateKey(sk)),
-		fx.Provide(pstoremem.NewPeerstore),
+		fx.Provide(libp2p.Peerstore),
 
 		fx.Invoke(libp2p.PstoreAddSelfKeys),
 	)
@@ -246,6 +269,7 @@ func Online(bcfg *BuildCfg, cfg *config.Config) fx.Option {
 
 	return fx.Options(
 		fx.Provide(OnlineExchange(shouldBitswapProvide)),
+		maybeProvide(Graphsync, cfg.Experimental.GraphsyncEnabled),
 		fx.Provide(Namesys(ipnsCacheSize)),
 
 		fx.Invoke(IpnsRepublisher(repubPeriod, recordLifetime)),

@@ -4,7 +4,6 @@ SHELL := /bin/bash # Use bash syntax
 GO_MIN_VERSION = 1.14
 export GO111MODULE=on
 
-
 # pre-definitions
 GOCC ?= go
 GOTAGS ?=
@@ -29,6 +28,9 @@ GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPA
 #GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=$(COVERPKG_LIST)"
 GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out"
 #GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
+
+# Try to make building as reproducible as possible by stripping the go path.
+GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
 
 ifeq ($(tarball-is),1)
 	GOFLAGS += -mod=vendor
@@ -114,7 +116,6 @@ test_build_special_exe:
 check_go_version:
 	@$(GOCC) version
 	bin/check_go_version $(GO_MIN_VERSION)
-	bash patching.sh
 .PHONY: check_go_version
 DEPS_GO += check_go_version
 

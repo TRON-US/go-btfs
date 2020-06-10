@@ -11,7 +11,7 @@ import (
 
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
-	pb "github.com/ipfs/go-ipns/pb"
+	pb "github.com/TRON-US/go-btns/pb"
 	logging "github.com/ipfs/go-log"
 	goprocess "github.com/jbenet/goprocess"
 	gpctx "github.com/jbenet/goprocess/context"

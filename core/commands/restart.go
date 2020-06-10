@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 
 	path "github.com/TRON-US/go-btfs/core/commands/storage"
 )

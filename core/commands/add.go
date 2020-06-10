@@ -11,7 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs-files"
+	files "github.com/TRON-US/go-btfs-files"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/options"
 	mh "github.com/multiformats/go-multihash"
@@ -88,6 +88,9 @@ hashes for the same file. The default is a fixed block size of
 Rabin fingerprint chunker for content defined chunking by specifying
 rabin-[min]-[avg]-[max] (where min/avg/max refer to the desired
 chunk sizes in bytes), e.g. 'rabin-262144-524288-1048576'.
+Buzhash or Rabin fingerprint chunker for content defined chunking by
+specifying buzhash or rabin-[min]-[avg]-[max] (where min/avg/max refer
+to the desired chunk sizes in bytes), e.g. 'rabin-262144-524288-1048576'.
 For replicated files intended for host storage, reed-solomon should be
 used with default settings. It is also supported to customize data and
 parity shards using reed-solomon-[#data]-[#parity]-[size].
@@ -110,6 +113,11 @@ You can now check what blocks have been created by:
   QmY6yj1GsermExDXoosVE3aSPxdMNYr6aKuw3nA8LoWPRS 2059
   QmerURi9k4XzKCaaPbsK6BL5pMEjF7PGphjDvkkjDtsVf3 868
   QmQB28iwSriSUSMqG2nXDTLtdPHgWb4rebBrU7Q1j4vxPv 338
+
+Finally, a note on hash determinism. While not guaranteed, adding the same
+file/directory with the same flags will almost always result in the same output
+hash. However, almost all of the flags provided by this command (other than pin,
+only-hash, and progress/status related flags) will change the final hash.
 `,
 	},
 
@@ -121,6 +129,8 @@ You can now check what blocks have been created by:
 		cmds.OptionDerefArgs,     // a builtin option that resolves passed in filesystem links (--dereference-args)
 		cmds.OptionStdinName,     // a builtin option that optionally allows wrapping stdin into a named file
 		cmds.OptionHidden,
+		cmds.OptionIgnore,
+		cmds.OptionIgnoreRules,
 		cmds.BoolOption(quietOptionName, "q", "Write minimal output."),
 		cmds.BoolOption(quieterOptionName, "Q", "Write only final hash."),
 		cmds.BoolOption(silentOptionName, "Write no output."),
@@ -128,7 +138,7 @@ You can now check what blocks have been created by:
 		cmds.BoolOption(trickleOptionName, "t", "Use trickle-dag format for dag generation."),
 		cmds.BoolOption(onlyHashOptionName, "n", "Only chunk and hash - do not write to disk."),
 		cmds.BoolOption(wrapOptionName, "w", "Wrap files with a directory object."),
-		cmds.StringOption(chunkerOptionName, "s", "Chunking algorithm, size-[bytes], rabin-[min]-[avg]-[max] or reed-solomon-[#data]-[#parity]-[size]").WithDefault("size-262144"),
+		cmds.StringOption(chunkerOptionName, "s", "Chunking algorithm, size-[bytes], rabin-[min]-[avg]-[max], buzhash or reed-solomon-[#data]-[#parity]-[size]").WithDefault("size-262144"),
 		cmds.BoolOption(pinOptionName, "Pin this object when adding.").WithDefault(true),
 		cmds.BoolOption(rawLeavesOptionName, "Use raw blocks for leaf nodes. (experimental)"),
 		cmds.BoolOption(noCopyOptionName, "Add the file using filestore. Implies raw-leaves. (experimental)"),
@@ -319,7 +329,7 @@ You can now check what blocks have been created by:
 					for it.Next() {
 						s, err := it.Node().Size()
 						if err != nil {
-							log.Warningf("error getting files size: %s", err)
+							log.Warnf("error getting files size: %s", err)
 							// see comment above
 							return
 						}
@@ -330,7 +340,7 @@ You can now check what blocks have been created by:
 				} else {
 					size, err := req.Files.Size()
 					if err != nil {
-						log.Warningf("error getting files size: %s", err)
+						log.Warnf("error getting files size: %s", err)
 						// see comment above
 						return
 					}

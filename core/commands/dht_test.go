@@ -5,7 +5,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/namesys"
 
-	ipns "github.com/ipfs/go-ipns"
+	ipns "github.com/TRON-US/go-btns"
 	"github.com/libp2p/go-libp2p-core/test"
 )
 

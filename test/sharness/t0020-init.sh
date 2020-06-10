@@ -22,9 +22,9 @@ test_expect_success "btfs init fails" '
 # Under Windows/Cygwin the error message is different,
 # so we use the STD_ERR_MSG prereq.
 if test_have_prereq STD_ERR_MSG; then
-  init_err_msg="Error: error opening repository at $BTFS_PATH: permission denied"
+  init_err_msg="Error: error loading plugins: open $BTFS_PATH/config: permission denied"
 else
-  init_err_msg="Error: mkdir $BTFS_PATH: The system cannot find the path specified."
+  init_err_msg="Error: error loading plugins: open $BTFS_PATH/config: The system cannot find the path specified."
 fi
 
 test_expect_success "btfs init output looks good" '
@@ -98,7 +98,7 @@ test_expect_success "clean up btfs dir" '
 '
 
 test_expect_success "'btfs init --empty-repo' succeeds" '
-  BITS="1024" &&
+  BITS="2048" &&
   btfs init --bits="$BITS" --empty-repo >actual_init
 '
 
@@ -128,14 +128,14 @@ test_expect_success "clean up btfs dir" '
 
 # test init profiles
 test_expect_success "'btfs init --profile' with invalid profile fails" '
-  BITS="1024" &&
+  BITS="2048" &&
   test_must_fail btfs init --bits="$BITS" --profile=nonexistent_profile 2> invalid_profile_out
   EXPECT="Error: invalid configuration profile: nonexistent_profile" &&
   grep "$EXPECT" invalid_profile_out
 '
 
 test_expect_success "'btfs init --profile' succeeds" '
-  BITS="1024" &&
+  BITS="2048" &&
   btfs init --bits="$BITS" --profile=server
 '
 
@@ -149,7 +149,7 @@ test_expect_success "clean up btfs dir" '
 '
 
 test_expect_success "'btfs init --profile=test' succeeds" '
-  BITS="1024" &&
+  BITS="2048" &&
   btfs init --bits="$BITS" --profile=test
 '
 
@@ -163,12 +163,26 @@ test_expect_success "'btfs config Addresses.API' looks good" '
   test $(cat actual_config) = "/ip4/127.0.0.1/tcp/0"
 '
 
+test_expect_success "btfs init from existing config succeeds" '
+  export ORIG_PATH=$BTFS_PATH
+  export BTFS_PATH=$(pwd)/.btfs-clone
+
+  btfs init "$ORIG_PATH/config" &&
+  btfs config Addresses.API > actual_config &&
+  test $(cat actual_config) = "/ip4/127.0.0.1/tcp/0"
+'
+
+test_expect_success "clean up btfs clone dir and reset BTFS_PATH" '
+  rm -rf "$BTFS_PATH" &&
+  export BTFS_PATH=$ORIG_PATH
+'
+
 test_expect_success "clean up btfs dir" '
   rm -rf "$BTFS_PATH"
 '
 
 test_expect_success "'btfs init --profile=lowpower' succeeds" '
-  BITS="1024" &&
+  BITS="2048" &&
   btfs init --bits="$BITS" --profile=lowpower
 '
 

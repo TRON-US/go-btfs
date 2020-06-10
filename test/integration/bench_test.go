@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
+
 	testutil "github.com/libp2p/go-libp2p-testing/net"
 )
 
