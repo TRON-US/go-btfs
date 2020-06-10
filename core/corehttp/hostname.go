@@ -8,18 +8,18 @@ import (
 	"net/url"
 	"strings"
 
-	cid "github.com/ipfs/go-cid"
 	core "github.com/TRON-US/go-btfs/core"
 	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	namesys "github.com/TRON-US/go-btfs/namesys"
-	isd "github.com/jbenet/go-is-domain"
-	"github.com/libp2p/go-libp2p-core/peer"
-	mbase "github.com/multiformats/go-multibase"
 
-	config "github.com/ipfs/go-ipfs-config"
+	config "github.com/TRON-US/go-btfs-config"
+	cid "github.com/ipfs/go-cid"
 	iface "github.com/ipfs/interface-go-ipfs-core"
 	options "github.com/ipfs/interface-go-ipfs-core/options"
 	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
+	isd "github.com/jbenet/go-is-domain"
+	"github.com/libp2p/go-libp2p-core/peer"
+	mbase "github.com/multiformats/go-multibase"
 )
 
 var defaultPaths = []string{"/ipfs/", "/ipns/", "/api/", "/p2p/", "/version"}
