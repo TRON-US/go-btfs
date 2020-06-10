@@ -102,9 +102,6 @@ func (ns *mpns) ResolveAsync(ctx context.Context, name string, options ...opts.R
 	return resolveAsync(ctx, ns, name, opts.ProcessOpts(options))
 }
 
-const ethTLD = ".eth"
-const linkTLD = ".link"
-
 // resolveOnce implements resolver.
 func (ns *mpns) resolveOnceAsync(ctx context.Context, name string, options opts.ResolveOpts) <-chan onceResult {
 	out := make(chan onceResult, 1)
