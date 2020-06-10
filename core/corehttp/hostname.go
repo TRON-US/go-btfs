@@ -13,10 +13,10 @@ import (
 	namesys "github.com/TRON-US/go-btfs/namesys"
 
 	config "github.com/TRON-US/go-btfs-config"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	nsopts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	cid "github.com/ipfs/go-cid"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	options "github.com/ipfs/interface-go-ipfs-core/options"
-	nsopts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
 	isd "github.com/jbenet/go-is-domain"
 	"github.com/libp2p/go-libp2p-core/peer"
 	mbase "github.com/multiformats/go-multibase"

@@ -5,12 +5,11 @@ import (
 	"io"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/namesys/resolve"
 	tar "github.com/TRON-US/go-btfs/tar"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	dag "github.com/ipfs/go-merkledag"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 var TarCmd = &cmds.Command{

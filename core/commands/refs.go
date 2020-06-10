@@ -7,16 +7,14 @@ import (
 	"io"
 	"strings"
 
-	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/namesys/resolve"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	ipld "github.com/ipfs/go-ipld-format"
-	iface "github.com/ipfs/interface-go-ipfs-core"
-	path "github.com/ipfs/interface-go-ipfs-core/path"
 )
 
 var refsEncoderMap = cmds.EncoderMap{
