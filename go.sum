@@ -53,8 +53,8 @@ github.com/TRON-US/go-btfs-config v0.6.4/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iH
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
 github.com/TRON-US/go-btfs-files v0.2.0 h1:JZ+F0gX8iPmUf1OlrdOdsA8GMGxCHhwQ03jEWWEgVLE=
 github.com/TRON-US/go-btfs-files v0.2.0/go.mod h1:Qx+rTOIC0xl3ZkosGcEoB4hqExZmTONErPys8K5suEc=
-github.com/TRON-US/go-btfs-pinner v0.1.0 h1:LdJuDwGa1u9df35QBN6YTAYUHL+TYg0ZSnaTNLDVLx4=
-github.com/TRON-US/go-btfs-pinner v0.1.0/go.mod h1:4CVxKEQNNTbuW92BIYwiH9/W63eDNtlt7bK0fCnXSag=
+github.com/TRON-US/go-btfs-pinner v0.1.1 h1:cqI3oGLfqoCCNjTGFoFt4Saq9JG2gLQNXiROukjJZQU=
+github.com/TRON-US/go-btfs-pinner v0.1.1/go.mod h1:4CVxKEQNNTbuW92BIYwiH9/W63eDNtlt7bK0fCnXSag=
 github.com/TRON-US/go-btns v0.1.0 h1:QZ914xHYzNP7qOvyA5KtbejfBRKVo8AUc97bziRzhq8=
 github.com/TRON-US/go-btns v0.1.0/go.mod h1:DQiF1iCxhDWUv5wWKueipXgi+D0PmkrRToO0btEOQ4k=
 github.com/TRON-US/go-cid v0.2.0 h1:VDEI5AkDI3tC31BpPFGTS6AZGYOUxGuHhAavH4Dnuhg=
@@ -382,6 +382,7 @@ github.com/ipfs/go-ipfs-chunker v0.0.1 h1:cHUUxKFQ99pozdahi+uSC/3Y6HeRpi9oTeUHbE
 github.com/ipfs/go-ipfs-chunker v0.0.1/go.mod h1:tWewYK0we3+rMbOh7pPFGDyypCtvGcBFymgY4rSDLAw=
 github.com/ipfs/go-ipfs-chunker v0.0.5 h1:ojCf7HV/m+uS2vhUGWcogIIxiO5ubl5O57Q7NapWLY8=
 github.com/ipfs/go-ipfs-chunker v0.0.5/go.mod h1:jhgdF8vxRHycr00k13FM8Y0E+6BoalYeobXmUyTreP8=
+github.com/ipfs/go-ipfs-cmds v0.2.2 h1:F2pro/Q3ifRUsdxEKIS8cg8lO4R6WiwAyERiaG8I9no=
 github.com/ipfs/go-ipfs-cmds v0.2.2/go.mod h1:kqlUrp6m2ceoaJe40cXpADCi5aS6NKRn0NIeuLp5CeM=
 github.com/ipfs/go-ipfs-config v0.5.3 h1:3GpI/xR9FoJNTjU6YvCMRbYyEi0dBVY5UtlUTcNRlSA=
 github.com/ipfs/go-ipfs-config v0.5.3/go.mod h1:nSLCFtlaL+2rbl3F+9D4gQZQbT1LjRKx7TJg/IHz6oM=

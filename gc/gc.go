@@ -144,7 +144,7 @@ func Descendants(ctx context.Context, pn pin.Pinner, getLinks dag.GetLinks,
 		if err != nil {
 			return nil, err
 		}
-		if pin.IsExpiredPin(c, pinMap, pinMap2) {
+		if pn.IsExpiredPin(ctx, c) {
 			return nil, nil
 		}
 		return getLinks(ctx, c)
@@ -162,7 +162,7 @@ func Descendants(ctx context.Context, pn pin.Pinner, getLinks dag.GetLinks,
 	}
 
 	for _, c := range roots {
-		if pin.IsExpiredPin(c, pinMap, pinMap2) {
+		if pn.IsExpiredPin(ctx, c) {
 			if cleanMode == Eagar {
 				pn.Unpin(ctx, c, true)
 				pn.Flush(ctx)
@@ -250,7 +250,7 @@ func ColoredSet(ctx context.Context, pn pin.Pinner, ng ipld.NodeGetter, bestEffo
 	}
 	for _, k := range dkeys {
 		// Skip expired pins
-		if pin.IsExpiredPin(k, rmap, dmap) {
+		if pn.IsExpiredPin(ctx, k) {
 			if cleanMode == Eagar {
 				pn.Unpin(ctx, k, false)
 				pn.Flush(ctx)
@@ -265,7 +265,7 @@ func ColoredSet(ctx context.Context, pn pin.Pinner, ng ipld.NodeGetter, bestEffo
 		return nil, err
 	}
 
-	err = Descendants(ctx, pn, getLinks, gcs, rmap, dmapa, ikeys)
+	err = Descendants(ctx, pn, getLinks, gcs, rmap, dmap, ikeys)
 	if err != nil {
 		errors = true
 		select {

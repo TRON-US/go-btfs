@@ -85,7 +85,7 @@ func (api *PinAPI) Rm(ctx context.Context, p path.Path, opts ...caopts.PinRmOpti
 
 	// If host has pinned the stored file with unexpired live contract
 	// We can only remove it if a manual --force is passed
-	exp, err := api.pinning.HasExpiration(rp.Cid())
+	exp, err := api.pinning.HasExpiration(ctx, rp.Cid())
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ loop:
 }
 
 // PinLsAll is an internal function for returning a list of pins
-func PinLsAll(ctx context.Context, typeStr string, pin pin.Pinner, dag ipld.DAGService) (chan coreiface.Pin, chan error) {
+func PinLsAll(ctx context.Context, typeStr string, pn pin.Pinner, dag ipld.DAGService) (chan coreiface.Pin, chan error) {
 	ch := make(chan coreiface.Pin, 32)
 	errCh := make(chan error, 1)
 
@@ -265,7 +265,7 @@ func PinLsAll(ctx context.Context, typeStr string, pin pin.Pinner, dag ipld.DAGS
 		defer close(ch)
 		defer close(errCh)
 		if typeStr == "direct" || typeStr == "all" {
-			dkeys, err := pin.DirectKeys(ctx)
+			dkeys, err := pn.DirectKeys(ctx)
 			if err != nil {
 				errCh <- err
 				return
@@ -276,7 +276,7 @@ func PinLsAll(ctx context.Context, typeStr string, pin pin.Pinner, dag ipld.DAGS
 			}
 		}
 		if typeStr == "recursive" || typeStr == "all" {
-			rkeys, err := pin.RecursiveKeys(ctx)
+			rkeys, err := pn.RecursiveKeys(ctx)
 			if err != nil {
 				errCh <- err
 				return
@@ -287,7 +287,7 @@ func PinLsAll(ctx context.Context, typeStr string, pin pin.Pinner, dag ipld.DAGS
 			}
 		}
 		if typeStr == "indirect" || typeStr == "all" {
-			rkeys, err := pin.RecursiveKeys(ctx)
+			rkeys, err := pn.RecursiveKeys(ctx)
 			if err != nil {
 				errCh <- err
 				return
@@ -297,7 +297,7 @@ func PinLsAll(ctx context.Context, typeStr string, pin pin.Pinner, dag ipld.DAGS
 			// explicitly mark direct/recursive pins so we don't
 			// send them.
 			if typeStr == "indirect" {
-				dkeys, err := pin.DirectKeys(ctx)
+				dkeys, err := pn.DirectKeys(ctx)
 				if err != nil {
 					errCh <- err
 					return
@@ -313,7 +313,7 @@ func PinLsAll(ctx context.Context, typeStr string, pin pin.Pinner, dag ipld.DAGS
 
 			indirectKeys := cid.NewSet()
 			for _, k := range rkeys {
-				if pin.IsExpiredPin(k, n.Pinning.RecursiveMap(), n.Pinning.DirectMap()) {
+				if pn.IsExpiredPin(ctx, k) {
 					continue
 				}
 				err := merkledag.Walk(ctx, merkledag.GetLinksWithDAG(dag), k, func(c cid.Cid) bool {
