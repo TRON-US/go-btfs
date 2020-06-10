@@ -3,8 +3,6 @@ module github.com/TRON-US/go-btfs
 require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
-	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
-	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
 	github.com/TRON-US/go-btfs-cmds v0.2.0
@@ -22,7 +20,6 @@ require (
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/cenkalti/backoff/v4 v4.0.2
-	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/coreos/go-systemd/v22 v22.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
@@ -122,8 +119,6 @@ require (
 	github.com/tron-us/go-btfs-common v0.3.7
 	github.com/tron-us/go-common/v2 v2.0.5
 	github.com/tron-us/protobuf v1.3.4
-	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
-	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-sysinfo v0.0.0-20190219211824-4a357d4b90b1
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
@@ -135,7 +130,6 @@ require (
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.7
-	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
 replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.2.0
