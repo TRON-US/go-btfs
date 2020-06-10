@@ -55,6 +55,9 @@ improve the hard disk space usage, provide the function to change the original
 storage location, a specified path as a parameter need to be passed.
 `,
 	},
+	Subcommands: map[string]*cmds.Command{
+		"status": PathStatusCmd,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
 			"New BTFS Path. Should be absolute path."),
@@ -117,6 +120,35 @@ storage location, a specified path as a parameter need to be passed.
 		}
 		return nil
 	},
+}
+
+var PathStatusCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "Get status of resetting path.",
+		ShortDescription: "Get status of resetting path.",
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		tryLock := lock.TryLock()
+		if tryLock {
+			lock.Unlock()
+		}
+		if !tryLock {
+			return cmds.EmitOnce(res, PathStatus{
+				Resetting: true,
+				Path:      StorePath,
+			})
+		}
+		return cmds.EmitOnce(res, PathStatus{
+			Resetting: false,
+			Path:      StorePath,
+		})
+	},
+	Type: PathStatus{},
+}
+
+type PathStatus struct {
+	Resetting bool
+	Path      string
 }
 
 func init() {
