@@ -12,10 +12,6 @@ import (
 	"os"
 	"strings"
 
-	core "github.com/TRON-US/go-btfs/core"
-	namesys "github.com/TRON-US/go-btfs/namesys"
-	resolve "github.com/TRON-US/go-btfs/namesys/resolve"
-
 	fuse "bazil.org/fuse"
 	fs "bazil.org/fuse/fs"
 	mfs "github.com/TRON-US/go-mfs"
