@@ -147,7 +147,7 @@ replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.2.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.5.0
 
-replace github.com/libp2p/go-libp2p-kad-dht => github.com/TRON-US/go-libp2p-kad-dht v0.9.1
+replace github.com/libp2p/go-libp2p-kad-dht => github.com/TRON-US/go-libp2p-kad-dht v0.9.2
 
 replace github.com/multiformats/go-multiaddr => github.com/TRON-US/go-multiaddr v0.3.0
 

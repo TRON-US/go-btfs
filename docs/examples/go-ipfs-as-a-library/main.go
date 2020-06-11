@@ -53,7 +53,7 @@ func createTempRepo(ctx context.Context) (string, error) {
 	}
 
 	// Create a config with default options and a 2048 bit key
-	cfg, err := config.Init(ioutil.Discard, 2048)
+	cfg, err := config.Init(ioutil.Discard, 2048, "RSA", "", "", false)
 	if err != nil {
 		return "", err
 	}

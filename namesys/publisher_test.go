@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	ipns "github.com/TRON-US/go-btns"
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	dshelp "github.com/ipfs/go-ipfs-ds-help"
 	mockrouting "github.com/ipfs/go-ipfs-routing/mock"
-	ipns "github.com/TRON-US/go-btns"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	testutil "github.com/libp2p/go-libp2p-testing/net"
@@ -124,7 +124,7 @@ func TestAsyncDS(t *testing.T) {
 	publisher := NewIpnsPublisher(rt, ds)
 
 	ipnsFakeID := testutil.RandIdentityOrFatal(t)
-	ipnsVal, err := path.ParsePath("/ipns/foo.bar")
+	ipnsVal, err := path.ParsePath("/btns/foo.bar")
 	if err != nil {
 		t.Fatal(err)
 	}

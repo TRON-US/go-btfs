@@ -66,8 +66,8 @@ github.com/TRON-US/go-ipld-format v0.2.0 h1:dCnCrqhknXh4HbYF3lutZLEnHNxHo4cUP2Yl
 github.com/TRON-US/go-ipld-format v0.2.0/go.mod h1:3l3C1uKoadTPbeNfrDi+xMInYKlx2Cvg1BuydPSdzQs=
 github.com/TRON-US/go-libp2p-core v0.5.0 h1:GNYu7vXRk6sXbJuOMw4qR2x9cvZ+bKffzB0yB8CFMuo=
 github.com/TRON-US/go-libp2p-core v0.5.0/go.mod h1:uN7L2D4EvPCvzSH5SrhR72UWbnSGpt5/a35Sm4upn4Y=
-github.com/TRON-US/go-libp2p-kad-dht v0.9.1 h1:s9ZOobY0TaW03VtJY/UASPq5cSAK5XE/Ij5Ylt/Jqp0=
-github.com/TRON-US/go-libp2p-kad-dht v0.9.1/go.mod h1:KVtSQ8ZH6mxzczIfooZ8plOgKRaGZtNCPWui0tsPIeU=
+github.com/TRON-US/go-libp2p-kad-dht v0.9.2 h1:CONSmIHzsz/e8nSXBe4/sC6sKojlWS13kURaowq7zPQ=
+github.com/TRON-US/go-libp2p-kad-dht v0.9.2/go.mod h1:KVtSQ8ZH6mxzczIfooZ8plOgKRaGZtNCPWui0tsPIeU=
 github.com/TRON-US/go-mfs v0.3.0 h1:gTIPQRgWbDFnvi0TFW8YkD8puDTOKBg5xs7X51SRpEA=
 github.com/TRON-US/go-mfs v0.3.0/go.mod h1:hXLxeLnJp50uu+Ibg7Tf7BzaC49m8RSTRA/eDl0wx1s=
 github.com/TRON-US/go-multiaddr v0.3.0 h1:5Y09zZJ5U+yaIW6/58DB1zjl+V4/qBOlLuVXw0gNJI4=

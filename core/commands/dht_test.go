@@ -19,7 +19,7 @@ func TestKeyTranslation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ipnsk, err := escapeDhtKey("/ipns/" + pid.Pretty())
+	ipnsk, err := escapeDhtKey("/btns/" + pid.Pretty())
 	if err != nil {
 		t.Fatal(err)
 	}
