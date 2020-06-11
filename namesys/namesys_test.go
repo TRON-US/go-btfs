@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
+	btns "github.com/TRON-US/go-btns"
 	unixfs "github.com/TRON-US/go-unixfs"
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	offroute "github.com/ipfs/go-ipfs-routing/offline"
-	ipns "github.com/TRON-US/go-btns"
 	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -105,7 +105,7 @@ func TestPublishWithCache0(t *testing.T) {
 	}
 
 	routing := offroute.NewOfflineRouter(dst, record.NamespacedValidator{
-		"ipns": ipns.Validator{KeyBook: ps},
+		"btns": btns.Validator{KeyBook: ps},
 		"pk":   record.PublicKeyValidator{},
 	})
 
@@ -137,7 +137,7 @@ func TestPublishWithTTL(t *testing.T) {
 	}
 
 	routing := offroute.NewOfflineRouter(dst, record.NamespacedValidator{
-		"ipns": ipns.Validator{KeyBook: ps},
+		"btns": btns.Validator{KeyBook: ps},
 		"pk":   record.PublicKeyValidator{},
 	})
 
@@ -150,7 +150,7 @@ func TestPublishWithTTL(t *testing.T) {
 	ttl := 1 * time.Second
 	eol := time.Now().Add(2 * time.Second)
 
-	ctx := context.WithValue(context.Background(), "ipns-publish-ttl", ttl)
+	ctx := context.WithValue(context.Background(), "btns-publish-ttl", ttl)
 	err = nsys.Publish(ctx, priv, p)
 	if err != nil {
 		t.Fatal(err)

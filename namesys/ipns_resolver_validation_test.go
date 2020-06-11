@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
+	btns "github.com/TRON-US/go-btns"
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	mockrouting "github.com/ipfs/go-ipfs-routing/mock"
 	offline "github.com/ipfs/go-ipfs-routing/offline"
-	ipns "github.com/TRON-US/go-btns"
 	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -37,7 +37,7 @@ func TestResolverValidation(t *testing.T) {
 	priv, id, _, ipnsDHTPath := genKeys(t)
 	ts := time.Now()
 	p := []byte("/btfs/QmfM2r8seH2GiRaC4esTjeraXEachRt8ZsSeGaWTPLyMoG")
-	entry, err := ipns.Create(priv, p, 1, ts.Add(time.Hour))
+	entry, err := btns.Create(priv, p, 1, ts.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestResolverValidation(t *testing.T) {
 		t.Fatalf("Mismatch between published path %s and resolved path %s", p, resp)
 	}
 	// Create expired entry
-	expiredEntry, err := ipns.Create(priv, p, 1, ts.Add(-1*time.Hour))
+	expiredEntry, err := btns.Create(priv, p, 1, ts.Add(-1*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestResolverValidation(t *testing.T) {
 	}
 
 	// Record should fail validation because public key defined by
-	// ipns path doesn't match record signature
+	// btns path doesn't match record signature
 	_, err = resolve(ctx, resolver, id2.Pretty(), opts.DefaultResolveOpts())
 	if err == nil {
 		t.Fatal("ValidateIpnsRecord should have failed signature verification")
@@ -104,7 +104,7 @@ func TestResolverValidation(t *testing.T) {
 
 	// Publish entry without making public key available in peer store
 	priv3, id3, pubkDHTPath3, ipnsDHTPath3 := genKeys(t)
-	entry3, err := ipns.Create(priv3, p, 1, ts.Add(time.Hour))
+	entry3, err := btns.Create(priv3, p, 1, ts.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func genKeys(t *testing.T) (ci.PrivKey, peer.ID, string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sk, id, PkKeyForID(id), ipns.RecordKey(id)
+	return sk, id, PkKeyForID(id), btns.RecordKey(id)
 }
 
 type mockValueStore struct {
@@ -156,7 +156,7 @@ type mockValueStore struct {
 func newMockValueStore(id testutil.Identity, dstore ds.Datastore, kbook pstore.KeyBook) *mockValueStore {
 	return &mockValueStore{
 		r: offline.NewOfflineRouter(dstore, record.NamespacedValidator{
-			"ipns": ipns.Validator{KeyBook: kbook},
+			"btns": btns.Validator{KeyBook: kbook},
 			"pk":   record.PublicKeyValidator{},
 		}),
 		kbook: kbook,

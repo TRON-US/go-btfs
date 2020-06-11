@@ -61,7 +61,7 @@ func (api *NameAPI) Publish(ctx context.Context, p path.Path, opts ...caopts.Nam
 	}
 
 	if options.TTL != nil {
-		ctx = context.WithValue(ctx, "ipns-publish-ttl", *options.TTL)
+		ctx = context.WithValue(ctx, "btns-publish-ttl", *options.TTL)
 	}
 
 	eol := time.Now().Add(options.ValidTime)

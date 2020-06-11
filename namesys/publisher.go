@@ -7,12 +7,12 @@ import (
 	"time"
 
 	pin "github.com/TRON-US/go-btfs-pinner"
+	ipns "github.com/TRON-US/go-btns"
+	pb "github.com/TRON-US/go-btns/pb"
 	ft "github.com/TRON-US/go-unixfs"
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsquery "github.com/ipfs/go-datastore/query"
-	ipns "github.com/TRON-US/go-btns"
-	pb "github.com/TRON-US/go-btns/pb"
 	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -203,7 +203,7 @@ func (p *IpnsPublisher) PublishWithEOL(ctx context.Context, k ci.PrivKey, value 
 // as such, i'm using the context to wire it through to avoid changing too
 // much code along the way.
 func checkCtxTTL(ctx context.Context) (time.Duration, bool) {
-	v := ctx.Value("ipns-publish-ttl")
+	v := ctx.Value("btns-publish-ttl")
 	if v == nil {
 		return 0, false
 	}
