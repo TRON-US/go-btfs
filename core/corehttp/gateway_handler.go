@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TRON-US/go-btfs/namesys/resolve"
-
 	files "github.com/TRON-US/go-btfs-files"
 	mfs "github.com/TRON-US/go-mfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
@@ -27,7 +25,6 @@ import (
 	path "github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
 	routing "github.com/libp2p/go-libp2p-core/routing"
-	"github.com/multiformats/go-multibase"
 )
 
 const (
@@ -220,7 +217,6 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		escapedRootPath           string
 		resolvedRootPath          ipath.Resolved
 		dr                        files.Node
-		err                       error
 		isReedSolomonSubdirOrFile bool // Is ReedSolomon non-root subdirectory or file?
 	)
 
@@ -295,17 +291,14 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 
 	defer dr.Close()
 
-	// we need to figure out whether this is a directory before doing most of the heavy lifting below
-	_, ok := dr.(files.Directory)
-
 	// Check etag send back to us.
 	if isReedSolomonSubdirOrFile {
 		// Set root path prefix for paths for the entity tag.
-		if !i.setupEntityTag(w, r, resolvedRootPath, rootPath, ok) {
+		if !i.setupEntityTag(w, r, resolvedRootPath, rootPath) {
 			return
 		}
 	} else {
-		if !i.setupEntityTag(w, r, resolvedPath, urlPath, ok) {
+		if !i.setupEntityTag(w, r, resolvedPath, urlPath) {
 			return
 		}
 	}
@@ -366,18 +359,6 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// See statusResponseWriter.WriteHeader
-	// and https://github.com/ipfs/go-ipfs/issues/7164
-	// Note: this needs to occur before listingTemplate.Execute otherwise we get
-	// superfluous response.WriteHeader call from prometheus/client_golang
-	if w.Header().Get("Location") != "" {
-		w.WriteHeader(http.StatusMovedPermanently)
-		return
-	}
-
-	// A HTML directory index will be presented, be sure to set the correct
-	// type instead of relying on autodetection (which may fail).
-	w.Header().Set("Content-Type", "text/html")
 	if r.Method == http.MethodHead {
 		return
 	}
@@ -443,7 +424,10 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	hash := resolvedPath.Cid().String()
+	var hash string
+	if !strings.HasPrefix(urlPath, ipfsPathPrefix) {
+		hash = resolvedPath.Cid().String()
+	}
 
 	// See comment above where originalUrlPath is declared.
 	tplData := listingTemplateData{
@@ -451,6 +435,15 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		Path:     originalUrlPath,
 		BackLink: backLink,
 		Hash:     hash,
+	}
+
+	// See statusResponseWriter.WriteHeader
+	// and https://github.com/ipfs/go-ipfs/issues/7164
+	// Note: this needs to occur before listingTemplate.Execute otherwise we get
+	// superfluous response.WriteHeader call from prometheus/client_golang
+	if w.Header().Get("Location") != "" {
+		w.WriteHeader(http.StatusMovedPermanently)
+		return
 	}
 
 	err = listingTemplate.Execute(w, tplData)
@@ -707,9 +700,6 @@ func (i *gatewayHandler) resolveAndGetFilesNode(ctx context.Context,
 		webError(w, "btfs resolve -r "+escPath, err, http.StatusServiceUnavailable)
 		return nil, nil, err
 	default:
-		if i.servePretty404IfPresent(w, r, parsedPath) {
-			return nil, nil, err
-		}
 		webError(w, "btfs resolve -r "+escPath, err, http.StatusNotFound)
 		return nil, nil, err
 	}
@@ -725,55 +715,48 @@ func (i *gatewayHandler) resolveAndGetFilesNode(ctx context.Context,
 
 // isTopLevelEntryPath checks to see if the node being resolved is a root path/directory
 func (i *gatewayHandler) isTopLevelEntryPath(w http.ResponseWriter, r *http.Request,
-	path string) (bool, error) {
-	path = gopath.Clean(path)
-	parts := strings.Split(path, "/")
+	urlPath string) (bool, error) {
+	urlPath = gopath.Clean(urlPath)
+	parts := strings.Split(urlPath, "/")
 
 	var (
-		ipfpath *ipfspath.Path
-		err     error
+		ipnspath *path.Path
+		err      error
 	)
 	switch parts[1] {
 	case "btfs":
 		return len(parts) == 3 && parts[2] != "", nil
 	case "btns":
-		ipfpath, err = i.api.ResolveIpnsPath(r.Context(), ipath.New(path))
-		if err == resolve.ErrNoNamesys || err == coreiface.ErrOffline {
-			webError(w, "btfs resolve -r ", path, coreiface.ErrOffline, http.StatusServiceUnavailable)
+		ipnspath, err = i.api.ResolveIpnsPath(r.Context(), ipath.New(urlPath))
+		if err == coreiface.ErrOffline {
+			webError(w, "btfs resolve -r "+urlPath, coreiface.ErrOffline, http.StatusServiceUnavailable)
 			return false, coreiface.ErrOffline
 		}
 		if err != nil {
 			break
 		}
-		return len(ipfpath.Segments()) == 2 && ipfpath.Segments()[1] != "", nil
+		return len(ipnspath.Segments()) == 2 && ipnspath.Segments()[1] != "", nil
 	default:
 		err = fmt.Errorf("unsupported path namespace: [%s]", parts[1])
 	}
-	if i.servePretty404IfPresent(w, r, path) {
-		return false, err
-	}
-	webError(w, "btfs resolve -r "+path, err, http.StatusNotFound)
+	webError(w, "btfs resolve -r "+urlPath, err, http.StatusNotFound)
 	return false, err
 }
 
 // setupEntityTag sets the ETag according to resolved path and url path
 func (i *gatewayHandler) setupEntityTag(w http.ResponseWriter, r *http.Request,
-	resolvedPath ipath.Resolved, urlPath string, isDir bool) bool {
-	if isDir && assets.BindataVersionHash != "" {
-		responseEtag = `"DirIndex-` + assets.BindataVersionHash + `_CID-` + resolvedPath.Cid().String() + `"`
-	} else {
-		responseEtag = `"` + resolvedPath.Cid().String() + `"`
-	}
-
-	// Check etag sent back to us
-	if r.Header.Get("If-None-Match") == responseEtag || r.Header.Get("If-None-Match") == `W/`+responseEtag {
+	resolvedPath ipath.Resolved, urlPath string) bool {
+	// Check etag send back to us
+	etag := "\"" + resolvedPath.Cid().String() + "\""
+	if r.Header.Get("If-None-Match") == etag || r.Header.Get("If-None-Match") == "W/"+etag {
 		w.WriteHeader(http.StatusNotModified)
 		return false
 	}
 
 	i.addUserHeaders(w) // ok, _now_ write user's headers.
 	w.Header().Set("X-BTFS-Path", urlPath)
-	w.Header().Set("Etag", responseEtag)
+	w.Header().Set("Etag", etag)
+
 	return true
 }
 
