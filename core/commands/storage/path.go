@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	"github.com/TRON-US/go-btfs-cmds"
 
@@ -61,7 +63,7 @@ storage location, a specified path as a parameter need to be passed.
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
-			"New BTFS Path. Should be absolute path."),
+			"New BTFS Path.Should be absolute path."),
 		cmds.StringArg("storage-size", true, false, "Storage Commitment Size"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -71,13 +73,27 @@ storage location, a specified path as a parameter need to be passed.
 		} else {
 			return errors.New("Cannot set path concurrently.")
 		}
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
 		StorePath = strings.Trim(req.Arguments[0], " ")
 
 		if StorePath == "" {
 			return fmt.Errorf("path is not defined")
 		}
-		var err error
 		if !filepath.IsAbs(StorePath) {
+			if strings.HasPrefix(StorePath, "~") {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return err
+				}
+				StorePath = strings.Replace(StorePath, "~", homeDir, 1)
+			}
 			StorePath, err = filepath.Abs(StorePath)
 			if err != nil {
 				return err
@@ -115,8 +131,8 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("Not enough disk space, expect: ge %v bytes, actual: %v bytes",
 				promisedStorageSize, usage.Free)
 		}
-		restartCmd := exec.Command("btfs", "restart")
-		if err := restartCmd.Run(); err != nil {
+
+		if err := helper.Call(req.Context, cfg, "restart"); err != nil {
 			return fmt.Errorf("restart command: %s", err)
 		}
 		return nil
@@ -221,10 +237,13 @@ func WriteProperties() error {
 }
 
 func MoveFolder() error {
-	// make dir does not contain .btfs, but move need to specify .btfs
 	err := os.Rename(OriginPath, filepath.Join(StorePath, storeDir))
+	// src and dest dir are not in the same partition
 	if err != nil {
-		return err
+		err := helper.MoveDirectory(make(chan int, 10), OriginPath, StorePath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

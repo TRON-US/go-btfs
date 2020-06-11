@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"os"
 	"os/exec"
 	"time"
 
@@ -9,6 +10,13 @@ import (
 
 	path "github.com/TRON-US/go-btfs/core/commands/storage"
 )
+
+var ex = func() string {
+	if ex, err := os.Executable(); err == nil {
+		return ex
+	}
+	return "btfs"
+}()
 
 var daemonStartup = func() *backoff.ExponentialBackOff {
 	bo := backoff.NewExponentialBackOff()
@@ -29,7 +37,7 @@ And if specified a new btfs path, it will be applied.
 	},
 
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		shutdownCmd := exec.Command("btfs", "shutdown")
+		shutdownCmd := exec.Command(ex, "shutdown")
 		if err := shutdownCmd.Run(); err != nil {
 			return err
 		}
@@ -45,13 +53,12 @@ And if specified a new btfs path, it will be applied.
 		}
 
 		err := backoff.Retry(func() error {
-			daemonCmd := exec.Command("btfs", "daemon")
+			daemonCmd := exec.Command(ex, "daemon")
 			if err := daemonCmd.Run(); err != nil {
 				return err
 			}
 			return nil
 		}, daemonStartup)
-
 		if err != nil {
 			return err
 		}
