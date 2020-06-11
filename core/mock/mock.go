@@ -78,7 +78,7 @@ func MockCmdsCtx() (commands.Context, error) {
 
 func MockPublicNode(ctx context.Context, mn mocknet.Mocknet) (*core.IpfsNode, error) {
 	ds := syncds.MutexWrap(datastore.NewMapDatastore())
-	cfg, err := config.Init(ioutil.Discard, 2048)
+	cfg, err := config.Init(ioutil.Discard, 2048, "RSA", "", "", false)
 	if err != nil {
 		return nil, err
 	}

@@ -6,14 +6,11 @@ import (
 	"testing"
 	"time"
 
+	ipns "github.com/TRON-US/go-btns"
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	mockrouting "github.com/ipfs/go-ipfs-routing/mock"
-	ipns "github.com/TRON-US/go-btns"
 	path "github.com/ipfs/go-path"
-	ci "github.com/libp2p/go-libp2p-core/crypto"
-	peer "github.com/libp2p/go-libp2p-core/peer"
-	test "github.com/libp2p/go-libp2p-core/test"
 	testutil "github.com/libp2p/go-libp2p-testing/net"
 )
 

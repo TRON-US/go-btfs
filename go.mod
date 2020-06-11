@@ -2,6 +2,7 @@ module github.com/TRON-US/go-btfs
 
 require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc
+	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
@@ -26,6 +27,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
 	github.com/ethereum/go-ethereum v1.9.15
+	github.com/fatih/color v1.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/gogo/protobuf v1.3.1
@@ -47,11 +49,12 @@ require (
 	github.com/ipfs/go-filestore v0.0.3
 	github.com/ipfs/go-fs-lock v0.0.4
 	github.com/ipfs/go-graphsync v0.0.5
-	github.com/ipfs/go-ipfs v0.5.1
 	github.com/ipfs/go-ipfs-blockstore v0.1.4
+	github.com/ipfs/go-ipfs-chunker v0.0.5 // indirect
 	github.com/ipfs/go-ipfs-ds-help v0.1.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
+	github.com/ipfs/go-ipfs-files v0.0.8 // indirect
 	github.com/ipfs/go-ipfs-posinfo v0.0.1
 	github.com/ipfs/go-ipfs-provider v0.4.3
 	github.com/ipfs/go-ipfs-routing v0.1.0
@@ -64,6 +67,7 @@ require (
 	github.com/ipfs/go-metrics-interface v0.0.1
 	github.com/ipfs/go-metrics-prometheus v0.0.2
 	github.com/ipfs/go-path v0.0.7
+	github.com/ipfs/go-unixfs v0.2.4 // indirect
 	github.com/ipfs/go-verifcid v0.0.1
 	github.com/ipld/go-car v0.1.0
 	github.com/jbenet/go-is-domain v1.0.3
@@ -94,10 +98,12 @@ require (
 	github.com/libp2p/go-libp2p-tls v0.1.3
 	github.com/libp2p/go-libp2p-yamux v0.2.7
 	github.com/libp2p/go-maddr-filter v0.0.5
+	github.com/libp2p/go-sockaddr v0.1.0 // indirect
 	github.com/libp2p/go-socket-activation v0.0.2
 	github.com/libp2p/go-testutil v0.1.0
 	github.com/looplab/fsm v0.1.0
 	github.com/markbates/pkger v0.17.0
+	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mholt/archiver/v3 v3.3.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -141,7 +147,7 @@ replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.2.0
 
 replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.5.0
 
-replace github.com/libp2p/go-libp2p-kad-dht => github.com/TRON-US/go-libp2p-kad-dht v0.9.0
+replace github.com/libp2p/go-libp2p-kad-dht => github.com/TRON-US/go-libp2p-kad-dht v0.9.1
 
 replace github.com/multiformats/go-multiaddr => github.com/TRON-US/go-multiaddr v0.3.0
 
