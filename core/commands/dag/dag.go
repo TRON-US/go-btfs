@@ -388,7 +388,7 @@ Maximum supported CAR version: 1
 					ret.PinErrorMsg = err.Error()
 				} else if nd, err := ipld.Decode(block); err != nil {
 					ret.PinErrorMsg = err.Error()
-				} else if err := node.Pinning.Pin(req.Context, nd, true); err != nil {
+				} else if err := node.Pinning.Pin(req.Context, nd, true, 0); err != nil {
 					ret.PinErrorMsg = err.Error()
 				} else if err := node.Pinning.Flush(req.Context); err != nil {
 					ret.PinErrorMsg = err.Error()

@@ -111,7 +111,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.HostsSyncMode = dc.config.Experimental.HostsSyncMode
 		dc.pn.Libp2PStreamMounting = dc.config.Experimental.Analytics
 		dc.pn.P2PHttpProxy = dc.config.Experimental.P2pHttpProxy
-		dc.pn.PreferTls = dc.config.Experimental.PreferTLS
+		//dc.pn.PreferTls = dc.config.Experimental.PreferTLS
 		dc.pn.Quic = dc.config.Experimental.QUIC
 		dc.pn.RemoveOnUnpin = dc.config.Experimental.RemoveOnUnpin
 		dc.pn.ShardingEnabled = dc.config.Experimental.ShardingEnabled

@@ -41,7 +41,6 @@ const (
 	rawLeavesOptionName        = "raw-leaves"
 	noCopyOptionName           = "nocopy"
 	fstoreCacheOptionName      = "fscache"
-	cidVersionOptionName       = "cid-version"
 	hashOptionName             = "hash"
 	inlineOptionName           = "inline"
 	inlineLimitOptionName      = "inline-limit"
