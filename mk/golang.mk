@@ -29,9 +29,6 @@ GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPA
 GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out"
 #GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-covermode=set"
 
-# Try to make building as reproducible as possible by stripping the go path.
-GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
-
 ifeq ($(tarball-is),1)
 	GOFLAGS += -mod=vendor
 endif
