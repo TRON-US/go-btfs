@@ -187,8 +187,8 @@ func TestGatewayGet(t *testing.T) {
 		{"127.0.0.1:8080", "/", http.StatusNotFound, "404 page not found\n"},
 		{"127.0.0.1:8080", "/" + k.Cid().String(), http.StatusNotFound, "404 page not found\n"},
 		{"127.0.0.1:8080", k.String(), http.StatusOK, "fnord"},
-		{"127.0.0.1:8080", "/btns/nxdomain.example.com", http.StatusNotFound, "btfs resolve -r /ipns/nxdomain.example.com: " + namesys.ErrResolveFailed.Error() + "\n"},
-		{"127.0.0.1:8080", "/btns/%0D%0A%0D%0Ahello", http.StatusNotFound, "btfs resolve -r /ipns/%0D%0A%0D%0Ahello: " + namesys.ErrResolveFailed.Error() + "\n"},
+		{"127.0.0.1:8080", "/btns/nxdomain.example.com", http.StatusNotFound, "btfs resolve -r /btns/nxdomain.example.com: " + namesys.ErrResolveFailed.Error() + "\n"},
+		{"127.0.0.1:8080", "/btns/%0D%0A%0D%0Ahello", http.StatusNotFound, "btfs resolve -r /btns/%0D%0A%0D%0Ahello: " + namesys.ErrResolveFailed.Error() + "\n"},
 		{"127.0.0.1:8080", "/btns/example.com", http.StatusOK, "fnord"},
 		{"example.com", "/", http.StatusOK, "fnord"},
 
