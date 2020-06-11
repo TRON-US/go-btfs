@@ -56,7 +56,8 @@ storage location, a specified path as a parameter need to be passed.
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"status": PathStatusCmd,
+		"status":   PathStatusCmd,
+		"capacity": PathCapacityCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -149,6 +150,54 @@ var PathStatusCmd = &cmds.Command{
 type PathStatus struct {
 	Resetting bool
 	Path      string
+}
+
+var PathCapacityCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "Get free space of passed path.",
+		ShortDescription: "Get free space of passed path.",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("path-name", true, true,
+			"New BTFS Path. Should be absolute path."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		path := strings.Trim(req.Arguments[0], " ")
+		if path == "" {
+			return fmt.Errorf("path is not defined")
+		}
+		var err error
+		if !filepath.IsAbs(path) {
+			path, err = filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+		}
+		if !CheckExist(path) {
+			err := os.MkdirAll(path, os.ModePerm)
+			if err != nil {
+				return fmt.Errorf("mkdir: %s", err)
+			}
+		}
+		valid := true
+		if !CheckDirEmpty(filepath.Join(path, storeDir)) {
+			valid = false
+		}
+		usage, err := disk.Usage(path)
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, &PathCapacity{
+			FreeSpace: usage.Free,
+			Valid:     valid,
+		})
+	},
+	Type: &PathCapacity{},
+}
+
+type PathCapacity struct {
+	FreeSpace uint64
+	Valid     bool
 }
 
 func init() {
