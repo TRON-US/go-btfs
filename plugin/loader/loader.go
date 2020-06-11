@@ -15,7 +15,6 @@ import (
 
 	config "github.com/TRON-US/go-btfs-config"
 	cserialize "github.com/TRON-US/go-btfs-config/serialize"
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	opentracing "github.com/opentracing/opentracing-go"
