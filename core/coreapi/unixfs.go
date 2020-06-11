@@ -63,7 +63,7 @@ func getOrCreateNilNode() (*core.IpfsNode, error) {
 
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
-func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
+func (api *UnixfsAPI) Add(ctx context.Context, filesNode files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
 	settings, prefix, err := options.UnixfsAddOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 			}
 		}
 		log.Infof("The file will be encrypted with pubkey: %s", settings.Pubkey)
-		switch f := node.(type) {
+		switch f := filesNode.(type) {
 		case files.File:
 			bytes, err := ioutil.ReadAll(f)
 			if err != nil {
@@ -210,7 +210,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 			if err != nil {
 				return nil, err
 			}
-			node = files.NewBytesFile([]byte(ciphertext))
+			filesNode = files.NewBytesFile([]byte(ciphertext))
 		default:
 			return nil, notSupport(f)
 		}
@@ -223,7 +223,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	// any execution case can append metadata
 	if settings.TokenMetadata != "" {
 		fileAdder.TokenMetadata = settings.TokenMetadata
-		if _, ok := node.(files.Directory); ok {
+		if _, ok := filesNode.(files.Directory); ok {
 			fileAdder.MetaForDirectory = true
 		}
 	}
@@ -231,7 +231,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 	// if chunker is reed-solomon and the given `node` is directory,
 	// create ReedSolomonAdder. Otherwise use Adder.
 	var nd ipld.Node
-	dir, ok := node.(files.Directory)
+	dir, ok := filesNode.(files.Directory)
 	if ok && chunker.IsReedSolomon(settings.Chunker) {
 		rsfileAdder, err := coreunix.NewReedSolomonAdder(fileAdder)
 		if err != nil {
@@ -247,9 +247,9 @@ func (api *UnixfsAPI) Add(ctx context.Context, files files.Node, opts ...options
 		} else {
 			return nil, fmt.Errorf("unexpected files.Directory type [%T]", dir)
 		}
-		nd, err = rsfileAdder.AddAllAndPin(node)
+		nd, err = rsfileAdder.AddAllAndPin(filesNode)
 	} else {
-		nd, err = fileAdder.AddAllAndPin(node)
+		nd, err = fileAdder.AddAllAndPin(filesNode)
 	}
 	if err != nil {
 		return nil, err
@@ -573,7 +573,7 @@ func (api *UnixfsAPI) processLink(ctx context.Context, linkres ft.LinkResult, se
 			break
 		}
 
-		if pn, ok := linkNode.(*merkledag.ProtoNode); ok {
+		if pn, ok := linkNode.(*dag.ProtoNode); ok {
 			d, err := ft.FSNodeFromBytes(pn.Data())
 			if err != nil {
 				lnk.Err = err
