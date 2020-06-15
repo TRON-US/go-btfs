@@ -966,8 +966,8 @@ github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e h1:RumXZ56IrCj4C
 github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tron-us/go-btfs-common v0.2.11/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
-github.com/tron-us/go-btfs-common v0.5.0-pre4 h1:h5q0PNt1MXk+qBOHyKnj7githfWU7sh4K0rpoe0/mIE=
-github.com/tron-us/go-btfs-common v0.5.0-pre4/go.mod h1:aSULSZh1gImmEEYm9d6jpQp+fq/6ae30Lmd1agd/oRU=
+github.com/tron-us/go-btfs-common v0.5.2-pre1 h1:gKQjkvPumxZi3c5hK3x2JqKqsg3qCJjrfxZNMhGDbMk=
+github.com/tron-us/go-btfs-common v0.5.2-pre1/go.mod h1:aSULSZh1gImmEEYm9d6jpQp+fq/6ae30Lmd1agd/oRU=
 github.com/tron-us/go-common/v2 v2.0.5 h1:LiGEmOd0FVVRisFyg3AJWDWMXlM537M3JZ+gh75sBlw=
 github.com/tron-us/go-common/v2 v2.0.5/go.mod h1:GiKX9noBLHotkZAU+7ET4h7N0DYWnm3OcGHOFJg1Q68=
 github.com/tron-us/go-common/v2 v2.1.1 h1:0Nj07cBrOFT38Q0kIHnqM4o4T6GNNxMr2rs5yeqlZ8Y=
