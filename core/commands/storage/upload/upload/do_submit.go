@@ -13,7 +13,7 @@ import (
 	"github.com/tron-us/protobuf/proto"
 )
 
-func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) error {
+func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool, isRenewContract bool) error {
 	if err := rss.To(sessions.RssToSubmitEvent); err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) er
 	if err != nil {
 		return err
 	}
-	return pay(rss, res, fileSize, offlineSigning)
+	return pay(rss, res, fileSize, offlineSigning, isRenewContract)
 }
 
 func doSubmit(rss *sessions.RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {

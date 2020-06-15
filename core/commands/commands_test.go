@@ -223,6 +223,7 @@ func TestCommands(t *testing.T) {
 		"/cid/hashes",
 		"/storage",
 		"/storage/path",
+		"/storage/renew",
 		"/storage/upload",
 		"/storage/upload/init",
 		"/storage/upload/recvcontract",

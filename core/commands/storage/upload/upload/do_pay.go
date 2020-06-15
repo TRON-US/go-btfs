@@ -16,7 +16,7 @@ import (
 	"github.com/tron-us/protobuf/proto"
 )
 
-func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool) error {
+func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool, isRenewContract bool) error {
 	if err := rss.To(sessions.RssToPayEvent); err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResul
 	if err != nil {
 		return err
 	}
-	return doGuard(rss, payinRes, fileSize, offlineSigning)
+	return doGuard(rss, payinRes, fileSize, offlineSigning, isRenewContract)
 }
 
 func payInToEscrow(ctx context.Context, configuration *config.Config, signedPayinReq *escrowpb.SignedPayinRequest) (*escrowpb.SignedPayinResult, error) {

@@ -42,7 +42,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				errChan := make(chan error, 2)
 				go func() {
 					tmp := func() error {
-						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning,
+						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, 0, offlineSigning, false,
 							renterId, contractId)
 						if err != nil {
 							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
@@ -67,7 +67,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 							StorageLength: int64(storageLength),
 							Price:         price,
 							TotalPay:      tp,
-						}, offlineSigning, rp)
+						}, offlineSigning, false, rp)
 						if err != nil {
 							log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
 							return err
@@ -138,7 +138,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 				log.Info("session", rss.SsId, "contractNum", completeNum, "errorNum", errorNum)
 				if completeNum == numShards {
-					err := Submit(rss, fileSize, offlineSigning)
+					err := Submit(rss, fileSize, offlineSigning, false)
 					if err != nil {
 						_ = rss.To(sessions.RssToErrorEvent, err)
 					}

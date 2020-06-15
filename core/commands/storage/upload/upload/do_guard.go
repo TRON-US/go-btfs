@@ -22,7 +22,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
+func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool, isRenewContract bool) error {
 	if err := rss.To(sessions.RssToGuardEvent); err != nil {
 		return err
 	}
@@ -41,7 +41,9 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 		contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
 		contracts.SignedGuardContract.LastModifyTime = time.Now()
 		cts = append(cts, contracts.SignedGuardContract)
-		selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)
+		if !isRenewContract {
+			selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)
+		}
 	}
 	fsStatus, err := newFileStatus(cts, rss.CtxParams.Cfg, cts[0].ContractMeta.RenterPid, rss.Hash, fileSize)
 	if err != nil {
@@ -89,11 +91,13 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 	if err != nil {
 		return err
 	}
+	if len(selectedHosts) == 0 {
+		return nil
+	}
 	qs, err := guard.PrepFileChallengeQuestions(rss, fsStatus, rss.Hash, offlineSigning, fsStatus.RenterPid)
 	if err != nil {
 		return err
 	}
-
 	fcid, err := cidlib.Parse(rss.Hash)
 	if err != nil {
 		return err

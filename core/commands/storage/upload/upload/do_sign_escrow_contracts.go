@@ -2,7 +2,6 @@ package upload
 
 import (
 	"fmt"
-
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
@@ -13,17 +12,22 @@ import (
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	"github.com/tron-us/protobuf/proto"
 
+	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
-	offlineSigning bool, offSignPid peer.ID,
+func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64, contingentAmount int64,
+	offlineSigning bool, isRenewContract bool, offSignPid peer.ID,
 	contractId string) ([]byte, error) {
-	hostPid, err := peer.IDB58Decode(host)
-	if err != nil {
-		return nil, err
+	var hostPid peer.ID
+	if !isRenewContract {
+		if id, err := peer.IDB58Decode(host); err == nil {
+			hostPid = id
+		} else {
+			return nil, err
+		}
 	}
-	escrowContract, err := newContract(rss, hostPid, totalPay, false, 0, offSignPid, contractId)
+	escrowContract, err := newContract(rss, hostPid, totalPay, contingentAmount, false, isRenewContract, 0, offSignPid, contractId)
 	if err != nil {
 		return nil, fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
@@ -61,16 +65,20 @@ func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, sha
 	return renterSignedEscrowContract, nil
 }
 
-func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, customizedSchedule bool, period int,
+func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, contingentAmount int64, customizedSchedule bool, isRenewContract bool, period int,
 	pid peer.ID, contractId string) (*escrowpb.EscrowContract, error) {
 	var err error
 	payerPubKey, err := pid.ExtractPublicKey()
 	if err != nil {
 		return nil, err
 	}
-	hostPubKey, err := hostPid.ExtractPublicKey()
-	if err != nil {
-		return nil, err
+	var hostPubKey ic.PubKey
+	if hostPid != "" {
+		if pubKey, err := hostPid.ExtractPublicKey(); err == nil {
+			hostPubKey = pubKey
+		} else {
+			return nil, err
+		}
 	}
 	if len(rss.CtxParams.Cfg.Services.GuardPubKeys) == 0 {
 		return nil, fmt.Errorf("No Services.GuardPubKeys are set in config")
@@ -85,8 +93,12 @@ func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, c
 		ps = escrowpb.Schedule_CUSTOMIZED
 		p = period
 	}
+	contrType := escrowpb.ContractType_REGULAR
+	if isRenewContract {
+		contrType = escrowpb.ContractType_PLAN
+	}
 	return ledger.NewEscrowContract(contractId,
-		payerPubKey, hostPubKey, authPubKey, totalPay, ps, int32(p))
+		payerPubKey, hostPubKey, authPubKey, totalPay, ps, int32(p), contrType, contingentAmount)
 }
 
 func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, signedBytes []byte,
