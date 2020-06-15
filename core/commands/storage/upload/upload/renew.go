@@ -95,12 +95,11 @@ and file hash need to be specified and passed on the command.
 		if err != nil {
 			return err
 		}
-		//get render session base on ssid and hashes need to be repaired
 		rss, err := sessions.GetRenterSession(ctxParams, ssId, fileHash, shardHashes)
 		if err != nil {
 			return err
 		}
-		//hp := uh.GetHostsProvider(ctxParams, make([]string, 0))
+
 		m := contracts[0].ContractMeta
 		renterPid, err := peer.IDB58Decode(renterId)
 		if err != nil {
@@ -134,12 +133,9 @@ and file hash need to be specified and passed on the command.
 	Type: Res{},
 }
 
-//create new contracts and send to Guard
 func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int64, preRentEnd time.Time,
 	storageLength int, offlineSigning bool, renterId peer.ID, fileSize int64, shardIndexes []int, rp *RepairParams) {
-	//loop all the shard hashes
 	for index, shardHash := range rss.ShardHashes {
-		//create escrow contract and sign the contract
 		go func(i int, h string) {
 			err := backoff.Retry(func() error {
 				select {
@@ -149,9 +145,6 @@ func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int6
 					break
 				}
 				contractId := uh.NewContractID(rss.SsId)
-				cb := make(chan error)
-				ShardErrChanMap.Set(contractId, cb)
-
 				tp := uh.TotalPay(shardSize, price, storageLength)
 				percent := config.GetRenewContingencyPercentage()
 				ca := int64(float64(tp) * float64(percent) / 100)
@@ -198,22 +191,6 @@ func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int6
 					}()
 					errChan <- tmp
 				}()
-
-				guardContract := new(guardpb.Contract)
-				err := proto.Unmarshal(renewGuardContractBytes, guardContract)
-				if err != nil {
-					errChan <- err
-				}
-				//save contract in ds
-				shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, shardHash, index)
-				if err != nil {
-					errChan <- err
-				}
-				err = shard.Contract(renewEscrowContractBytes, guardContract)
-				if err != nil {
-					errChan <- err
-				}
-
 				c := 0
 				for err := range errChan {
 					c++
@@ -224,15 +201,17 @@ func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int6
 						break
 					}
 				}
-				// host needs to send recv in 10 seconds, or the contract will be invalid.
-				tick := time.Tick(10 * time.Second)
-				select {
-				case err = <-cb:
-					ShardErrChanMap.Remove(contractId)
+				guardContract := new(guardpb.Contract)
+				err := proto.Unmarshal(renewGuardContractBytes, guardContract)
+				if err != nil {
 					return err
-				case <-tick:
-					return errors.New("host timeout")
 				}
+				shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, shardHash, index)
+				if err != nil {
+					return err
+				}
+				_ = shard.Contract(renewEscrowContractBytes, guardContract)
+				return nil
 			}, uh.HandleShardBo)
 			if err != nil {
 				_ = rss.To(sessions.RssToErrorEvent, err)
@@ -250,8 +229,6 @@ func CreateNewContracts(rss *sessions.RenterSession, price int64, shardSize int6
 					continue
 				}
 				log.Info("session", rss.SsId, "contractNum", completeNum, "errorNum", errorNum)
-				//shard 处理完成submit
-				//if s.Status == rshContractStatus { completeNum++ }
 				if completeNum == numShards {
 					err := Submit(rss, fileSize, offlineSigning, true)
 					if err != nil {
