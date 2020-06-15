@@ -110,10 +110,14 @@ and file hash need to be specified and passed on the command.
 		err = grpc.HubQueryClient(cfg.Services.HubDomain).WithContext(ctx,
 			func(ctx context.Context, client hubpb.HubQueryServiceClient) error {
 				req := new(hubpb.SettingsReq)
-				req.Id = renterId
+				//unknow host id
+				req.Id = ""
 				resp, err := client.GetSettings(ctx, req)
 				if err != nil {
 					return err
+				}
+				if resp.Code != hubpb.ResponseCode_SUCCESS {
+					return errors.New(resp.Message)
 				}
 				price = int64(resp.SettingsData.StoragePriceAsk)
 				return nil
