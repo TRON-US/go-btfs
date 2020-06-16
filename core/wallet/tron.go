@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core"
+	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -84,12 +85,16 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		if err != nil {
 			return err
 		}
-		PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount, BttWallet, to, StatusSuccess)
+		err = PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
+			BttWallet, to, StatusPending, walletpb.TransactionV1_ON_CHAIN)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
-		PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount, BttWallet, to, StatusFailed)
-		return nil, err
+		return nil, PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
+			BttWallet, to, StatusFailed, walletpb.TransactionV1_ON_CHAIN)
 	}
 	return &TronRet{
 		Message: string(ret.Message),

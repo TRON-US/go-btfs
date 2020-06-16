@@ -3,6 +3,8 @@ module github.com/TRON-US/go-btfs
 require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
+	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
+	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
 	github.com/TRON-US/go-btfs-cmds v0.2.0
@@ -19,6 +21,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/btcsuite/btcutil v1.0.2
+	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/coreos/go-systemd/v22 v22.0.0
 	github.com/dustin/go-humanize v1.0.0
@@ -28,7 +31,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/golang-lru v0.5.4
@@ -114,11 +117,14 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1
 	github.com/shirou/gopsutil v2.20.5+incompatible
+	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tron-us/go-btfs-common v0.4.8
 	github.com/tron-us/go-common/v2 v2.1.1
 	github.com/tron-us/protobuf v1.3.4
+	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
+	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	github.com/whyrusleeping/base32 v0.0.0-20170828182744-c30ac30633cc
 	github.com/whyrusleeping/go-sysinfo v0.0.0-20190219211824-4a357d4b90b1
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
@@ -129,7 +135,7 @@ require (
 	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.2.8
 )
 
 replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.2.0

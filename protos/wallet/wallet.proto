@@ -42,4 +42,10 @@ message TransactionV1 {
   string from = 4;
   string to = 5;
   string status = 6;
+  enum Type {
+    EXCHANGE = 0;
+    ON_CHAIN = 1;
+    OFF_CHAIN = 2;
+  }
+  Type type = 7;
 }

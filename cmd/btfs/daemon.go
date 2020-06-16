@@ -4,6 +4,7 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -271,7 +272,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 				}
 			}
 
-			if err = doInit(os.Stdout, cfg, false, nBitsForKeypairDefault, profiles, conf,
+			if err = doInit(os.Stdout, cfg, false, utilmain.NBitsForKeypairDefault, []string{profiles}, conf,
 				keyTypeDefault, "", "", false); err != nil {
 				return err
 			}
@@ -532,6 +533,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
+	if params, err := helper.ExtractContextParams(req, env); err == nil {
+		spin.NewWalletWrap(params).UpdateStatus()
+	}
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
