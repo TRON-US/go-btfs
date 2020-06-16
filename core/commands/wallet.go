@@ -13,11 +13,8 @@ import (
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-<<<<<<< HEAD
 
 	"github.com/cenkalti/backoff/v3"
-=======
->>>>>>> a6d38ef8c... BTFS-1984 Wallet BE: Implement transfer function to on-chain public address
 )
 
 var WalletCmd = &cmds.Command{
@@ -36,11 +33,8 @@ withdraw and query balance of token used in BTFS.`,
 		"password":     walletPasswordCmd,
 		"keys":         walletKeysCmd,
 		"transactions": walletTransactionsCmd,
-<<<<<<< HEAD
 		"import":       walletImportCmd,
-=======
 		"transfer":     walletTransferCmd,
->>>>>>> a6d38ef8c... BTFS-1984 Wallet BE: Implement transfer function to on-chain public address
 	},
 }
 
