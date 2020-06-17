@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/TRON-US/go-btfs/core"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
@@ -96,6 +97,36 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		return nil, PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
 			BttWallet, to, StatusFailed, walletpb.TransactionV1_ON_CHAIN)
 	}
+	go func() {
+		// confirmed after 19 * 3 second/block
+		time.Sleep(1 * time.Minute)
+		err = grpc.WalletClient(url).WithContext(context.Background(),
+			func(ctx context.Context, client tronPb.WalletClient) error {
+				tib, err := hex.DecodeString(txId)
+				if err != nil {
+					return err
+				}
+				info, err := client.GetTransactionById(ctx, &tronPb.BytesMessage{Value: tib})
+				if err != nil {
+					return err
+				}
+				status := StatusPending
+				if info.Ret[0].ContractRet == protocol_core.Transaction_Result_SUCCESS {
+					status = StatusSuccess
+				} else if info.Ret[0].ContractRet == protocol_core.Transaction_Result_REVERT {
+					status = StatusFailed
+				}
+				err = PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
+					BttWallet, to, status, walletpb.TransactionV1_ON_CHAIN)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 	return &TronRet{
 		Message: string(ret.Message),
 		Result:  ret.Result,
