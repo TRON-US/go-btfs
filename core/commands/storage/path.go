@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs-cmds/http"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -27,6 +28,13 @@ const (
 	defaultPath = "~/.btfs"
 	fileName    = "~/.btfs.properties"
 )
+
+func init() {
+	http.RegisterNonLocalCmds(
+		"/path",
+		"/path/status",
+		"/path/capacity")
+}
 
 var log = logging.Logger("core/commands/path")
 

@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs-cmds/http"
 	"io"
 	"os/exec"
 	"strconv"
@@ -16,6 +17,17 @@ import (
 
 	"github.com/cenkalti/backoff/v3"
 )
+
+func init() {
+	http.RegisterNonLocalCmds(
+		"/wallet/init",
+		"/wallet/deposit",
+		"/wallet/withdraw",
+		"/wallet/password",
+		"/wallet/keys",
+		"/wallet/import",
+		"/wallet/transfer")
+}
 
 var WalletCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
