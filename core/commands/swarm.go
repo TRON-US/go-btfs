@@ -354,11 +354,7 @@ var swarmConnectCmd = &cmds.Command{
 
 The address format is an BTFS multiaddr:
 
-<<<<<<< HEAD
-btfs swarm connect /ip4/104.131.131.82/tcp/4001/btfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
-=======
-ipfs swarm connect /ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
->>>>>>> 56a8b012e7975c66f9d4a86be7659adc8eae14bb
+btfs swarm connect /ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 `,
 	},
 	Arguments: []cmds.Argument{
@@ -403,11 +399,7 @@ var swarmDisconnectCmd = &cmds.Command{
 'btfs swarm disconnect' closes a connection to a peer address. The address
 format is an BTFS multiaddr:
 
-<<<<<<< HEAD
-btfs swarm disconnect /ip4/104.131.131.82/tcp/4001/btfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
-=======
-ipfs swarm disconnect /ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
->>>>>>> 56a8b012e7975c66f9d4a86be7659adc8eae14bb
+btfs swarm disconnect /ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 
 The disconnect is not permanent; if btfs needs to talk to that address later,
 it will reconnect.
@@ -592,13 +584,9 @@ var swarmFiltersAddCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Add an address filter.",
 		ShortDescription: `
-<<<<<<< HEAD
 'btfs swarm filters add' will add an address filter to the daemons swarm.
 Filters applied this way will not persist daemon reboots, to achieve that,
 add your filters to the btfs config file.
-=======
-'ipfs swarm filters add' will add an address filter to the daemons swarm.
->>>>>>> 56a8b012e7975c66f9d4a86be7659adc8eae14bb
 `,
 	},
 	Arguments: []cmds.Argument{
@@ -660,13 +648,9 @@ var swarmFiltersRmCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Remove an address filter.",
 		ShortDescription: `
-<<<<<<< HEAD
 'btfs swarm filters rm' will remove an address filter from the daemons swarm.
 Filters removed this way will not persist daemon reboots, to achieve that,
 remove your filters from the btfs config file.
-=======
-'ipfs swarm filters rm' will remove an address filter from the daemons swarm.
->>>>>>> 56a8b012e7975c66f9d4a86be7659adc8eae14bb
 `,
 	},
 	Arguments: []cmds.Argument{
