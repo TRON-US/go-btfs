@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
+	ipns "github.com/TRON-US/go-btns"
+	pb "github.com/TRON-US/go-btns/pb"
 	opts "github.com/TRON-US/interface-go-btfs-core/options/namesys"
 	proto "github.com/gogo/protobuf/proto"
 	cid "github.com/ipfs/go-cid"
-	ipns "github.com/TRON-US/go-btns"
-	pb "github.com/TRON-US/go-btns/pb"
 	logging "github.com/ipfs/go-log"
 	path "github.com/ipfs/go-path"
 	peer "github.com/libp2p/go-libp2p-core/peer"
