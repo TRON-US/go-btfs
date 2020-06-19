@@ -11,14 +11,14 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
-func ExternalBinary() *cmds.Command {
+func ExternalBinary(instructions string) *cmds.Command {
 	return &cmds.Command{
 		Arguments: []cmds.Argument{
 			cmds.StringArg("args", false, true, "Arguments for subcommand."),
 		},
 		External: true,
 		Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-			binname := strings.Join(append([]string{"ipfs"}, req.Path...), "-")
+			binname := strings.Join(append([]string{"btfs"}, req.Path...), "-")
 			_, err := exec.LookPath(binname)
 			if err != nil {
 				// special case for '--help' on uninstalled binaries.
@@ -27,7 +27,7 @@ func ExternalBinary() *cmds.Command {
 						buf := new(bytes.Buffer)
 						fmt.Fprintf(buf, "%s is an 'external' command.\n", binname)
 						fmt.Fprintf(buf, "It does not currently appear to be installed.\n")
-						fmt.Fprintf(buf, "Please refer to the btfs documentation for instructions.\n")
+						fmt.Fprintf(buf, "Please refer to the btfs documentation for additional instructions.\n")
 						return res.Emit(buf)
 					}
 				}

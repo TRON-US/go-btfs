@@ -9,7 +9,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 

@@ -15,7 +15,7 @@ for mounting. If you'd like to be able to mount, please use a version of
 btfs compiled with fuse.
 
 For the latest instructions, please check the project's repository:
-  http://github.com/ipfs/go-ipfs
+  http://github.com/TRON-US/go-btfs
 `,
 	},
 }

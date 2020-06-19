@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/TRON-US/go-btfs/namesys"
+
 	"github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
-
-	"github.com/TRON-US/go-btfs/namesys"
 )
 
 var log = logging.Logger("nsresolv")
@@ -19,12 +19,12 @@ var log = logging.Logger("nsresolv")
 // ErrNoNamesys is an explicit error for when an BTFS node doesn't
 // (yet) have a name system
 var ErrNoNamesys = errors.New(
-	"core/resolve: no Namesys on IpfsNode - can't resolve btns entry")
+	"core/resolve: no Namesys on BtfsNode - can't resolve btns entry")
 
 // ResolveIPNS resolves /btns paths
 func ResolveIPNS(ctx context.Context, nsys namesys.NameSystem, p path.Path) (path.Path, error) {
 	if strings.HasPrefix(p.String(), "/btns/") {
-		evt := log.EventBegin(ctx, "resolveIpnsPath")
+		evt := log.EventBegin(ctx, "resolveBtnsPath")
 		defer evt.Done()
 		// resolve btns paths
 

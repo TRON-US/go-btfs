@@ -8,15 +8,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/TRON-US/go-btfs/dagutils"
+	chunker "github.com/TRON-US/go-btfs-chunker"
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
-	dag "github.com/ipfs/go-merkledag"
-	path "github.com/ipfs/go-path"
-
-	chunker "github.com/TRON-US/go-btfs-chunker"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
+	dag "github.com/ipfs/go-merkledag"
+	"github.com/ipfs/go-merkledag/dagutils"
+	path "github.com/ipfs/go-path"
 )
 
 var log = logging.Logger("tarfmt")

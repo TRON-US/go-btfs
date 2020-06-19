@@ -13,8 +13,8 @@ import (
 
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/interface-go-btfs-core/options"
-	"github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/dustin/go-humanize"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-cidutil/cidenc"
 	ipld "github.com/ipfs/go-ipld-format"
@@ -46,7 +46,7 @@ type Object struct {
 	Links []Link `json:"Links,omitempty"`
 }
 
-var ErrDataEncoding = errors.New("unkown data field encoding")
+var ErrDataEncoding = errors.New("unknown data field encoding")
 
 const (
 	headersOptionName      = "headers"
@@ -215,7 +215,7 @@ This command outputs data in the following encodings:
   * "xml"
 (Specified by the "--encoding" or "--enc" flag)
 
-The encoding of the object's data field can be specifed by using the
+The encoding of the object's data field can be specified by using the
 --data-encoding flag
 
 Supported values are:

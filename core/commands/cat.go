@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/TRON-US/interface-go-btfs-core/options"
 	"io"
 	"os"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-files"
 	"github.com/TRON-US/interface-go-btfs-core"
+	"github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
 )
 
@@ -35,8 +35,8 @@ var CatCmd = &cmds.Command{
 		cmds.Int64Option(offsetOptionName, "o", "Byte offset to begin reading from."),
 		cmds.Int64Option(lengthOptionName, "l", "Maximum number of bytes to read."),
 		cmds.BoolOption(catMetaDisplayOptionName, "m", "Display token metadata"),
-		cmds.BoolOption(decryptName, "Decrypt the file."),
-		cmds.StringOption(privateKeyName, "The private key to decrypt file."),
+		cmds.BoolOption(decryptName, "d", "Decrypt the file."),
+		cmds.StringOption(privateKeyName, "pk", "The private key to decrypt file."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
@@ -111,7 +111,7 @@ var CatCmd = &cmds.Command{
 						return err
 					}
 				default:
-					log.Warningf("cat postrun: received unexpected type %T", val)
+					log.Warnf("cat postrun: received unexpected type %T", val)
 				}
 			}
 		},

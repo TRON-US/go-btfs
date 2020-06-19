@@ -3,17 +3,18 @@ package libp2p
 import (
 	"context"
 	"sort"
+	"time"
+
+	"github.com/TRON-US/go-btfs/core/node/helpers"
 
 	host "github.com/libp2p/go-libp2p-core/host"
 	routing "github.com/libp2p/go-libp2p-core/routing"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
+	ddht "github.com/libp2p/go-libp2p-kad-dht/dual"
 	"github.com/libp2p/go-libp2p-pubsub"
 	namesys "github.com/libp2p/go-libp2p-pubsub-router"
 	record "github.com/libp2p/go-libp2p-record"
 	routinghelpers "github.com/libp2p/go-libp2p-routing-helpers"
 	"go.uber.org/fx"
-
-	"github.com/TRON-US/go-btfs/core/node/helpers"
 )
 
 type BaseIpfsRouting routing.Routing
@@ -30,8 +31,8 @@ type p2pRouterOut struct {
 	Router Router `group:"routers"`
 }
 
-func BaseRouting(lc fx.Lifecycle, in BaseIpfsRouting) (out p2pRouterOut, dr *dht.IpfsDHT) {
-	if dht, ok := in.(*dht.IpfsDHT); ok {
+func BaseRouting(lc fx.Lifecycle, in BaseIpfsRouting) (out p2pRouterOut, dr *ddht.DHT) {
+	if dht, ok := in.(*ddht.DHT); ok {
 		dr = dht
 
 		lc.Append(fx.Hook{
@@ -83,14 +84,18 @@ type p2pPSRoutingIn struct {
 	PubSub          *pubsub.PubSub `optional:"true"`
 }
 
-func PubsubRouter(mctx helpers.MetricsCtx, lc fx.Lifecycle, in p2pPSRoutingIn) (p2pRouterOut, *namesys.PubsubValueStore) {
-	psRouter := namesys.NewPubsubValueStore(
+func PubsubRouter(mctx helpers.MetricsCtx, lc fx.Lifecycle, in p2pPSRoutingIn) (p2pRouterOut, *namesys.PubsubValueStore, error) {
+	psRouter, err := namesys.NewPubsubValueStore(
 		helpers.LifecycleCtx(mctx, lc),
 		in.Host,
-		in.BaseIpfsRouting,
 		in.PubSub,
 		in.Validator,
+		namesys.WithRebroadcastInterval(time.Minute),
 	)
+
+	if err != nil {
+		return p2pRouterOut{}, nil, err
+	}
 
 	return p2pRouterOut{
 		Router: Router{
@@ -102,5 +107,5 @@ func PubsubRouter(mctx helpers.MetricsCtx, lc fx.Lifecycle, in p2pPSRoutingIn) (
 			},
 			Priority: 100,
 		},
-	}, psRouter
+	}, psRouter, nil
 }

@@ -7,3 +7,8 @@ var CurrentCommit string
 const CurrentVersionNumber = "1.3.0-dev"
 
 const ApiVersion = "/go-btfs/" + CurrentVersionNumber + "/"
+
+// UserAgent is the libp2p user agent used by go-btfs.
+//
+// Note: This will end in `/` when no commit is available. This is expected.
+var UserAgent = "go-btfs/" + CurrentVersionNumber + "/" + CurrentCommit

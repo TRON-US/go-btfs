@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TRON-US/go-btfs/pin/gc"
+	"github.com/TRON-US/go-btfs/gc"
 	ft "github.com/TRON-US/go-unixfs"
 	importer "github.com/TRON-US/go-unixfs/importer"
 	uio "github.com/TRON-US/go-unixfs/io"
