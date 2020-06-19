@@ -153,6 +153,6 @@ replace github.com/multiformats/go-multiaddr => github.com/TRON-US/go-multiaddr 
 
 replace github.com/ipfs/go-path => github.com/TRON-US/go-path v0.1.0
 
-replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.1.1
+replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.1.2
 
 go 1.14
