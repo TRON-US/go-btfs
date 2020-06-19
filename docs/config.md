@@ -488,10 +488,10 @@ Default: `false`
 
 ### `Gateway.PathPrefixes`
 
-Array of acceptable url paths that a client can specify in X-Ipfs-Path-Prefix
+Array of acceptable url paths that a client can specify in X-Btfs-Path-Prefix
 header.
 
-The X-Ipfs-Path-Prefix header is used to specify a base path to prepend to links
+The X-Btfs-Path-Prefix header is used to specify a base path to prepend to links
 in directory listings and for trailing-slash redirects. It is intended to be set
 by a frontend http proxy like nginx.
 
@@ -508,7 +508,7 @@ Example: We mount `blog.ipfs.io` (a dnslink page) at `ipfs.io/blog`.
 location /blog/ {
   rewrite "^/blog(/.*)$" $1 break;
   proxy_set_header Host blog.ipfs.io;
-  proxy_set_header X-Ipfs-Gateway-Prefix /blog;
+  proxy_set_header X-Btfs-Gateway-Prefix /blog;
   proxy_pass http://127.0.0.1:8080;
 }
 ```

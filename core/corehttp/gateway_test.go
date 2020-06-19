@@ -287,7 +287,7 @@ func TestIPNSHostnameRedirect(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Host = "example.net"
-	req.Header.Set("X-Ipfs-Gateway-Prefix", "/good-prefix")
+	req.Header.Set("X-Btfs-Gateway-Prefix", "/good-prefix")
 
 	res, err = doWithoutRedirect(req)
 	if err != nil {
@@ -311,7 +311,7 @@ func TestIPNSHostnameRedirect(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Host = "example.net"
-	req.Header.Set("X-Ipfs-Gateway-Prefix", "/good-prefix")
+	req.Header.Set("X-Btfs-Gateway-Prefix", "/good-prefix")
 
 	res, err = doWithoutRedirect(req)
 	if err != nil {
@@ -463,7 +463,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Host = "example.net"
-	req.Header.Set("X-Ipfs-Gateway-Prefix", "/good-prefix")
+	req.Header.Set("X-Btfs-Gateway-Prefix", "/good-prefix")
 
 	res, err = doWithoutRedirect(req)
 	if err != nil {
@@ -497,7 +497,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Host = "example.net"
-	req.Header.Set("X-Ipfs-Gateway-Prefix", "/bad-prefix")
+	req.Header.Set("X-Btfs-Gateway-Prefix", "/bad-prefix")
 
 	// make request to directory listing with evil prefix
 	req, err = http.NewRequest(http.MethodGet, ts.URL, nil)
@@ -505,7 +505,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Host = "example.net"
-	req.Header.Set("X-Ipfs-Gateway-Prefix", "//good-prefix/foo")
+	req.Header.Set("X-Btfs-Gateway-Prefix", "//good-prefix/foo")
 
 	res, err = doWithoutRedirect(req)
 	if err != nil {
