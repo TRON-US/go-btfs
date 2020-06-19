@@ -107,7 +107,7 @@ test_go: $(TEST_GO)
 
 test_build_special_exe:
 	cd ./cmd/btfs && \
-	$(GOCC) test -coverpkg=./... -c *.go -tags testrunmain -o $(TEST_FILE_DIR)/test-special-exe
+	$(GOCC) test -v -coverpkg=./... -c -tags testrunmain -o $(TEST_FILE_DIR)/test-special-exe
 .PHONY: test_build_special_exe
 
 check_go_version:
