@@ -220,7 +220,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		isReedSolomonSubdirOrFile bool // Is ReedSolomon non-root subdirectory or file?
 	)
 
-	top, err := i.isTopLevelEntryPath(w, r, parsedPath.String())
+	top, err := i.isTopLevelEntryPath(w, r, parsedPath.String(), escapedURLPath)
 	if err != nil {
 		// helper already handled webError
 		return
@@ -715,7 +715,7 @@ func (i *gatewayHandler) resolveAndGetFilesNode(ctx context.Context,
 
 // isTopLevelEntryPath checks to see if the node being resolved is a root path/directory
 func (i *gatewayHandler) isTopLevelEntryPath(w http.ResponseWriter, r *http.Request,
-	urlPath string) (bool, error) {
+	urlPath, escPath string) (bool, error) {
 	urlPath = gopath.Clean(urlPath)
 	parts := strings.Split(urlPath, "/")
 
@@ -729,7 +729,7 @@ func (i *gatewayHandler) isTopLevelEntryPath(w http.ResponseWriter, r *http.Requ
 	case "btns":
 		ipnspath, err = i.api.ResolveIpnsPath(r.Context(), ipath.New(urlPath))
 		if err == coreiface.ErrOffline {
-			webError(w, "btfs resolve -r "+urlPath, coreiface.ErrOffline, http.StatusServiceUnavailable)
+			webError(w, "btfs resolve -r "+escPath, coreiface.ErrOffline, http.StatusServiceUnavailable)
 			return false, coreiface.ErrOffline
 		}
 		if err != nil {
@@ -739,7 +739,7 @@ func (i *gatewayHandler) isTopLevelEntryPath(w http.ResponseWriter, r *http.Requ
 	default:
 		err = fmt.Errorf("unsupported path namespace: [%s]", parts[1])
 	}
-	webError(w, "btfs resolve -r "+urlPath, err, http.StatusNotFound)
+	webError(w, "btfs resolve -r "+escPath, err, http.StatusNotFound)
 	return false, err
 }
 

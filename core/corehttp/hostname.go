@@ -22,7 +22,7 @@ import (
 	mbase "github.com/multiformats/go-multibase"
 )
 
-var defaultPaths = []string{"/ipfs/", "/ipns/", "/api/", "/p2p/", "/version"}
+var defaultPaths = []string{"/btfs/", "/btns/", "/api/", "/p2p/", "/version"}
 
 var pathGatewaySpec = config.GatewaySpec{
 	Paths:         defaultPaths,
@@ -36,9 +36,9 @@ var subdomainGatewaySpec = config.GatewaySpec{
 
 var defaultKnownGateways = map[string]config.GatewaySpec{
 	"localhost":       subdomainGatewaySpec,
-	"ipfs.io":         pathGatewaySpec,
-	"gateway.ipfs.io": pathGatewaySpec,
-	"dweb.link":       subdomainGatewaySpec,
+	"btfs.io":         pathGatewaySpec,
+	"gateway.btfs.io": pathGatewaySpec,
+	"soter.btfs.io":   subdomainGatewaySpec,
 }
 
 // HostnameOption rewrites an incoming request based on the Host header.
@@ -126,7 +126,7 @@ func HostnameOption() ServeOption {
 				// Try DNSLink, if it was not explicitly disabled for the hostname
 				if !gw.NoDNSLink && isDNSLinkRequest(n.Context(), coreApi, r) {
 					// rewrite path and handle as DNSLink
-					r.URL.Path = "/ipns/" + stripPort(r.Host) + r.URL.Path
+					r.URL.Path = "/btns/" + stripPort(r.Host) + r.URL.Path
 					childMux.ServeHTTP(w, r)
 					return
 				}
@@ -178,7 +178,7 @@ func HostnameOption() ServeOption {
 			// 3. does DNSLink record exist in DNS?
 			if !cfg.Gateway.NoDNSLink && isDNSLinkRequest(n.Context(), coreApi, r) {
 				// rewrite path and handle as DNSLink
-				r.URL.Path = "/ipns/" + stripPort(r.Host) + r.URL.Path
+				r.URL.Path = "/btns/" + stripPort(r.Host) + r.URL.Path
 				childMux.ServeHTTP(w, r)
 				return
 			}
@@ -241,7 +241,7 @@ func isDNSLinkRequest(ctx context.Context, ipfs iface.CoreAPI, r *http.Request) 
 	if len(fqdn) == 0 && !isd.IsDomain(fqdn) {
 		return false
 	}
-	name := "/ipns/" + fqdn
+	name := "/btns/" + fqdn
 	// check if DNSLink exists
 	depth := options.Name.ResolveOption(nsopts.Depth(1))
 	_, err := ipfs.Name().Resolve(ctx, name, depth)
@@ -250,7 +250,7 @@ func isDNSLinkRequest(ctx context.Context, ipfs iface.CoreAPI, r *http.Request) 
 
 func isSubdomainNamespace(ns string) bool {
 	switch ns {
-	case "ipfs", "ipns", "p2p", "ipld":
+	case "btfs", "btns", "p2p", "ipld":
 		return true
 	default:
 		return false
@@ -259,7 +259,7 @@ func isSubdomainNamespace(ns string) bool {
 
 func isPeerIDNamespace(ns string) bool {
 	switch ns {
-	case "ipns", "p2p":
+	case "btns", "p2p":
 		return true
 	default:
 		return false
