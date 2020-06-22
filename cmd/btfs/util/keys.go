@@ -19,7 +19,7 @@ func GenerateKey(importKey string, keyType string, seedPhrase string) (string, s
 	mnemonicLen := len(strings.Split(seedPhrase, ","))
 	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
 
-	if importKey != "" && strings.ToLower(keyType) != "secp256k1" {
+	if importKey != "" && keyType != "" && strings.ToLower(keyType) != "secp256k1" {
 		return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
 	} else if seedPhrase != "" {
 		if mnemonicLen != mnemonicLength {
@@ -30,7 +30,7 @@ func GenerateKey(importKey string, keyType string, seedPhrase string) (string, s
 		}
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
 		return GeneratePrivKeyUsingBIP39(mnemonic)
-	} else if keyType == "" || keyType == "BIP39" {
+	} else if (keyType == "" && importKey == "") || keyType == "BIP39" {
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
 		return GeneratePrivKeyUsingBIP39("")
 	} else {
