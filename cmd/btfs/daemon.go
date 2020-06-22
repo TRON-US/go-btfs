@@ -4,7 +4,6 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -21,6 +20,7 @@ import (
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
@@ -272,7 +272,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 				}
 			}
 
-			if err = doInit(os.Stdout, cfg, false, utilmain.NBitsForKeypairDefault, []string{profiles}, conf,
+			if err = doInit(os.Stdout, cfg, false, utilmain.NBitsForKeypairDefault, profiles, conf,
 				keyTypeDefault, "", "", false); err != nil {
 				return err
 			}

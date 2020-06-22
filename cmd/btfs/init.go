@@ -114,17 +114,11 @@ environment variable:
 		}
 
 		profile, _ := req.Options[profileOptionName].(string)
-
-		var profiles []string
-		if profile != "" {
-			profiles = strings.Split(profile, ",")
-		}
-
 		importKey, _ := req.Options[importKeyOptionName].(string)
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
 
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, seedPhrase, rmOnUnpin)
+		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profile, conf, keyType, importKey, seedPhrase, rmOnUnpin)
 	},
 }
 
@@ -132,17 +126,7 @@ var errRepoExists = errors.New(`btfs configuration file already exists!
 Reinitializing would overwrite your keys.
 `)
 
-func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
-	var profiles []string
-	if profile != "" {
-		profiles = strings.Split(profile, ",")
-	}
-
-	// the last argument (false) refers to the configuration variable Experimental.RemoveOnUnpin
-	return doInit(out, repoRoot, false, util.NBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", "", false)
-}
-
-func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,
+func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles string, conf *config.Config,
 	keyType string, importKey string, mnemonic string, rmOnUnpin bool) error {
 
 	importKey, mnemonic, err := util.GenerateKey(importKey, keyType, mnemonic)
@@ -175,15 +159,8 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 		}
 	}
 
-	for _, profile := range confProfiles {
-		transformer, ok := config.Profiles[profile]
-		if !ok {
-			return fmt.Errorf("invalid configuration profile: %s", profile)
-		}
-
-		if err := transformer.Transform(conf); err != nil {
-			return err
-		}
+	if err := applyProfiles(conf, confProfiles); err != nil {
+		return err
 	}
 
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
@@ -197,6 +174,22 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 	}
 
 	return initializeIpnsKeyspace(repoRoot)
+}
+
+func applyProfiles(conf *config.Config, profiles string) error {
+	if profiles == "" {
+		return nil
+	}
+	for _, profile := range strings.Split(profiles, ",") {
+		transformer, ok := config.Profiles[profile]
+		if !ok {
+			return fmt.Errorf("invalid configuration profile: %s", profile)
+		}
+		if err := transformer.Transform(conf); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func checkWritable(dir string) error {

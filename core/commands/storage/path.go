@@ -3,7 +3,6 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs-cmds/http"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds/http"
 
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"

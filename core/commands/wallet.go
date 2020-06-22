@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs-cmds/http"
 	"io"
 	"os/exec"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs-cmds/http"
 
 	"github.com/cenkalti/backoff/v3"
 )
