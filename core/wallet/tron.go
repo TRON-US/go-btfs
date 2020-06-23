@@ -95,8 +95,10 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		return nil
 	})
 	if err != nil {
-		return nil, PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
+		e := PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
 			BttWallet, to, StatusFailed, walletpb.TransactionV1_ON_CHAIN)
+		log.Debug(e)
+		return nil, err
 	}
 	go func() {
 		// confirmed after 19 * 3 second/block
