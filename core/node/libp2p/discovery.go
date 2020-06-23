@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/node/helpers"
+
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery"
 	"go.uber.org/fx"
-
-	"github.com/TRON-US/go-btfs/core/node/helpers"
 )
 
 const discoveryConnTimeout = time.Second * 30
@@ -20,11 +20,11 @@ type discoveryHandler struct {
 }
 
 func (dh *discoveryHandler) HandlePeerFound(p peer.AddrInfo) {
-	log.Warning("trying peer info: ", p)
+	log.Info("connecting to discovered peer: ", p)
 	ctx, cancel := context.WithTimeout(dh.ctx, discoveryConnTimeout)
 	defer cancel()
 	if err := dh.host.Connect(ctx, p); err != nil {
-		log.Warning("Failed to connect to peer found by discovery: ", err)
+		log.Warnf("failed to connect to peer %s found by discovery: %s", p.ID, err)
 	}
 }
 

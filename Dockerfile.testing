@@ -1,5 +1,12 @@
 FROM golang:1.14-stretch
 MAINTAINER TRON-US <support@tron.network>
+
+# Install deps
+RUN apt-get update && apt-get install -y \
+  libssl-dev \
+  ca-certificates \
+  fuse
+
 # Dockerfile.testing will build an image that contains the go-btfs source and binary.
 # It is quite large.  Its primary use case is to run the unit tests and test/sharness tests.
 # Use Dockerfile to run a btfs daemon instead
@@ -20,32 +27,34 @@ ARG gitdir=.git
 RUN test -d $SRC_DIR/.git \
   || mv $SRC_DIR/$gitdir $SRC_DIR/.git
 
-# Install path
-RUN apt-get update && apt-get install -y patch
+# Preload an in-tree but disabled-by-default plugin by adding it to the IPFS_PLUGINS variable
+# e.g. docker build --build-arg IPFS_PLUGINS="foo bar baz"
+ARG IPFS_PLUGINS
 
 # Build the thing.
 # Also: fix getting HEAD commit hash via git rev-parse.
 RUN cd $SRC_DIR \
   && mkdir .git/objects \
-  && make build
+  && make build GOTAGS=openssl IPFS_PLUGINS=$IPFS_PLUGINS
 
+# Get su-exec, a very minimal tool for dropping privileges,
+# and tini, a very minimal init daemon for containers
 ENV SUEXEC_VERSION v0.2
-ENV TINI_VERSION v0.16.1
-RUN set -x \
-  && cd /tmp \
+ENV TINI_VERSION v0.19.0
+RUN set -eux; \
+    dpkgArch="$(dpkg --print-architecture)"; \
+    case "${dpkgArch##*-}" in \
+        "amd64" | "armhf" | "arm64") tiniArch="tini-$dpkgArch" ;;\
+        *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
+    esac; \
+  cd /tmp \
   && git clone https://github.com/ncopa/su-exec.git \
   && cd su-exec \
   && git checkout -q $SUEXEC_VERSION \
   && make \
   && cd /tmp \
-  && wget -q -O tini https://github.com/krallin/tini/releases/download/$TINI_VERSION/tini \
+  && wget -q -O tini https://github.com/krallin/tini/releases/download/$TINI_VERSION/$tiniArch \
   && chmod +x tini
-
-# Get the TLS CA certificates, they're not provided by busybox.
-RUN apt-get update && apt-get install -y ca-certificates
-
-# Install FUSE
-RUN apt-get update && apt-get install -y fuse
 
 # Do this in the current container
 RUN mv /tmp/su-exec/su-exec /sbin/su-exec
@@ -54,10 +63,13 @@ RUN mv /bin/fusermount /usr/local/bin/fusermount
 # Add suid bit on fusermount so it will run properly
 RUN chmod 4755 /usr/local/bin/fusermount
 
+# Fix permissions on start_btfs (ignore the build machine's permissions)
+RUN chmod 0755 /usr/local/bin/start_btfs
+
 # Create the fs-repo directory and switch to a non-privileged user.
 ENV BTFS_PATH /data/btfs
 RUN mkdir -p $BTFS_PATH \
-  && adduser --disabled-password --home $BTFS_PATH --uid 1000 --ingroup users btfs \
+  && adduser -D -h $BTFS_PATH -u 1000 -G users btfs \
   && chown btfs:users $BTFS_PATH
 
 # Create mount points for `btfs mount` command

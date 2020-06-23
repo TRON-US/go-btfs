@@ -32,7 +32,7 @@ func RmDag(ctx context.Context, hashes []string, n *core.IpfsNode, req *cmds.Req
 			continue
 		}
 
-		_, pinned, err := n.Pinning.IsPinned(node.Cid())
+		_, pinned, err := n.Pinning.IsPinned(ctx, node.Cid())
 		if err != nil {
 			return nil, err
 		}

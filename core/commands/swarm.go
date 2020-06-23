@@ -297,10 +297,11 @@ var swarmAddrsLocalCmd = &cmds.Command{
 		}
 
 		var addrs []string
+		p2pProtocolName := ma.ProtocolWithCode(ma.P_P2P).Name
 		for _, addr := range maddrs {
 			saddr := addr.String()
 			if showid {
-				saddr = path.Join(saddr, "btfs", self.ID().Pretty())
+				saddr = path.Join(saddr, p2pProtocolName, self.ID().Pretty())
 			}
 			addrs = append(addrs, saddr)
 		}
@@ -353,7 +354,7 @@ var swarmConnectCmd = &cmds.Command{
 
 The address format is an BTFS multiaddr:
 
-btfs swarm connect /ip4/104.131.131.82/tcp/4001/btfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+btfs swarm connect /ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 `,
 	},
 	Arguments: []cmds.Argument{
@@ -398,7 +399,7 @@ var swarmDisconnectCmd = &cmds.Command{
 'btfs swarm disconnect' closes a connection to a peer address. The address
 format is an BTFS multiaddr:
 
-btfs swarm disconnect /ip4/104.131.131.82/tcp/4001/btfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
+btfs swarm disconnect /ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 
 The disconnect is not permanent; if btfs needs to talk to that address later,
 it will reconnect.

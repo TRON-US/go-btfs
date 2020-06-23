@@ -70,7 +70,7 @@ func GatewayOption(writable bool, paths ...string) ServeOption {
 		}
 		if _, ok := headers[ACAMethodsName]; !ok {
 			// Default to GET
-			headers[ACAMethodsName] = []string{"GET"}
+			headers[ACAMethodsName] = []string{http.MethodGet}
 		}
 
 		headers[ACAHeadersName] = cleanHeaderSet(
@@ -105,7 +105,7 @@ func VersionOption() ServeOption {
 	return func(_ *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Commit: %s\n", version.CurrentCommit)
-			fmt.Fprintf(w, "Client Version: %s\n", id.ClientVersion)
+			fmt.Fprintf(w, "Client Version: %s\n", version.UserAgent)
 			fmt.Fprintf(w, "Protocol Version: %s\n", id.LibP2PVersion)
 		})
 		return mux, nil

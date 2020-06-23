@@ -11,8 +11,8 @@ import (
 	mock "github.com/TRON-US/go-btfs/core/mock"
 	namesys "github.com/TRON-US/go-btfs/namesys"
 	. "github.com/TRON-US/go-btfs/namesys/republisher"
-	path "github.com/ipfs/go-path"
 
+	path "github.com/ipfs/go-path"
 	goprocess "github.com/jbenet/goprocess"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
@@ -29,10 +29,7 @@ func TestRepublish(t *testing.T) {
 
 	var nodes []*core.IpfsNode
 	for i := 0; i < 10; i++ {
-		nd, err := core.NewNode(ctx, &core.BuildCfg{
-			Online: true,
-			Host:   mock.MockHostOption(mn),
-		})
+		nd, err := mock.MockPublicNode(ctx, mn)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +92,7 @@ func TestRepublish(t *testing.T) {
 
 	// The republishers that are contained within the nodes have their timeout set
 	// to 12 hours. Instead of trying to tweak those, we're just going to pretend
-	// they dont exist and make our own.
+	// they don't exist and make our own.
 	repub := NewRepublisher(rp, publisher.Repo.Datastore(), publisher.PrivateKey, publisher.Repo.Keystore())
 	repub.Interval = time.Second
 	repub.RecordLifetime = time.Second * 5

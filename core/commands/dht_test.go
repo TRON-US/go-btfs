@@ -5,7 +5,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/namesys"
 
-	ipns "github.com/ipfs/go-ipns"
+	ipns "github.com/TRON-US/go-btns"
 	"github.com/libp2p/go-libp2p-core/test"
 )
 
@@ -19,7 +19,7 @@ func TestKeyTranslation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ipnsk, err := escapeDhtKey("/ipns/" + pid.Pretty())
+	ipnsk, err := escapeDhtKey("/btns/" + pid.Pretty())
 	if err != nil {
 		t.Fatal(err)
 	}

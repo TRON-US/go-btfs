@@ -13,7 +13,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/coreunix"
-	"github.com/TRON-US/go-btfs/pin/gc"
+	"github.com/TRON-US/go-btfs/gc"
 	"github.com/TRON-US/go-btfs/repo"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -21,8 +21,8 @@ import (
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-blockservice"
-	cid "github.com/ipfs/go-cid"
-	datastore "github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
 	syncds "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	pi "github.com/ipfs/go-ipfs-posinfo"
@@ -211,7 +211,7 @@ func TestAddGCLive(t *testing.T) {
 	case o := <-out:
 		addedHashes[o.(*coreiface.AddEvent).Path.Cid().String()] = struct{}{}
 	case <-addDone:
-		t.Fatal("add shouldnt complete yet")
+		t.Fatal("add shouldn't complete yet")
 	}
 
 	var gcout <-chan gc.Result
@@ -221,14 +221,14 @@ func TestAddGCLive(t *testing.T) {
 		gcout = gc.GC(context.Background(), node.Blockstore, node.Repo.Datastore(), node.Pinning, nil)
 	}()
 
-	// gc shouldnt start until we let the add finish its current file.
+	// gc shouldn't start until we let the add finish its current file.
 	if _, err := pipew.Write([]byte("some data for file b")); err != nil {
 		t.Fatal(err)
 	}
 
 	select {
 	case <-gcstarted:
-		t.Fatal("gc shouldnt have started yet")
+		t.Fatal("gc shouldn't have started yet")
 	default:
 	}
 

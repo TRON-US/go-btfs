@@ -8,31 +8,30 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"reflect"
+	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
-
 	"github.com/TRON-US/go-btfs/core/coreunix"
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	files "github.com/TRON-US/go-btfs-files"
 	ecies "github.com/TRON-US/go-eccrypto"
-	"github.com/TRON-US/go-mfs"
+	mfs "github.com/TRON-US/go-mfs"
 	ft "github.com/TRON-US/go-unixfs"
 	unixfile "github.com/TRON-US/go-unixfs/file"
 	"github.com/TRON-US/go-unixfs/importer/helpers"
 	uio "github.com/TRON-US/go-unixfs/io"
 	ftutil "github.com/TRON-US/go-unixfs/util"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
-	"github.com/TRON-US/interface-go-btfs-core/options"
-	"github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/ipfs/go-blockservice"
-	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-cidutil"
+	options "github.com/TRON-US/interface-go-btfs-core/options"
+	path "github.com/TRON-US/interface-go-btfs-core/path"
+	blockservice "github.com/ipfs/go-blockservice"
+	cid "github.com/ipfs/go-cid"
+	cidutil "github.com/ipfs/go-cidutil"
+	filestore "github.com/ipfs/go-filestore"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	ipld "github.com/ipfs/go-ipld-format"
-	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -40,9 +39,31 @@ import (
 
 type UnixfsAPI CoreAPI
 
+var nilNode *core.IpfsNode
+var once sync.Once
+
+func getOrCreateNilNode() (*core.IpfsNode, error) {
+	once.Do(func() {
+		if nilNode != nil {
+			return
+		}
+		node, err := core.NewNode(context.Background(), &core.BuildCfg{
+			//TODO: need this to be true or all files
+			// hashed will be stored in memory!
+			NilRepo: true,
+		})
+		if err != nil {
+			panic(err)
+		}
+		nilNode = node
+	})
+
+	return nilNode, nil
+}
+
 // Add builds a merkledag node from a reader, adds it to the blockstore,
 // and returns the key representing that node.
-func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
+func (api *UnixfsAPI) Add(ctx context.Context, filesNode files.Node, opts ...options.UnixfsAddOption) (path.Resolved, error) {
 	settings, prefix, err := options.UnixfsAddOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -73,23 +94,41 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	pinning := api.pinning
 
 	if settings.OnlyHash {
-		nilnode, err := core.NewNode(ctx, &core.BuildCfg{
-			//TODO: need this to be true or all files
-			// hashed will be stored in memory!
-			NilRepo: true,
-		})
+		node, err := getOrCreateNilNode()
 		if err != nil {
 			return nil, err
 		}
-		addblockstore = nilnode.Blockstore
-		exch = nilnode.Exchange
-		pinning = nilnode.Pinning
+		addblockstore = node.Blockstore
+		exch = node.Exchange
+		pinning = node.Pinning
 	}
 
 	bserv := blockservice.New(addblockstore, exch) // hash security 001
 	dserv := dag.NewDAGService(bserv)
 
-	fileAdder, err := coreunix.NewAdder(ctx, pinning, addblockstore, dserv)
+	// add a sync call to the DagService
+	// this ensures that data written to the DagService is persisted to the underlying datastore
+	// TODO: propagate the Sync function from the datastore through the blockstore, blockservice and dagservice
+	var syncDserv *syncDagService
+	if settings.OnlyHash {
+		syncDserv = &syncDagService{
+			DAGService: dserv,
+			syncFn:     func() error { return nil },
+		}
+	} else {
+		syncDserv = &syncDagService{
+			DAGService: dserv,
+			syncFn: func() error {
+				ds := api.repo.Datastore()
+				if err := ds.Sync(bstore.BlockPrefix); err != nil {
+					return err
+				}
+				return ds.Sync(filestore.FilestorePrefix)
+			},
+		}
+	}
+
+	fileAdder, err := coreunix.NewAdder(ctx, pinning, addblockstore, syncDserv)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +186,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 			}
 		}
 		log.Infof("The file will be encrypted with pubkey: %s", settings.Pubkey)
-		switch f := node.(type) {
+		switch f := filesNode.(type) {
 		case files.File:
 			bytes, err := ioutil.ReadAll(f)
 			if err != nil {
@@ -171,7 +210,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 			if err != nil {
 				return nil, err
 			}
-			node = files.NewBytesFile([]byte(ciphertext))
+			filesNode = files.NewBytesFile([]byte(ciphertext))
 		default:
 			return nil, notSupport(f)
 		}
@@ -184,7 +223,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	// any execution case can append metadata
 	if settings.TokenMetadata != "" {
 		fileAdder.TokenMetadata = settings.TokenMetadata
-		if _, ok := node.(files.Directory); ok {
+		if _, ok := filesNode.(files.Directory); ok {
 			fileAdder.MetaForDirectory = true
 		}
 	}
@@ -192,7 +231,7 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 	// if chunker is reed-solomon and the given `node` is directory,
 	// create ReedSolomonAdder. Otherwise use Adder.
 	var nd ipld.Node
-	dir, ok := node.(files.Directory)
+	dir, ok := filesNode.(files.Directory)
 	if ok && chunker.IsReedSolomon(settings.Chunker) {
 		rsfileAdder, err := coreunix.NewReedSolomonAdder(fileAdder)
 		if err != nil {
@@ -208,9 +247,9 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 		} else {
 			return nil, fmt.Errorf("unexpected files.Directory type [%T]", dir)
 		}
-		nd, err = rsfileAdder.AddAllAndPin(node)
+		nd, err = rsfileAdder.AddAllAndPin(filesNode)
 	} else {
-		nd, err = fileAdder.AddAllAndPin(node)
+		nd, err = fileAdder.AddAllAndPin(filesNode)
 	}
 	if err != nil {
 		return nil, err
@@ -219,20 +258,13 @@ func (api *UnixfsAPI) Add(ctx context.Context, node files.Node, opts ...options.
 		return nil, errors.New("unexpected nil value for ipld.Node")
 	}
 
-	if err := api.provider.Provide(nd.Cid()); err != nil {
-		return nil, err
+	if !settings.OnlyHash {
+		if err := api.provider.Provide(nd.Cid()); err != nil {
+			return nil, err
+		}
 	}
 
 	return path.IpfsPath(nd.Cid()), nil
-}
-
-func newSerialFileNode(fpath string, hidden bool) (files.Node, error) {
-	stat, err := os.Lstat(fpath)
-	if err != nil {
-		return nil, err
-	}
-
-	return files.NewSerialFile(fpath, hidden, stat)
 }
 
 func notSupport(f interface{}) error {
@@ -261,6 +293,7 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	if err != nil {
 		return nil, err
 	}
+
 	ses := api.core().getSession(ctx)
 
 	nd, err := ses.ResolveNode(ctx, p)
@@ -540,7 +573,7 @@ func (api *UnixfsAPI) processLink(ctx context.Context, linkres ft.LinkResult, se
 			break
 		}
 
-		if pn, ok := linkNode.(*merkledag.ProtoNode); ok {
+		if pn, ok := linkNode.(*dag.ProtoNode); ok {
 			d, err := ft.FSNodeFromBytes(pn.Data())
 			if err != nil {
 				lnk.Err = err
@@ -640,4 +673,14 @@ func (api *UnixfsAPI) appendMetaMap(tokenMetadata string, metaMap map[string]int
 
 	tokenMetadata = string(b)
 	return tokenMetadata, nil
+}
+
+// syncDagService is used by the Adder to ensure blocks get persisted to the underlying datastore
+type syncDagService struct {
+	ipld.DAGService
+	syncFn func() error
+}
+
+func (s *syncDagService) Sync() error {
+	return s.syncFn()
 }

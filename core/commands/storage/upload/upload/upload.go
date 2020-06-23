@@ -14,7 +14,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -170,7 +170,7 @@ Use status command to check for completion:
 		for i, _ := range rss.ShardHashes {
 			shardIndexes = append(shardIndexes, i)
 		}
-		UploadShard(rss, hp, price, shardSize, storageLength, offlineSigning, renterId, fileSize, shardIndexes, nil)
+		UploadShard(rss, hp, price, shardSize, storageLength, time.Now(), offlineSigning, false, renterId, fileSize, shardIndexes, nil)
 		seRes := &Res{
 			ID: ssId,
 		}

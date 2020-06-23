@@ -61,6 +61,5 @@ github.com/TRON-US/go-btfs/thirdparty/assert
 github.com/TRON-US/go-btfs/thirdparty/cidv0v1
 github.com/TRON-US/go-btfs/thirdparty/dir
 github.com/TRON-US/go-btfs/thirdparty/notifier
-github.com/TRON-US/go-btfs/thirdparty/pollEndpoint
 github.com/TRON-US/go-btfs/thirdparty/unit
 github.com/TRON-US/go-btfs/thirdparty/verifbs

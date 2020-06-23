@@ -85,7 +85,7 @@ This command repairs the given shards of a file.`,
 		if err != nil {
 			return err
 		}
-		UploadShard(rss, hp, m.Price, m.ShardFileSize, -1, false, renterPid, -1,
+		UploadShard(rss, hp, m.Price, m.ShardFileSize, -1, time.Now(), false, false, renterPid, -1,
 			shardIndexes, &RepairParams{
 				RenterStart: m.RentStart,
 				RenterEnd:   m.RentEnd,

@@ -16,7 +16,7 @@ import (
 	"github.com/TRON-US/interface-go-btfs-core/path"
 
 	"github.com/alecthomas/units"
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	cidlib "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"

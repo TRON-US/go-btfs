@@ -17,17 +17,18 @@ import (
 )
 
 type ContractParams struct {
-	ContractId    string
-	RenterPid     string
-	HostPid       string
-	ShardIndex    int32
-	ShardHash     string
-	ShardSize     int64
-	FileHash      string
-	StartTime     time.Time
-	StorageLength int64
-	Price         int64
-	TotalPay      int64
+	ContractId       string
+	RenterPid        string
+	HostPid          string
+	ShardIndex       int32
+	ShardHash        string
+	ShardSize        int64
+	FileHash         string
+	StartTime        time.Time
+	StorageLength    int64
+	Price            int64
+	TotalPay         int64
+	ContingentAmount int64
 }
 
 type RepairParams struct {
@@ -36,36 +37,43 @@ type RepairParams struct {
 }
 
 func RenterSignGuardContract(rss *sessions.RenterSession, params *ContractParams, offlineSigning bool,
-	rp *RepairParams) ([]byte,
+	isRenewContract bool, rp *RepairParams) ([]byte,
 	error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(rss.CtxParams.Cfg)
 	if err != nil {
 		return nil, err
 	}
 	gm := &guardpb.ContractMeta{
-		ContractId:    params.ContractId,
-		RenterPid:     params.RenterPid,
-		HostPid:       params.HostPid,
-		ShardHash:     params.ShardHash,
-		ShardIndex:    params.ShardIndex,
-		ShardFileSize: params.ShardSize,
-		FileHash:      params.FileHash,
-		RentStart:     params.StartTime,
-		RentEnd:       params.StartTime.Add(time.Duration(params.StorageLength*24) * time.Hour),
-		GuardPid:      guardPid.Pretty(),
-		EscrowPid:     escrowPid.Pretty(),
-		Price:         params.Price,
-		Amount:        params.TotalPay,
+		ContractId:       params.ContractId,
+		RenterPid:        params.RenterPid,
+		HostPid:          params.HostPid,
+		ShardHash:        params.ShardHash,
+		ShardIndex:       params.ShardIndex,
+		ShardFileSize:    params.ShardSize,
+		FileHash:         params.FileHash,
+		RentStart:        params.StartTime,
+		RentEnd:          params.StartTime.Add(time.Duration(params.StorageLength*24) * time.Hour),
+		GuardPid:         guardPid.Pretty(),
+		EscrowPid:        escrowPid.Pretty(),
+		Price:            params.Price,
+		Amount:           params.TotalPay,
+		ContingentAmount: params.ContingentAmount,
 	}
 	cont := &guardpb.Contract{
 		ContractMeta:   *gm,
 		LastModifyTime: time.Now(),
 	}
+
+	if isRenewContract {
+		cont.State = guardpb.Contract_RECREATED
+	}
+
 	if rp != nil {
 		cont.State = guardpb.Contract_RENEWED
 		cont.RentStart = rp.RenterStart
 		cont.RentEnd = rp.RenterEnd
 	}
+
 	cont.RenterPid = params.RenterPid
 	cont.PreparerPid = params.RenterPid
 	bc := make(chan []byte)
