@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -196,7 +196,7 @@ func checkWritable(dir string) error {
 	_, err := os.Stat(dir)
 	if err == nil {
 		// dir exists, make sure we can write to it
-		testfile := path.Join(dir, "test")
+		testfile := filepath.Join(dir, "test")
 		fi, err := os.Create(testfile)
 		if err != nil {
 			if os.IsPermission(err) {

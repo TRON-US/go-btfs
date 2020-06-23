@@ -22,11 +22,11 @@ func NewWalletWrap(params *helper.ContextParams) *walletWrap {
 }
 
 func (wt *walletWrap) UpdateStatus() {
-	tick := time.NewTicker(period)
-	defer tick.Stop()
 	ex := make(chan os.Signal, 1)
 	signal.Notify(ex, os.Interrupt)
 	go func() {
+		tick := time.NewTicker(period)
+		defer tick.Stop()
 		for {
 			sc, ec, err := wallet.UpdatePendingTransactions(wt.Ctx, wt.N.Repo.Datastore(), wt.Cfg, wt.N.Identity.String())
 			log.Debugf("update pending tx, success: %v, error: %v, err: %v", sc, ec, err)

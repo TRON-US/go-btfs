@@ -33,11 +33,11 @@ func TestImportPrivateKey(t *testing.T) {
 
 	n, err := coremock.NewMockNode()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	cfg, err := n.Repo.Config()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	for _, tc := range testCases {
 		err := ImportKeys(n, tc.privKey, tc.mnemonic)

@@ -9,13 +9,12 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	storage "github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
-
-	"github.com/cenkalti/backoff/v3"
 )
 
 func init() {
@@ -393,20 +392,9 @@ var walletImportCmd = &cmds.Command{
 			return err
 		}
 		go func() error {
-			shutdownCmd := exec.Command("btfs", "shutdown")
-			if err := shutdownCmd.Run(); err != nil {
-				log.Errorf("shutdown error, %v", err)
-				return err
-			}
-			err = backoff.Retry(func() error {
-				daemonCmd := exec.Command("btfs", "daemon")
-				if err := daemonCmd.Run(); err != nil {
-					return err
-				}
-				return nil
-			}, daemonStartup)
-			if err != nil {
-				log.Errorf("start damon error, %v", err)
+			restartCmd := exec.Command(storage.Excutable, "restart")
+			if err := restartCmd.Run(); err != nil {
+				log.Errorf("restart error, %v", err)
 				return err
 			}
 			return nil

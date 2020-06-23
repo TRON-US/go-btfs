@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	"github.com/TRON-US/go-btfs-cmds"
@@ -28,6 +28,13 @@ const (
 	defaultPath = "~/.btfs"
 	fileName    = "~/.btfs.properties"
 )
+
+var Excutable = func() string {
+	if ex, err := os.Executable(); err == nil {
+		return ex
+	}
+	return "btfs"
+}()
 
 func init() {
 	http.RegisterNonLocalCmds(
@@ -81,27 +88,16 @@ storage location, a specified path as a parameter need to be passed.
 		} else {
 			return errors.New("Cannot set path concurrently.")
 		}
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		cfg, err := n.Repo.Config()
-		if err != nil {
-			return err
-		}
 		StorePath = strings.Trim(req.Arguments[0], " ")
 
 		if StorePath == "" {
 			return fmt.Errorf("path is not defined")
 		}
+		var err error
+		if StorePath, err = homedir.Expand(StorePath); err != nil {
+			return err
+		}
 		if !filepath.IsAbs(StorePath) {
-			if strings.HasPrefix(StorePath, "~") {
-				homeDir, err := os.UserHomeDir()
-				if err != nil {
-					return err
-				}
-				StorePath = strings.Replace(StorePath, "~", homeDir, 1)
-			}
 			StorePath, err = filepath.Abs(StorePath)
 			if err != nil {
 				return err
@@ -140,7 +136,8 @@ storage location, a specified path as a parameter need to be passed.
 				promisedStorageSize, usage.Free)
 		}
 
-		if err := helper.Call(req.Context, cfg, "restart"); err != nil {
+		restartCmd := exec.Command("btfs", "restart", "-p")
+		if err := restartCmd.Run(); err != nil {
 			return fmt.Errorf("restart command: %s", err)
 		}
 		return nil
@@ -157,14 +154,8 @@ var PathStatusCmd = &cmds.Command{
 		if tryLock {
 			lock.Unlock()
 		}
-		if !tryLock {
-			return cmds.EmitOnce(res, PathStatus{
-				Resetting: true,
-				Path:      StorePath,
-			})
-		}
 		return cmds.EmitOnce(res, PathStatus{
-			Resetting: false,
+			Resetting: !tryLock,
 			Path:      StorePath,
 		})
 	},
