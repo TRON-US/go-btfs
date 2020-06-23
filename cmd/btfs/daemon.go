@@ -20,6 +20,7 @@ import (
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
 	corerepo "github.com/TRON-US/go-btfs/core/corerepo"
@@ -271,7 +272,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 				}
 			}
 
-			if err = doInit(os.Stdout, cfg, false, nBitsForKeypairDefault, profiles, conf,
+			if err = doInit(os.Stdout, cfg, false, utilmain.NBitsForKeypairDefault, profiles, conf,
 				keyTypeDefault, "", "", false); err != nil {
 				return err
 			}
@@ -532,6 +533,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
+	if params, err := helper.ExtractContextParams(req, env); err == nil {
+		spin.NewWalletWrap(params).UpdateStatus()
+	}
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {

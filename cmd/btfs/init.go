@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/assets"
+	"github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/namesys"
@@ -21,28 +21,18 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	files "github.com/TRON-US/go-btfs-files"
-
-	"github.com/tyler-smith/go-bip32"
-	"github.com/tyler-smith/go-bip39"
 )
 
 const (
-	nBitsForKeypairDefault = 2048
-	defaultEntropy         = 128
-	mnemonicLength         = 12
-	bitsOptionName         = "bits"
-	emptyRepoOptionName    = "empty-repo"
-	profileOptionName      = "profile"
-	keyTypeDefault         = "BIP39"
-	keyTypeOptionName      = "key"
-	importKeyOptionName    = "import"
-	rmOnUnpinOptionName    = "rm-on-unpin"
-	seedOptionName         = "seed"
+	bitsOptionName      = "bits"
+	emptyRepoOptionName = "empty-repo"
+	profileOptionName   = "profile"
+	keyTypeDefault      = "BIP39"
+	keyTypeOptionName   = "key"
+	importKeyOptionName = "import"
+	rmOnUnpinOptionName = "rm-on-unpin"
+	seedOptionName      = "seed"
 )
-
-var errRepoExists = errors.New(`ipfs configuration file already exists!
-Reinitializing would overwrite your keys.
-`)
 
 var initCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -66,7 +56,7 @@ environment variable:
 		cmds.FileArg("default-config", false, false, "Initialize with the given configuration.").EnableStdin(),
 	},
 	Options: []cmds.Option{
-		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(nBitsForKeypairDefault),
+		cmds.IntOption(bitsOptionName, "b", "Number of bits to use in the generated RSA private key.").WithDefault(util.NBitsForKeypairDefault),
 		cmds.BoolOption(emptyRepoOptionName, "e", "Don't add and pin help files to the local storage."),
 		cmds.StringOption(profileOptionName, "p", "Apply profile settings to config. Multiple profiles can be separated by ','"),
 		cmds.StringOption(keyTypeOptionName, "k", "Key generation algorithm, e.g. RSA, Ed25519, Secp256k1, ECDSA, BIP39. By default is Secp256k1"),
@@ -123,116 +113,23 @@ environment variable:
 			}
 		}
 
-		profiles, _ := req.Options[profileOptionName].(string)
+		profile, _ := req.Options[profileOptionName].(string)
 		importKey, _ := req.Options[importKeyOptionName].(string)
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
 
-		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profiles, conf, keyType, importKey, seedPhrase, rmOnUnpin)
+		return doInit(os.Stdout, cctx.ConfigRoot, empty, nBitsForKeypair, profile, conf, keyType, importKey, seedPhrase, rmOnUnpin)
 	},
 }
 
-func generateKey(importKey string, keyType string, seedPhrase string) (string, string, error) {
-	mnemonicLen := len(strings.Split(seedPhrase, ","))
-	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
+var errRepoExists = errors.New(`btfs configuration file already exists!
+Reinitializing would overwrite your keys.
+`)
 
-	if importKey != "" && keyType != "" && strings.ToLower(keyType) != "secp256k1" {
-		return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
-	} else if seedPhrase != "" {
-		if mnemonicLen != mnemonicLength {
-			return "", "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
-		}
-		if err := !bip39.IsMnemonicValid(mnemonic); err {
-			return "", "", fmt.Errorf("Entered seed phrase is not valid")
-		}
-		fmt.Println("Generating TRON key with BIP39 seed phrase...")
-		return generatePrivKeyUsingBIP39(mnemonic)
-	} else if (keyType == "" && importKey == "") || keyType == "BIP39" {
-		fmt.Println("Generating TRON key with BIP39 seed phrase...")
-		return generatePrivKeyUsingBIP39("")
-	} else {
-		return importKey, mnemonic, nil
-	}
-}
-
-func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
-	if mnemonic == "" {
-		entropy, err := bip39.NewEntropy(defaultEntropy)
-		if err != nil {
-			return "", "", err
-		}
-		mnemonic, err = bip39.NewMnemonic(entropy)
-		if err != nil {
-			return "", "", err
-		}
-	}
-
-	if !bip39.IsMnemonicValid(mnemonic) {
-		return "", "", fmt.Errorf("invalid mnemonic: %s", mnemonic)
-	}
-
-	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
-	seed := bip39.NewSeed(mnemonic, "")
-
-	masterKey, err := bip32.NewMasterKey(seed)
-	if err != nil {
-		return "", "", err
-	}
-	publicKey := masterKey.PublicKey()
-
-	childKey, err := masterKey.NewChildKey(44 + bip32.FirstHardenedChild)
-	if err != nil {
-		return "", "", err
-	}
-	childKey2, err := childKey.NewChildKey(195 + bip32.FirstHardenedChild)
-	if err != nil {
-		return "", "", err
-	}
-	childKey3, err := childKey2.NewChildKey(0 + bip32.FirstHardenedChild)
-	if err != nil {
-		return "", "", err
-	}
-	childKey4, err := childKey3.NewChildKey(0)
-	if err != nil {
-		return "", "", err
-	}
-	childKey5, err := childKey4.NewChildKey(0)
-	if err != nil {
-		return "", "", err
-	}
-
-	encoding := childKey5.Key
-	importKey := hex.EncodeToString(encoding)
-
-	// Display mnemonic and keys
-	fmt.Println("Master public key: ", publicKey)
-
-	return importKey, mnemonic, nil
-}
-
-func applyProfiles(conf *config.Config, profiles string) error {
-	if profiles == "" {
-		return nil
-	}
-
-	for _, profile := range strings.Split(profiles, ",") {
-		transformer, ok := config.Profiles[profile]
-		if !ok {
-			return fmt.Errorf("invalid configuration profile: %s", profile)
-		}
-
-		if err := transformer.Transform(conf); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int,
-	confProfiles string, conf *config.Config,
+func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles string, conf *config.Config,
 	keyType string, importKey string, mnemonic string, rmOnUnpin bool) error {
 
-	importKey, mnemonic, err := generateKey(importKey, keyType, mnemonic)
+	importKey, mnemonic, err := util.GenerateKey(importKey, keyType, mnemonic)
 	if err != nil {
 		return err
 	}
@@ -279,6 +176,22 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int,
 	return initializeIpnsKeyspace(repoRoot)
 }
 
+func applyProfiles(conf *config.Config, profiles string) error {
+	if profiles == "" {
+		return nil
+	}
+	for _, profile := range strings.Split(profiles, ",") {
+		transformer, ok := config.Profiles[profile]
+		if !ok {
+			return fmt.Errorf("invalid configuration profile: %s", profile)
+		}
+		if err := transformer.Transform(conf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func checkWritable(dir string) error {
 	_, err := os.Stat(dir)
 	if err == nil {
@@ -297,7 +210,7 @@ func checkWritable(dir string) error {
 
 	if os.IsNotExist(err) {
 		// dir doesn't exist, check that we can create it
-		return os.Mkdir(dir, 0775)
+		return os.MkdirAll(dir, 0775)
 	}
 
 	if os.IsPermission(err) {

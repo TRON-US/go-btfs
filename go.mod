@@ -7,8 +7,8 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
-	github.com/TRON-US/go-btfs-cmds v0.2.0
-	github.com/TRON-US/go-btfs-config v0.6.4
+	github.com/TRON-US/go-btfs-cmds v0.2.3
+	github.com/TRON-US/go-btfs-config v0.6.5
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
 	github.com/TRON-US/go-btns v0.1.0
@@ -31,7 +31,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/golang-lru v0.5.4
@@ -117,10 +117,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1
 	github.com/shirou/gopsutil v2.20.5+incompatible
+	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	github.com/tron-us/go-btfs-common v0.3.7
-	github.com/tron-us/go-common/v2 v2.0.5
+	github.com/tron-us/go-btfs-common v0.4.8
+	github.com/tron-us/go-common/v2 v2.1.1
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.2
@@ -134,7 +135,7 @@ require (
 	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.2.8
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
