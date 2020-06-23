@@ -2,18 +2,30 @@ package loader
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
+	core "github.com/TRON-US/go-btfs/core"
+	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 	coredag "github.com/TRON-US/go-btfs/core/coredag"
 	plugin "github.com/TRON-US/go-btfs/plugin"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	coreiface "github.com/TRON-US/interface-go-btfs-core"
+	config "github.com/TRON-US/go-btfs-config"
+	cserialize "github.com/TRON-US/go-btfs-config/serialize"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	opentracing "github.com/opentracing/opentracing-go"
 )
+
+var preloadPlugins []plugin.Plugin
+
+// Preload adds one or more plugins to the preload list. This should _only_ be called during init.
+func Preload(plugins ...plugin.Plugin) {
+	preloadPlugins = append(preloadPlugins, plugins...)
+}
 
 var log = logging.Logger("plugin/loader")
 
@@ -76,15 +88,31 @@ type PluginLoader struct {
 	state   loaderState
 	plugins map[string]plugin.Plugin
 	started []plugin.Plugin
+	config  config.Plugins
+	repo    string
 }
 
 // NewPluginLoader creates new plugin loader
-func NewPluginLoader() (*PluginLoader, error) {
-	loader := &PluginLoader{plugins: make(map[string]plugin.Plugin, len(preloadPlugins))}
+func NewPluginLoader(repo string) (*PluginLoader, error) {
+	loader := &PluginLoader{plugins: make(map[string]plugin.Plugin, len(preloadPlugins)), repo: repo}
+	if repo != "" {
+		cfg, err := cserialize.Load(filepath.Join(repo, config.DefaultConfigFile))
+		switch err {
+		case cserialize.ErrNotInitialized:
+		case nil:
+			loader.config = cfg.Plugins
+		default:
+			return nil, err
+		}
+	}
 	for _, v := range preloadPlugins {
 		if err := loader.Load(v); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := loader.LoadDirectory(filepath.Join(repo, "plugins")); err != nil {
+		return nil, err
 	}
 	return loader, nil
 }
@@ -117,6 +145,10 @@ func (loader *PluginLoader) Load(pl plugin.Plugin) error {
 			"plugin: %s, is duplicated in version: %s, "+
 				"while trying to load dynamically: %s",
 			name, ppl.Version(), pl.Version())
+	}
+	if loader.config.Plugins[name].Disabled {
+		log.Infof("not loading disabled plugin %s", name)
+		return nil
 	}
 	loader.plugins[name] = pl
 	return nil
@@ -157,8 +189,11 @@ func (loader *PluginLoader) Initialize() error {
 	if err := loader.transition(loaderLoading, loaderInitializing); err != nil {
 		return err
 	}
-	for _, p := range loader.plugins {
-		err := p.Init()
+	for name, p := range loader.plugins {
+		err := p.Init(&plugin.Environment{
+			Repo:   loader.repo,
+			Config: loader.config.Plugins[name].Config,
+		})
 		if err != nil {
 			loader.state = loaderFailed
 			return err
@@ -202,13 +237,25 @@ func (loader *PluginLoader) Inject() error {
 }
 
 // Start starts all long-running plugins.
-func (loader *PluginLoader) Start(iface coreiface.CoreAPI) error {
+func (loader *PluginLoader) Start(node *core.IpfsNode) error {
 	if err := loader.transition(loaderInjected, loaderStarting); err != nil {
+		return err
+	}
+	iface, err := coreapi.NewCoreAPI(node)
+	if err != nil {
 		return err
 	}
 	for _, pl := range loader.plugins {
 		if pl, ok := pl.(plugin.PluginDaemon); ok {
 			err := pl.Start(iface)
+			if err != nil {
+				_ = loader.Close()
+				return err
+			}
+			loader.started = append(loader.started, pl)
+		}
+		if pl, ok := pl.(plugin.PluginDaemonInternal); ok {
+			err := pl.Start(node)
 			if err != nil {
 				_ = loader.Close()
 				return err
@@ -233,8 +280,8 @@ func (loader *PluginLoader) Close() error {
 	started := loader.started
 	loader.started = nil
 	for _, pl := range started {
-		if pl, ok := pl.(plugin.PluginDaemon); ok {
-			err := pl.Close()
+		if closer, ok := pl.(io.Closer); ok {
+			err := closer.Close()
 			if err != nil {
 				errs = append(errs, fmt.Sprintf(
 					"error closing plugin %s: %s",

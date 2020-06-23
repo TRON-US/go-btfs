@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -39,6 +39,10 @@ const (
 	rmOnUnpinOptionName    = "rm-on-unpin"
 	seedOptionName         = "seed"
 )
+
+var errRepoExists = errors.New(`ipfs configuration file already exists!
+Reinitializing would overwrite your keys.
+`)
 
 var initCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -119,13 +123,7 @@ environment variable:
 			}
 		}
 
-		profile, _ := req.Options[profileOptionName].(string)
-
-		var profiles []string
-		if profile != "" {
-			profiles = strings.Split(profile, ",")
-		}
-
+		profiles, _ := req.Options[profileOptionName].(string)
 		importKey, _ := req.Options[importKeyOptionName].(string)
 		keyType, _ := req.Options[keyTypeOptionName].(string)
 		seedPhrase, _ := req.Options[seedOptionName].(string)
@@ -156,10 +154,6 @@ func generateKey(importKey string, keyType string, seedPhrase string) (string, s
 		return importKey, mnemonic, nil
 	}
 }
-
-var errRepoExists = errors.New(`btfs configuration file already exists!
-Reinitializing would overwrite your keys.
-`)
 
 func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
 	if mnemonic == "" {
@@ -216,17 +210,26 @@ func generatePrivKeyUsingBIP39(mnemonic string) (string, string, error) {
 	return importKey, mnemonic, nil
 }
 
-func initWithDefaults(out io.Writer, repoRoot string, profile string) error {
-	var profiles []string
-	if profile != "" {
-		profiles = strings.Split(profile, ",")
+func applyProfiles(conf *config.Config, profiles string) error {
+	if profiles == "" {
+		return nil
 	}
 
-	// the last argument (false) refers to the configuration variable Experimental.RemoveOnUnpin
-	return doInit(out, repoRoot, false, nBitsForKeypairDefault, profiles, nil, keyTypeDefault, "", "", false)
+	for _, profile := range strings.Split(profiles, ",") {
+		transformer, ok := config.Profiles[profile]
+		if !ok {
+			return fmt.Errorf("invalid configuration profile: %s", profile)
+		}
+
+		if err := transformer.Transform(conf); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles []string, conf *config.Config,
+func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int,
+	confProfiles string, conf *config.Config,
 	keyType string, importKey string, mnemonic string, rmOnUnpin bool) error {
 
 	importKey, mnemonic, err := generateKey(importKey, keyType, mnemonic)
@@ -259,15 +262,8 @@ func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, con
 		}
 	}
 
-	for _, profile := range confProfiles {
-		transformer, ok := config.Profiles[profile]
-		if !ok {
-			return fmt.Errorf("invalid configuration profile: %s", profile)
-		}
-
-		if err := transformer.Transform(conf); err != nil {
-			return err
-		}
+	if err := applyProfiles(conf, confProfiles); err != nil {
+		return err
 	}
 
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
@@ -287,7 +283,7 @@ func checkWritable(dir string) error {
 	_, err := os.Stat(dir)
 	if err == nil {
 		// dir exists, make sure we can write to it
-		testfile := path.Join(dir, "test")
+		testfile := filepath.Join(dir, "test")
 		fi, err := os.Create(testfile)
 		if err != nil {
 			if os.IsPermission(err) {

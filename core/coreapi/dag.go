@@ -3,8 +3,7 @@ package coreapi
 import (
 	"context"
 
-	"github.com/TRON-US/go-btfs/pin"
-
+	"github.com/TRON-US/go-btfs-pinner"
 	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
 )
@@ -26,7 +25,7 @@ func (adder *pinningAdder) Add(ctx context.Context, nd ipld.Node) error {
 
 	adder.pinning.PinWithMode(nd.Cid(), pin.DefaultDurationCount, pin.Recursive)
 
-	return adder.pinning.Flush()
+	return adder.pinning.Flush(ctx)
 }
 
 func (adder *pinningAdder) AddMany(ctx context.Context, nds []ipld.Node) error {
@@ -45,7 +44,7 @@ func (adder *pinningAdder) AddMany(ctx context.Context, nds []ipld.Node) error {
 		}
 	}
 
-	return adder.pinning.Flush()
+	return adder.pinning.Flush(ctx)
 }
 
 func (api *dagAPI) Pinning() ipld.NodeAdder {

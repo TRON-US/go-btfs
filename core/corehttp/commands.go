@@ -54,7 +54,7 @@ var defaultLocalhostOrigins = []string{
 func addCORSFromEnv(c *cmdsHttp.ServerConfig) {
 	origin := os.Getenv(originEnvKey)
 	if origin != "" {
-		log.Warning(originEnvKeyDeprecate)
+		log.Warn(originEnvKeyDeprecate)
 		c.AppendAllowedOrigins(origin)
 	}
 }
@@ -96,7 +96,7 @@ func addCORSDefaults(c *cmdsHttp.ServerConfig) {
 
 	// by default, use GET, PUT, POST
 	if len(c.AllowedMethods()) == 0 {
-		c.SetAllowedMethods("GET", "POST", "PUT")
+		c.SetAllowedMethods(http.MethodGet, http.MethodPost, http.MethodPut)
 	}
 }
 
@@ -124,11 +124,17 @@ func patchCORSVars(c *cmdsHttp.ServerConfig, addr net.Addr) {
 	c.SetAllowedOrigins(newOrigins...)
 }
 
-func commandsOption(cctx oldcmds.Context, command *cmds.Command) ServeOption {
+func commandsOption(cctx oldcmds.Context, command *cmds.Command, allowGet bool) ServeOption {
 	return func(n *core.IpfsNode, l net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 
 		cfg := cmdsHttp.NewServerConfig()
-		cfg.SetAllowedMethods("GET", "POST", "PUT")
+		cfg.AllowGet = allowGet
+		corsAllowedMethods := []string{http.MethodPost}
+		if allowGet {
+			corsAllowedMethods = append(corsAllowedMethods, http.MethodGet)
+		}
+
+		cfg.SetAllowedMethods(corsAllowedMethods...)
 		cfg.APIPath = APIPath
 		cfg.RedirectPaths = redirectPaths
 		rcfg, err := n.Repo.Config()
@@ -151,21 +157,21 @@ func commandsOption(cctx oldcmds.Context, command *cmds.Command) ServeOption {
 }
 
 // CommandsOption constructs a ServerOption for hooking the commands into the
-// HTTP server.
+// HTTP server. It will NOT allow GET requests.
 func CommandsOption(cctx oldcmds.Context) ServeOption {
-	return commandsOption(cctx, corecommands.Root)
+	return commandsOption(cctx, corecommands.Root, false)
 }
 
 // CommandsROOption constructs a ServerOption for hooking the read-only commands
-// into the HTTP server.
+// into the HTTP server. It will allow GET requests.
 func CommandsROOption(cctx oldcmds.Context) ServeOption {
-	return commandsOption(cctx, corecommands.RootRO)
+	return commandsOption(cctx, corecommands.RootRO, true)
 }
 
 // CommandsRemoteOption constructs a ServerOption for hooking the public-facing,
 // remote commands into the HTTP server.
 func CommandsRemoteOption(cctx oldcmds.Context) ServeOption {
-	return commandsOption(cctx, corecommands.RootRemote)
+	return commandsOption(cctx, corecommands.RootRemote, false)
 }
 
 // CheckVersionOption returns a ServeOption that checks whether the client btfs version matches. Does nothing when the user agent string does not contain `/go-btfs/`

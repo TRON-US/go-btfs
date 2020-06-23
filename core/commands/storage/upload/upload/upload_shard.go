@@ -11,7 +11,7 @@ import (
 	"github.com/tron-us/go-btfs-common/config"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 )

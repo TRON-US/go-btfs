@@ -12,16 +12,16 @@ import (
 	"io/ioutil"
 
 	"github.com/TRON-US/go-btfs/core/coreunix"
-	"github.com/TRON-US/go-btfs/dagutils"
-	"github.com/TRON-US/go-btfs/pin"
 
+	"github.com/TRON-US/go-btfs-pinner"
 	ft "github.com/TRON-US/go-unixfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	caopts "github.com/TRON-US/interface-go-btfs-core/options"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
+	"github.com/ipfs/go-merkledag/dagutils"
 )
 
 const inputLimit = 2 << 20
@@ -120,7 +120,7 @@ func (api *ObjectAPI) Put(ctx context.Context, src io.Reader, opts ...caopts.Obj
 
 	if options.Pin {
 		api.pinning.PinWithMode(dagnode.Cid(), pin.DefaultDurationCount, pin.Recursive)
-		err = api.pinning.Flush()
+		err = api.pinning.Flush(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -323,7 +323,7 @@ func (api *ObjectAPI) Diff(ctx context.Context, before ipath.Path, after ipath.P
 	out := make([]coreiface.ObjectChange, len(changes))
 	for i, change := range changes {
 		out[i] = coreiface.ObjectChange{
-			Type: change.Type,
+			Type: coreiface.ChangeType(change.Type),
 			Path: change.Path,
 		}
 
@@ -355,7 +355,7 @@ func deserializeNode(nd *Node, dataFieldEncoding string) (*dag.ProtoNode, error)
 		}
 		dagnode.SetData(data)
 	default:
-		return nil, fmt.Errorf("unkown data field encoding")
+		return nil, fmt.Errorf("unknown data field encoding")
 	}
 
 	links := make([]*ipld.Link, len(nd.Links))

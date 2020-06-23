@@ -16,7 +16,7 @@ import (
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"
@@ -111,7 +111,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.HostsSyncMode = dc.config.Experimental.HostsSyncMode
 		dc.pn.Libp2PStreamMounting = dc.config.Experimental.Analytics
 		dc.pn.P2PHttpProxy = dc.config.Experimental.P2pHttpProxy
-		dc.pn.PreferTls = dc.config.Experimental.PreferTLS
+		//dc.pn.PreferTls = dc.config.Experimental.PreferTLS
 		dc.pn.Quic = dc.config.Experimental.QUIC
 		dc.pn.RemoveOnUnpin = dc.config.Experimental.RemoveOnUnpin
 		dc.pn.ShardingEnabled = dc.config.Experimental.ShardingEnabled

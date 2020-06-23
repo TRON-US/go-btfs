@@ -83,7 +83,6 @@ go: extracting github.com/tron-us/go-btfs-common v0.2.28
 go: finding github.com/tron-us/go-btfs-common v0.2.28
 go version go1.14.1 darwin/amd64
 bin/check_go_version 1.14
-bash patching.sh
 go install  "-asmflags=all='-trimpath='" "-gcflags=all='-trimpath='" -ldflags="-X "github.com/TRON-US/go-btfs".CurrentCommit=e4848946d" ./cmd/btfs
 ```
 

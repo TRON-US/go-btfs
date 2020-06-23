@@ -23,7 +23,7 @@ import (
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/alecthomas/units"
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"

@@ -19,7 +19,7 @@ import (
 
 	btfs_version "github.com/TRON-US/go-btfs"
 	"github.com/TRON-US/go-btfs-api"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )

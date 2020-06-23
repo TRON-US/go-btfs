@@ -34,7 +34,7 @@ space+=
 comma:=,
 join-with=$(subst $(space),$1,$(strip $2))
 
-# debug target, prints varaible. Example: `make print-GOFLAGS`
+# debug target, prints variable. Example: `make print-GOFLAGS`
 print-%:
 	@echo $*=$($*)
 

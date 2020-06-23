@@ -14,7 +14,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/peer"
