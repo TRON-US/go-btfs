@@ -354,7 +354,7 @@ var walletTransferCmd = &cmds.Command{
 			return err
 		}
 		return cmds.EmitOnce(res, &TransferResult{
-			Result:  ret.Result,
+			Result:  ret != nil && ret.Result,
 			Message: ret.Message,
 		})
 	},
