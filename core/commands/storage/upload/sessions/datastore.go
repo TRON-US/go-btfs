@@ -1,7 +1,9 @@
 package sessions
 
 import (
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tron-us/protobuf/proto"
 
@@ -66,4 +68,37 @@ func List(d ds.Datastore, prefix string, substrInKey ...string) ([][]byte, error
 		}
 	}
 	return vs, nil
+}
+
+func ListFiles(d ds.Datastore, prefix string) ([][]byte, time.Time, error) {
+	var tmpStr string
+	var latest = time.Unix(0, 0)
+	vs := make([][]byte, 0)
+	results, err := d.Query(query.Query{
+		Prefix:  prefix,
+		Filters: []query.Filter{},
+	})
+	if err != nil {
+		return nil, latest, err
+	}
+
+	for entry := range results.Next() {
+		key := entry.Key
+		index := strings.LastIndex(key, "/")
+		tsStr := key[index+1:]
+
+		if strings.Compare(tsStr, tmpStr) >= 0 {
+			tmpStr = tsStr
+		}
+		value := entry.Value
+		vs = append(vs, value)
+	}
+
+	ts, err := strconv.ParseInt(tmpStr, 10, 64)
+	if err != nil {
+		return nil, latest, err
+	}
+
+	latest = time.Unix(ts, 0)
+	return vs, latest, nil
 }

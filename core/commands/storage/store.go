@@ -23,6 +23,7 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"stats":     StorageStatsCmd,
 		"contracts": StorageContractsCmd,
 		"path":      PathCmd,
+		"files":     StorageFilesCmd,
 		"renew":     upload.RenewCmd,
 	},
 }
