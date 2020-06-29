@@ -15,7 +15,7 @@ require (
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.3.0
 	github.com/TRON-US/go-unixfs v0.6.0
-	github.com/TRON-US/interface-go-btfs-core v0.6.0
+	github.com/TRON-US/interface-go-btfs-core v0.6.1
 	github.com/Workiva/go-datastructures v1.0.52
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/blang/semver v3.5.1+incompatible
