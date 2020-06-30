@@ -155,7 +155,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				_, err = remote.P2PCall(ctxParams.Ctx, ctxParams.N, requestPid, "/storage/upload/recvcontract",
+				_, err = remote.P2PCall(ctxParams.Ctx, ctxParams.N, ctxParams.Api, requestPid, "/storage/upload/recvcontract",
 					ssId,
 					shardHash,
 					shardIndex,
