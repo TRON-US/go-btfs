@@ -19,7 +19,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"
 	kb "github.com/libp2p/go-libp2p-kbucket"
-	identify "github.com/libp2p/go-libp2p/p2p/protocol/identify"
+	//identify "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 
 const offlineIdErrorMessage = `'btfs id' currently cannot query information on remote
@@ -195,7 +195,7 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 			info.Addresses = append(info.Addresses, a.String())
 		}
 	}
-	info.ProtocolVersion = identify.LibP2PVersion
+	info.ProtocolVersion = "btfs/0.1.0" //identify.LibP2PVersion
 	info.AgentVersion = version.UserAgent
 
 	if node.IsDaemon {

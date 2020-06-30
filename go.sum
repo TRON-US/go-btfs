@@ -51,8 +51,8 @@ github.com/TRON-US/go-btfs-chunker v0.3.0/go.mod h1:m0xvt42kqLskWsLF6SQ51AA9cqPz
 github.com/TRON-US/go-btfs-cmds v0.2.3 h1:zzR1YGME4lX3JFbCcJRY6Y0Uq9xlhyD3wTJzVC6oG9s=
 github.com/TRON-US/go-btfs-cmds v0.2.3/go.mod h1:b1puslIW6bD50zr1gWasJSbnC7ZIJ2AwdQrUnyZ6ud4=
 github.com/TRON-US/go-btfs-config v0.6.0/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
-github.com/TRON-US/go-btfs-config v0.6.6 h1:cn42M/pJ/3/fGMG7w5pob3VK0ZzHp/N6n9jCjDjazb8=
-github.com/TRON-US/go-btfs-config v0.6.6/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
+github.com/TRON-US/go-btfs-config v0.6.7 h1:EnL/UCBa/wgmSEMWLoZ9dPx9Tsv6k4unJvVsCnMawCc=
+github.com/TRON-US/go-btfs-config v0.6.7/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
 github.com/TRON-US/go-btfs-files v0.2.0 h1:JZ+F0gX8iPmUf1OlrdOdsA8GMGxCHhwQ03jEWWEgVLE=
 github.com/TRON-US/go-btfs-files v0.2.0/go.mod h1:Qx+rTOIC0xl3ZkosGcEoB4hqExZmTONErPys8K5suEc=
@@ -84,8 +84,8 @@ github.com/TRON-US/go-path v0.1.0 h1:8PptQW4RThmNwJPyKfTLKWW/ebsoGrxihwLwNmP+Ruk
 github.com/TRON-US/go-path v0.1.0/go.mod h1:VpDkSBKQ9EFQOUgi54Tq/O/tGi8n1RfYNks13M3DEs8=
 github.com/TRON-US/go-unixfs v0.6.0 h1:TlMM8SZBpbopckE4ZNvsjDfcIXbTEJ27nTcMS9u32Io=
 github.com/TRON-US/go-unixfs v0.6.0/go.mod h1:U3+FopU5+8rwrr05MJOwDB1E9vAwKGsb/GII0LkXZ8k=
-github.com/TRON-US/interface-go-btfs-core v0.6.0 h1:v9uFO5FvweO5PZB6+oVsaglST+YmjEVK/JnlxhLPpC0=
-github.com/TRON-US/interface-go-btfs-core v0.6.0/go.mod h1:I9E5ZKnGZZjlGmnWJazUC0KDN7plvVMleRMae9I3sCc=
+github.com/TRON-US/interface-go-btfs-core v0.6.1 h1:IYPrEd6E5obueDx6GDAD+nhvMt+aywf2/djwHqu7tGc=
+github.com/TRON-US/interface-go-btfs-core v0.6.1/go.mod h1:I9E5ZKnGZZjlGmnWJazUC0KDN7plvVMleRMae9I3sCc=
 github.com/VictoriaMetrics/fastcache v1.5.7/go.mod h1:ptDBkNMQI4RtmVo8VS/XwRY6RoTu1dAWCbrk+6WsEM8=
 github.com/Workiva/go-datastructures v1.0.52 h1:PLSK6pwn8mYdaoaCZEMsXBpBotr4HHn9abU0yMQt0NI=
 github.com/Workiva/go-datastructures v1.0.52/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
