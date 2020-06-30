@@ -48,7 +48,6 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 	if err != nil {
 		return nil, err
 	}
-	url := cfg.Services.FullnodeDomain
 	oa, err := hex.DecodeString(from)
 	if err != nil {
 		return nil, err
@@ -64,7 +63,7 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		strings.Contains(cfg.Services.EscrowDomain, "staging") {
 		tokenId = TokenIdDev
 	}
-	err = grpc.WalletClient(url).WithContext(ctx, func(ctx context.Context, client tronPb.WalletClient) error {
+	err = grpc.WalletClient(cfg.Services.FullnodeDomain).WithContext(ctx, func(ctx context.Context, client tronPb.WalletClient) error {
 		tx, err := client.TransferAsset2(ctx, &protocol_core.TransferAssetContract{
 			AssetName:    []byte(tokenId),
 			OwnerAddress: oa,
@@ -92,6 +91,34 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		if err != nil {
 			return err
 		}
+		go func() {
+			// confirmed after 19 * 3 second/block
+			time.Sleep(1 * time.Minute)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			err = grpc.SolidityClient(cfg.Services.SolidityDomain).WithContext(ctx, func(ctx context.Context,
+				client tronPb.WalletSolidityClient) error {
+				info, err := client.GetTransactionById(ctx, &tronPb.BytesMessage{Value: tx.Txid})
+				if err != nil {
+					return err
+				}
+				status := StatusPending
+				if info != nil && info.Ret != nil && len(info.Ret) > 0 && info.Ret[0].ContractRet == protocol_core.Transaction_Result_SUCCESS {
+					status = StatusSuccess
+				} else {
+					status = StatusFailed
+				}
+				err = PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
+					BttWallet, to, status, walletpb.TransactionV1_ON_CHAIN)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				log.Debug(err)
+			}
+		}()
 		return nil
 	})
 	if err != nil {
@@ -100,37 +127,6 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		log.Debug(e)
 		return nil, err
 	}
-	go func() {
-		// confirmed after 19 * 3 second/block
-		time.Sleep(1 * time.Minute)
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-		err = grpc.WalletClient(url).WithContext(ctx, func(ctx context.Context, client tronPb.WalletClient) error {
-			tib, err := hex.DecodeString(txId)
-			if err != nil {
-				return err
-			}
-			info, err := client.GetTransactionById(ctx, &tronPb.BytesMessage{Value: tib})
-			if err != nil {
-				return err
-			}
-			status := StatusPending
-			if info.Ret[0].ContractRet == protocol_core.Transaction_Result_SUCCESS {
-				status = StatusSuccess
-			} else if info.Ret[0].ContractRet == protocol_core.Transaction_Result_REVERT {
-				status = StatusFailed
-			}
-			err = PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
-				BttWallet, to, status, walletpb.TransactionV1_ON_CHAIN)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			log.Debug(err)
-		}
-	}()
 	return &TronRet{
 		Message: string(ret.Message),
 		Result:  ret.Result,
