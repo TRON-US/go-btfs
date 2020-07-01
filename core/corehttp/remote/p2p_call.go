@@ -11,6 +11,8 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 
+	iface "github.com/TRON-US/interface-go-btfs-core"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	p2phttp "github.com/libp2p/go-libp2p-http"
 )
@@ -30,10 +32,16 @@ const P2PRemoteCallProto = "/rapi"
 
 // P2PCall is a wrapper for creating a client and calling a get
 // If passed a nil context, a new one will be created
-func P2PCall(ctx context.Context, n *core.IpfsNode, pid peer.ID, api string, args ...interface{}) ([]byte, error) {
+func P2PCall(ctx context.Context, n *core.IpfsNode, coreApi iface.CoreAPI, pid peer.ID, api string, args ...interface{}) ([]byte, error) {
 	// new context if not caller-passed down
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	err := coreApi.Swarm().Connect(ctx, peer.AddrInfo{
+		ID: pid,
+	})
+	if err != nil {
+		return nil, err
 	}
 	remoteCall := &P2PRemoteCall{
 		Node: n,
@@ -43,12 +51,12 @@ func P2PCall(ctx context.Context, n *core.IpfsNode, pid peer.ID, api string, arg
 }
 
 // P2PCallStrings is a helper to pass string arguments to P2PCall
-func P2PCallStrings(ctx context.Context, n *core.IpfsNode, pid peer.ID, api string, strs ...string) ([]byte, error) {
+func P2PCallStrings(ctx context.Context, n *core.IpfsNode, coreApi iface.CoreAPI, pid peer.ID, api string, strs ...string) ([]byte, error) {
 	var args []interface{}
 	for _, str := range strs {
 		args = append(args, str)
 	}
-	return P2PCall(ctx, n, pid, api, args...)
+	return P2PCall(ctx, n, coreApi, pid, api, args...)
 }
 
 func (r *P2PRemoteCall) CallGet(ctx context.Context, api string, args []interface{}) ([]byte, error) {

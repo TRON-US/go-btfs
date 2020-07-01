@@ -31,12 +31,8 @@ type CustomizedHostsProvider struct {
 func (p *CustomizedHostsProvider) NextValidHost(price int64) (string, error) {
 	for true {
 		if index, err := p.AddIndex(); err == nil {
-			id, err := peer.IDB58Decode(p.hosts[index])
+			_, err := peer.IDB58Decode(p.hosts[index])
 			if err != nil {
-				continue
-			}
-			if err := p.cp.Api.Swarm().Connect(p.cp.Ctx, peer.AddrInfo{ID: id}); err != nil {
-				p.hosts = append(p.hosts, p.hosts[index])
 				continue
 			}
 			return p.hosts[index], nil
@@ -122,16 +118,9 @@ LOOP:
 					continue LOOP
 				}
 			}
-			id, err := peer.IDB58Decode(host.NodeId)
+			_, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
 				needHigherPrice = true
-				continue
-			}
-			ctx, _ := context.WithTimeout(p.ctx, 3*time.Second)
-			if err := p.cp.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: id}); err != nil {
-				p.Lock()
-				p.hosts = append(p.hosts, host)
-				p.Unlock()
 				continue
 			}
 			return host.NodeId, nil

@@ -3,7 +3,6 @@ package upload
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/guard"
@@ -19,7 +18,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	cidlib "github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
@@ -102,27 +100,6 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
-	go func() {
-		for {
-			select {
-			case <-rss.Ctx.Done():
-				return
-			default:
-				wg := sync.WaitGroup{}
-				for _, h := range selectedHosts {
-					wg.Add(1)
-					go func(host string) {
-						ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-						id, _ := peer.IDB58Decode(host)
-						rss.CtxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: id})
-						wg.Done()
-					}(h)
-				}
-				wg.Wait()
-				time.Sleep(5 * time.Second)
-			}
-		}
-	}()
 	return waitUpload(rss, offlineSigning, fsStatus.RenterPid)
 }
 
