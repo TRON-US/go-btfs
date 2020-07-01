@@ -37,9 +37,12 @@ func P2PCall(ctx context.Context, n *core.IpfsNode, coreApi iface.CoreAPI, pid p
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	coreApi.Swarm().Connect(ctx, peer.AddrInfo{
+	err := coreApi.Swarm().Connect(ctx, peer.AddrInfo{
 		ID: pid,
 	})
+	if err != nil {
+		return nil, err
+	}
 	remoteCall := &P2PRemoteCall{
 		Node: n,
 		ID:   pid,
