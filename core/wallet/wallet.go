@@ -32,7 +32,7 @@ var (
 	DepositMinAmount  int64 = 1
 	DepositMaxAmount  int64 = 1000000000000
 	TokenId                 = "1002000"
-	TokenIdDev              = "1002508"
+	TokenIdDev              = "1000252"
 	hostWallet        Wallet
 
 	escrowService   string
