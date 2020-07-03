@@ -162,7 +162,7 @@ func contains(s []string, e string) bool {
 
 func defaultRepo(dstore repo.Datastore) (repo.Repo, error) {
 	c := cfg.Config{}
-	priv, pub, err := ci.GenerateKeyPairWithReader(ci.ECDSA, 1024, rand.Reader)
+	priv, pub, err := ci.GenerateKeyPairWithReader(ci.RSA, 2048, rand.Reader)
 	if err != nil {
 		return nil, err
 	}

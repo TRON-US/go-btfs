@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"time"
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
@@ -67,7 +68,7 @@ var queryDhtCmd = &cmds.Command{
 			return ErrNotDHT
 		}
 
-		id, err := peer.IDB58Decode(req.Arguments[0])
+		id, err := peer.Decode(req.Arguments[0])
 		if err != nil {
 			return cmds.ClientError("invalid peer ID")
 		}
@@ -75,19 +76,28 @@ var queryDhtCmd = &cmds.Command{
 		ctx, cancel := context.WithCancel(req.Context)
 		ctx, events := routing.RegisterForQueryEvents(ctx)
 
-		closestPeers, err := nd.DHT.GetClosestPeers(ctx, string(id))
-		if err != nil {
-			cancel()
-			return err
+		dht := nd.DHT.WAN
+		if !nd.DHT.WANActive() {
+			dht = nd.DHT.LAN
 		}
 
+		errCh := make(chan error, 1)
 		go func() {
+			defer close(errCh)
 			defer cancel()
-			for p := range closestPeers {
-				routing.PublishQueryEvent(ctx, &routing.QueryEvent{
-					ID:   p,
-					Type: routing.FinalPeer,
-				})
+			closestPeers, err := dht.GetClosestPeers(ctx, string(id))
+			if closestPeers != nil {
+				for p := range closestPeers {
+					routing.PublishQueryEvent(ctx, &routing.QueryEvent{
+						ID:   p,
+						Type: routing.FinalPeer,
+					})
+				}
+			}
+
+			if err != nil {
+				errCh <- err
+				return
 			}
 		}()
 
@@ -97,15 +107,13 @@ var queryDhtCmd = &cmds.Command{
 			}
 		}
 
-		return nil
+		return <-errCh
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *routing.QueryEvent) error {
 			pfm := pfuncMap{
-				routing.PeerResponse: func(obj *routing.QueryEvent, out io.Writer, verbose bool) error {
-					for _, p := range obj.Responses {
-						fmt.Fprintf(out, "%s\n", p.ID.Pretty())
-					}
+				routing.FinalPeer: func(obj *routing.QueryEvent, out io.Writer, verbose bool) error {
+					fmt.Fprintf(out, "%s\n", obj.ID)
 					return nil
 				},
 			}
@@ -369,7 +377,7 @@ var findPeerDhtCmd = &cmds.Command{
 			return ErrNotOnline
 		}
 
-		pid, err := peer.IDB58Decode(req.Arguments[0])
+		pid, err := peer.Decode(req.Arguments[0])
 		if err != nil {
 			return err
 		}
@@ -515,8 +523,8 @@ var putValueDhtCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Write a key/value pair to the routing system.",
 		ShortDescription: `
-Given a key of the form /foo/bar and a value of any form, this will write that
-value to the routing system with that key.
+Given a key of the form /foo/bar and a valid value for that key, this will write
+that value to the routing system with that key.
 
 Keys have two parts: a keytype (foo) and the key name (bar). BTNS uses the
 /btns keytype, and expects the key name to be a Peer ID. BTNS entries are
@@ -527,15 +535,15 @@ this is only /btns. Unless you have a relatively deep understanding of the
 go-btfs routing internals, you likely want to be using 'btfs name publish' instead
 of this.
 
-Value is arbitrary text. Standard input can be used to provide value.
-
-NOTE: A value may not exceed 2048 bytes.
+The value must be a valid value for the given key type. For example, if the key
+is /ipns/QmFoo, the value must be IPNS record (protobuf) signed with the key
+identified by QmFoo.
 `,
 	},
 
 	Arguments: []cmds.Argument{
 		cmds.StringArg("key", true, false, "The key to store the value at."),
-		cmds.StringArg("value", true, false, "The value to store.").EnableStdin(),
+		cmds.FileArg("value-file", true, false, "A path to a file containing the value to store.").EnableStdin(),
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(dhtVerboseOptionName, "v", "Print extra information."),
@@ -561,7 +569,16 @@ NOTE: A value may not exceed 2048 bytes.
 			return err
 		}
 
-		data := req.Arguments[1]
+		file, err := cmdenv.GetFileArg(req.Files.Entries())
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			return err
+		}
 
 		ctx, cancel := context.WithCancel(req.Context)
 		ctx, events := routing.RegisterForQueryEvents(ctx)

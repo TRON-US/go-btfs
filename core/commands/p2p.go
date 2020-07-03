@@ -87,9 +87,8 @@ Forward connections made to <listen-address> to <target-address>.
 connections and/or handlers. It must be prefixed with '` + P2PProtoPrefix + `'.
 
 Example:
-  btfs p2p forward ` + P2PProtoPrefix + `myproto /ip4/127.0.0.1/tcp/4567 /btfs/QmPeer
-    - Forward connections to 127.0.0.1:4567 to '` + P2PProtoPrefix + `myproto' service on /btfs/QmPeer
-
+  btfs p2p forward ` + P2PProtoPrefix + `myproto /ip4/127.0.0.1/tcp/4567 /p2p/QmPeer
+    - Forward connections to 127.0.0.1:4567 to '` + P2PProtoPrefix + `myproto' service on /p2p/QmPeer
 `,
 	},
 	Arguments: []cmds.Argument{

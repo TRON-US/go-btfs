@@ -12,6 +12,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/coreapi"
 	mock "github.com/TRON-US/go-btfs/core/mock"
+	"github.com/TRON-US/go-btfs/core/node/libp2p"
 	"github.com/TRON-US/go-btfs/keystore"
 	"github.com/TRON-US/go-btfs/repo"
 
@@ -39,7 +40,7 @@ func (NodeProvider) MakeAPISwarm(ctx context.Context, fullIdentity bool, n int) 
 	for i := 0; i < n; i++ {
 		var ident config.Identity
 		if fullIdentity {
-			sk, pk, err := ci.GenerateKeyPair(ci.RSA, 512)
+			sk, pk, err := ci.GenerateKeyPair(ci.RSA, 2048)
 			if err != nil {
 				return nil, err
 			}
@@ -65,7 +66,7 @@ func (NodeProvider) MakeAPISwarm(ctx context.Context, fullIdentity bool, n int) 
 		}
 
 		c := config.Config{}
-		c.Addresses.Swarm = []string{fmt.Sprintf("/ip4/127.0.%d.1/tcp/4001", i)}
+		c.Addresses.Swarm = []string{fmt.Sprintf("/ip4/18.0.%d.1/tcp/4001", i)}
 		c.Identity = ident
 		c.Experimental.FilestoreEnabled = true
 
@@ -78,9 +79,10 @@ func (NodeProvider) MakeAPISwarm(ctx context.Context, fullIdentity bool, n int) 
 		}
 
 		node, err := core.NewNode(ctx, &core.BuildCfg{
-			Repo:   r,
-			Host:   mock.MockHostOption(mn),
-			Online: fullIdentity,
+			Routing: libp2p.DHTServerOption,
+			Repo:    r,
+			Host:    mock.MockHostOption(mn),
+			Online:  fullIdentity,
 			ExtraOpts: map[string]bool{
 				"pubsub": true,
 			},

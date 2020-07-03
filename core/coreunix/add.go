@@ -11,7 +11,7 @@ import (
 
 	chunker "github.com/TRON-US/go-btfs-chunker"
 	"github.com/TRON-US/go-btfs-files"
-	"github.com/TRON-US/go-btfs/pin"
+	"github.com/TRON-US/go-btfs-pinner"
 	"github.com/TRON-US/go-mfs"
 	"github.com/TRON-US/go-unixfs"
 	"github.com/TRON-US/go-unixfs/importer/balanced"
@@ -39,6 +39,10 @@ var liveCacheSize = uint64(256 << 10)
 type Link struct {
 	Name, Hash string
 	Size       uint64
+}
+
+type syncer interface {
+	Sync() error
 }
 
 // NewAdder Returns a new Adder used for a file add operation.
@@ -277,7 +281,7 @@ func (adder *Adder) PinRoot(root ipld.Node) error {
 		return err
 	}
 	adder.pinning.PinWithMode(rnk, dur, pin.Recursive)
-	return adder.pinning.Flush()
+	return adder.pinning.Flush(adder.ctx)
 }
 
 // outputDirs outputs directory dagnodes in a postorder DFS pattern.
@@ -444,7 +448,17 @@ func (adder *Adder) addToMfs(file files.Node) (ipld.Node, error) {
 		return nil, err
 	}
 
-	return nd, nil
+	if asyncDagService, ok := adder.dagService.(syncer); ok {
+		err = asyncDagService.Sync()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !adder.Pin {
+		return nd, nil
+	}
+	return nd, adder.PinRoot(nd)
 }
 
 func (adder *Adder) addFileNode(path string, file files.Node, toplevel bool) error {

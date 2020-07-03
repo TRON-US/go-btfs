@@ -4,7 +4,6 @@ SHELL := /bin/bash # Use bash syntax
 GO_MIN_VERSION = 1.14
 export GO111MODULE=on
 
-
 # pre-definitions
 GOCC ?= go
 GOTAGS ?=
@@ -108,13 +107,12 @@ test_go: $(TEST_GO)
 
 test_build_special_exe:
 	cd ./cmd/btfs && \
-	$(GOCC) test -coverpkg=./... -c *.go -tags testrunmain -o $(TEST_FILE_DIR)/test-special-exe
+	$(GOCC) test -v -coverpkg=./... -c -tags testrunmain -o $(TEST_FILE_DIR)/test-special-exe
 .PHONY: test_build_special_exe
 
 check_go_version:
 	@$(GOCC) version
 	bin/check_go_version $(GO_MIN_VERSION)
-	bash patching.sh
 .PHONY: check_go_version
 DEPS_GO += check_go_version
 

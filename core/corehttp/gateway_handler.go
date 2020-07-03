@@ -3,28 +3,28 @@ package corehttp
 import (
 	"context"
 	"fmt"
-	"github.com/TRON-US/go-btfs/namesys/resolve"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	gopath "path"
+	"regexp"
 	"runtime/debug"
 	"strings"
 	"time"
 
 	files "github.com/TRON-US/go-btfs-files"
-	"github.com/TRON-US/go-mfs"
+	mfs "github.com/TRON-US/go-mfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
 	"github.com/Workiva/go-datastructures/cache"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/ipfs/go-cid"
 	dag "github.com/ipfs/go-merkledag"
-	ipfspath "github.com/ipfs/go-path"
+	path "github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
 	routing "github.com/libp2p/go-libp2p-core/routing"
-	"github.com/multiformats/go-multibase"
 )
 
 const (
@@ -52,6 +52,25 @@ func (d ReedSolomonDirectory) Size() uint64 {
 	return uint64(1)
 }
 
+// StatusResponseWriter enables us to override HTTP Status Code passed to
+// WriteHeader function inside of http.ServeContent.  Decision is based on
+// presence of HTTP Headers such as Location.
+type statusResponseWriter struct {
+	http.ResponseWriter
+}
+
+func (sw *statusResponseWriter) WriteHeader(code int) {
+	// Check if we need to adjust Status Code to account for scheduled redirect
+	// This enables us to return payload along with HTTP 301
+	// for subdomain redirect in web browsers while also returning body for cli
+	// tools which do not follow redirects by default (curl, wget).
+	redirect := sw.ResponseWriter.Header().Get("Location")
+	if redirect != "" && code == http.StatusOK {
+		code = http.StatusMovedPermanently
+	}
+	sw.ResponseWriter.WriteHeader(code)
+}
+
 func newGatewayHandler(c GatewayConfig, api coreiface.CoreAPI, dirs cache.Cache) *gatewayHandler {
 	i := &gatewayHandler{
 		config: c,
@@ -62,7 +81,7 @@ func newGatewayHandler(c GatewayConfig, api coreiface.CoreAPI, dirs cache.Cache)
 }
 
 func parseIpfsPath(p string) (cid.Cid, string, error) {
-	rootPath, err := ipfspath.ParsePath(p)
+	rootPath, err := path.ParsePath(p)
 	if err != nil {
 		return cid.Cid{}, "", err
 	}
@@ -78,7 +97,7 @@ func parseIpfsPath(p string) (cid.Cid, string, error) {
 		return cid.Cid{}, "", err
 	}
 
-	return rootCid, ipfspath.Join(rsegs[2:]), nil
+	return rootCid, path.Join(rsegs[2:]), nil
 }
 
 func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -97,24 +116,23 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if i.config.Writable {
 		switch r.Method {
-		case "POST":
+		case http.MethodPost:
 			i.postHandler(w, r)
 			return
-		case "PUT":
+		case http.MethodPut:
 			i.putHandler(w, r)
 			return
-		case "DELETE":
+		case http.MethodDelete:
 			i.deleteHandler(w, r)
 			return
 		}
 	}
 
-	if r.Method == "GET" || r.Method == "HEAD" {
+	switch r.Method {
+	case http.MethodGet, http.MethodHead:
 		i.getOrHeadHandler(w, r)
 		return
-	}
-
-	if r.Method == "OPTIONS" {
+	case http.MethodOptions:
 		i.optionsHandler(w, r)
 		return
 	}
@@ -124,6 +142,9 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !i.config.Writable {
 		status = http.StatusMethodNotAllowed
 		errmsg = errmsg + "read only access"
+		w.Header().Add("Allow", http.MethodGet)
+		w.Header().Add("Allow", http.MethodHead)
+		w.Header().Add("Allow", http.MethodOptions)
 	} else {
 		status = http.StatusBadRequest
 		errmsg = errmsg + "bad request for " + r.URL.Path
@@ -149,7 +170,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// the prefix header can be set to signal this sub-path.
 	// It will be prepended to links in directory listings and the index.html redirect.
 	prefix := ""
-	if prfx := r.Header.Get("X-Ipfs-Gateway-Prefix"); len(prfx) > 0 {
+	if prfx := r.Header.Get("X-Btfs-Gateway-Prefix"); len(prfx) > 0 {
 		for _, p := range i.config.PathPrefixes {
 			if prfx == p || strings.HasPrefix(prfx, p+"/") {
 				prefix = prfx
@@ -158,16 +179,28 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// IPNSHostnameOption might have constructed an BTNS path using the Host header.
+	// HostnameOption might have constructed an BTNS/BTFS path using the Host header.
 	// In this case, we need the original path for constructing redirects
 	// and links that match the requested URL.
-	// For example, http://example.net would become /ipns/example.net, and
-	// the redirects and links would end up as http://example.net/ipns/example.net
-	originalUrlPath := prefix + urlPath
-	ipnsHostname := false
-	if hdr := r.Header.Get("X-Ipns-Original-Path"); len(hdr) > 0 {
-		originalUrlPath = prefix + hdr
-		ipnsHostname = true
+	// For example, http://example.net would become /btns/example.net, and
+	// the redirects and links would end up as http://example.net/btns/example.net
+	requestURI, err := url.ParseRequestURI(r.RequestURI)
+	if err != nil {
+		webError(w, "failed to parse request path", err, http.StatusInternalServerError)
+		return
+	}
+	originalUrlPath := prefix + requestURI.Path
+
+	// Service Worker registration request
+	if r.Header.Get("Service-Worker") == "script" {
+		// Disallow Service Worker registration on namespace roots
+		// https://github.com/ipfs/go-ipfs/issues/4025
+		matched, _ := regexp.MatchString(`^/ip[fn]s/[^/]+$`, r.URL.Path)
+		if matched {
+			err := fmt.Errorf("registration is not allowed for this scope")
+			webError(w, "navigator.serviceWorker", err, http.StatusBadRequest)
+			return
+		}
 	}
 
 	parsedPath := ipath.New(urlPath)
@@ -176,28 +209,23 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Resolve path to the final DAG node for the ETag
+	// Resolve path to the final DAG node for reed solomon directory differrently
+	// from normal files / directories.
 	var (
 		resolvedPath              ipath.Resolved
 		rootPath                  string
 		escapedRootPath           string
 		resolvedRootPath          ipath.Resolved
 		dr                        files.Node
-		err                       error
 		isReedSolomonSubdirOrFile bool // Is ReedSolomon non-root subdirectory or file?
 	)
-	top, err := i.isTopLevelEntryPath(r, parsedPath.String())
+
+	top, err := i.isTopLevelEntryPath(w, r, parsedPath.String(), escapedURLPath)
 	if err != nil {
-		switch err {
-		case nil:
-		case coreiface.ErrOffline:
-			webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusServiceUnavailable)
-			return
-		default:
-			webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusNotFound)
-			return
-		}
+		// helper already handled webError
+		return
 	}
+
 	if !top {
 		// Check if the `parsedPath` is part of Reed-Solomon enconded directory object.
 		// If yes, put a new entry to the Reed-Solomon directory cache if not exist and
@@ -224,14 +252,15 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 			}
 
 			var rootDr files.Node
-			resolvedRootPath, rootDr, err = i.resolveAndGetFilesNode(context.Background(), w, r, ipath.New(rootPath), escapedRootPath)
+			resolvedRootPath, rootDr, err = i.resolveAndGetFilesNode(r.Context(), w, r, ipath.New(rootPath), escapedRootPath)
 			if err != nil {
+				// helper already handled webError
 				return
 			}
 			ok := false
 			rootDir, ok = rootDr.(files.Directory)
 			if !ok {
-				log.Warningf("expected directory type for %s", escapedRootPath)
+				log.Warnf("expected directory type for %s", escapedRootPath)
 			}
 		}
 		if isPresent || (rootDir != nil && rootDir.IsReedSolomon()) {
@@ -249,9 +278,11 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	// Normal file/directory case: perform resolve
 	if !isReedSolomonSubdirOrFile {
 		resolvedPath, dr, err = i.resolveAndGetFilesNode(r.Context(), w, r, parsedPath, escapedURLPath)
 		if err != nil {
+			// helper already handled webError
 			return
 		}
 	}
@@ -263,48 +294,15 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// Check etag send back to us.
 	if isReedSolomonSubdirOrFile {
 		// Set root path prefix for paths for the entity tag.
-		i.setupEntityTag(w, r, resolvedRootPath, rootPath)
-	} else {
-		i.setupEntityTag(w, r, resolvedPath, urlPath)
-	}
-
-	// Suborigin header, sandboxes apps from each other in the browser (even
-	// though they are served from the same gateway domain).
-	//
-	// Omitted if the path was treated by IPNSHostnameOption(), for example
-	// a request for http://example.net/ would be changed to /ipns/example.net/,
-	// which would turn into an incorrect Suborigin header.
-	// In this case the correct thing to do is omit the header because it is already
-	// handled correctly without a Suborigin.
-	//
-	// NOTE: This is not yet widely supported by browsers.
-	if !ipnsHostname {
-		// e.g.: 1="btfs", 2="QmYuNaKwY...", ...
-		pathComponents := strings.SplitN(urlPath, "/", 4)
-
-		var suboriginRaw []byte
-		cidDecoded, err := cid.Decode(pathComponents[2])
-		if err != nil {
-			// component 2 doesn't decode with cid, so it must be a hostname
-			suboriginRaw = []byte(strings.ToLower(pathComponents[2]))
-		} else {
-			suboriginRaw = cidDecoded.Bytes()
-		}
-
-		base32Encoded, err := multibase.Encode(multibase.Base32, suboriginRaw)
-		if err != nil {
-			internalWebError(w, err)
+		if !i.setupEntityTag(w, r, resolvedRootPath, rootPath) {
 			return
 		}
-
-		suborigin := pathComponents[1] + "000" + strings.ToLower(base32Encoded)
-		w.Header().Set("Suborigin", suborigin)
+	} else {
+		if !i.setupEntityTag(w, r, resolvedPath, urlPath) {
+			return
+		}
 	}
 
-	// set these headers _after_ the error, for we may just not have it
-	// and dont want the client to cache a 500 response...
-	// and only if it's /btfs!
-	// TODO: break this out when we split /btfs /btns routes.
 	modtime := time.Now()
 
 	if f, ok := dr.(files.File); ok {
@@ -340,7 +338,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 			goget := r.URL.Query().Get("go-get") == "1"
 			if dirwithoutslash && !goget {
 				// See comment above where originalUrlPath is declared.
-				http.Redirect(w, r, originalUrlPath+"/", 302)
+				http.Redirect(w, r, originalUrlPath+"/", http.StatusFound)
 				return
 			}
 
@@ -351,7 +349,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 			}
 
 			// write to request
-			http.ServeContent(w, r, "index.html", modtime, f)
+			i.serveFile(w, r, "index.html", modtime, f)
 			return
 		case resolver.ErrNoLink:
 			// no index.html; noop
@@ -361,23 +359,23 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if r.Method == "HEAD" {
+	if r.Method == http.MethodHead {
 		return
 	}
 
-	// storage for directory list
+	// storage for directory listing
 	var dirListing []directoryItem
 	dirit := dir.Entries()
 	dirit.BreadthFirstTraversal()
 	for dirit.Next() {
-		// See comment above where originalUrlPath is declared.
-		s, err := dirit.Node().Size()
-		if err != nil {
-			internalWebError(w, err)
-			return
+		size := "?"
+		if s, err := dirit.Node().Size(); err == nil {
+			// Size may not be defined/supported. Continue anyways.
+			size = humanize.Bytes(uint64(s))
 		}
 
-		di := directoryItem{humanize.Bytes(uint64(s)), dirit.Name(), gopath.Join(originalUrlPath, dirit.Name())}
+		// See comment above where originalUrlPath is declared.
+		di := directoryItem{size, dirit.Name(), gopath.Join(originalUrlPath, dirit.Name())}
 		dirListing = append(dirListing, di)
 	}
 	if dirit.Err() != nil {
@@ -388,7 +386,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// Put the current Reed-Solomon directory entry to the cache
 	// if it is Reed-Solomon root directory.
 	if !isReedSolomonSubdirOrFile && dir.IsReedSolomon() {
-		dr, err := i.api.Unixfs().Get(context.Background(), resolvedPath)
+		dr, err := i.api.Unixfs().Get(r.Context(), resolvedPath)
 		if err != nil {
 			webError(w, "btfs cat "+escapedURLPath, err, http.StatusNotFound)
 			return
@@ -406,10 +404,10 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 
 	// construct the correct back link
 	// https://github.com/ipfs/go-ipfs/issues/1365
-	var backLink string = prefix + urlPath
+	var backLink string = originalUrlPath
 
 	// don't go further up than /btfs/$hash/
-	pathSplit := ipfspath.SplitList(backLink)
+	pathSplit := path.SplitList(urlPath)
 	switch {
 	// keep backlink
 	case len(pathSplit) == 3: // url: /btfs/$hash
@@ -417,7 +415,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// keep backlink
 	case len(pathSplit) == 4 && pathSplit[3] == "": // url: /btfs/$hash/
 
-	// add the correct link depending on wether the path ends with a slash
+	// add the correct link depending on whether the path ends with a slash
 	default:
 		if strings.HasSuffix(backLink, "/") {
 			backLink += "./.."
@@ -426,18 +424,8 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// strip /btfs/$hash from backlink if IPNSHostnameOption touched the path.
-	if ipnsHostname {
-		backLink = prefix + "/"
-		if len(pathSplit) > 5 {
-			// also strip the trailing segment, because it's a backlink
-			backLinkParts := pathSplit[3 : len(pathSplit)-2]
-			backLink += ipfspath.Join(backLinkParts) + "/"
-		}
-	}
-
 	var hash string
-	if !strings.HasPrefix(originalUrlPath, ipfsPathPrefix) {
+	if !strings.HasPrefix(urlPath, ipfsPathPrefix) {
 		hash = resolvedPath.Cid().String()
 	}
 
@@ -448,6 +436,16 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		BackLink: backLink,
 		Hash:     hash,
 	}
+
+	// See statusResponseWriter.WriteHeader
+	// and https://github.com/ipfs/go-ipfs/issues/7164
+	// Note: this needs to occur before listingTemplate.Execute otherwise we get
+	// superfluous response.WriteHeader call from prometheus/client_golang
+	if w.Header().Get("Location") != "" {
+		w.WriteHeader(http.StatusMovedPermanently)
+		return
+	}
+
 	err = listingTemplate.Execute(w, tplData)
 	if err != nil {
 		internalWebError(w, err)
@@ -455,31 +453,46 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-type sizeReadSeeker interface {
-	Size() (int64, error)
-
-	io.ReadSeeker
-}
-
-type sizeSeeker struct {
-	sizeReadSeeker
-}
-
-func (s *sizeSeeker) Seek(offset int64, whence int) (int64, error) {
-	if whence == io.SeekEnd && offset == 0 {
-		return s.Size()
+func (i *gatewayHandler) serveFile(w http.ResponseWriter, req *http.Request, name string, modtime time.Time, file files.File) {
+	size, err := file.Size()
+	if err != nil {
+		http.Error(w, "cannot serve files with unknown sizes", http.StatusBadGateway)
+		return
 	}
 
-	return s.sizeReadSeeker.Seek(offset, whence)
-}
+	content := &lazySeeker{
+		size:   size,
+		reader: file,
+	}
 
-func (i *gatewayHandler) serveFile(w http.ResponseWriter, req *http.Request, name string, modtime time.Time, content io.ReadSeeker) {
-	if sp, ok := content.(sizeReadSeeker); ok {
-		content = &sizeSeeker{
-			sizeReadSeeker: sp,
+	var ctype string
+	if _, isSymlink := file.(*files.Symlink); isSymlink {
+		// We should be smarter about resolving symlinks but this is the
+		// "most correct" we can be without doing that.
+		ctype = "inode/symlink"
+	} else {
+		ctype = mime.TypeByExtension(gopath.Ext(name))
+		if ctype == "" {
+			buf := make([]byte, 512)
+			n, _ := io.ReadFull(content, buf[:])
+			ctype = http.DetectContentType(buf[:n])
+			_, err := content.Seek(0, io.SeekStart)
+			if err != nil {
+				http.Error(w, "seeker can't seek", http.StatusInternalServerError)
+				return
+			}
+		}
+		// Strip the encoding from the HTML Content-Type header and let the
+		// browser figure it out.
+		//
+		// Fixes https://github.com/ipfs/go-ipfs/issues/2203
+		if strings.HasPrefix(ctype, "text/html;") {
+			ctype = "text/html"
 		}
 	}
+	w.Header().Set("Content-Type", ctype)
 
+	w = &statusResponseWriter{w}
 	http.ServeContent(w, req, name, modtime, content)
 }
 
@@ -677,9 +690,9 @@ func (i *gatewayHandler) cacheEntryFor(p string) (*ReedSolomonDirectory, bool, e
 	return &d, true, nil
 }
 
-func (i *gatewayHandler) resolveAndGetFilesNode(
-	ctx context.Context, w http.ResponseWriter, r *http.Request, pp ipath.Path, escPath string) (ipath.Resolved, files.Node, error) {
-	// Resolve path to the final DAG node for the ETag
+// resolveAndGetFileNode combines resolution nd getting node on the gateway handler
+func (i *gatewayHandler) resolveAndGetFilesNode(ctx context.Context,
+	w http.ResponseWriter, r *http.Request, pp ipath.Path, escPath string) (ipath.Resolved, files.Node, error) {
 	resolvedPath, err := i.api.ResolvePath(ctx, pp)
 	switch err {
 	case nil:
@@ -700,41 +713,51 @@ func (i *gatewayHandler) resolveAndGetFilesNode(
 	return resolvedPath, dr, nil
 }
 
-func (i *gatewayHandler) isTopLevelEntryPath(r *http.Request, path string) (bool, error) {
-	path = gopath.Clean(path)
-	parts := strings.Split(path, "/")
+// isTopLevelEntryPath checks to see if the node being resolved is a root path/directory
+func (i *gatewayHandler) isTopLevelEntryPath(w http.ResponseWriter, r *http.Request,
+	urlPath, escPath string) (bool, error) {
+	urlPath = gopath.Clean(urlPath)
+	parts := strings.Split(urlPath, "/")
 
 	var (
-		ipfpath *ipfspath.Path
-		err     error
+		ipnspath *path.Path
+		err      error
 	)
 	switch parts[1] {
 	case "btfs":
 		return len(parts) == 3 && parts[2] != "", nil
 	case "btns":
-		ipfpath, err = i.api.ResolveIpnsPath(r.Context(), ipath.New(path))
-		if err == resolve.ErrNoNamesys {
+		ipnspath, err = i.api.ResolveIpnsPath(r.Context(), ipath.New(urlPath))
+		if err == coreiface.ErrOffline {
+			webError(w, "btfs resolve -r "+escPath, coreiface.ErrOffline, http.StatusServiceUnavailable)
 			return false, coreiface.ErrOffline
-		} else if err != nil {
-			return false, err
 		}
-		return len(ipfpath.Segments()) == 2 && ipfpath.Segments()[1] != "", nil
+		if err != nil {
+			break
+		}
+		return len(ipnspath.Segments()) == 2 && ipnspath.Segments()[1] != "", nil
 	default:
-		return false, fmt.Errorf("unsupported path namespace: [%s]", parts[1])
+		err = fmt.Errorf("unsupported path namespace: [%s]", parts[1])
 	}
+	webError(w, "btfs resolve -r "+escPath, err, http.StatusNotFound)
+	return false, err
 }
 
-func (i *gatewayHandler) setupEntityTag(
-	w http.ResponseWriter, r *http.Request, resolvedPath ipath.Resolved, urlPath string) {
+// setupEntityTag sets the ETag according to resolved path and url path
+func (i *gatewayHandler) setupEntityTag(w http.ResponseWriter, r *http.Request,
+	resolvedPath ipath.Resolved, urlPath string) bool {
+	// Check etag send back to us
 	etag := "\"" + resolvedPath.Cid().String() + "\""
 	if r.Header.Get("If-None-Match") == etag || r.Header.Get("If-None-Match") == "W/"+etag {
 		w.WriteHeader(http.StatusNotModified)
-		return
+		return false
 	}
 
 	i.addUserHeaders(w) // ok, _now_ write user's headers.
-	w.Header().Set("X-IPFS-Path", urlPath)
+	w.Header().Set("X-BTFS-Path", urlPath)
 	w.Header().Set("Etag", etag)
+
+	return true
 }
 
 func webError(w http.ResponseWriter, message string, err error, defaultCode int) {
@@ -752,7 +775,7 @@ func webError(w http.ResponseWriter, message string, err error, defaultCode int)
 func webErrorWithCode(w http.ResponseWriter, message string, err error, code int) {
 	http.Error(w, fmt.Sprintf("%s: %s", message, err), code)
 	if code >= 500 {
-		log.Warningf("server error: %s: %s", err)
+		log.Warnf("server error: %s: %s", err)
 	}
 }
 

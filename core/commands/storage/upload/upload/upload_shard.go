@@ -9,7 +9,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -94,7 +94,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 				go func() {
 					ctx, _ := context.WithTimeout(rss.Ctx, 10*time.Second)
-					_, err := remote.P2PCall(ctx, rss.CtxParams.N, hostPid, "/storage/upload/init",
+					_, err := remote.P2PCall(ctx, rss.CtxParams.N, rss.CtxParams.Api, hostPid, "/storage/upload/init",
 						rss.SsId,
 						rss.Hash,
 						h,

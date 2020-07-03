@@ -54,13 +54,18 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 			return err
 		}
 
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+
 		// Check if peer is reachable
 		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
 		if err != nil {
 			return err
 		}
 		// Pass arguments through to host response endpoint
-		resp, err := remote.P2PCallStrings(req.Context, n, pi.ID, "/storage/challenge/response",
+		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/challenge/response",
 			req.Arguments[1:]...)
 		if err != nil {
 			return err
