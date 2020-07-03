@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	gc "github.com/TRON-US/go-btfs/pin/gc"
-	repo "github.com/TRON-US/go-btfs/repo"
+	"github.com/TRON-US/go-btfs/gc"
+	"github.com/TRON-US/go-btfs/repo"
 
 	mfs "github.com/TRON-US/go-mfs"
 	humanize "github.com/dustin/go-humanize"
@@ -212,12 +212,11 @@ func (gc *GC) maybeGC(ctx context.Context, offset uint64) error {
 
 	if storage+offset > gc.StorageGC {
 		if storage+offset > gc.StorageMax {
-			log.Warningf("pre-GC: %s", ErrMaxStorageExceeded)
+			log.Warnf("pre-GC: %s", ErrMaxStorageExceeded)
 		}
 
 		// Do GC here
 		log.Info("Watermark exceeded. Starting repo GC...")
-		defer log.EventBegin(ctx, "repoGC").Done()
 
 		if err := GarbageCollect(gc.Node, ctx); err != nil {
 			return err

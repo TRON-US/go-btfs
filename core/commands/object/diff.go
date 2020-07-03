@@ -5,10 +5,10 @@ import (
 	"io"
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/dagutils"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
+	"github.com/ipfs/go-merkledag/dagutils"
 )
 
 const (
@@ -70,7 +70,7 @@ Example:
 		out := make([]*dagutils.Change, len(changes))
 		for i, change := range changes {
 			out[i] = &dagutils.Change{
-				Type: change.Type,
+				Type: dagutils.ChangeType(change.Type),
 				Path: change.Path,
 			}
 

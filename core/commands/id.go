@@ -9,15 +9,17 @@ import (
 	"os"
 	"strings"
 
+	version "github.com/TRON-US/go-btfs"
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/host"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"
 	kb "github.com/libp2p/go-libp2p-kbucket"
-	identify "github.com/libp2p/go-libp2p/p2p/protocol/identify"
+	//identify "github.com/libp2p/go-libp2p/p2p/protocol/identify"
 )
 
 const offlineIdErrorMessage = `'btfs id' currently cannot query information on remote
@@ -76,7 +78,7 @@ EXAMPLE:
 		var id peer.ID
 		if len(req.Arguments) > 0 {
 			var err error
-			id, err = peer.IDB58Decode(req.Arguments[0])
+			id, err = peer.Decode(req.Arguments[0])
 			if err != nil {
 				return fmt.Errorf("invalid peer id")
 			}
@@ -185,13 +187,17 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 	info.PublicKey = base64.StdEncoding.EncodeToString(pkb)
 
 	if node.PeerHost != nil {
-		for _, a := range node.PeerHost.Addrs() {
-			s := a.String() + "/btfs/" + info.ID
-			info.Addresses = append(info.Addresses, s)
+		addrs, err := peer.AddrInfoToP2pAddrs(host.InfoFromHost(node.PeerHost))
+		if err != nil {
+			return nil, err
+		}
+		for _, a := range addrs {
+			info.Addresses = append(info.Addresses, a.String())
 		}
 	}
-	info.ProtocolVersion = "btfs/1.0.0"
-	info.AgentVersion = identify.ClientVersion
+	info.ProtocolVersion = "btfs/0.1.0" //identify.LibP2PVersion
+	info.AgentVersion = version.UserAgent
+
 	if node.IsDaemon {
 		info.DaemonProcessID = os.Getpid()
 	} else {

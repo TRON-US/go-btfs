@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
+	"net/http"
 	"os"
-	"path/filepath"
 	"runtime/pprof"
 	"strings"
 	"time"
@@ -21,10 +22,10 @@ import (
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
-	"github.com/TRON-US/go-btfs-cmds"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/cli"
-	"github.com/TRON-US/go-btfs-cmds/http"
-	"github.com/TRON-US/go-btfs-config"
+	cmdhttp "github.com/TRON-US/go-btfs-cmds/http"
+	config "github.com/TRON-US/go-btfs-config"
 	u "github.com/ipfs/go-ipfs-util"
 	logging "github.com/ipfs/go-log"
 	loggables "github.com/libp2p/go-libp2p-loggables"
@@ -46,22 +47,9 @@ const (
 )
 
 func loadPlugins(repoPath string) (*loader.PluginLoader, error) {
-	pluginpath := filepath.Join(repoPath, "plugins")
-
-	plugins, err := loader.NewPluginLoader()
+	plugins, err := loader.NewPluginLoader(repoPath)
 	if err != nil {
-		return nil, fmt.Errorf("error loading preloaded plugins: %s", err)
-	}
-
-	// check if repo is accessible before loading plugins
-	ok, err := checkPermissions(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	if ok {
-		if err := plugins.LoadDirectory(pluginpath); err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("error loading plugins: %s", err)
 	}
 
 	if err := plugins.Initialize(); err != nil {
@@ -125,6 +113,9 @@ func mainRet() int {
 				os.Args[1] = "--help"
 			}
 		}
+	} else if insideGUI() { // if no args were passed, and we're in a GUI environment
+		// launch the daemon instead of launching a ghost window
+		os.Args = append(os.Args, "daemon", "--init")
 	}
 
 	// output depends on executable name passed in os.Args
@@ -184,6 +175,10 @@ func mainRet() int {
 	return 0
 }
 
+func insideGUI() bool {
+	return util.InsideGUI()
+}
+
 func checkDebug(req *cmds.Request) {
 	// check if user wants to debug. option OR env var.
 	debug, _ := req.Options["debug"].(bool)
@@ -233,7 +228,7 @@ func makeExecutor(req *cmds.Request, env interface{}) (cmds.Executor, error) {
 	if details.cannotRunOnDaemon || req.Command.External {
 		if daemonRequested {
 			// User requested that the command be run on the daemon but we can't.
-			// NOTE: We drop this check for the `btfs daemon` command.
+			// NOTE: We drop this check for the `ipfs daemon` command.
 			return nil, errors.New("api flag specified but command cannot be run on the daemon")
 		}
 		return exe, nil
@@ -263,37 +258,39 @@ func makeExecutor(req *cmds.Request, env interface{}) (cmds.Executor, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, host, err := manet.DialArgs(apiAddr)
+	network, host, err := manet.DialArgs(apiAddr)
 	if err != nil {
 		return nil, err
 	}
 
 	// Construct the executor.
-	opts := []http.ClientOpt{
-		http.ClientWithAPIPrefix(corehttp.APIPath),
+	opts := []cmdhttp.ClientOpt{
+		cmdhttp.ClientWithAPIPrefix(corehttp.APIPath),
 	}
 
 	// Fallback on a local executor if we (a) have a repo and (b) aren't
 	// forcing a daemon.
 	if !daemonRequested && fsrepo.IsInitialized(cctx.ConfigRoot) {
-		opts = append(opts, http.ClientWithFallback(exe))
+		opts = append(opts, cmdhttp.ClientWithFallback(exe))
 	}
 
-	return http.NewClient(host, opts...), nil
-}
-
-func checkPermissions(path string) (bool, error) {
-	_, err := os.Open(path)
-	if os.IsNotExist(err) {
-		// repo does not exist yet - don't load plugins, but also don't fail
-		return false, nil
+	switch network {
+	case "tcp", "tcp4", "tcp6":
+	case "unix":
+		path := host
+		host = "unix"
+		opts = append(opts, cmdhttp.ClientWithHTTPClient(&http.Client{
+			Transport: &http.Transport{
+				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial("unix", path)
+				},
+			},
+		}))
+	default:
+		return nil, fmt.Errorf("unsupported API address: %s", apiAddr)
 	}
-	if os.IsPermission(err) {
-		// repo is not accessible. error out.
-		return false, fmt.Errorf("error opening repository at %s: permission denied", path)
-	}
 
-	return true, nil
+	return cmdhttp.NewClient(host, opts...), nil
 }
 
 // commandDetails returns a command's details for the command given by |path|.

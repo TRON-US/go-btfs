@@ -31,3 +31,21 @@ message Transaction {
   string to = 5;
   string status = 6;
 }
+
+message TransactionV1 {
+  string id = 1;
+  google.protobuf.Timestamp time_create = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdtime) = true
+  ];
+  int64 amount = 3;
+  string from = 4;
+  string to = 5;
+  string status = 6;
+  enum Type {
+    EXCHANGE = 0;
+    ON_CHAIN = 1;
+    OFF_CHAIN = 2;
+  }
+  Type type = 7;
+}

@@ -6,14 +6,13 @@ import (
 	"sync"
 	"time"
 
-	pin "github.com/TRON-US/go-btfs/pin"
-
+	pin "github.com/TRON-US/go-btfs-pinner"
+	ipns "github.com/TRON-US/go-btns"
+	pb "github.com/TRON-US/go-btns/pb"
 	ft "github.com/TRON-US/go-unixfs"
 	proto "github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsquery "github.com/ipfs/go-datastore/query"
-	ipns "github.com/ipfs/go-ipns"
-	pb "github.com/ipfs/go-ipns/pb"
 	path "github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -23,7 +22,6 @@ import (
 
 const ipnsPrefix = "/btns/"
 
-const PublishPutValTimeout = time.Minute
 const DefaultRecordEOL = 24 * time.Hour
 
 // IpnsPublisher is capable of publishing and resolving names to the IPFS
@@ -180,7 +178,11 @@ func (p *IpnsPublisher) updateRecord(ctx context.Context, k ci.PrivKey, value pa
 	}
 
 	// Put the new record.
-	if err := p.ds.Put(IpnsDsKey(id), data); err != nil {
+	key := IpnsDsKey(id)
+	if err := p.ds.Put(key, data); err != nil {
+		return nil, err
+	}
+	if err := p.ds.Sync(key); err != nil {
 		return nil, err
 	}
 	return entry, nil
@@ -201,7 +203,7 @@ func (p *IpnsPublisher) PublishWithEOL(ctx context.Context, k ci.PrivKey, value 
 // as such, i'm using the context to wire it through to avoid changing too
 // much code along the way.
 func checkCtxTTL(ctx context.Context) (time.Duration, bool) {
-	v := ctx.Value("ipns-publish-ttl")
+	v := ctx.Value("btns-publish-ttl")
 	if v == nil {
 		return 0, false
 	}
@@ -266,15 +268,10 @@ func PublishPublicKey(ctx context.Context, r routing.ValueStore, k string, pubk 
 	}
 
 	// Store associated public key
-	timectx, cancel := context.WithTimeout(ctx, PublishPutValTimeout)
-	defer cancel()
-	return r.PutValue(timectx, k, pkbytes)
+	return r.PutValue(ctx, k, pkbytes)
 }
 
 func PublishEntry(ctx context.Context, r routing.ValueStore, ipnskey string, rec *pb.IpnsEntry) error {
-	timectx, cancel := context.WithTimeout(ctx, PublishPutValTimeout)
-	defer cancel()
-
 	data, err := proto.Marshal(rec)
 	if err != nil {
 		return err
@@ -282,7 +279,7 @@ func PublishEntry(ctx context.Context, r routing.ValueStore, ipnskey string, rec
 
 	log.Debugf("Storing btns entry at: %s", ipnskey)
 	// Store ipns entry at "/ipns/"+h(pubkey)
-	return r.PutValue(timectx, ipnskey, data)
+	return r.PutValue(ctx, ipnskey, data)
 }
 
 // InitializeKeyspace sets the ipns record for the given key to
@@ -298,7 +295,7 @@ func InitializeKeyspace(ctx context.Context, pub Publisher, pins pin.Pinner, key
 		return err
 	}
 
-	err = pins.Flush()
+	err = pins.Flush(ctx)
 	if err != nil {
 		return err
 	}

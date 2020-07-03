@@ -9,19 +9,19 @@ test_init_btfs
 ID_HASH0=bafkqaedknncdsodknncdsnzvnbvuioak
 ID_HASH0_CONTENTS=jkD98jkD975hkD8
 
-test_expect_success "can fetch random id hash" '
+test_expect_success "can fetch random identity hash" '
   btfs cat $ID_HASH0 > expected &&
   echo $ID_HASH0_CONTENTS > actual &&
   test_cmp expected actual
 '
 
-test_expect_success "can pin random id hash" '
+test_expect_success "can pin random identity hash" '
   btfs pin add $ID_HASH0
 '
 
-test_expect_success "btfs add succeeds with id hash" '
+test_expect_success "btfs add succeeds with identity hash" '
   echo "djkd7jdkd7jkHHG" > junk.txt &&
-  HASH=$(btfs add -q --hash=id junk.txt)
+  HASH=$(btfs add -q --hash=identity junk.txt)
 '
 
 test_expect_success "content not actually added" '
@@ -48,10 +48,10 @@ test_expect_success "btfs add --inline works as expected" '
   HASH=$(btfs add -q --inline afile)
 '
 
-test_expect_success "btfs add --inline uses id multihash" '
+test_expect_success "btfs add --inline uses identity multihash" '
   MHTYPE=`cid-fmt %h $HASH`
   echo "mhtype is $MHTYPE"
-  test "$MHTYPE" = id
+  test "$MHTYPE" = identity
 '
 
 test_expect_success "btfs add --inline --raw-leaves works as expected" '
@@ -82,19 +82,19 @@ test_expect_success "enable filestore" '
   btfs config --json Experimental.FilestoreEnabled true
 '
 
-test_expect_success "can fetch random id hash (filestore enabled)" '
+test_expect_success "can fetch random identity hash (filestore enabled)" '
   btfs cat $ID_HASH0 > expected &&
   echo $ID_HASH0_CONTENTS > actual &&
   test_cmp expected actual
 '
 
-test_expect_success "can pin random id hash (filestore enabled)" '
+test_expect_success "can pin random identity hash (filestore enabled)" '
   btfs pin add $ID_HASH0
 '
 
-test_expect_success "btfs add succeeds with id hash and --nocopy" '
+test_expect_success "btfs add succeeds with identity hash and --nocopy" '
   echo "djkd7jdkd7jkHHG" > junk.txt &&
-  HASH=$(btfs add -q --hash=id --nocopy junk.txt)
+  HASH=$(btfs add -q --hash=identity --nocopy junk.txt)
 '
 
 test_expect_success "content not actually added (filestore enabled)" '

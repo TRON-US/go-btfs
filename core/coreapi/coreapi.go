@@ -21,9 +21,9 @@ import (
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/node"
 	"github.com/TRON-US/go-btfs/namesys"
-	"github.com/TRON-US/go-btfs/pin"
 	"github.com/TRON-US/go-btfs/repo"
 
+	"github.com/TRON-US/go-btfs-pinner"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/options"
 	bserv "github.com/ipfs/go-blockservice"

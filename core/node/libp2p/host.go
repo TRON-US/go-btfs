@@ -3,6 +3,9 @@ package libp2p
 import (
 	"context"
 
+	"github.com/TRON-US/go-btfs/core/node/helpers"
+	"github.com/TRON-US/go-btfs/repo"
+
 	"github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-core/host"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -11,9 +14,6 @@ import (
 	record "github.com/libp2p/go-libp2p-record"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"go.uber.org/fx"
-
-	"github.com/TRON-US/go-btfs/core/node/helpers"
-	"github.com/TRON-US/go-btfs/repo"
 )
 
 type P2PHostIn struct {
