@@ -100,7 +100,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
-	return waitUpload(rss, offlineSigning, fsStatus.RenterPid)
+	return waitUpload(rss, offlineSigning, fsStatus)
 }
 
 func newFileStatus(contracts []*guardpb.Contract, configuration *config.Config,
