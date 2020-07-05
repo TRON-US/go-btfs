@@ -30,14 +30,14 @@ const (
 var (
 	log = logging.Logger("upload")
 
-	WaitUploadBo = func() *backoff.ExponentialBackOff {
+	WaitUploadBo = func(maxTime time.Duration) *backoff.ExponentialBackOff {
 		bo := backoff.NewExponentialBackOff()
-		bo.InitialInterval = 1 * time.Second
-		bo.MaxElapsedTime = 24 * time.Hour
+		bo.InitialInterval = 10 * time.Second
+		bo.MaxElapsedTime = maxTime
 		bo.Multiplier = 1.5
-		bo.MaxInterval = 1 * time.Minute
+		bo.MaxInterval = 10 * time.Minute
 		return bo
-	}()
+	}
 	HandleShardBo = func() *backoff.ExponentialBackOff {
 		bo := backoff.NewExponentialBackOff()
 		bo.InitialInterval = 1 * time.Second
