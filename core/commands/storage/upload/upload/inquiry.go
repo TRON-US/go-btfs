@@ -178,11 +178,11 @@ func agreeProcess(req *cmds.Request, n *core.IpfsNode, renterPid string, fileHas
 		}(hostPidMap[contract.ShardHash], contract.ShardIndex, contract.ShardHash)
 		if len(rejectedHosts) > 0 {
 			// TODO host reject process to find new hosts, collect the signed contracts and integrate with agreed contracts
-			replaceHostContracts, err := rejectProcess(rejectedHosts)
+			replacedHostContracts, err := rejectProcess(rejectedHosts)
 			if err != nil {
 				return nil, errors.New("can not find appropriate hosts to replace rejected hosts")
 			}
-			signedContracts = append(signedContracts, replaceHostContracts...)
+			signedContracts = append(signedContracts, replacedHostContracts...)
 		}
 	}
 	return signedContracts, nil
@@ -190,7 +190,7 @@ func agreeProcess(req *cmds.Request, n *core.IpfsNode, renterPid string, fileHas
 
 // find new host, download shards and return signed contracts
 func rejectProcess(rejectHosts []*guardpb.Contract) ([]*guardpb.Contract, error) {
-	var replaceHostContracts []*guardpb.Contract
+	var replacedHostContracts []*guardpb.Contract
 	// TODO add logic here
-	return replaceHostContracts, nil
+	return replacedHostContracts, nil
 }
