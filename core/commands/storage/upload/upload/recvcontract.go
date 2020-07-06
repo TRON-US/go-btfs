@@ -4,14 +4,16 @@ import (
 	"errors"
 	"strconv"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-
-	cmds "github.com/TRON-US/go-btfs-cmds"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	"github.com/gogo/protobuf/proto"
+	ic "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 var StorageUploadRecvContractCmd = &cmds.Command{
@@ -87,7 +89,35 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	if err != nil {
 		return
 	}
-	// ignore error
+	if len(escrowContractBytes) == 0 {
+		hostPid, err := peer.IDB58Decode(guardContract.HostPid)
+		if err != nil {
+			return contractId, err
+		}
+		hostPubKey, err := hostPid.ExtractPublicKey()
+		if err != nil {
+			return contractId, err
+		}
+		hostAddr, err := ic.RawFull(hostPubKey)
+		if err != nil {
+			return contractId, err
+		}
+		signedContracts, err := shard.Contracts()
+		if err != nil {
+			return contractId, err
+		}
+		signedEscrowContract := &escrowpb.SignedEscrowContract{}
+		err = proto.Unmarshal(signedContracts.SignedEscrowContract, signedEscrowContract)
+		if err != nil {
+			return contractId, err
+		}
+		signedEscrowContract.Contract.SellerAddress = hostAddr
+		SignedEscrowContractBytes, err := proto.Marshal(signedEscrowContract)
+		if err != nil {
+			return contractId, err
+		}
+		escrowContractBytes = SignedEscrowContractBytes
+	}
 	_ = shard.Contract(escrowContractBytes, guardContract)
 	return
 }

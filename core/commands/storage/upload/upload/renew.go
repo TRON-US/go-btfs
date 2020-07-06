@@ -27,6 +27,10 @@ without uploading the file again when the contract was expired, the extended dur
 and file hash need to be specified and passed on the command.
 `,
 	},
+	Subcommands: map[string]*cmds.Command{
+		"inquiry":   StorageRenewInquiryCmd,
+		"renewinit": StorageRenewInitCmd,
+	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to renew."),
 		cmds.StringArg("renew-length", true, false, "New File storage period on hosts in days."),
