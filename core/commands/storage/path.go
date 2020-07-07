@@ -202,9 +202,9 @@ var PathCapacityCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		freeSpace := humanize.Bytes(usage.Free)
+		HumanizedFreeSpace := humanize.Bytes(usage.Free)
 		return cmds.EmitOnce(res, &PathCapacity{
-			FreeSpace: freeSpace,
+			FreeSpace: HumanizedFreeSpace,
 			Valid:     valid,
 		})
 	},
