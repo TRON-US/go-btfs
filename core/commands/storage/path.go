@@ -213,7 +213,7 @@ var PathCapacityCmd = &cmds.Command{
 }
 
 type PathCapacity struct {
-	FreeSpace 		   uint64
+	FreeSpace          uint64
 	Valid              bool
 	HumanizedFreeSpace string
 }
