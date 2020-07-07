@@ -122,6 +122,19 @@ finally returns the signed contract.
 					return err
 				}
 
+				signedContractID, err := signContractID(signedGuardContract.ContractId, ctxParams.N.PrivateKey)
+				if err != nil {
+					return err
+				}
+				// check payment
+
+				paidIn := make(chan bool)
+				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
+				paid := <-paidIn
+				if !paid {
+					return fmt.Errorf("contract is not paid: %s", signedGuardContract.ContractId)
+				}
+
 				err = shard.Contract(nil, signedGuardContract)
 				if err != nil {
 					return err
