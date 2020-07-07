@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,6 +17,7 @@ import (
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 
+	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/shirou/gopsutil/disk"
@@ -127,7 +127,7 @@ storage location, a specified path as a parameter need to be passed.
 		if err != nil {
 			return err
 		}
-		promisedStorageSize, err := strconv.ParseUint(req.Arguments[1], 10, 64)
+		promisedStorageSize, err := humanize.ParseBytes(req.Arguments[1])
 		if err != nil {
 			return err
 		}
@@ -202,17 +202,20 @@ var PathCapacityCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		humanizedFreeSpace := humanize.Bytes(usage.Free)
 		return cmds.EmitOnce(res, &PathCapacity{
-			FreeSpace: usage.Free,
-			Valid:     valid,
+			FreeSpace:          usage.Free,
+			Valid:              valid,
+			HumanizedFreeSpace: humanizedFreeSpace,
 		})
 	},
 	Type: &PathCapacity{},
 }
 
 type PathCapacity struct {
-	FreeSpace uint64
-	Valid     bool
+	FreeSpace          uint64
+	Valid              bool
+	HumanizedFreeSpace string
 }
 
 func init() {
