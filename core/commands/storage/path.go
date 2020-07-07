@@ -3,7 +3,6 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -18,6 +17,7 @@ import (
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 
+	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/shirou/gopsutil/disk"
