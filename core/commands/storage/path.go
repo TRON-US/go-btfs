@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,13 +17,13 @@ import (
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 
+	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/shirou/gopsutil/disk"
 )
 
 const (
-	storeDir    = ".btfs"
 	defaultPath = "~/.btfs"
 	fileName    = "~/.btfs.properties"
 )
@@ -105,10 +104,12 @@ storage location, a specified path as a parameter need to be passed.
 		}
 		if btfsPath != "" {
 			if btfsPath != StorePath {
-				OriginPath = filepath.Join(btfsPath, storeDir)
+				OriginPath = btfsPath
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
+		} else if envBtfsPath := os.Getenv("BTFS_PATH"); envBtfsPath != "" {
+			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
 		} else {
@@ -120,14 +121,14 @@ storage location, a specified path as a parameter need to be passed.
 			if err != nil {
 				return fmt.Errorf("mkdir: %s", err)
 			}
-		} else if !CheckDirEmpty(filepath.Join(StorePath, storeDir)) {
+		} else if !CheckDirEmpty(StorePath) {
 			return fmt.Errorf("path is invalid")
 		}
 		usage, err := disk.Usage(StorePath)
 		if err != nil {
 			return err
 		}
-		promisedStorageSize, err := strconv.ParseUint(req.Arguments[1], 10, 64)
+		promisedStorageSize, err := humanize.ParseBytes(req.Arguments[1])
 		if err != nil {
 			return err
 		}
@@ -195,24 +196,27 @@ var PathCapacityCmd = &cmds.Command{
 			}
 		}
 		valid := true
-		if !CheckDirEmpty(filepath.Join(path, storeDir)) {
+		if !CheckDirEmpty(path) {
 			valid = false
 		}
 		usage, err := disk.Usage(path)
 		if err != nil {
 			return err
 		}
+		humanizedFreeSpace := humanize.Bytes(usage.Free)
 		return cmds.EmitOnce(res, &PathCapacity{
-			FreeSpace: usage.Free,
-			Valid:     valid,
+			FreeSpace:          usage.Free,
+			Valid:              valid,
+			HumanizedFreeSpace: humanizedFreeSpace,
 		})
 	},
 	Type: &PathCapacity{},
 }
 
 type PathCapacity struct {
-	FreeSpace uint64
-	Valid     bool
+	FreeSpace          uint64
+	Valid              bool
+	HumanizedFreeSpace string
 }
 
 func init() {
@@ -236,7 +240,7 @@ func WriteProperties() error {
 }
 
 func MoveFolder() error {
-	err := os.Rename(OriginPath, filepath.Join(StorePath, storeDir))
+	err := os.Rename(OriginPath, StorePath)
 	// src and dest dir are not in the same partition
 	if err != nil {
 		err := helper.MoveDirectory(make(chan int, 10), OriginPath, StorePath)
@@ -269,7 +273,7 @@ func SetEnvVariables() {
 		if CheckExist(filePath) {
 			btfsPath = ReadProperties(filePath)
 			if btfsPath != "" {
-				newPath := filepath.Join(btfsPath, storeDir)
+				newPath := btfsPath
 				err := os.Setenv("BTFS_PATH", newPath)
 				if err != nil {
 					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
