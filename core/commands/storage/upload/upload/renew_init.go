@@ -126,7 +126,6 @@ finally returns the signed contract.
 				if err != nil {
 					return err
 				}
-				// check payment
 
 				paidIn := make(chan bool)
 				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
