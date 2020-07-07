@@ -81,11 +81,6 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 		scaledRetry = highRetry
 	}
 	err = backoff.Retry(func() error {
-		select {
-		case <-rss.Ctx.Done():
-			return errors.New("context closed")
-		default:
-		}
 		err = grpc.GuardClient(rss.CtxParams.Cfg.Services.GuardDomain).WithContext(rss.Ctx,
 			func(ctx context.Context, client guardpb.GuardServiceClient) error {
 				meta, err := client.CheckFileStoreMeta(ctx, req)
@@ -119,7 +114,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 				return errors.New("uploading")
 			})
 		return err
-	}, helper.WaitUploadBo(scaledRetry))
+	}, helper.WaitUploadBo(highRetry))
 	if err != nil {
 		return err
 	}
