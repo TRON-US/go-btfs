@@ -204,16 +204,18 @@ var PathCapacityCmd = &cmds.Command{
 		}
 		humanizedFreeSpace := humanize.Bytes(usage.Free)
 		return cmds.EmitOnce(res, &PathCapacity{
-			FreeSpace: humanizedFreeSpace,
-			Valid:     valid,
+			FreeSpace:          usage.Free,
+			Valid:              valid,
+			HumanizedFreeSpace: humanizedFreeSpace,
 		})
 	},
 	Type: &PathCapacity{},
 }
 
 type PathCapacity struct {
-	FreeSpace string
-	Valid     bool
+	FreeSpace 		   uint64
+	Valid              bool
+	HumanizedFreeSpace string
 }
 
 func init() {
