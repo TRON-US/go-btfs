@@ -3,11 +3,11 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -127,7 +127,7 @@ storage location, a specified path as a parameter need to be passed.
 		if err != nil {
 			return err
 		}
-		promisedStorageSize, err := strconv.ParseUint(req.Arguments[1], 10, 64)
+		promisedStorageSize, err := humanize.ParseBytes(req.Arguments[1])
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ var PathCapacityCmd = &cmds.Command{
 			return err
 		}
 		return cmds.EmitOnce(res, &PathCapacity{
-			FreeSpace: usage.Free,
+			FreeSpace: humanize.Bytes(usage.Free),
 			Valid:     valid,
 		})
 	},
@@ -211,7 +211,7 @@ var PathCapacityCmd = &cmds.Command{
 }
 
 type PathCapacity struct {
-	FreeSpace uint64
+	FreeSpace string
 	Valid     bool
 }
 
