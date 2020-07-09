@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	storeDir    = ".btfs"
 	defaultPath = "~/.btfs"
 	fileName    = "~/.btfs.properties"
 )
@@ -105,10 +104,12 @@ storage location, a specified path as a parameter need to be passed.
 		}
 		if btfsPath != "" {
 			if btfsPath != StorePath {
-				OriginPath = filepath.Join(btfsPath, storeDir)
+				OriginPath = btfsPath
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
+		} else if envBtfsPath := os.Getenv("BTFS_PATH"); envBtfsPath != "" {
+			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
 		} else {
@@ -120,7 +121,7 @@ storage location, a specified path as a parameter need to be passed.
 			if err != nil {
 				return fmt.Errorf("mkdir: %s", err)
 			}
-		} else if !CheckDirEmpty(filepath.Join(StorePath, storeDir)) {
+		} else if !CheckDirEmpty(StorePath) {
 			return fmt.Errorf("path is invalid")
 		}
 		usage, err := disk.Usage(StorePath)
@@ -195,7 +196,7 @@ var PathCapacityCmd = &cmds.Command{
 			}
 		}
 		valid := true
-		if !CheckDirEmpty(filepath.Join(path, storeDir)) {
+		if !CheckDirEmpty(path) {
 			valid = false
 		}
 		usage, err := disk.Usage(path)
@@ -239,7 +240,7 @@ func WriteProperties() error {
 }
 
 func MoveFolder() error {
-	err := os.Rename(OriginPath, filepath.Join(StorePath, storeDir))
+	err := os.Rename(OriginPath, StorePath)
 	// src and dest dir are not in the same partition
 	if err != nil {
 		err := helper.MoveDirectory(make(chan int, 10), OriginPath, StorePath)
@@ -272,7 +273,7 @@ func SetEnvVariables() {
 		if CheckExist(filePath) {
 			btfsPath = ReadProperties(filePath)
 			if btfsPath != "" {
-				newPath := filepath.Join(btfsPath, storeDir)
+				newPath := btfsPath
 				err := os.Setenv("BTFS_PATH", newPath)
 				if err != nil {
 					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
