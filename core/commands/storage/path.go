@@ -218,7 +218,7 @@ var PathCapacityCmd = &cmds.Command{
 }
 
 func validatePath(src string, dest string) error {
-	fmt.Println("src", src, "dest", dest)
+	log.Debug("src", src, "dest", dest)
 	// clean: /abc/ => /abc
 	src = filepath.Clean(src)
 	dest = filepath.Clean(dest)
