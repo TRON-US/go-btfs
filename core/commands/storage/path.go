@@ -116,15 +116,11 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("can not find the original stored path")
 		}
 
-		if !CheckExist(StorePath) {
-			err := os.MkdirAll(StorePath, os.ModePerm)
-			if err != nil {
-				return fmt.Errorf("mkdir: %s", err)
-			}
-		} else if !CheckDirEmpty(StorePath) {
-			return fmt.Errorf("path is invalid")
+		if err := validatePath(OriginPath, StorePath); err != nil {
+			return err
 		}
-		usage, err := disk.Usage(StorePath)
+
+		usage, err := disk.Usage(filepath.Dir(StorePath))
 		if err != nil {
 			return err
 		}
@@ -189,17 +185,11 @@ var PathCapacityCmd = &cmds.Command{
 				return err
 			}
 		}
-		if !CheckExist(path) {
-			err := os.MkdirAll(path, os.ModePerm)
-			if err != nil {
-				return fmt.Errorf("mkdir: %s", err)
-			}
+		if err := validatePath(OriginPath, path); err != nil {
+			return err
 		}
 		valid := true
-		if !CheckDirEmpty(path) {
-			valid = false
-		}
-		usage, err := disk.Usage(path)
+		usage, err := disk.Usage(filepath.Dir(path))
 		if err != nil {
 			return err
 		}
@@ -211,6 +201,23 @@ var PathCapacityCmd = &cmds.Command{
 		})
 	},
 	Type: &PathCapacity{},
+}
+
+func validatePath(src string, dest string) error {
+	// clean: /abc/ => /abc
+	src = filepath.Clean(src)
+	dest = filepath.Clean(dest)
+	if src == dest || strings.HasPrefix(dest, src+string(filepath.Separator)) {
+		return errors.New("invalid path")
+	}
+	dir := filepath.Dir(src)
+	if !CheckExist(src) {
+		err := os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("mkdir: %s", err)
+		}
+	}
+	return nil
 }
 
 type PathCapacity struct {
@@ -285,8 +292,5 @@ func SetEnvVariables() {
 
 func CheckExist(pathName string) bool {
 	_, err := os.Stat(pathName)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return !os.IsNotExist(err)
 }
