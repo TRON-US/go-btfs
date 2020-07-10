@@ -98,7 +98,7 @@ This command get node stats in the network from the local node data store.`,
 	Options: []cmds.Option{
 		cmds.BoolOption(localInfoOnlyOptionName, "l", "Return only the locally available disk stats without querying/returning the network stats.").WithDefault(false),
 	},
-	RunTimeout: 3 * time.Second,
+	RunTimeout: 30 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
