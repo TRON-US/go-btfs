@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"os/exec"
 	"time"
 
@@ -37,13 +36,11 @@ And if specified a new btfs path, it will be applied.
 	}, Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		shutdownCmd := exec.Command(path.Excutable, "shutdown")
 		if err := shutdownCmd.Run(); err != nil {
-			fmt.Println("err", err)
 			return err
 		}
 
 		if req.Options[postPathModificationName].(bool) && path.StorePath != "" && path.OriginPath != "" {
 			if err := path.MoveFolder(); err != nil {
-				fmt.Println("err", err, "path.StorePath", path.StorePath, "path.OriginPath", path.OriginPath)
 				return err
 			}
 
@@ -55,13 +52,11 @@ And if specified a new btfs path, it will be applied.
 		err := backoff.Retry(func() error {
 			daemonCmd := exec.Command(path.Excutable, "daemon")
 			if err := daemonCmd.Run(); err != nil {
-				fmt.Println("err", err)
 				return err
 			}
 			return nil
 		}, daemonStartup)
 		if err != nil {
-			fmt.Println("err", err)
 			return err
 		}
 		return nil
