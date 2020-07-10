@@ -116,15 +116,16 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("can not find the original stored path")
 		}
 
+		dir := filepath.Dir(StorePath)
 		if !CheckExist(StorePath) {
-			err := os.MkdirAll(StorePath, os.ModePerm)
+			err := os.MkdirAll(dir, os.ModePerm)
 			if err != nil {
 				return fmt.Errorf("mkdir: %s", err)
 			}
-		} else if !CheckDirEmpty(StorePath) {
+		} else if !CheckDirEmpty(dir) {
 			return fmt.Errorf("path is invalid")
 		}
-		usage, err := disk.Usage(StorePath)
+		usage, err := disk.Usage(dir)
 		if err != nil {
 			return err
 		}
