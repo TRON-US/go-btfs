@@ -26,6 +26,7 @@ import (
 const (
 	defaultPath = "~/.btfs"
 	fileName    = "~/.btfs.properties"
+	key         = "BTFS_PATH"
 )
 
 var Excutable = func() string {
@@ -185,6 +186,19 @@ var PathCapacityCmd = &cmds.Command{
 				return err
 			}
 		}
+		if btfsPath != "" {
+			if btfsPath != StorePath {
+				OriginPath = btfsPath
+			} else {
+				return fmt.Errorf("specifed path is same with current path")
+			}
+		} else if envBtfsPath := os.Getenv("BTFS_PATH"); envBtfsPath != "" {
+			OriginPath = envBtfsPath
+		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
+			OriginPath = home
+		} else {
+			return fmt.Errorf("can not find the original stored path")
+		}
 		if err := validatePath(OriginPath, path); err != nil {
 			return err
 		}
@@ -204,6 +218,7 @@ var PathCapacityCmd = &cmds.Command{
 }
 
 func validatePath(src string, dest string) error {
+	fmt.Println("src", src, "dest", dest)
 	// clean: /abc/ => /abc
 	src = filepath.Clean(src)
 	dest = filepath.Clean(dest)
@@ -275,6 +290,9 @@ func CheckDirEmpty(dirname string) bool {
 }
 
 func SetEnvVariables() {
+	if os.Getenv(key) != "" {
+		return
+	}
 	if propertiesHome, err := homedir.Expand(fileName); err == nil {
 		filePath = propertiesHome
 		if CheckExist(filePath) {
