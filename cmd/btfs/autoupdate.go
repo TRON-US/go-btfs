@@ -80,7 +80,7 @@ func update(url, hval string) {
 	var updateBinaryPathCompressed string
 
 	// Select binary files based on operating system.
-	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386") {
+	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386" || runtime.GOARCH == "arm") {
 		ext := ""
 		sep := "/"
 		compressedExt := ".tar.gz"

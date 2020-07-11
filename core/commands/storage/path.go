@@ -108,7 +108,7 @@ storage location, a specified path as a parameter need to be passed.
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
-		} else if envBtfsPath := os.Getenv("BTFS_PATH"); envBtfsPath != "" {
+		} else if envBtfsPath := os.Getenv(key); envBtfsPath != "" {
 			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
@@ -133,7 +133,7 @@ storage location, a specified path as a parameter need to be passed.
 				promisedStorageSize, usage.Free)
 		}
 
-		restartCmd := exec.Command("btfs", "restart", "-p")
+		restartCmd := exec.Command(Excutable, "restart", "-p")
 		if err := restartCmd.Run(); err != nil {
 			return fmt.Errorf("restart command: %s", err)
 		}
@@ -191,7 +191,7 @@ var PathCapacityCmd = &cmds.Command{
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
-		} else if envBtfsPath := os.Getenv("BTFS_PATH"); envBtfsPath != "" {
+		} else if envBtfsPath := os.Getenv(key); envBtfsPath != "" {
 			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
@@ -358,18 +358,18 @@ func CheckDirEmpty(dirname string) bool {
 }
 
 func SetEnvVariables() {
-	if os.Getenv(key) != "" {
-		return
-	}
 	if propertiesHome, err := homedir.Expand(fileName); err == nil {
 		filePath = propertiesHome
 		if CheckExist(filePath) {
 			btfsPath = ReadProperties(filePath)
 			if btfsPath != "" {
 				newPath := btfsPath
-				err := os.Setenv("BTFS_PATH", newPath)
-				if err != nil {
-					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+				_, b := os.LookupEnv(key)
+				if !b {
+					err := os.Setenv(key, newPath)
+					if err != nil {
+						log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+					}
 				}
 			}
 		}
