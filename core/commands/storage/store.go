@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
+	"github.com/TRON-US/go-btfs/core/commands/storage/renew"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -24,6 +25,6 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"contracts": StorageContractsCmd,
 		"path":      PathCmd,
 		"files":     StorageFilesCmd,
-		"renew":     upload.RenewCmd,
+		"renew":     renew.RenewCmd,
 	},
 }

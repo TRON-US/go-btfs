@@ -122,6 +122,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 							storageLength,
 							shardSize,
 							i,
+							"",
 							renterId,
 						)
 						if err != nil {
