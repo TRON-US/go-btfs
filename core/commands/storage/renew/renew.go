@@ -121,10 +121,14 @@ and file hash need to be specified and passed on the command.
 		newRentStart := m.RentEnd.Add(time.Duration(24) * time.Hour)
 		upload.UploadShard(rss, nil, price, m.ShardFileSize, int(renewPeriod), newRentStart, false, true, renterPid, -1,
 			shardIndexes, nil)
-		seRes := &upload.Res{
+		seRes := &Res{
 			ID: ssId,
 		}
 		return res.Emit(seRes)
 	},
-	Type: upload.Res{},
+	Type: Res{},
+}
+
+type Res struct {
+	ID string
 }
