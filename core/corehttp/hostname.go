@@ -35,10 +35,14 @@ var subdomainGatewaySpec = config.GatewaySpec{
 }
 
 var defaultKnownGateways = map[string]config.GatewaySpec{
-	"localhost":       subdomainGatewaySpec,
-	"btfs.io":         pathGatewaySpec,
-	"gateway.btfs.io": pathGatewaySpec,
-	"soter.btfs.io":   subdomainGatewaySpec,
+	"localhost":               subdomainGatewaySpec,
+	"btfs.io":                 pathGatewaySpec,
+	"gateway.btfs.io":         pathGatewaySpec,
+	"gateway-dev.btfs.io":     pathGatewaySpec,
+	"gateway-staging.btfs.io": pathGatewaySpec,
+	"soter.btfs.io":           subdomainGatewaySpec,
+	"soter-dev.btfs.io":       subdomainGatewaySpec,
+	"soter-staging.btfs.io":   subdomainGatewaySpec,
 }
 
 // HostnameOption rewrites an incoming request based on the Host header.

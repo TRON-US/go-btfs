@@ -3,30 +3,29 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 
+	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/shirou/gopsutil/disk"
 )
 
 const (
-	storeDir    = ".btfs"
 	defaultPath = "~/.btfs"
 	fileName    = "~/.btfs.properties"
+	key         = "BTFS_PATH"
 )
 
 var Excutable = func() string {
@@ -105,29 +104,27 @@ storage location, a specified path as a parameter need to be passed.
 		}
 		if btfsPath != "" {
 			if btfsPath != StorePath {
-				OriginPath = filepath.Join(btfsPath, storeDir)
+				OriginPath = btfsPath
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
+		} else if envBtfsPath := os.Getenv(key); envBtfsPath != "" {
+			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
 		} else {
 			return fmt.Errorf("can not find the original stored path")
 		}
 
-		if !CheckExist(StorePath) {
-			err := os.MkdirAll(StorePath, os.ModePerm)
-			if err != nil {
-				return fmt.Errorf("mkdir: %s", err)
-			}
-		} else if !CheckDirEmpty(filepath.Join(StorePath, storeDir)) {
-			return fmt.Errorf("path is invalid")
+		if err := validatePath(OriginPath, StorePath); err != nil {
+			return err
 		}
-		usage, err := disk.Usage(StorePath)
+
+		usage, err := disk.Usage(filepath.Dir(StorePath))
 		if err != nil {
 			return err
 		}
-		promisedStorageSize, err := strconv.ParseUint(req.Arguments[1], 10, 64)
+		promisedStorageSize, err := humanize.ParseBytes(req.Arguments[1])
 		if err != nil {
 			return err
 		}
@@ -136,7 +133,7 @@ storage location, a specified path as a parameter need to be passed.
 				promisedStorageSize, usage.Free)
 		}
 
-		restartCmd := exec.Command("btfs", "restart", "-p")
+		restartCmd := exec.Command(Excutable, "restart", "-p")
 		if err := restartCmd.Run(); err != nil {
 			return fmt.Errorf("restart command: %s", err)
 		}
@@ -188,31 +185,62 @@ var PathCapacityCmd = &cmds.Command{
 				return err
 			}
 		}
-		if !CheckExist(path) {
-			err := os.MkdirAll(path, os.ModePerm)
-			if err != nil {
-				return fmt.Errorf("mkdir: %s", err)
+		if btfsPath != "" {
+			if btfsPath != StorePath {
+				OriginPath = btfsPath
+			} else {
+				return fmt.Errorf("specifed path is same with current path")
 			}
+		} else if envBtfsPath := os.Getenv(key); envBtfsPath != "" {
+			OriginPath = envBtfsPath
+		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
+			OriginPath = home
+		} else {
+			return fmt.Errorf("can not find the original stored path")
+		}
+		if err := validatePath(OriginPath, path); err != nil {
+			return err
+		}
+		if !CheckDirEmpty(path) {
+			return fmt.Errorf("path %s is not empty", path)
 		}
 		valid := true
-		if !CheckDirEmpty(filepath.Join(path, storeDir)) {
-			valid = false
-		}
-		usage, err := disk.Usage(path)
+		usage, err := disk.Usage(filepath.Dir(path))
 		if err != nil {
 			return err
 		}
+		humanizedFreeSpace := humanize.Bytes(usage.Free)
 		return cmds.EmitOnce(res, &PathCapacity{
-			FreeSpace: usage.Free,
-			Valid:     valid,
+			FreeSpace:          usage.Free,
+			Valid:              valid,
+			HumanizedFreeSpace: humanizedFreeSpace,
 		})
 	},
 	Type: &PathCapacity{},
 }
 
+func validatePath(src string, dest string) error {
+	log.Debug("src", src, "dest", dest)
+	// clean: /abc/ => /abc
+	src = filepath.Clean(src)
+	dest = filepath.Clean(dest)
+	if src == dest || strings.HasPrefix(dest, src+string(filepath.Separator)) {
+		return errors.New("invalid path")
+	}
+	dir := filepath.Dir(src)
+	if !CheckExist(src) {
+		err := os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("mkdir: %s", err)
+		}
+	}
+	return nil
+}
+
 type PathCapacity struct {
-	FreeSpace uint64
-	Valid     bool
+	FreeSpace          uint64
+	Valid              bool
+	HumanizedFreeSpace string
 }
 
 func init() {
@@ -236,15 +264,81 @@ func WriteProperties() error {
 }
 
 func MoveFolder() error {
-	err := os.Rename(OriginPath, filepath.Join(StorePath, storeDir))
+	err := os.Rename(OriginPath, StorePath)
 	// src and dest dir are not in the same partition
 	if err != nil {
-		err := helper.MoveDirectory(make(chan int, 10), OriginPath, StorePath)
+		err := move(OriginPath, StorePath)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func move(src string, dst string) error {
+	if err := copyDir(src, dst); err != nil {
+		return err
+	}
+	return os.RemoveAll(src)
+}
+
+func copyDir(src string, dst string) error {
+	var err error
+	var fds []os.FileInfo
+	var srcinfo os.FileInfo
+
+	if srcinfo, err = os.Stat(src); err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(dst, srcinfo.Mode()); err != nil {
+		return err
+	}
+
+	if fds, err = ioutil.ReadDir(src); err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcfp := filepath.Join(src, fd.Name())
+		dstfp := filepath.Join(dst, fd.Name())
+
+		if fd.IsDir() {
+			if err = copyDir(srcfp, dstfp); err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			if err = copyFile(srcfp, dstfp); err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+	return nil
+}
+
+// File copies a single file from src to dst
+func copyFile(src, dst string) error {
+	var err error
+	var srcfd *os.File
+	var dstfd *os.File
+	var srcinfo os.FileInfo
+
+	if srcfd, err = os.Open(src); err != nil {
+		return err
+	}
+	defer srcfd.Close()
+
+	if dstfd, err = os.Create(dst); err != nil {
+		return err
+	}
+	defer dstfd.Close()
+
+	if _, err = io.Copy(dstfd, srcfd); err != nil {
+		return err
+	}
+	if srcinfo, err = os.Stat(src); err != nil {
+		return err
+	}
+	return os.Chmod(dst, srcinfo.Mode())
 }
 
 func ReadProperties(filePath string) string {
@@ -269,10 +363,13 @@ func SetEnvVariables() {
 		if CheckExist(filePath) {
 			btfsPath = ReadProperties(filePath)
 			if btfsPath != "" {
-				newPath := filepath.Join(btfsPath, storeDir)
-				err := os.Setenv("BTFS_PATH", newPath)
-				if err != nil {
-					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+				newPath := btfsPath
+				_, b := os.LookupEnv(key)
+				if !b {
+					err := os.Setenv(key, newPath)
+					if err != nil {
+						log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+					}
 				}
 			}
 		}
@@ -281,8 +378,5 @@ func SetEnvVariables() {
 
 func CheckExist(pathName string) bool {
 	_, err := os.Stat(pathName)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return !os.IsNotExist(err)
 }
