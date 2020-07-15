@@ -1,10 +1,15 @@
 package commands
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/wallet"
+	eth "github.com/ethereum/go-ethereum/crypto"
+	"github.com/mr-tron/base58"
 	"io"
 	"os"
 	"strings"
@@ -34,6 +39,7 @@ please run the daemon:
 type IdOutput struct {
 	ID              string
 	PublicKey       string
+	TronAddress     string
 	Addresses       []string
 	AgentVersion    string
 	ProtocolVersion string
@@ -203,6 +209,50 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 	} else {
 		info.DaemonProcessID = -1
 	}
-
+	raw, err := node.PrivateKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	ecdsa, err := eth.HexToECDSA(hex.EncodeToString(raw))
+	if err != nil {
+		return nil, err
+	}
+	address, err := wallet.PublicKeyToAddress(ecdsa.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	c, err := encode58Check(address.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	info.TronAddress = c
 	return info, nil
+}
+
+func encode58Check(input []byte) (string, error) {
+	h0, err := hash(input)
+	if err != nil {
+		return "", err
+	}
+	h1, err := hash(h0)
+	if err != nil {
+		return "", err
+	}
+	if len(h1) < 4 {
+		return "", errors.New("base58 encode length error")
+	}
+	inputCheck := append(input, h1[:4]...)
+
+	return base58.Encode(inputCheck), nil
+}
+
+//Package goLang sha256 hash algorithm.
+func hash(s []byte) ([]byte, error) {
+	h := sha256.New()
+	_, err := h.Write(s)
+	if err != nil {
+		return nil, err
+	}
+	bs := h.Sum(nil)
+	return bs, nil
 }
