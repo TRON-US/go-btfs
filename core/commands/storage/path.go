@@ -14,8 +14,6 @@ import (
 	"unsafe"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs-cmds/http"
-
 	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
@@ -34,13 +32,6 @@ var Excutable = func() string {
 	}
 	return "btfs"
 }()
-
-func init() {
-	http.RegisterNonLocalCmds(
-		"/path",
-		"/path/status",
-		"/path/capacity")
-}
 
 var log = logging.Logger("core/commands/path")
 

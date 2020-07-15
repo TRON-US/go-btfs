@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs-cmds/http"
 	"io"
 	"io/ioutil"
 	"os"
@@ -19,14 +18,6 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/elgris/jsondiff"
 )
-
-func init() {
-	http.RegisterNonLocalCmds(
-		"/config",
-		"/config/edit",
-		"/config/optin",
-		"/config/optout")
-}
 
 // ConfigUpdateOutput is config profile apply command's output
 type ConfigUpdateOutput struct {
