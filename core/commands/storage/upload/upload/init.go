@@ -40,8 +40,7 @@ type RecvContractParams struct {
 }
 
 var (
-	isAcceptedHost    bool
-	isRejectedHost    bool
+	isReplacedHost    bool
 	isRegularContract bool
 )
 
@@ -63,19 +62,10 @@ the shard and replies back to client for the next challenge step.`,
 		cmds.StringArg("storage-length", true, false, "Store file for certain length in days."),
 		cmds.StringArg("shard-size", true, false, "Size of each shard received in bytes."),
 		cmds.StringArg("shard-index", true, false, "Index of shard within the encoding scheme."),
-		cmds.StringArg("agree-reject", true, false, "Host agrees or rejects the extended period."),
 		cmds.StringArg("upload-peer-id", false, false, "Peer id when upload sign is used."),
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		policy := req.Arguments[9]
-		if policy == "agree" {
-			isAcceptedHost = true
-		} else if policy == "reject" {
-			isRejectedHost = true
-		} else {
-			isRegularContract = true
-		}
 		ctxParams, err := uh.ExtractContextParams(req, env)
 		if err != nil {
 			return err
@@ -88,7 +78,6 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		var price int64
-		if isRegularContract {
 			price, err = strconv.ParseInt(req.Arguments[3], 10, 64)
 			if err != nil {
 				return err
@@ -96,7 +85,6 @@ the shard and replies back to client for the next challenge step.`,
 			if uint64(price) < settings.StoragePriceAsk {
 				return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
 			}
-		}
 		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
 			return fmt.Errorf("fail to get peer ID from request")
@@ -114,7 +102,6 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-
 		var halfSignedGuardContBytes []byte
 		halfSignedGuardContString := req.Arguments[5]
 		halfSignedGuardContBytes = []byte(halfSignedGuardContString)
@@ -124,17 +111,30 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		guardContractMeta := halfSignedGuardContract.ContractMeta
+
+		var peerId string
+		if len(req.Arguments) >= 10 {
+			peerId = req.Arguments[9]
+		}
+		if guardContractMeta.HostPid != "" {
+			isRegularContract = true
+		} else if peerId != ctxParams.N.Identity.Pretty() {
+			isReplacedHost = true
+		}
 		s := halfSignedGuardContract.GetRenterSignature()
 		if s == nil {
 			s = halfSignedGuardContract.GetPreparerSignature()
 		}
-		pid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
-		if !ok {
-			return fmt.Errorf("fail to get peer ID from request")
-		}
-		var peerId string
-		if peerId = pid.String(); len(req.Arguments) >= 11 {
-			peerId = req.Arguments[10]
+		if isRegularContract {
+			if peerId == "" {
+				pid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
+				if !ok {
+					return fmt.Errorf("fail to get peer ID from request")
+				}
+				peerId = pid.String()
+			}
+		} else {
+			peerId = guardContractMeta.RenterPid
 		}
 		payerPubKey, err := crypto.GetPubKeyFromPeerId(peerId)
 		if err != nil {
@@ -147,7 +147,6 @@ the shard and replies back to client for the next challenge step.`,
 
 		storageLength := int(guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24)
 		if !isRegularContract {
-			halfSignedGuardContract.Price = int64(settings.StoragePriceAsk)
 			halfSignedGuardContract.HostPid = ctxParams.N.Identity.Pretty()
 			if storeLen != storageLength {
 				halfSignedGuardContract.RentEnd = halfSignedGuardContract.RentStart.Add(time.Duration(storeLen*24) * time.Hour)
@@ -190,6 +189,13 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
+		var sourceId string
+		if isReplacedHost {
+			sourceId = peerId
+		} else if isRegularContract {
+			sourceId = signedGuardContract.PreparerPid
+		}
+
 		go func() {
 			var waitTime float64
 			recvContract := &RecvContractParams{
@@ -199,17 +205,17 @@ the shard and replies back to client for the next challenge step.`,
 				signedEscrowContractBytes: signedEscrowContractBytes,
 				signedGuardContractBytes:  signedGuardContractBytes,
 			}
-			if isRejectedHost {
+			if isRegularContract {
+				err = downloadShardAndChallenge(requestPid, ctxParams, recvContract, sourceId, halfSignedGuardContract, signedGuardContract)
+			} else {
 				interval := signedGuardContract.RentStart.Sub(time.Now()).Hours() / 24
 				if interval > Gap {
 					waitTime = (interval - Gap) * 24 * 60 * 60
 				}
 				select {
 				case <-time.After(time.Duration(waitTime) * time.Second):
-					err = downloadShardAndChallenge(requestPid, ctxParams, recvContract, halfSignedGuardContract, signedGuardContract)
+					err = downloadShardAndChallenge(requestPid, ctxParams, recvContract, sourceId, halfSignedGuardContract, signedGuardContract)
 				}
-			} else {
-				err = downloadShardAndChallenge(requestPid, ctxParams, recvContract, halfSignedGuardContract, signedGuardContract)
 			}
 			if err != nil {
 				log.Error(err)
@@ -220,7 +226,7 @@ the shard and replies back to client for the next challenge step.`,
 	Type: guardpb.Contract{},
 }
 
-func downloadShardAndChallenge(requestPid peer.ID, ctxParams *uh.ContextParams, param *RecvContractParams, halfSignedGuardContract *guardpb.Contract, signedGuardContract *guardpb.Contract) error {
+func downloadShardAndChallenge(requestPid peer.ID, ctxParams *uh.ContextParams, param *RecvContractParams, sourceId string, halfSignedGuardContract *guardpb.Contract, signedGuardContract *guardpb.Contract) error {
 	guardContractMeta := halfSignedGuardContract.ContractMeta
 	shard, err := sessions.GetHostShard(ctxParams, signedGuardContract.ContractId)
 	if err != nil {
@@ -257,8 +263,8 @@ func downloadShardAndChallenge(requestPid peer.ID, ctxParams *uh.ContextParams, 
 	if err != nil {
 		return err
 	}
-	if !isAcceptedHost {
-		err = downloadShardFromClient(ctxParams, halfSignedGuardContract, guardContractMeta.FileHash, param.shardHash)
+	if isRegularContract || isReplacedHost {
+		err = downloadShardFromClient(ctxParams, halfSignedGuardContract, guardContractMeta.FileHash, param.shardHash, sourceId)
 		if err != nil {
 			return err
 		}
@@ -371,7 +377,7 @@ func checkPaymentFromClient(ctxParams *uh.ContextParams, paidIn chan bool, contr
 }
 
 func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb.Contract, fileHash string,
-	shardHash string) error {
+	shardHash string, sourceId string) error {
 
 	// Get + pin to make sure it does not get accidentally deleted
 	// Sharded scheme as special pin logic to add
@@ -403,20 +409,9 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 		scaledRetry = highRetry
 	}
 	expir := uint64(guardContract.RentEnd.Unix())
-
-	var sourcePid peer.ID
-	if isRejectedHost {
-		hostPid, err := peer.IDB58Decode(guardContract.HostPid)
-		if err != nil {
-			return err
-		}
-		sourcePid = hostPid
-	} else {
-		renterPid, err := peer.IDB58Decode(guardContract.PreparerPid)
-		if err != nil {
-			return err
-		}
-		sourcePid = renterPid
+	sourcePid, err := peer.IDB58Decode(sourceId)
+	if err != nil {
+		return nil
 	}
 	// based on small and large file sizes
 	err = backoff.Retry(func() error {

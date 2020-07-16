@@ -91,10 +91,10 @@ or find new hosts to download and store the shards.`,
 
 		var signedGuardContracts []*guardpb.Contract
 		if askTotalPrice <= bidTotalPrice {
-			signedGuardContracts, err = renewHostProcess(ctxParams, renterPid, fileHash, storageLength, hostPidMap, askPriceMap, contractList, "agree", nil)
+			signedGuardContracts, err = renewHostProcess(ctxParams, renterPid, fileHash, storageLength, hostPidMap, askPriceMap, contractList, nil)
 		} else {
 			storageLength = (int)(bidTotalPrice / askDailyPrice)
-			signedGuardContracts, err = renewHostProcess(ctxParams, renterPid, fileHash, storageLength, hostPidMap, askPriceMap, contractList, "agree", nil)
+			signedGuardContracts, err = renewHostProcess(ctxParams, renterPid, fileHash, storageLength, hostPidMap, askPriceMap, contractList, nil)
 		}
 		if err != nil {
 			return err
@@ -119,7 +119,7 @@ func updateContract(guardContracts []*guardpb.Contract, signedGuardContracts []*
 	}
 }
 
-func renewHostProcess(ctxParams *uh.ContextParams, renterPid string, fileHash string, storageLength int, hostPidMap map[string]string, askPriceMap map[string]int64, guardContracts []*guardpb.Contract, agreeReject string, hp uh.IHostsProvider) ([]*guardpb.Contract, error) {
+func renewHostProcess(ctxParams *uh.ContextParams, renterPid string, fileHash string, storageLength int, hostPidMap map[string]string, askPriceMap map[string]int64, guardContracts []*guardpb.Contract, hp uh.IHostsProvider) ([]*guardpb.Contract, error) {
 	cb := make(chan error)
 	inquiryResult := make(chan *guardpb.Contract)
 	rejectedHosts := make([]*guardpb.Contract, 0)
@@ -130,16 +130,16 @@ func renewHostProcess(ctxParams *uh.ContextParams, renterPid string, fileHash st
 		signedGuardContract := &guardpb.Contract{}
 		go func(hostId string, price int64, shardIndex int32, shardHash string, shardSize int64) {
 			err := backoff.Retry(func() error {
-				if agreeReject == "reject" {
+				hostPid, err := peer.IDB58Decode(hostId)
+				if hp != nil {
 					price = contract.Price
-					if hostPid, err := hp.NextValidHost(contract.Price); err != nil {
+					if newHostId, err := hp.NextValidHost(contract.Price); err != nil {
 						log.Debugf("original err: %s", err.Error())
 						return nil
 					} else {
-						hostId = hostPid
+						hostPid, err = peer.IDB58Decode(newHostId)
 					}
 				}
-				hostPid, err := peer.IDB58Decode(hostId)
 				if err != nil {
 					log.Errorf("shard %s decodes host_pid error: %s", shardHash, err.Error())
 					return err
@@ -157,8 +157,7 @@ func renewHostProcess(ctxParams *uh.ContextParams, renterPid string, fileHash st
 						storageLength,
 						shardSize,
 						shardIndex,
-						agreeReject,
-						renterPid,
+						hostId,
 					)
 					if err != nil {
 						cb <- err
@@ -178,6 +177,7 @@ func renewHostProcess(ctxParams *uh.ContextParams, renterPid string, fileHash st
 					return errors.New("host timeout")
 				case signedContract := <-inquiryResult:
 					signedContracts = append(signedContracts, signedContract)
+					delete(hostPidMap, contract.ContractId)
 					return nil
 				}
 			}, uh.HandleShardBo)
@@ -190,7 +190,7 @@ func renewHostProcess(ctxParams *uh.ContextParams, renterPid string, fileHash st
 
 	if len(rejectedHosts) > 0 {
 		hp = uh.GetHostsProvider(ctxParams, make([]string, 0))
-		replacedHostContracts, err := renewHostProcess(ctxParams, renterPid, fileHash, storageLength, hostPidMap, askPriceMap, rejectedHosts, "reject", hp)
+		replacedHostContracts, err := renewHostProcess(ctxParams, renterPid, fileHash, storageLength, hostPidMap, askPriceMap, rejectedHosts, hp)
 		if err != nil {
 			return nil, errors.New("can not find appropriate hosts to replace rejected hosts")
 		}
