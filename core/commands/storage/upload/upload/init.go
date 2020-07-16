@@ -78,13 +78,13 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		var price int64
-			price, err = strconv.ParseInt(req.Arguments[3], 10, 64)
-			if err != nil {
-				return err
-			}
-			if uint64(price) < settings.StoragePriceAsk {
-				return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
-			}
+		price, err = strconv.ParseInt(req.Arguments[3], 10, 64)
+		if err != nil {
+			return err
+		}
+		if uint64(price) < settings.StoragePriceAsk {
+			return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
+		}
 		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
 			return fmt.Errorf("fail to get peer ID from request")
