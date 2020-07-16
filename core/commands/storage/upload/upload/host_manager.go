@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"fmt"
 	config "github.com/TRON-US/go-btfs-config"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/protos/node"
@@ -27,6 +28,7 @@ func (h *HostManager) AcceptContract(ds datastore.Datastore, peerId string, shar
 	if err != nil {
 		return true, err
 	}
+	fmt.Println("count", count, "low", h.low, "high", h.high)
 	if count <= h.low {
 		return true, nil
 	} else if count >= h.high {

@@ -8,7 +8,7 @@ require (
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
 	github.com/TRON-US/go-btfs-cmds v0.2.3
-	github.com/TRON-US/go-btfs-config v0.6.7
+	github.com/TRON-US/go-btfs-config v0.6.8
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
 	github.com/TRON-US/go-btns v0.1.0
@@ -156,7 +156,5 @@ replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.1.2
 replace github.com/ipld/go-car => github.com/TRON-US/go-car v0.2.1
 
 replace github.com/ipld/go-ipld-prime-proto => github.com/TRON-US/go-ipld-prime-proto v0.0.2
-
-replace github.com/TRON-US/go-btfs-config => ../go-btfs-config
 
 go 1.14
