@@ -1,13 +1,16 @@
 package upload
 
 import (
-	"fmt"
 	config "github.com/TRON-US/go-btfs-config"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/protos/node"
 
 	"github.com/ipfs/go-datastore"
 )
+
+type IHostManager interface {
+	Count(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error)
+}
 
 type HostManager struct {
 	low       int
@@ -24,11 +27,11 @@ func NewHostManster(cfg *config.Config) *HostManager {
 }
 
 func (h *HostManager) AcceptContract(ds datastore.Datastore, peerId string, shardSize int64) (bool, error) {
-	count, err := h.count(ds, peerId, guardpb.Contract_READY_CHALLENGE)
+	count, err := Count(ds, peerId, guardpb.Contract_READY_CHALLENGE)
 	if err != nil {
-		return true, err
+		log.Debug("err", err)
+		return true, nil
 	}
-	fmt.Println("count", count, "low", h.low, "high", h.high)
 	if count <= h.low {
 		return true, nil
 	} else if count >= h.high {
@@ -38,7 +41,7 @@ func (h *HostManager) AcceptContract(ds datastore.Datastore, peerId string, shar
 	}
 }
 
-func (h *HostManager) count(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
+var Count = func(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
 	contracts, err := ListContracts(ds, peerId, node.ContractStat_HOST.String())
 	if err != nil {
 		return 0, err
