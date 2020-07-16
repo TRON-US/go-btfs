@@ -2,11 +2,12 @@ package spin
 
 import (
 	"context"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	"time"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 const (

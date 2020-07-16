@@ -54,6 +54,11 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
+		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
+		}
+
+		// reject contract if holding contracts is above threshold
 		hm := NewHostManster(ctxParams.Cfg)
 		shardSize, err := strconv.ParseInt(req.Arguments[7], 10, 64)
 		if err != nil {
@@ -66,9 +71,7 @@ the shard and replies back to client for the next challenge step.`,
 		if !accept {
 			return errors.New("too many initialized contracts")
 		}
-		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
+
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
