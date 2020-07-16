@@ -77,8 +77,7 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		var price int64
-		price, err = strconv.ParseInt(req.Arguments[3], 10, 64)
+		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
 		}
