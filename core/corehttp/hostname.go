@@ -36,7 +36,6 @@ var subdomainGatewaySpec = config.GatewaySpec{
 
 var defaultKnownGateways = map[string]config.GatewaySpec{
 	"localhost":               subdomainGatewaySpec,
-	"btfs.io":                 pathGatewaySpec,
 	"gateway.btfs.io":         pathGatewaySpec,
 	"gateway-dev.btfs.io":     pathGatewaySpec,
 	"gateway-staging.btfs.io": pathGatewaySpec,
