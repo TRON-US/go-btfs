@@ -32,9 +32,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					break
 				}
 				if hp != nil {
-					if hostPid, err := hp.NextValidHost(price); err == nil {
-						host = hostPid
-					} else {
+					hostPid, err := hp.NextValidHost(price)
+					if err != nil {
 						terr := rss.To(sessions.RssToErrorEvent, err)
 						if terr != nil {
 							// Ignore err, just print error log
@@ -42,6 +41,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 						}
 						return nil
 					}
+					host = hostPid
 				}
 				tp := helper.TotalPay(shardSize, price, storageLength)
 				if isRenewContract {
@@ -52,22 +52,22 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				contractId := helper.NewContractID(rss.SsId)
 				cb := make(chan error)
 				ShardErrChanMap.Set(contractId, cb)
-				var renewEscrowContractBytes []byte
+				var newEscrowContractBytes []byte
 				errChan := make(chan error, 2)
 				go func() {
 					tmp := func() error {
-						escrowCotractBytes, err := renterSignEscrowContract(rss, h, i, host, tp, 0, offlineSigning, isRenewContract,
+						escrowContractBytes, err := renterSignEscrowContract(rss, h, i, host, tp, 0, offlineSigning, isRenewContract,
 							renterId, contractId)
 						if err != nil {
 							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
 							return err
 						}
-						renewEscrowContractBytes = escrowCotractBytes
+						newEscrowContractBytes = escrowContractBytes
 						return nil
 					}()
 					errChan <- tmp
 				}()
-				var renewGuardContractBytes []byte
+				var newGuardContractBytes []byte
 				go func() {
 					tmp := func() error {
 						guardContractBytes, err := RenterSignGuardContract(rss, &ContractParams{
@@ -88,7 +88,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 							log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
 							return err
 						}
-						renewGuardContractBytes = guardContractBytes
+						newGuardContractBytes = guardContractBytes
 						return nil
 					}()
 					errChan <- tmp
@@ -117,8 +117,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 							rss.Hash,
 							h,
 							price,
-							renewEscrowContractBytes,
-							renewGuardContractBytes,
+							newEscrowContractBytes,
+							newGuardContractBytes,
 							storageLength,
 							shardSize,
 							i,
@@ -139,7 +139,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					}
 				} else {
 					guardContract := new(guardpb.Contract)
-					err := proto.Unmarshal(renewGuardContractBytes, guardContract)
+					err := proto.Unmarshal(newGuardContractBytes, guardContract)
 					if err != nil {
 						return err
 					}
@@ -147,7 +147,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					if err != nil {
 						return err
 					}
-					_ = shard.Contract(renewEscrowContractBytes, guardContract)
+					_ = shard.Contract(newEscrowContractBytes, guardContract)
 					return nil
 				}
 			}, helper.HandleShardBo)

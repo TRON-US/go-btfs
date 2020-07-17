@@ -1,9 +1,10 @@
-package upload
+package renew
 
 import (
 	"context"
 	"errors"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	"strconv"
 	"time"
 
@@ -26,6 +27,9 @@ The functionality facilitates users to renew the contract for next storage perio
 without uploading the file again when the contract was expired, the extended duration
 and file hash need to be specified and passed on the command.
 `,
+	},
+	Subcommands: map[string]*cmds.Command{
+		"inquiry": StorageRenewInquiryCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to renew."),
@@ -115,7 +119,7 @@ and file hash need to be specified and passed on the command.
 			return err
 		}
 		newRentStart := m.RentEnd.Add(time.Duration(24) * time.Hour)
-		UploadShard(rss, nil, price, m.ShardFileSize, int(renewPeriod), newRentStart, false, true, renterPid, -1,
+		upload.UploadShard(rss, nil, price, m.ShardFileSize, int(renewPeriod), newRentStart, false, true, renterPid, -1,
 			shardIndexes, nil)
 		seRes := &Res{
 			ID: ssId,
@@ -123,4 +127,8 @@ and file hash need to be specified and passed on the command.
 		return res.Emit(seRes)
 	},
 	Type: Res{},
+}
+
+type Res struct {
+	ID string
 }

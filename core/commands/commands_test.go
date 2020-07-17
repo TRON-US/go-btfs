@@ -226,6 +226,7 @@ func TestCommands(t *testing.T) {
 		"/storage",
 		"/storage/path",
 		"/storage/renew",
+		"/storage/renew/inquiry",
 		"/storage/upload",
 		"/storage/files",
 		"/storage/files/list",
