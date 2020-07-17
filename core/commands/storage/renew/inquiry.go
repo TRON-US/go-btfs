@@ -74,7 +74,7 @@ or find new hosts to download and store the shards.`,
 		}
 		for _, contract := range contracts {
 			if contract.State == guardpb.Contract_RECREATED {
-				hostPid := hostPidMap[contract.ShardHash]
+				hostPid := hostPidMap[contract.ContractId]
 				ns, err := hub.GetHostSettings(req.Context, cfg.Services.HubDomain, hostPid)
 				if err != nil {
 					return err
