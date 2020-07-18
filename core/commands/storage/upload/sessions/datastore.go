@@ -81,24 +81,23 @@ func ListFiles(d ds.Datastore, prefix string) ([][]byte, time.Time, error) {
 	if err != nil {
 		return nil, latest, err
 	}
-
 	for entry := range results.Next() {
 		key := entry.Key
 		index := strings.LastIndex(key, "/")
 		tsStr := key[index+1:]
-
 		if strings.Compare(tsStr, tmpStr) >= 0 {
 			tmpStr = tsStr
 		}
 		value := entry.Value
 		vs = append(vs, value)
 	}
-
+	if tmpStr == "" {
+		return nil, latest, nil
+	}
 	ts, err := strconv.ParseInt(tmpStr, 10, 64)
 	if err != nil {
 		return nil, latest, err
 	}
-
 	latest = time.Unix(ts, 0)
 	return vs, latest, nil
 }

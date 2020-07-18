@@ -92,7 +92,7 @@ duration, renter can check files with the command and find the desired file to r
 		}
 		return cmds.EmitOnce(res, fileList)
 	},
-	Type: FileInfo{},
+	Type: []FileInfo{},
 }
 
 type FileInfo struct {

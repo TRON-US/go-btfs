@@ -115,10 +115,14 @@ the shard and replies back to client for the next challenge step.`,
 		if len(req.Arguments) >= 10 {
 			peerId = req.Arguments[9]
 		}
+
+		var sourceId string
 		if guardContractMeta.HostPid != "" {
 			isRegularContract = true
+			sourceId = halfSignedGuardContract.PreparerPid
 		} else if peerId != ctxParams.N.Identity.Pretty() {
 			isReplacedHost = true
+			sourceId = peerId
 		}
 		s := halfSignedGuardContract.GetRenterSignature()
 		if s == nil {
@@ -186,13 +190,6 @@ the shard and replies back to client for the next challenge step.`,
 		signedGuardContractBytes, err := proto.Marshal(signedGuardContract)
 		if err != nil {
 			return err
-		}
-
-		var sourceId string
-		if isReplacedHost {
-			sourceId = peerId
-		} else if isRegularContract {
-			sourceId = signedGuardContract.PreparerPid
 		}
 
 		go func() {
