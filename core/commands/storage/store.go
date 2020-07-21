@@ -21,7 +21,7 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"announce":  StorageAnnounceCmd,
 		"challenge": challenge.StorageChallengeCmd,
 		"stats":     StorageStatsCmd,
-		"contracts": StorageContractsCmd,
+		"contracts": upload.StorageContractsCmd,
 		"path":      PathCmd,
 	},
 }
