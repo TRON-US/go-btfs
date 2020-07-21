@@ -21,10 +21,17 @@ import (
 )
 
 const (
-	defaultPath = "~/.btfs"
-	fileName    = "~/.btfs.properties"
-	key         = "BTFS_PATH"
+	btfsName           = ".btfs"
+	btfsPropertiesName = ".btfs.properties"
+	key                = "BTFS_PATH"
 )
+
+var defaultPath, fileName = func() (string, string) {
+	if dir, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(dir, btfsName), filepath.Join(dir, ".btfs.properties")
+	}
+	return "~/" + btfsName, "~/" + btfsPropertiesName
+}()
 
 var Excutable = func() string {
 	if ex, err := os.Executable(); err == nil {
