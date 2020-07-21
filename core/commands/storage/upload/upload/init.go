@@ -59,7 +59,7 @@ the shard and replies back to client for the next challenge step.`,
 		}
 
 		// reject contract if holding contracts is above threshold
-		hm := NewHostManster(ctxParams.Cfg)
+		hm := NewHostManager(ctxParams.Cfg)
 		shardSize, err := strconv.ParseInt(req.Arguments[7], 10, 64)
 		if err != nil {
 			return err

@@ -8,26 +8,30 @@ import (
 	"github.com/ipfs/go-datastore"
 )
 
-type IHostManager interface {
+type ICount interface {
 	Count(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error)
 }
+
+type Count struct{}
 
 type HostManager struct {
 	low       int
 	high      int
 	threshold int64
+	count     ICount
 }
 
-func NewHostManster(cfg *config.Config) *HostManager {
+func NewHostManager(cfg *config.Config) *HostManager {
 	return &HostManager{
 		low:       cfg.UI.Host.ContractManager.LowWater,
 		high:      cfg.UI.Host.ContractManager.HighWater,
 		threshold: cfg.UI.Host.ContractManager.Threshold,
+		count:     &Count{},
 	}
 }
 
 func (h *HostManager) AcceptContract(ds datastore.Datastore, peerId string, shardSize int64) (bool, error) {
-	count, err := Count(ds, peerId, guardpb.Contract_READY_CHALLENGE)
+	count, err := h.count.Count(ds, peerId, guardpb.Contract_READY_CHALLENGE)
 	if err != nil {
 		log.Debug("err", err)
 		return true, nil
@@ -41,7 +45,7 @@ func (h *HostManager) AcceptContract(ds datastore.Datastore, peerId string, shar
 	}
 }
 
-var Count = func(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
+func (h *Count) Count(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
 	contracts, err := ListContracts(ds, peerId, node.ContractStat_HOST.String())
 	if err != nil {
 		return 0, err

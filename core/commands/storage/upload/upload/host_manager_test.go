@@ -13,6 +13,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type MockCount struct {
+}
+
+func (m *MockCount) Count(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
+	switch peerId {
+	case "id1":
+		return 50, nil
+	case "id2":
+		return 200, nil
+	case "id3":
+		return 400, nil
+	}
+	return -1, errors.New("np")
+}
+
 func TestAcceptContract(t *testing.T) {
 	node, err := coremock.NewMockNode()
 	if err != nil {
@@ -31,18 +46,8 @@ func TestAcceptContract(t *testing.T) {
 			},
 		},
 	}
-	hm := NewHostManster(cfg)
-	Count = func(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
-		switch peerId {
-		case "id1":
-			return 50, nil
-		case "id2":
-			return 200, nil
-		case "id3":
-			return 400, nil
-		}
-		return -1, errors.New("np")
-	}
+	hm := NewHostManager(cfg)
+	hm.count = &MockCount{}
 	tests := []struct {
 		peerId    string
 		shardSize int64
