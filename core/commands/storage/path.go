@@ -22,9 +22,39 @@ import (
 
 const (
 	defaultPath = "~/.btfs"
-	fileName    = "~/.btfs.properties"
+	properties  = ".btfs.properties"
 	key         = "BTFS_PATH"
 )
+
+var (
+	fileName      string
+	srcProperties string
+)
+
+/* can be dir of `btfs` or path like `/private/var/folders/q0/lc8cmwd93gv50ygrsy3bwfyc0000gn/T`,
+depends on how `btfs` is called
+*/
+func init() {
+	ex, err := os.Executable()
+	if err != nil {
+		log.Error("err", err)
+	}
+	exPath := filepath.Dir(ex)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Error("err", err)
+	}
+	srcProperties = filepath.Join(home, properties)
+	fileName = filepath.Join(exPath, properties)
+	// .btfs.properties migration
+	if !checkExistAndNotDir(fileName) && checkExistAndNotDir(srcProperties) {
+		if err := copyFile(srcProperties, fileName); err != nil {
+			//NOP
+			log.Errorf("error occurred when copy .btfs.properties", err)
+		}
+	}
+	SetEnvVariables()
+}
 
 var Excutable = func() string {
 	if ex, err := os.Executable(); err == nil {
@@ -65,6 +95,7 @@ storage location, a specified path as a parameter need to be passed.
 	Subcommands: map[string]*cmds.Command{
 		"status":   PathStatusCmd,
 		"capacity": PathCapacityCmd,
+		"migrate":  PathMigrateCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -210,6 +241,24 @@ var PathCapacityCmd = &cmds.Command{
 	Type: &PathCapacity{},
 }
 
+var PathMigrateCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "path migrate.",
+		ShortDescription: "path migrate.",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("btfs-dir", true, true,
+			"Current BTFS Path. Should be absolute path."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		if _, k := os.LookupEnv(key); k || checkExistAndNotDir(srcProperties) || checkExistAndNotDir(fileName) {
+			return errors.New("no need to migrate")
+		}
+		fmt.Printf("write %s to %s\n", req.Arguments, fileName)
+		return ioutil.WriteFile(fileName, []byte(req.Arguments[0]), os.ModePerm)
+	},
+}
+
 func validatePath(src string, dest string) error {
 	log.Debug("src", src, "dest", dest)
 	// clean: /abc/ => /abc
@@ -234,12 +283,8 @@ type PathCapacity struct {
 	HumanizedFreeSpace string
 }
 
-func init() {
-	SetEnvVariables()
-}
-
 func WriteProperties() error {
-	if CheckExist(filePath) == false {
+	if !CheckExist(filePath) {
 		newFile, err := os.Create(filePath)
 		defer newFile.Close()
 		if err != nil {
@@ -370,4 +415,12 @@ func SetEnvVariables() {
 func CheckExist(pathName string) bool {
 	_, err := os.Stat(pathName)
 	return !os.IsNotExist(err)
+}
+
+func checkExistAndNotDir(fileName string) bool {
+	info, err := os.Stat(fileName)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
