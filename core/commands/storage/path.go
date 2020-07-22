@@ -100,6 +100,7 @@ storage location, a specified path as a parameter need to be passed.
 	Subcommands: map[string]*cmds.Command{
 		"status":   PathStatusCmd,
 		"capacity": PathCapacityCmd,
+		"migrate":  PathMigrateCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -243,6 +244,24 @@ var PathCapacityCmd = &cmds.Command{
 		})
 	},
 	Type: &PathCapacity{},
+}
+
+var PathMigrateCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "path migrate. e.x.: btfs storage path migrate /Users/tron/.btfs.new",
+		ShortDescription: "path migrate.",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("btfs-dir", true, true,
+			"Current BTFS Path. Should be absolute path."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		if _, k := os.LookupEnv(key); k || CheckExist(srcProperties) || CheckExist(fileName) {
+			return errors.New("no need to migrate")
+		}
+		fmt.Printf("Writing \"%s\" to %s\n", req.Arguments[0], fileName)
+		return ioutil.WriteFile(fileName, []byte(req.Arguments[0]), os.ModePerm)
+	},
 }
 
 func validatePath(src string, dest string) error {
