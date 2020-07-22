@@ -32,11 +32,8 @@ func Hosts(node *core.IpfsNode, env cmds.Environment) {
 		fmt.Printf("Storage host info will be synced at [%s] mode\n", m)
 		go periodicHostSync(hostSyncPeriod, hostSyncTimeout+hostSortTimeout, "hosts",
 			func(ctx context.Context) error {
-				nodes, err := storage.SyncHosts(ctx, node, m)
-				if err != nil {
-					return err
-				}
-				return storage.SortHosts(ctx, node, nodes, m)
+				_, err := storage.SyncHosts(ctx, node, m)
+				return err
 			})
 	}
 	if cfg.Experimental.StorageHostEnabled {

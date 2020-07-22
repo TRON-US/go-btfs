@@ -3,19 +3,16 @@ package storage
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-	"github.com/TRON-US/go-btfs/core/coreapi"
 	"github.com/TRON-US/go-btfs/core/hub"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
 
 	logging "github.com/ipfs/go-log"
-	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 var hostsLog = logging.Logger("storage/hosts")
@@ -126,39 +123,4 @@ func SyncHosts(ctx context.Context, node *core.IpfsNode, mode string) ([]*hubpb.
 		return nil, err
 	}
 	return nodes, nil
-}
-
-func SortHosts(ctx context.Context, n *core.IpfsNode, nodes []*hubpb.Host, mode string) error {
-	api, err := coreapi.NewCoreAPI(n)
-	if err != nil {
-		return fmt.Errorf("failed to sort the hosts: %v", err)
-	}
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	gs := make([]*hubpb.Host, 0)
-	bs := make([]*hubpb.Host, 0)
-	for _, h := range nodes {
-		wg.Add(1)
-		go func(h *hubpb.Host) {
-			if err := api.Swarm().Connect(ctx, peer.AddrInfo{ID: peer.ID(h.NodeId)}); err != nil {
-				mu.Lock()
-				// push back
-				bs = append(bs, h)
-				mu.Unlock()
-			} else {
-				mu.Lock()
-				// push front
-				gs = append(gs, h)
-				mu.Unlock()
-			}
-			wg.Done()
-		}(h)
-	}
-	wg.Wait()
-	gs = append(gs, bs...)
-	err = helper.SaveHostsIntoDatastore(ctx, n, mode, nodes)
-	if err != nil {
-		return fmt.Errorf("failed to sort the hosts: %v", err)
-	}
-	return nil
 }
