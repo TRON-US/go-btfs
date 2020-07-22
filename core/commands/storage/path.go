@@ -73,7 +73,6 @@ var log = logging.Logger("core/commands/path")
 
 var (
 	btfsPath   string
-	filePath   string
 	StorePath  string
 	OriginPath string
 	lock       Mutex
@@ -290,15 +289,15 @@ type PathCapacity struct {
 }
 
 func WriteProperties() error {
-	if !CheckExist(filePath) {
-		newFile, err := os.Create(filePath)
+	if !CheckExist(fileName) {
+		newFile, err := os.Create(fileName)
 		defer newFile.Close()
 		if err != nil {
 			return err
 		}
 	}
 	data := []byte(StorePath)
-	err := ioutil.WriteFile(filePath, data, 0666)
+	err := ioutil.WriteFile(fileName, data, 0666)
 	if err == nil {
 		fmt.Printf("Storage location was reset in %v\n", StorePath)
 	}
@@ -402,6 +401,9 @@ func CheckDirEmpty(dirname string) bool {
 func SetEnvVariables() {
 	if CheckExist(fileName) {
 		btfsPath = ReadProperties(fileName)
+		btfsPath = strings.Replace(btfsPath, " ", "", -1)
+		btfsPath = strings.Replace(btfsPath, "\n", "", -1)
+		btfsPath = strings.Replace(btfsPath, "\r", "", -1)
 		if btfsPath != "" {
 			newPath := btfsPath
 			_, b := os.LookupEnv(key)
