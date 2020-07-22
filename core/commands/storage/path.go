@@ -38,19 +38,25 @@ func init() {
 	ex, err := os.Executable()
 	if err != nil {
 		log.Error("err", err)
+		return
 	}
 	exPath := filepath.Dir(ex)
 	home, err := os.UserHomeDir()
 	if err != nil {
 		log.Error("err", err)
+		return
 	}
 	srcProperties = filepath.Join(home, properties)
 	fileName = filepath.Join(exPath, properties)
 	// .btfs.properties migration
-	if !checkExistAndNotDir(fileName) && checkExistAndNotDir(srcProperties) {
+	if !CheckExist(fileName) && CheckExist(srcProperties) {
 		if err := copyFile(srcProperties, fileName); err != nil {
-			//NOP
 			log.Errorf("error occurred when copy .btfs.properties", err)
+			return
+		}
+		err := os.Remove(srcProperties)
+		if err != nil {
+			log.Errorf("error occurred when remove %s", srcProperties)
 		}
 	}
 	SetEnvVariables()
@@ -243,7 +249,7 @@ var PathCapacityCmd = &cmds.Command{
 
 var PathMigrateCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "path migrate.",
+		Tagline:          "path migrate. e.x.: btfs storage path migrate /Users/tron/.btfs.new",
 		ShortDescription: "path migrate.",
 	},
 	Arguments: []cmds.Argument{
@@ -251,10 +257,10 @@ var PathMigrateCmd = &cmds.Command{
 			"Current BTFS Path. Should be absolute path."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		if _, k := os.LookupEnv(key); k || checkExistAndNotDir(srcProperties) || checkExistAndNotDir(fileName) {
+		if _, k := os.LookupEnv(key); k || CheckExist(srcProperties) || CheckExist(fileName) {
 			return errors.New("no need to migrate")
 		}
-		fmt.Printf("write %s to %s\n", req.Arguments, fileName)
+		fmt.Printf("Writing \"%s\" to %s\n", req.Arguments[0], fileName)
 		return ioutil.WriteFile(fileName, []byte(req.Arguments[0]), os.ModePerm)
 	},
 }
@@ -394,18 +400,15 @@ func CheckDirEmpty(dirname string) bool {
 }
 
 func SetEnvVariables() {
-	if propertiesHome, err := homedir.Expand(fileName); err == nil {
-		filePath = propertiesHome
-		if CheckExist(filePath) {
-			btfsPath = ReadProperties(filePath)
-			if btfsPath != "" {
-				newPath := btfsPath
-				_, b := os.LookupEnv(key)
-				if !b {
-					err := os.Setenv(key, newPath)
-					if err != nil {
-						log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
-					}
+	if CheckExist(fileName) {
+		btfsPath = ReadProperties(fileName)
+		if btfsPath != "" {
+			newPath := btfsPath
+			_, b := os.LookupEnv(key)
+			if !b {
+				err := os.Setenv(key, newPath)
+				if err != nil {
+					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
 				}
 			}
 		}
@@ -415,12 +418,4 @@ func SetEnvVariables() {
 func CheckExist(pathName string) bool {
 	_, err := os.Stat(pathName)
 	return !os.IsNotExist(err)
-}
-
-func checkExistAndNotDir(fileName string) bool {
-	info, err := os.Stat(fileName)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
