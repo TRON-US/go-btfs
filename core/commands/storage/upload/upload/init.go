@@ -57,6 +57,21 @@ the shard and replies back to client for the next challenge step.`,
 		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
+
+		// reject contract if holding contracts is above threshold
+		hm := NewHostManager(ctxParams.Cfg)
+		shardSize, err := strconv.ParseInt(req.Arguments[7], 10, 64)
+		if err != nil {
+			return err
+		}
+		accept, err := hm.AcceptContract(ctxParams.N.Repo.Datastore(), ctxParams.N.Identity.String(), shardSize)
+		if err != nil {
+			return err
+		}
+		if !accept {
+			return errors.New("too many initialized contracts")
+		}
+
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
