@@ -168,9 +168,6 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 					return err
 				}
 				signSuccessChannelState.ToSignature = toSignature
-				if err != nil {
-					return err
-				}
 			} else {
 				return fmt.Errorf("[Id:%d] SignSuccessChannelState is nil", prepareResponse.GetId())
 			}
@@ -194,6 +191,9 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 			}
 			log.Info(fmt.Sprintf("[Id:%d] Close SuccessChannelState succeed.", prepareResponse.GetId()))
 			err = UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), txId, StatusSuccess)
+			if err != nil {
+				return err
+			}
 			return nil
 		}
 	}
