@@ -39,7 +39,7 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 	Arguments: append([]cmds.Argument{
 		cmds.StringArg("peer-id", true, false, "Host Peer ID to send challenge requests."),
 	}, StorageChallengeResponseCmd.Arguments...), // append pass-through arguments
-	RunTimeout: 5 * time.Second, // TODO: consider slow networks?
+	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
@@ -99,7 +99,7 @@ the challenge request back to the caller.`,
 		cmds.StringArg("chunk-index", true, false, "Chunk index for this challenge. Chunks available on this host include root + metadata + shard chunks."),
 		cmds.StringArg("nonce", true, false, "Nonce for this challenge. A random UUIDv4 string."),
 	},
-	RunTimeout: 3 * time.Second,
+	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {

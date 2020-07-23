@@ -14,8 +14,6 @@ import (
 	"unsafe"
 
 	"github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs-cmds/http"
-
 	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
@@ -24,9 +22,45 @@ import (
 
 const (
 	defaultPath = "~/.btfs"
-	fileName    = "~/.btfs.properties"
+	properties  = ".btfs.properties"
 	key         = "BTFS_PATH"
 )
+
+var (
+	fileName      string
+	srcProperties string
+)
+
+/* can be dir of `btfs` or path like `/private/var/folders/q0/lc8cmwd93gv50ygrsy3bwfyc0000gn/T`,
+depends on how `btfs` is called
+*/
+func init() {
+	ex, err := os.Executable()
+	if err != nil {
+		log.Error("err", err)
+		return
+	}
+	exPath := filepath.Dir(ex)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Error("err", err)
+		return
+	}
+	srcProperties = filepath.Join(home, properties)
+	fileName = filepath.Join(exPath, properties)
+	// .btfs.properties migration
+	if !CheckExist(fileName) && CheckExist(srcProperties) {
+		if err := copyFile(srcProperties, fileName); err != nil {
+			log.Errorf("error occurred when copy .btfs.properties", err)
+			return
+		}
+		err := os.Remove(srcProperties)
+		if err != nil {
+			log.Errorf("error occurred when remove %s", srcProperties)
+		}
+	}
+	SetEnvVariables()
+}
 
 var Excutable = func() string {
 	if ex, err := os.Executable(); err == nil {
@@ -35,18 +69,10 @@ var Excutable = func() string {
 	return "btfs"
 }()
 
-func init() {
-	http.RegisterNonLocalCmds(
-		"/path",
-		"/path/status",
-		"/path/capacity")
-}
-
 var log = logging.Logger("core/commands/path")
 
 var (
 	btfsPath   string
-	filePath   string
 	StorePath  string
 	OriginPath string
 	lock       Mutex
@@ -74,6 +100,7 @@ storage location, a specified path as a parameter need to be passed.
 	Subcommands: map[string]*cmds.Command{
 		"status":   PathStatusCmd,
 		"capacity": PathCapacityCmd,
+		"migrate":  PathMigrateCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -219,6 +246,24 @@ var PathCapacityCmd = &cmds.Command{
 	Type: &PathCapacity{},
 }
 
+var PathMigrateCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "path migrate. e.x.: btfs storage path migrate /Users/tron/.btfs.new",
+		ShortDescription: "path migrate.",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("btfs-dir", true, true,
+			"Current BTFS Path. Should be absolute path."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		if _, k := os.LookupEnv(key); k || CheckExist(srcProperties) || CheckExist(fileName) {
+			return errors.New("no need to migrate")
+		}
+		fmt.Printf("Writing \"%s\" to %s\n", req.Arguments[0], fileName)
+		return ioutil.WriteFile(fileName, []byte(req.Arguments[0]), os.ModePerm)
+	},
+}
+
 func validatePath(src string, dest string) error {
 	log.Debug("src", src, "dest", dest)
 	// clean: /abc/ => /abc
@@ -243,20 +288,16 @@ type PathCapacity struct {
 	HumanizedFreeSpace string
 }
 
-func init() {
-	SetEnvVariables()
-}
-
 func WriteProperties() error {
-	if CheckExist(filePath) == false {
-		newFile, err := os.Create(filePath)
+	if !CheckExist(fileName) {
+		newFile, err := os.Create(fileName)
 		defer newFile.Close()
 		if err != nil {
 			return err
 		}
 	}
 	data := []byte(StorePath)
-	err := ioutil.WriteFile(filePath, data, 0666)
+	err := ioutil.WriteFile(fileName, data, 0666)
 	if err == nil {
 		fmt.Printf("Storage location was reset in %v\n", StorePath)
 	}
@@ -358,18 +399,18 @@ func CheckDirEmpty(dirname string) bool {
 }
 
 func SetEnvVariables() {
-	if propertiesHome, err := homedir.Expand(fileName); err == nil {
-		filePath = propertiesHome
-		if CheckExist(filePath) {
-			btfsPath = ReadProperties(filePath)
-			if btfsPath != "" {
-				newPath := btfsPath
-				_, b := os.LookupEnv(key)
-				if !b {
-					err := os.Setenv(key, newPath)
-					if err != nil {
-						log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
-					}
+	if CheckExist(fileName) {
+		btfsPath = ReadProperties(fileName)
+		btfsPath = strings.Replace(btfsPath, " ", "", -1)
+		btfsPath = strings.Replace(btfsPath, "\n", "", -1)
+		btfsPath = strings.Replace(btfsPath, "\r", "", -1)
+		if btfsPath != "" {
+			newPath := btfsPath
+			_, b := os.LookupEnv(key)
+			if !b {
+				err := os.Setenv(key, newPath)
+				if err != nil {
+					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
 				}
 			}
 		}
