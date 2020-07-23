@@ -134,8 +134,8 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 	log.Debug(fmt.Sprintf("[Id:%d] ConfirmDepositProcess begin.", prepareResponse.GetId()))
 
 	// Continuous call ConfirmDeposit until it responses a FAILED or SUCCESS.
-	for time.Now().UnixNano()/1e6 < (prepareResponse.GetTronTransaction().GetRawData().GetExpiration() + 240*1000) {
-		time.Sleep(10 * time.Second)
+	for time.Now().UnixNano()/1e6 < (prepareResponse.GetTronTransaction().GetRawData().GetExpiration() + 480*1000) {
+		time.Sleep(5 * time.Second)
 
 		// ConfirmDeposit after 1min, because watcher need wait for 1min to confirm tron transaction.
 		if time.Now().UnixNano()/1e6 < (prepareResponse.GetTronTransaction().GetRawData().GetTimestamp() + 60*1000) {
@@ -168,8 +168,6 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 					return err
 				}
 				signSuccessChannelState.ToSignature = toSignature
-
-				err = UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), txId, StatusSuccess)
 				if err != nil {
 					return err
 				}
@@ -177,19 +175,25 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 				return fmt.Errorf("[Id:%d] SignSuccessChannelState is nil", prepareResponse.GetId())
 			}
 
-			err = grpc.EscrowClient(escrowService).WithContext(ctx,
-				func(ctx context.Context, client escrowPb.EscrowServiceClient) error {
-					_, err = client.CloseChannel(ctx, signSuccessChannelState)
-					if err != nil {
-						return err
-					}
-					return nil
-				})
+			for i := 0; i < 10; i++ {
+				err = grpc.EscrowClient(escrowService).WithContext(ctx,
+					func(ctx context.Context, client escrowPb.EscrowServiceClient) error {
+						_, err = client.CloseChannel(ctx, signSuccessChannelState)
+						if err != nil {
+							return err
+						}
+						return nil
+					})
+				if err == nil {
+					break
+				}
+				time.Sleep(5 * time.Second)
+			}
 			if err != nil {
 				return err
 			}
-
 			log.Info(fmt.Sprintf("[Id:%d] Close SuccessChannelState succeed.", prepareResponse.GetId()))
+			err = UpdateStatus(n.Repo.Datastore(), n.Identity.Pretty(), txId, StatusSuccess)
 			return nil
 		}
 	}
