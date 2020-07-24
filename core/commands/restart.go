@@ -35,7 +35,11 @@ And if specified a new btfs path, it will be applied.
 	Options: []cmds.Option{
 		cmds.BoolOption(postPathModificationName, "p", "post path modification").WithDefault(false),
 	}, Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		daemonCmd := exec.Command(path.Excutable, "daemon")
+		shutdownCmd := exec.Command(path.Excutable, "shutdown")
+		if err := shutdownCmd.Run(); err != nil {
+			return err
+		}
+
 		if req.Options[postPathModificationName].(bool) && path.StorePath != "" && path.OriginPath != "" {
 			if err := path.MoveFolder(); err != nil {
 				return err
@@ -44,10 +48,9 @@ And if specified a new btfs path, it will be applied.
 			if err := path.WriteProperties(); err != nil {
 				return err
 			}
-
-			daemonCmd.Env = os.Environ()
-			daemonCmd.Env = append(daemonCmd.Env, "BTFS_PATH="+path.StorePath)
 		}
+
+		daemonCmd := exec.Command(path.Excutable, "daemon")
 		if err := daemonCmd.Start(); err != nil {
 			return err
 		}

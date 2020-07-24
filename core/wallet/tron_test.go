@@ -2,8 +2,10 @@ package wallet
 
 import (
 	"context"
-	coremock "github.com/TRON-US/go-btfs/core/mock"
 	"testing"
+	"time"
+
+	coremock "github.com/TRON-US/go-btfs/core/mock"
 
 	"github.com/tron-us/go-btfs-common/crypto"
 
@@ -54,4 +56,5 @@ func TestTransferBTT(t *testing.T) {
 	}
 	assert.True(t, ret.Result)
 	assert.Equal(t, "SUCCESS", ret2.Code)
+	time.Sleep(2 * time.Minute)
 }
