@@ -2,11 +2,13 @@ package upload
 
 import (
 	"fmt"
+
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
-	"github.com/ipfs/go-datastore"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+
+	"github.com/ipfs/go-datastore"
 )
 
 var StorageUploadStatusCmd = &cmds.Command{
@@ -52,7 +54,7 @@ This command print upload and payment status by the time queried.`,
 
 		// get shards info from session
 		shards := make(map[string]*ShardStatus)
-		status.FileHash = sessionStatus.Hash
+		status.FileHash = session.Hash
 		for i, h := range session.ShardHashes {
 			shard, err := sessions.GetRenterShard(ctxParams, ssId, h, i)
 			if err != nil {
