@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -98,16 +97,14 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 		err = grpc.GuardClient(rss.CtxParams.Cfg.Services.GuardDomain).WithContext(rss.Ctx,
 			func(ctx context.Context, client guardpb.GuardServiceClient) error {
 				meta, err := client.CheckFileStoreMeta(ctx, req)
-				fmt.Println("meta", meta, "err", err)
 				if err != nil {
 					return err
 				}
 				num := 0
 				m := make(map[string]int)
 				for _, c := range meta.Contracts {
-					fmt.Println("c.status", c.State.String())
 					m[c.State.String()]++
-					if c.State == guardpb.Contract_UPLOADED {
+					if c.State == guardpb.Contract_READY_CHALLENGE || c.State == guardpb.Contract_UPLOADED {
 						num++
 					}
 					shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, c.ShardHash, int(c.ShardIndex))

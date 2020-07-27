@@ -531,7 +531,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		node.Repo.SetConfigKey("Experimental.Analytics", dc)
 	}
 	// Spin jobs in the background
-	go func() { spin.RenterSessions(req, env) }()
+	spin.RenterSessions(req, env)
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())

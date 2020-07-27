@@ -11,25 +11,26 @@ import (
 )
 
 func RenterSessions(req *cmds.Request, env cmds.Environment) {
-	params, err := uh.ExtractContextParams(req, env)
-	if err != nil {
-		return
-	}
+	go func() {
+		params, err := uh.ExtractContextParams(req, env)
+		if err != nil {
+			return
+		}
 
-	cursor, err := sessions.GetRenterSessionsCursor(params)
-	if err != nil {
-		return
-	}
-
-	sem := syncutil.NewSem(10)
-	session, err := cursor.NextSession(sessions.RssWaitUploadReqSignedStatus)
-	for err == nil && session != nil {
-		go func(session *sessions.RenterSession) {
-			sem.Acquire(1)
-			defer sem.Release(1)
-			if e := upload.ResumeWaitUploadOnSigning(session); e != nil {
-				return
-			}
-		}(session)
-	}
+		cursor, err := sessions.GetRenterSessionsCursor(params)
+		if err != nil {
+			return
+		}
+		sem := syncutil.NewSem(10)
+		session, err := cursor.NextSession(sessions.RssWaitUploadReqSignedStatus)
+		for err == nil && session != nil {
+			go func(session *sessions.RenterSession) {
+				sem.Acquire(1)
+				defer sem.Release(1)
+				if e := upload.ResumeWaitUploadOnSigning(session); e != nil {
+					return
+				}
+			}(session)
+		}
+	}()
 }
