@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"os"
 	"os/exec"
 	"time"
 
@@ -49,16 +50,11 @@ And if specified a new btfs path, it will be applied.
 			}
 		}
 
-		err := backoff.Retry(func() error {
-			daemonCmd := exec.Command(path.Excutable, "daemon")
-			if err := daemonCmd.Run(); err != nil {
-				return err
-			}
-			return nil
-		}, daemonStartup)
-		if err != nil {
+		daemonCmd := exec.Command(path.Excutable, "daemon")
+		if err := daemonCmd.Start(); err != nil {
 			return err
 		}
+		os.Exit(0)
 		return nil
 	},
 }

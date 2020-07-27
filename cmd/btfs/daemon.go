@@ -33,6 +33,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	cserial "github.com/TRON-US/go-btfs-config/serialize"
+
 	multierror "github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
@@ -333,6 +334,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		return err
 	}
 
+	// Print self information for logging and debugging purposes
+	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
+	fmt.Printf("Node ID: %s\n", cfg.Identity.PeerID)
+
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
 	migrated := config.MigrateConfig(cfg, inited, hasHval)
@@ -530,6 +535,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		node.Repo.SetConfigKey("Experimental.Analytics", dc)
 	}
 	// Spin jobs in the background
+	spin.RenterSessions(req, env)
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())

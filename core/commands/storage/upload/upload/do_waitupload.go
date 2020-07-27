@@ -15,6 +15,7 @@ import (
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
+	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/gogo/protobuf/proto"
 )
@@ -27,15 +28,26 @@ func getSuccessThreshold(totalShards int) int {
 	return int(math.Min(float64(totalShards), thresholdContractsNums))
 }
 
-func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId string) error {
+func ResumeWaitUploadOnSigning(rss *sessions.RenterSession) error {
+	return waitUpload(rss, false, &guardpb.FileStoreStatus{
+		FileStoreMeta: guardpb.FileStoreMeta{
+			RenterPid: rss.CtxParams.N.Identity.String(),
+			FileSize:  math.MaxInt64,
+		},
+	}, true)
+}
+
+func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guardpb.FileStoreStatus, resume bool) error {
 	threshold := getSuccessThreshold(len(rss.ShardHashes))
-	if err := rss.To(sessions.RssToWaitUploadEvent); err != nil {
-		return err
+	if !resume {
+		if err := rss.To(sessions.RssToWaitUploadEvent); err != nil {
+			return err
+		}
 	}
 	req := &guardpb.CheckFileStoreMetaRequest{
 		FileHash:     rss.Hash,
-		RenterPid:    renterId,
-		RequesterPid: renterId,
+		RenterPid:    fsStatus.RenterPid,
+		RequesterPid: fsStatus.RenterPid,
 		RequestTime:  time.Now().UTC(),
 	}
 	payerPrivKey, err := rss.CtxParams.Cfg.Identity.DecodePrivateKey("")
@@ -67,16 +79,21 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 	}
 	sign := <-cb
 	helper.WaitUploadChanMap.Remove(rss.SsId)
-	if err := rss.To(sessions.RssToWaitUploadReqSignedEvent); err != nil {
-		return err
+	if !resume {
+		if err := rss.To(sessions.RssToWaitUploadReqSignedEvent); err != nil {
+			return err
+		}
 	}
 	req.Signature = sign
+	lowRetry := 30 * time.Minute
+	highRetry := 24 * time.Hour
+	scaledRetry := time.Duration(float64(fsStatus.FileSize) / float64(units.GiB) * float64(highRetry))
+	if scaledRetry < lowRetry {
+		scaledRetry = lowRetry
+	} else if scaledRetry > highRetry {
+		scaledRetry = highRetry
+	}
 	err = backoff.Retry(func() error {
-		select {
-		case <-rss.Ctx.Done():
-			return errors.New("context closed")
-		default:
-		}
 		err = grpc.GuardClient(rss.CtxParams.Cfg.Services.GuardDomain).WithContext(rss.Ctx,
 			func(ctx context.Context, client guardpb.GuardServiceClient) error {
 				meta, err := client.CheckFileStoreMeta(ctx, req)
@@ -87,8 +104,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 				m := make(map[string]int)
 				for _, c := range meta.Contracts {
 					m[c.State.String()]++
-					if c.State == guardpb.Contract_UPLOADED {
-						fmt.Println("host", c.HostPid, "state", c.State)
+					if c.State == guardpb.Contract_READY_CHALLENGE || c.State == guardpb.Contract_UPLOADED {
 						num++
 					}
 					shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, c.ShardHash, int(c.ShardIndex))
@@ -111,7 +127,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, renterId strin
 				return errors.New("uploading")
 			})
 		return err
-	}, helper.WaitUploadBo)
+	}, helper.WaitUploadBo(highRetry))
 	if err != nil {
 		return err
 	}

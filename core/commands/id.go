@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,16 +11,17 @@ import (
 	"strings"
 
 	version "github.com/TRON-US/go-btfs"
-	core "github.com/TRON-US/go-btfs/core"
-	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"
 	kb "github.com/libp2p/go-libp2p-kbucket"
-	//identify "github.com/libp2p/go-libp2p/p2p/protocol/identify"
+	"github.com/tron-us/go-btfs-common/crypto"
 )
 
 const offlineIdErrorMessage = `'btfs id' currently cannot query information on remote
@@ -38,6 +40,7 @@ type IdOutput struct {
 	AgentVersion    string
 	ProtocolVersion string
 	DaemonProcessID int
+	TronAddress     string
 }
 
 const (
@@ -197,6 +200,15 @@ func printSelf(node *core.IpfsNode) (interface{}, error) {
 	}
 	info.ProtocolVersion = "btfs/0.1.0" //identify.LibP2PVersion
 	info.AgentVersion = version.UserAgent
+	raw, err := node.PrivateKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	keys, err := crypto.FromPrivateKey(hex.EncodeToString(raw))
+	if err != nil {
+		return nil, err
+	}
+	info.TronAddress = keys.Base58Address
 
 	if node.IsDaemon {
 		info.DaemonProcessID = os.Getpid()
