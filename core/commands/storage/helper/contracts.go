@@ -4,10 +4,9 @@ import guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 
 var ContractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
 	"active": {
-		guardpb.Contract_UPLOADED:  true,
-		guardpb.Contract_RENEWED:   true,
-		guardpb.Contract_WARN:      true,
-		guardpb.Contract_RECREATED: true,
+		guardpb.Contract_UPLOADED: true,
+		guardpb.Contract_RENEWED:  true,
+		guardpb.Contract_WARN:     true,
 	},
 	"finished": {
 		guardpb.Contract_CLOSED: true,
@@ -20,6 +19,7 @@ var ContractFilterMap = map[string]map[guardpb.Contract_ContractState]bool{
 		guardpb.Contract_OBSOLETE:        true,
 		guardpb.Contract_DRAFT_WARN:      true,
 		guardpb.Contract_READY_CHALLENGE: true,
+		guardpb.Contract_RECREATED:       true,
 	},
 	"all": {
 		guardpb.Contract_DRAFT:           true,
