@@ -333,6 +333,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		return err
 	}
 
+	// Print self information for logging and debugging purposes
+	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
+	fmt.Printf("Node ID: %s\n", cfg.Identity.PeerID)
+
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
 	migrated := config.MigrateConfig(cfg, inited, hasHval)
