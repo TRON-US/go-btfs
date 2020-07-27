@@ -41,6 +41,8 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 	}, StorageChallengeResponseCmd.Arguments...), // append pass-through arguments
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		tm := timeEvaluate{}
+		tm.Init(6)
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -48,22 +50,26 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
+		tm.RecordTime("GetConfig")
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
 
+		tm.RecordTime("GetNode")
+
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
-
+		tm.RecordTime("GetApi")
 		// Check if peer is reachable
 		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
 		if err != nil {
 			return err
 		}
+		tm.RecordTime("FindPeer")
 		// Pass arguments through to host response endpoint
 		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/challenge/response",
 			req.Arguments[1:]...)
@@ -71,18 +77,50 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 			return err
 		}
 
+		tm.RecordTime("P2PCall")
 		var scr StorageChallengeRes
 		err = json.Unmarshal(resp, &scr)
 		if err != nil {
 			return err
 		}
+		scr.timeEvaluate = append(scr.timeEvaluate, tm)
 		return cmds.EmitOnce(res, &scr)
 	},
 	Type: StorageChallengeRes{},
 }
 
+type timeEvaluate struct {
+	TmVal   []time.Time
+	TmIndex int
+	Event   []string
+}
+
+func (t *timeEvaluate) Init(size int) {
+	t.TmVal = make([]time.Time, size)
+	t.TmIndex = 0
+	t.Event = make([]string, size)
+	t.RecordTime("Start")
+}
+
+func (t *timeEvaluate) RecordTime(event string) {
+	t.TmVal[t.TmIndex] = time.Now()
+	t.Event[t.TmIndex] = event
+	t.TmIndex++
+}
+func (t *timeEvaluate) Report() string {
+	result := "Report(InNanoS):Start"
+	for i := 1; i < t.TmIndex; i++ {
+		costTime := t.TmVal[i].UnixNano() - t.TmVal[i-1].UnixNano()
+		result = fmt.Sprintf("%s-%s:%d", result, t.Event[i], costTime)
+	}
+	tCo := t.TmVal[t.TmIndex-1].Unix() - t.TmVal[0].Unix()
+	result = fmt.Sprintf("%s-Sum:%ds", result, tCo)
+	return result
+}
+
 type StorageChallengeRes struct {
-	Answer string
+	Answer       string
+	timeEvaluate []timeEvaluate
 }
 
 var StorageChallengeResponseCmd = &cmds.Command{
@@ -101,6 +139,8 @@ the challenge request back to the caller.`,
 	},
 	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		tm := timeEvaluate{}
+		tm.Init(8)
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -108,26 +148,30 @@ the challenge request back to the caller.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
+		tm.RecordTime("HGetConfig")
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-
+		tm.RecordTime("HGetNode")
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
-
+		tm.RecordTime("HGetApi")
 		fileHash, err := cidlib.Parse(req.Arguments[1])
 		if err != nil {
 			return err
 		}
+		tm.RecordTime("HParseFileCid")
+
 		sh := req.Arguments[2]
 		shardHash, err := cidlib.Parse(sh)
 		if err != nil {
 			return err
 		}
+		tm.RecordTime("HParseShardCid")
 		chunkIndex, err := strconv.Atoi(req.Arguments[3])
 		if err != nil {
 			return err
@@ -138,11 +182,17 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
+		tm.RecordTime("HNewResponse")
+
 		err = sc.SolveChallenge(chunkIndex, nonce)
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
+		tm.RecordTime("HSolveChallenge")
+		return cmds.EmitOnce(res, &StorageChallengeRes{
+			Answer:       sc.Hash,
+			timeEvaluate: []timeEvaluate{tm},
+		})
 	},
 	Type: StorageChallengeRes{},
 }
