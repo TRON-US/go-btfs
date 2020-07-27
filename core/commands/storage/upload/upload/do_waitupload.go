@@ -28,10 +28,21 @@ func getSuccessThreshold(totalShards int) int {
 	return int(math.Min(float64(totalShards), thresholdContractsNums))
 }
 
-func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guardpb.FileStoreStatus) error {
+func ResumeWaitUploadOnSigning(rss *sessions.RenterSession) error {
+	return waitUpload(rss, false, &guardpb.FileStoreStatus{
+		FileStoreMeta: guardpb.FileStoreMeta{
+			RenterPid: rss.CtxParams.N.Identity.String(),
+			FileSize:  math.MaxInt64,
+		},
+	}, true)
+}
+
+func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guardpb.FileStoreStatus, resume bool) error {
 	threshold := getSuccessThreshold(len(rss.ShardHashes))
-	if err := rss.To(sessions.RssToWaitUploadEvent); err != nil {
-		return err
+	if !resume {
+		if err := rss.To(sessions.RssToWaitUploadEvent); err != nil {
+			return err
+		}
 	}
 	req := &guardpb.CheckFileStoreMetaRequest{
 		FileHash:     rss.Hash,
@@ -68,8 +79,10 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 	}
 	sign := <-cb
 	helper.WaitUploadChanMap.Remove(rss.SsId)
-	if err := rss.To(sessions.RssToWaitUploadReqSignedEvent); err != nil {
-		return err
+	if !resume {
+		if err := rss.To(sessions.RssToWaitUploadReqSignedEvent); err != nil {
+			return err
+		}
 	}
 	req.Signature = sign
 	lowRetry := 30 * time.Minute
@@ -91,7 +104,7 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 				m := make(map[string]int)
 				for _, c := range meta.Contracts {
 					m[c.State.String()]++
-					if c.State == guardpb.Contract_UPLOADED {
+					if c.State == guardpb.Contract_READY_CHALLENGE || c.State == guardpb.Contract_UPLOADED {
 						num++
 					}
 					shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, c.ShardHash, int(c.ShardIndex))
