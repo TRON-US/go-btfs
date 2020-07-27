@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
@@ -28,8 +27,6 @@ import (
 	cidlib "github.com/ipfs/go-cid"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
-
-var once sync.Once
 
 var StorageUploadInitCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -57,13 +54,6 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
-		go once.Do(func() {
-			for {
-				ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-				ctxParams.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: "16Uiu2HAm3Mw7YsZS3f5KH8VS4fnmdKxgQ1NNPugX7DpM5TQZP9uw"})
-				time.Sleep(500 * time.Millisecond)
-			}
-		})
 		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
@@ -213,9 +203,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				fmt.Println("do downloadShardFromClient...", "shard", shardHash, "file", req.Arguments[1])
 				err = downloadShardFromClient(ctxParams, halfSignedGuardContract, req.Arguments[1], shardHash)
-				fmt.Println("done downloadShardFromClient...", "shard", shardHash, "file", req.Arguments[1])
 				if err != nil {
 					return err
 				}
@@ -236,7 +224,6 @@ the shard and replies back to client for the next challenge step.`,
 				// req.Context obsolete
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
-				fmt.Println("do upload to guard...", "shard", shardHash, "file", req.Arguments[1])
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
 						_, err = client.ReadyForChallenge(ctx, in)
@@ -245,7 +232,6 @@ the shard and replies back to client for the next challenge step.`,
 						}
 						return nil
 					})
-				fmt.Println("done upload to guard...", "err", err, "shard", shardHash, "file", req.Arguments[1])
 				if err != nil {
 					return err
 				}
