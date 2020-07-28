@@ -118,15 +118,11 @@ func GetRenterSession(ctxParams *uh.ContextParams, ssId string, hash string, sha
 		if err != nil {
 			return nil, err
 		}
-		if hash == "" {
+		if rs.Hash = hash; hash == "" {
 			rs.Hash = status.Hash
-		} else {
-			rs.Hash = hash
 		}
-		if shardHashes == nil || len(shardHashes) == 0 {
+		if rs.ShardHashes = shardHashes; shardHashes == nil || len(shardHashes) == 0 {
 			rs.ShardHashes = status.ShardHashes
-		} else {
-			rs.ShardHashes = shardHashes
 		}
 		if status.Status != RssCompleteStatus {
 			rs.fsm = fsm.NewFSM(status.Status, rssFsmEvents, fsm.Callbacks{
