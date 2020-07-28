@@ -41,8 +41,8 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 	}, StorageChallengeResponseCmd.Arguments...), // append pass-through arguments
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		tm := timeEvaluate{}
-		tm.Init(6)
+		tm := TimeEvaluate{}
+		tm.Init()
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -83,31 +83,32 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 		if err != nil {
 			return err
 		}
+		tm.RecordTime("Unmarshall")
 		scr.timeEvaluate = append(scr.timeEvaluate, tm)
 		return cmds.EmitOnce(res, &scr)
 	},
 	Type: StorageChallengeRes{},
 }
 
-type timeEvaluate struct {
+type TimeEvaluate struct {
 	TmVal   []time.Time
 	TmIndex int
 	Event   []string
 }
 
-func (t *timeEvaluate) Init(size int) {
-	t.TmVal = make([]time.Time, size)
+func (t *TimeEvaluate) Init() {
+	t.TmVal = make([]time.Time, 0)
 	t.TmIndex = 0
-	t.Event = make([]string, size)
+	t.Event = make([]string, 0)
 	t.RecordTime("Start")
 }
 
-func (t *timeEvaluate) RecordTime(event string) {
-	t.TmVal[t.TmIndex] = time.Now()
-	t.Event[t.TmIndex] = event
+func (t *TimeEvaluate) RecordTime(event string) {
+	t.TmVal = append(t.TmVal, time.Now())
+	t.Event = append(t.Event, event)
 	t.TmIndex++
 }
-func (t *timeEvaluate) Report() string {
+func (t *TimeEvaluate) Report() string {
 	result := "Report(InNanoS):Start"
 	for i := 1; i < t.TmIndex; i++ {
 		costTime := t.TmVal[i].UnixNano() - t.TmVal[i-1].UnixNano()
@@ -120,7 +121,7 @@ func (t *timeEvaluate) Report() string {
 
 type StorageChallengeRes struct {
 	Answer       string
-	timeEvaluate []timeEvaluate
+	timeEvaluate []TimeEvaluate
 }
 
 var StorageChallengeResponseCmd = &cmds.Command{
@@ -139,8 +140,8 @@ the challenge request back to the caller.`,
 	},
 	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		tm := timeEvaluate{}
-		tm.Init(8)
+		tm := TimeEvaluate{}
+		tm.Init()
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -191,7 +192,7 @@ the challenge request back to the caller.`,
 		tm.RecordTime("HSolveChallenge")
 		return cmds.EmitOnce(res, &StorageChallengeRes{
 			Answer:       sc.Hash,
-			timeEvaluate: []timeEvaluate{tm},
+			timeEvaluate: []TimeEvaluate{tm},
 		})
 	},
 	Type: StorageChallengeRes{},
