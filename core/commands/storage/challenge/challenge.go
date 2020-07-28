@@ -42,7 +42,6 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		tm := TimeEvaluate{}
-		tm.Init()
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
@@ -96,7 +95,7 @@ type TimeEvaluate struct {
 	Event   []string
 }
 
-func (t *TimeEvaluate) Init() {
+func (t *TimeEvaluate) init() {
 	t.TmVal = make([]time.Time, 0)
 	t.TmIndex = 0
 	t.Event = make([]string, 0)
@@ -104,6 +103,9 @@ func (t *TimeEvaluate) Init() {
 }
 
 func (t *TimeEvaluate) RecordTime(event string) {
+	if t.TmVal == nil {
+		t.init()
+	}
 	t.TmVal = append(t.TmVal, time.Now())
 	t.Event = append(t.Event, event)
 	t.TmIndex++
@@ -141,7 +143,6 @@ the challenge request back to the caller.`,
 	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		tm := TimeEvaluate{}
-		tm.Init()
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err

@@ -68,7 +68,6 @@ func TestGenAndSolveChallenge(t *testing.T) {
 
 func TestTimeEvaluate(t *testing.T) {
 	tm := TimeEvaluate{}
-	tm.Init()
 	tm.RecordTime("start")
 	time.Sleep(1 * time.Second)
 	tm.RecordTime("1second")
