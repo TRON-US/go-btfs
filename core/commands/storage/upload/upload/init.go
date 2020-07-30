@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"strconv"
 	"sync"
 	"time"
