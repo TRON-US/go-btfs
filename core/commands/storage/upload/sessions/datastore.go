@@ -71,8 +71,9 @@ func List(d ds.Datastore, prefix string, substrInKey ...string) ([][]byte, error
 func ListKeys(d ds.Datastore, prefix string, substrInKey ...string) ([]string, error) {
 	ks := make([]string, 0)
 	results, err := d.Query(query.Query{
-		Prefix:  prefix,
-		Filters: []query.Filter{},
+		Prefix:   prefix,
+		Filters:  []query.Filter{},
+		KeysOnly: true,
 	})
 	if err != nil {
 		return nil, err

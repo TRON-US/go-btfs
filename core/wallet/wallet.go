@@ -6,20 +6,19 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core"
 	"strings"
 
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
 
 	config "github.com/TRON-US/go-btfs-config"
+	"github.com/tron-us/go-btfs-common/crypto"
 	"github.com/tron-us/go-btfs-common/ledger"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	exPb "github.com/tron-us/go-btfs-common/protos/exchange"
 	ledgerpb "github.com/tron-us/go-btfs-common/protos/ledger"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"github.com/tron-us/protobuf/proto"
 
-	eth "github.com/ethereum/go-ethereum/crypto"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 )
@@ -158,36 +157,6 @@ func GetBalance(ctx context.Context, configuration *config.Config) (int64, int64
 	return tronBalance, ledgerBalance, nil
 }
 
-// activate account on tron block chain
-// using wallet tronAddress 41***
-func ActivateAccount(ctx context.Context, configuration *config.Config) error {
-	err := Init(ctx, configuration)
-	if err != nil {
-		return err
-	}
-
-	if hostWallet.tronAddress == nil {
-		log.Error("wallet is not initialized")
-		return errors.New("wallet is not initialized")
-	}
-
-	err = grpc.ExchangeClient(exchangeService).WithContext(ctx,
-		func(ctx context.Context, client exPb.ExchangeClient) error {
-			response, err := client.ActivateAccountOnChain(ctx,
-				&exPb.ActivateAccountRequest{Address: hostWallet.tronAddress})
-			if err != nil {
-				return err
-			}
-			fmt.Println("wallet activate account succeed: ", response)
-			return nil
-		})
-	if err != nil {
-		log.Error("wallet activate account error: ", err)
-		return err
-	}
-	return nil
-}
-
 func Init(ctx context.Context, configuration *config.Config) error {
 	if configuration == nil {
 		fmt.Println("Init wallet, configuration is nil")
@@ -215,7 +184,7 @@ func Init(ctx context.Context, configuration *config.Config) error {
 	// hex key
 	hexPrivKey := hex.EncodeToString(privKeyRaw)
 	// hex key to ecdsa
-	privateKey, err := eth.HexToECDSA(hexPrivKey)
+	privateKey, err := crypto.HexToECDSA(hexPrivKey)
 	if err != nil {
 		log.Error("error when convent private key to edca, ERR[%v]\n", err)
 		return err
@@ -227,7 +196,7 @@ func Init(ctx context.Context, configuration *config.Config) error {
 	hostWallet.privateKey = privateKey
 
 	// tron key 41****
-	addr, err := PublicKeyToAddress(privateKey.PublicKey)
+	addr, err := crypto.PublicKeyToAddress(privateKey.PublicKey)
 	if err != nil {
 		log.Error("wallet get tron address failed, ERR[%v]\n ", err)
 		return err
