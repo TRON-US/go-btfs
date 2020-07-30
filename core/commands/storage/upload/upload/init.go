@@ -224,9 +224,10 @@ the shard and replies back to client for the next challenge step.`,
 				// req.Context obsolete
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
+				var question *guardpb.RequestChallengeQuestion
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						_, err = client.ReadyForChallenge(ctx, in)
+						question, err = client.RequestChallenge(ctx, in)
 						if err != nil {
 							return err
 						}
@@ -235,6 +236,31 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
+				go func() {
+					if question == nil {
+						return
+					}
+					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+					defer cancel()
+
+					fileHash, err := cidlib.Parse(req.Arguments[1])
+					if err != nil {
+						return
+					}
+					shardHash, err := cidlib.Parse(question.Question.ShardHash)
+					if err != nil {
+						return
+					}
+					sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
+						fileHash, shardHash, "", false, 0)
+					if err != nil {
+						return
+					}
+					err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
+					if err != nil {
+						return
+					}
+				}()
 				if err := shard.Complete(); err != nil {
 					return err
 				}
