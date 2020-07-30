@@ -21,11 +21,18 @@ func RenterSessions(req *cmds.Request, env cmds.Environment) {
 		if err != nil {
 			return
 		}
+		// Limit to 10 at a time to lower resource consumption
 		sem := syncutil.NewSem(10)
-		session, err := cursor.NextSession(sessions.RssWaitUploadReqSignedStatus)
-		for err == nil && session != nil {
+		for {
+			session, err := cursor.NextSession(sessions.RssWaitUploadReqSignedStatus)
+			if err != nil {
+				break
+			}
+			if session == nil {
+				break
+			}
+			sem.Acquire(1)
 			go func(session *sessions.RenterSession) {
-				sem.Acquire(1)
 				defer sem.Release(1)
 				if e := upload.ResumeWaitUploadOnSigning(session); e != nil {
 					return
