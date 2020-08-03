@@ -227,12 +227,13 @@ the shard and replies back to client for the next challenge step.`,
 				var question *guardpb.RequestChallengeQuestion
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						_, err = client.RequestChallenge(ctx, in)
-						if err != nil {
-							_, err = client.ReadyForChallenge(ctx, in)
-							return err
+						for i := 0; i < 3; i++ {
+							_, err = client.RequestChallenge(ctx, in)
+							if err == nil {
+								break
+							}
 						}
-						return nil
+						return err
 					})
 				if err != nil {
 					return err
