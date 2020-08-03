@@ -7,7 +7,7 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
-	github.com/TRON-US/go-btfs-cmds v0.2.4-Pre1
+	github.com/TRON-US/go-btfs-cmds v0.2.4
 	github.com/TRON-US/go-btfs-config v0.6.8
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
