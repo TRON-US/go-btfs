@@ -203,9 +203,7 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				fmt.Println("do downloadShardFromClient...", "shard", shardHash, "file", req.Arguments[1])
 				err = downloadShardFromClient(ctxParams, halfSignedGuardContract, req.Arguments[1], shardHash)
-				fmt.Println("done downloadShardFromClient...", "shard", shardHash, "file", req.Arguments[1])
 				if err != nil {
 					return err
 				}
