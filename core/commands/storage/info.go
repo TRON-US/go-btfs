@@ -2,10 +2,17 @@ package storage
 
 import (
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+)
+
+const (
+	RoleHost   = "host"
+	RoleRenter = "renter"
 )
 
 var StorageInfoCmd = &cmds.Command{
@@ -45,6 +52,11 @@ By default it shows local host node information.`,
 		}
 		if err != nil {
 			return err
+		}
+		if cfg.Experimental.StorageHostEnabled {
+			data.Role = RoleHost
+		} else if cfg.Experimental.StorageClientEnabled {
+			data.Role = RoleRenter
 		}
 		return cmds.EmitOnce(res, data)
 	},

@@ -3,6 +3,8 @@ package helper
 import (
 	"context"
 	"errors"
+	iface "github.com/TRON-US/interface-go-btfs-core"
+	"sort"
 	"sync"
 	"time"
 
@@ -68,12 +70,14 @@ func (p *CustomizedHostsProvider) AddIndex() (int, error) {
 type HostsProvider struct {
 	cp *ContextParams
 	sync.Mutex
-	mode      string
-	current   int
-	hosts     []*hubpb.Host
-	blacklist []string
-	ctx       context.Context
-	cancel    context.CancelFunc
+	mode           string
+	current        int
+	hosts          []*hubpb.Host
+	blacklist      []string
+	backupList     []string
+	backupListLock sync.Locker
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 func GetHostsProvider(cp *ContextParams, blacklist []string) IHostsProvider {
@@ -92,7 +96,48 @@ func GetHostsProvider(cp *ContextParams, blacklist []string) IHostsProvider {
 
 func (p *HostsProvider) init() (err error) {
 	p.hosts, err = helper.GetHostsFromDatastore(p.cp.Ctx, p.cp.N, p.mode, minimumHosts)
-	return err
+	if err != nil {
+		return err
+	}
+	peers, err := p.cp.Api.Swarm().Peers(p.cp.Ctx)
+	if err != nil {
+		log.Debug(err)
+		return nil
+	}
+	var prs Peers = peers
+	sort.Sort(prs)
+	p.backupList = make([]string, 0)
+	for _, h := range prs {
+		for _, ph := range p.hosts {
+			if h.ID().String() == ph.NodeId {
+				continue
+			}
+		}
+		p.backupList = append(p.backupList, h.ID().String())
+	}
+	return nil
+}
+
+type Peers []iface.ConnectionInfo
+
+func (p Peers) Len() int {
+	return len(p)
+}
+
+func (p Peers) Less(i int, j int) bool {
+	first, err := p[i].Latency()
+	if err != nil {
+		return true
+	}
+	second, err := p[j].Latency()
+	if err != nil {
+		return true
+	}
+	return first <= second
+}
+
+func (p Peers) Swap(i int, j int) {
+	p[i], p[j] = p[j], p[i]
 }
 
 func (p *HostsProvider) AddIndex() (int, error) {
@@ -103,6 +148,36 @@ func (p *HostsProvider) AddIndex() (int, error) {
 		return -1, errors.New("Index exceeds array bounds.")
 	}
 	return p.current, nil
+}
+
+func (p *HostsProvider) PickFromBackupHosts() (string, error) {
+	for true {
+		host, err := func() (string, error) {
+			p.backupListLock.Lock()
+			defer p.backupListLock.Unlock()
+			if len(p.backupList) > 0 {
+				host := p.backupList[0]
+				p.backupList = p.backupList[1:]
+				return host, nil
+			} else {
+				return "", errors.New("end of the backup host")
+			}
+		}()
+		if err != nil {
+			return "", err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		id, err := peer.IDB58Decode(host)
+		if err != nil {
+			continue
+		}
+		if err := p.cp.Api.Swarm().Connect(ctx, peer.AddrInfo{ID: id}); err != nil {
+			continue
+		}
+		return host, nil
+	}
+	return "", errors.New("can't reach here")
 }
 
 func (p *HostsProvider) NextValidHost(price int64) (string, error) {
@@ -135,6 +210,8 @@ LOOP:
 				continue
 			}
 			return host.NodeId, nil
+		} else if h, err := p.PickFromBackupHosts(); err == nil {
+			return h, nil
 		} else {
 			break
 		}

@@ -227,8 +227,9 @@ the shard and replies back to client for the next challenge step.`,
 				var question *guardpb.RequestChallengeQuestion
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						question, err = client.RequestChallenge(ctx, in)
+						_, err = client.RequestChallenge(ctx, in)
 						if err != nil {
+							_, err = client.ReadyForChallenge(ctx, in)
 							return err
 						}
 						return nil
@@ -236,62 +237,61 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				go func() {
-					if question == nil {
-						return
-					}
-					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-					defer cancel()
+				if question == nil {
+					return err
+				}
+				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+				defer cancel()
 
-					fileHash, err := cidlib.Parse(req.Arguments[1])
-					if err != nil {
-						return
-					}
-					shardHash, err := cidlib.Parse(question.Question.ShardHash)
-					if err != nil {
-						return
-					}
-					sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
-						fileHash, shardHash, "", false, 0)
-					if err != nil {
-						return
-					}
-					err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
-					if err != nil {
-						return
-					}
-					resp := &guardpb.ResponseChallengeQuestion{
-						Answer: &guardpb.ChallengeQuestion{
-							ShardHash:    question.Question.ShardHash,
-							HostPid:      question.Question.HostPid,
-							ChunkIndex:   int32(sc.CIndex),
-							Nonce:        sc.Nonce,
-							ExpectAnswer: sc.Hash,
-						},
-						HostPid:     question.Question.HostPid,
-						ResolveTime: time.Now(),
-					}
-					privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
-					if err != nil {
-						return
-					}
-					sig, err := crypto.Sign(privKey, resp)
-					if err != nil {
-						return
-					}
-					resp.Signature = sig
-					err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
-						func(ctx context.Context, client guardpb.GuardServiceClient) error {
-							_, err := client.ResponseChallenge(ctx, resp)
-							if err != nil {
-								return err
-							}
-							return nil
-						})
-					if err != nil {
-						return
-					}
-				}()
+				fileHash, err := cidlib.Parse(req.Arguments[1])
+				if err != nil {
+					return err
+				}
+				shardHash, err := cidlib.Parse(question.Question.ShardHash)
+				if err != nil {
+					return err
+				}
+				sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
+					fileHash, shardHash, "", false, 0)
+				if err != nil {
+					return err
+				}
+				err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
+				if err != nil {
+					return err
+				}
+				resp := &guardpb.ResponseChallengeQuestion{
+					Answer: &guardpb.ChallengeQuestion{
+						ShardHash:    question.Question.ShardHash,
+						HostPid:      question.Question.HostPid,
+						ChunkIndex:   int32(sc.CIndex),
+						Nonce:        sc.Nonce,
+						ExpectAnswer: sc.Hash,
+					},
+					HostPid:     question.Question.HostPid,
+					ResolveTime: time.Now(),
+				}
+				privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
+				if err != nil {
+					return err
+				}
+				sig, err := crypto.Sign(privKey, resp)
+				if err != nil {
+					return err
+				}
+				resp.Signature = sig
+				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
+					func(ctx context.Context, client guardpb.GuardServiceClient) error {
+						_, err := client.ResponseChallenge(ctx, resp)
+						if err != nil {
+							return err
+						}
+						return nil
+					})
+				if err != nil {
+					log.Debug(err)
+					return err
+				}
 				if err := shard.Complete(); err != nil {
 					return err
 				}

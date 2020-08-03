@@ -158,4 +158,6 @@ replace github.com/ipld/go-car => github.com/TRON-US/go-car v0.2.1
 
 replace github.com/ipld/go-ipld-prime-proto => github.com/TRON-US/go-ipld-prime-proto v0.0.2
 
+replace github.com/tron-us/go-btfs-common => ../go-btfs-common
+
 go 1.14
