@@ -48,22 +48,26 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 		if !cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
+		res.RecordEvent("GetConfig")
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
 
+		res.RecordEvent("GetNode")
+
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
-
+		res.RecordEvent("GetApi")
 		// Check if peer is reachable
 		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
 		if err != nil {
 			return err
 		}
+		res.RecordEvent("FindPeer")
 		// Pass arguments through to host response endpoint
 		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/challenge/response",
 			req.Arguments[1:]...)
@@ -71,18 +75,22 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 			return err
 		}
 
+		res.RecordEvent("P2PCall")
 		var scr StorageChallengeRes
 		err = json.Unmarshal(resp, &scr)
 		if err != nil {
 			return err
 		}
+		res.RecordEvent("Unmarshall")
+		scr.TimeEvaluate = append(scr.TimeEvaluate, res.ShowEventReport())
 		return cmds.EmitOnce(res, &scr)
 	},
 	Type: StorageChallengeRes{},
 }
 
 type StorageChallengeRes struct {
-	Answer string
+	Answer       string
+	TimeEvaluate []string
 }
 
 var StorageChallengeResponseCmd = &cmds.Command{
@@ -108,26 +116,30 @@ the challenge request back to the caller.`,
 		if !cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage host api not enabled")
 		}
+		res.RecordEvent("HGetConfig")
 
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-
+		res.RecordEvent("HGetNode")
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
-
+		res.RecordEvent("HGetApi")
 		fileHash, err := cidlib.Parse(req.Arguments[1])
 		if err != nil {
 			return err
 		}
+		res.RecordEvent("HParseFileCid")
+
 		sh := req.Arguments[2]
 		shardHash, err := cidlib.Parse(sh)
 		if err != nil {
 			return err
 		}
+		res.RecordEvent("HParseShardCid")
 		chunkIndex, err := strconv.Atoi(req.Arguments[3])
 		if err != nil {
 			return err
@@ -138,11 +150,17 @@ the challenge request back to the caller.`,
 		if err != nil {
 			return err
 		}
+		res.RecordEvent("HNewResponse")
+
 		err = sc.SolveChallenge(chunkIndex, nonce)
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, &StorageChallengeRes{Answer: sc.Hash})
+		res.RecordEvent("HSolveChallenge")
+		return cmds.EmitOnce(res, &StorageChallengeRes{
+			Answer:       sc.Hash,
+			TimeEvaluate: []string{res.ShowEventReport()},
+		})
 	},
 	Type: StorageChallengeRes{},
 }
