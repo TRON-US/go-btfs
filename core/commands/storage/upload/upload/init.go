@@ -228,7 +228,7 @@ the shard and replies back to client for the next challenge step.`,
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
 						for i := 0; i < 3; i++ {
-							_, err = client.RequestChallenge(ctx, in)
+							question, err = client.RequestChallenge(ctx, in)
 							if err == nil {
 								break
 							}
@@ -239,7 +239,7 @@ the shard and replies back to client for the next challenge step.`,
 					return err
 				}
 				if question == nil {
-					return err
+					return errors.New("question is nil")
 				}
 				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
