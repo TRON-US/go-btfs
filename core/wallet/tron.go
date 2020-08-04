@@ -2,8 +2,6 @@ package wallet
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"strings"
@@ -18,7 +16,6 @@ import (
 	protocol_core "github.com/tron-us/go-btfs-common/protos/protocol/core"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
-	eth "github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/mr-tron/base58/base58"
@@ -35,10 +32,11 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		}
 	}
 	if from == "" {
-		from, err = getHexAddress(privKey)
+		keys, err := crypto.FromIcPrivateKey(privKey)
 		if err != nil {
 			return nil, err
 		}
+		from = keys.HexAddress
 	}
 	txId := ""
 
@@ -46,7 +44,19 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 	if err != nil {
 		return nil, err
 	}
-	sig, err := sign(privKey, tx.Transaction.RawData)
+	raw, err := privKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	ecdsa, err := crypto.HexToECDSA(hex.EncodeToString(raw))
+	if err != nil {
+		return nil, err
+	}
+	bs, err := proto.Marshal(tx.Transaction.RawData)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := crypto.EcdsaSign(ecdsa, bs)
 	if err != nil {
 		return nil, err
 	}
@@ -80,12 +90,6 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 			return
 		}
 	}()
-	if err != nil {
-		e := PersistTx(n.Repo.Datastore(), n.Identity.String(), txId, amount,
-			BttWallet, to, StatusFailed, walletpb.TransactionV1_ON_CHAIN)
-		log.Debug(e)
-		return nil, err
-	}
 	return &TronRet{
 		Message: string(tx.Result.Message),
 		Result:  tx.Result.Result,
@@ -103,50 +107,6 @@ func toHex(address string) (string, error) {
 		address = hexutils.BytesToHex(bytes[:len(bytes)-4])
 	}
 	return address, nil
-}
-
-func sign(privKey ic.PrivKey, msg proto.Message) ([]byte, error) {
-	raw, err := privKey.Raw()
-	if err != nil {
-		return nil, err
-	}
-	txBytes, err := proto.Marshal(msg)
-	if err != nil {
-		return nil, err
-	}
-	ecdsa, err := eth.HexToECDSA(hex.EncodeToString(raw))
-	sum := sha256.Sum256(txBytes)
-	sig, err := eth.Sign(sum[:], ecdsa)
-	return sig, err
-}
-
-func getHexAddress(privKey ic.PrivKey) (string, error) {
-	bytes, err := privKey.Raw()
-	if err != nil {
-		return "", err
-	}
-	ecdsa, err := eth.ToECDSA(bytes)
-	if err != nil {
-		return "", err
-	}
-	address, err := publicKeyToAddress(ecdsa.PublicKey)
-	return hex.EncodeToString(address.Bytes()), nil
-}
-
-func publicKeyToAddress(p ecdsa.PublicKey) (Address, error) {
-	addr := eth.PubkeyToAddress(p)
-
-	addressTron := make([]byte, AddressLength)
-
-	addressPrefix, err := FromHex(AddressPrefix)
-	if err != nil {
-		return Address{}, err
-	}
-
-	addressTron = append(addressTron, addressPrefix...)
-	addressTron = append(addressTron, addr.Bytes()...)
-
-	return BytesToAddress(addressTron), nil
 }
 
 type TronRet struct {
