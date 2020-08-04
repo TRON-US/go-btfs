@@ -85,8 +85,9 @@ func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, c
 		ps = escrowpb.Schedule_CUSTOMIZED
 		p = period
 	}
-	return ledger.NewEscrowContract(contractId,
-		payerPubKey, hostPubKey, authPubKey, totalPay, ps, int32(p))
+	return ledger.NewEscrowContract(contractId, payerPubKey, hostPubKey, authPubKey, totalPay, ps,
+		int32(p), escrowpb.ContractType_REGULAR, 0)
+
 }
 
 func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, signedBytes []byte,

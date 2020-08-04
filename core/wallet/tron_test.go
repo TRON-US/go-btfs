@@ -13,15 +13,11 @@ import (
 )
 
 func TestGetHexAddress(t *testing.T) {
-	privKey, err := crypto.ToPrivKey("CAISILOZbORDZlczUlp5jdonb5y5SMZgaZy6OWp58SkS8jS8")
+	keys, err := crypto.FromPrivateKey("CAISILOZbORDZlczUlp5jdonb5y5SMZgaZy6OWp58SkS8jS8")
 	if err != nil {
 		t.Fatal(err)
 	}
-	hexAddr, err := getHexAddress(privKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, "41bc8e7f3e2bb11310b75d6b0b6e8537d069cdb72e", hexAddr)
+	assert.Equal(t, "41bc8e7f3e2bb11310b75d6b0b6e8537d069cdb72e", keys.HexAddress)
 }
 
 func TestTransferBTT(t *testing.T) {
