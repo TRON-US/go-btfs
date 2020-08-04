@@ -224,15 +224,74 @@ the shard and replies back to client for the next challenge step.`,
 				// req.Context obsolete
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
+				var question *guardpb.RequestChallengeQuestion
 				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						_, err = client.ReadyForChallenge(ctx, in)
+						for i := 0; i < 3; i++ {
+							question, err = client.RequestChallenge(ctx, in)
+							if err == nil {
+								break
+							}
+							time.Sleep(30 * time.Second)
+						}
+						return err
+					})
+				if err != nil {
+					return err
+				}
+				if question == nil {
+					return errors.New("question is nil")
+				}
+				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+				defer cancel()
+
+				fileHash, err := cidlib.Parse(req.Arguments[1])
+				if err != nil {
+					return err
+				}
+				shardHash, err := cidlib.Parse(question.Question.ShardHash)
+				if err != nil {
+					return err
+				}
+				sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
+					fileHash, shardHash, "", false, 0)
+				if err != nil {
+					return err
+				}
+				err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
+				if err != nil {
+					return err
+				}
+				resp := &guardpb.ResponseChallengeQuestion{
+					Answer: &guardpb.ChallengeQuestion{
+						ShardHash:    question.Question.ShardHash,
+						HostPid:      question.Question.HostPid,
+						ChunkIndex:   int32(sc.CIndex),
+						Nonce:        sc.Nonce,
+						ExpectAnswer: sc.Hash,
+					},
+					HostPid:     question.Question.HostPid,
+					ResolveTime: time.Now(),
+				}
+				privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
+				if err != nil {
+					return err
+				}
+				sig, err := crypto.Sign(privKey, resp)
+				if err != nil {
+					return err
+				}
+				resp.Signature = sig
+				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
+					func(ctx context.Context, client guardpb.GuardServiceClient) error {
+						_, err := client.ResponseChallenge(ctx, resp)
 						if err != nil {
 							return err
 						}
 						return nil
 					})
 				if err != nil {
+					log.Debug(err)
 					return err
 				}
 				if err := shard.Complete(); err != nil {
