@@ -232,6 +232,7 @@ the shard and replies back to client for the next challenge step.`,
 							if err == nil {
 								break
 							}
+							time.Sleep(30 * time.Second)
 						}
 						return err
 					})
