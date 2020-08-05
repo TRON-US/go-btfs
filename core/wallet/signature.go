@@ -1,7 +1,10 @@
 package wallet
 
 import (
+	"crypto"
 	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"math/big"
 	"time"
@@ -43,7 +46,7 @@ func Sign(in interface{}, key *ecdsa.PrivateKey) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return gbc_crypto.EcdsaSign(key, rawData)
+		return SignTron(rawData, key)
 
 	case *corePb.Transaction:
 		transaction := in.(*corePb.Transaction)
@@ -59,7 +62,7 @@ func Sign(in interface{}, key *ecdsa.PrivateKey) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return gbc_crypto.EcdsaSign(key, rawData)
+		return SignTron(rawData, key)
 
 	case *ledgerPb.ChannelState:
 		channelState := in.(*ledgerPb.ChannelState)
@@ -71,7 +74,7 @@ func Sign(in interface{}, key *ecdsa.PrivateKey) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return gbc_crypto.EcdsaSign(key, raw)
+		return SignChannel(raw, key)
 
 	case *ledgerPb.ChannelCommit:
 		channelCommit := in.(*ledgerPb.ChannelCommit)
@@ -83,9 +86,28 @@ func Sign(in interface{}, key *ecdsa.PrivateKey) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return gbc_crypto.EcdsaSign(key, raw)
+		return SignChannel(raw, key)
 
 	default:
 		return nil, ErrTypeParam
 	}
+}
+
+//Tron' Sign function, return signature and error.
+func SignTron(rawData []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+	signature, err := gbc_crypto.EcdsaSign(key, rawData)
+	if err != nil {
+		return nil, err
+	}
+	return signature, nil
+}
+
+//Channel' sign function, return signature and error.
+func SignChannel(raw []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+	hash := sha256.Sum256(raw)
+	signature, err := key.Sign(rand.Reader, hash[:], crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+	return signature, nil
 }
