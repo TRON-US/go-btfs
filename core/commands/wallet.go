@@ -25,7 +25,8 @@ func init() {
 		"/wallet/password",
 		"/wallet/keys",
 		"/wallet/import",
-		"/wallet/transfer")
+		"/wallet/transfer",
+		"/wallet/discovery")
 }
 
 var WalletCmd = &cmds.Command{
@@ -46,6 +47,7 @@ withdraw and query balance of token used in BTFS.`,
 		"transactions": walletTransactionsCmd,
 		"import":       walletImportCmd,
 		"transfer":     walletTransferCmd,
+		"discovery":    walletDiscoveryCmd,
 	},
 }
 
@@ -401,4 +403,35 @@ var walletImportCmd = &cmds.Command{
 		}()
 		return nil
 	},
+}
+
+var walletDiscoveryCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "Speed wallet discovery",
+		ShortDescription: "Speed wallet discovery",
+	},
+	Arguments: []cmds.Argument{},
+	Options:   []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		if cfg.UI.Wallet.Initialized {
+			return errors.New("Already init, cannot discovery.")
+		}
+		key, err := wallet.DiscoverySpeedKey()
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, DiscoveryResult{Key: key})
+	},
+}
+
+type DiscoveryResult struct {
+	Key string
 }
