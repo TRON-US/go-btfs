@@ -1,4 +1,4 @@
-// +build !windwows,!darwin
+// +build !windows,!darwin
 
 package wallet
 
