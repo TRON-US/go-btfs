@@ -75,10 +75,7 @@ func balanceHelper(ctx context.Context, configuration *config.Config, signedByte
 	ctx, _ = helper.NewGoContext(ctx)
 	err = grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			res, err := client.BalanceOf(ctx, &ledgerpb.SignedCreateAccountRequest{
-				Key:       ledgerSignedPubKey.Key,
-				Signature: ledgerSignedPubKey.Signature,
-			})
+			res, err := client.BalanceOf(ctx, ledger.NewSignedCreateAccountRequest(ledgerSignedPubKey.Key, ledgerSignedPubKey.Signature))
 			if err != nil {
 				return err
 			}
