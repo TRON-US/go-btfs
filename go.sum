@@ -48,11 +48,11 @@ github.com/TRON-US/go-btfs-api v0.3.0 h1:oTnzpvYC8t6ppCRg2lCMkWiKq3SpL6r861+UUGv
 github.com/TRON-US/go-btfs-api v0.3.0/go.mod h1:surmr8ztnpbVY7y2H7dbb7npNXfdaV0UH6cFwhtJPw0=
 github.com/TRON-US/go-btfs-chunker v0.3.0 h1:06/rAYKtC3BQRYVxMtEKvqFFHhSB+XKcqt3JZ0CjD4o=
 github.com/TRON-US/go-btfs-chunker v0.3.0/go.mod h1:m0xvt42kqLskWsLF6SQ51AA9cqPzWoweydOcDgSDX/U=
-github.com/TRON-US/go-btfs-cmds v0.2.5 h1:Pzacnw1RXhIvHJVhJSTj9zRy2iRg0A5PEz3Q2XREa4g=
-github.com/TRON-US/go-btfs-cmds v0.2.5/go.mod h1:b1puslIW6bD50zr1gWasJSbnC7ZIJ2AwdQrUnyZ6ud4=
+github.com/TRON-US/go-btfs-cmds v0.2.4 h1:18lPr7Aecu1TYnaVqo7IlFXGGednsMWhyixSzGMokJE=
+github.com/TRON-US/go-btfs-cmds v0.2.4/go.mod h1:b1puslIW6bD50zr1gWasJSbnC7ZIJ2AwdQrUnyZ6ud4=
 github.com/TRON-US/go-btfs-config v0.6.0/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
-github.com/TRON-US/go-btfs-config v0.6.10 h1:I96h8iicrmUmMp1tjwt88F1WhmVfC6IS8mVb2ofTCOU=
-github.com/TRON-US/go-btfs-config v0.6.10/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
+github.com/TRON-US/go-btfs-config v0.6.9 h1:gEBWxHp57qYvF+JFYhZ5ms5WravOEwh6XDWRjmp4nRk=
+github.com/TRON-US/go-btfs-config v0.6.9/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
 github.com/TRON-US/go-btfs-files v0.1.1/go.mod h1:tD2vOKLcLCDNMn9rrA27n2VbNpHdKewGzEguIFY+EJ0=
 github.com/TRON-US/go-btfs-files v0.2.0 h1:JZ+F0gX8iPmUf1OlrdOdsA8GMGxCHhwQ03jEWWEgVLE=
 github.com/TRON-US/go-btfs-files v0.2.0/go.mod h1:Qx+rTOIC0xl3ZkosGcEoB4hqExZmTONErPys8K5suEc=
@@ -949,8 +949,6 @@ github.com/segmentio/encoding v0.1.10/go.mod h1:RWhr02uzMB9gQC1x+MfYxedtmBibb9cZ
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shirou/gopsutil v2.20.5+incompatible h1:tYH07UPoQt0OCQdgWWMgYHy3/a9bcxNpBIysykNIP7I=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
-github.com/shirou/gopsutil v2.20.7+incompatible h1:Ymv4OD12d6zm+2yONe39VSmp2XooJe8za7ngOLW/o/w=
-github.com/shirou/gopsutil v2.20.7+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shurcooL/component v0.0.0-20170202220835-f88ec8f54cc4/go.mod h1:XhFIlyj5a1fBNx5aJTbKoIq0mNaPvOagO+HjB3EtxrY=
 github.com/shurcooL/events v0.0.0-20181021180414-410e4ca65f48/go.mod h1:5u70Mqkb5O5cxEA8nxTsgrgLehJeAw6Oc4Ab1c/P1HM=
 github.com/shurcooL/github_flavored_markdown v0.0.0-20181002035957-2122de532470/go.mod h1:2dOwnU2uBioM+SGy2aZoq1f/Sd1l9OkAeAUvjSyvgU0=
@@ -1021,8 +1019,8 @@ github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
 github.com/tron-us/go-btfs-common v0.2.11/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
 github.com/tron-us/go-btfs-common v0.3.7/go.mod h1:FbYoo6ZrtnJH3TKdyJTGQrUP2rbwNVATQpxplwaYQ/c=
-github.com/tron-us/go-btfs-common v0.5.18 h1:O0wrQ2YschrLc/ko7FoRWLdARJpwzyKRIcuVCtT3QTA=
-github.com/tron-us/go-btfs-common v0.5.18/go.mod h1:0T4AmMiAWKkT6qgi/QSONy/KlX2OeKiAcYOFMwVo97I=
+github.com/tron-us/go-btfs-common v0.5.15 h1:tl/bp1SZfWuOjbjFSI3bdKezmgrb/D8h7v6z9LshHi4=
+github.com/tron-us/go-btfs-common v0.5.15/go.mod h1:0T4AmMiAWKkT6qgi/QSONy/KlX2OeKiAcYOFMwVo97I=
 github.com/tron-us/go-common/v2 v2.0.5/go.mod h1:GiKX9noBLHotkZAU+7ET4h7N0DYWnm3OcGHOFJg1Q68=
 github.com/tron-us/go-common/v2 v2.1.1 h1:0Nj07cBrOFT38Q0kIHnqM4o4T6GNNxMr2rs5yeqlZ8Y=
 github.com/tron-us/go-common/v2 v2.1.1/go.mod h1:YIEJZF9Ph79g0zZWOvfNDtJhvO5OqSNPAb/TM1i+KvQ=
