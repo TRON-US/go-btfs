@@ -20,6 +20,16 @@ const (
 	hostStorageMaxOptionName      = "host-storage-max"
 	hostStorageEnableOptionName   = "enable-host-mode"
 
+	repairHostEnabledOptionName       = "repair-host-enabled"
+	repairPriceDefaultOptionName      = "repair-price-default"
+	repairPriceCustomizedOptionName   = "repair-price-customized"
+	repairCustomizedPricingOptionName = "repair-customized-pricing"
+
+	challengeHostEnabledOptionName       = "challenge-host-enabled"
+	challengePriceDefaultOptionName      = "challenge-price-default"
+	challengePriceCustomizedOptionName   = "challenge-price-customized"
+	challengeCustomizedPricingOptionName = "challenge-customized-pricing"
+
 	bttTotalSupply uint64 = 990_000_000_000
 )
 
@@ -42,6 +52,14 @@ $ btfs storage announce --host-storage-price=1000000`,
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
 		cmds.BoolOption(hostStorageEnableOptionName, "hm", "Enable/disable host storage mode. By default no mode change is made. When specified, toggles between enable/disable host mode."),
+		cmds.BoolOption(repairHostEnabledOptionName, "rm", "Enable/disable repair mode. By default no mode change is made. When specified, toggles between enable/disable repair mode."),
+		cmds.BoolOption(challengeHostEnabledOptionName, "cm", "Enable/disable challenge mode. By default no mode change is made. When specified, toggles between enable/disable challenge mode."),
+		cmds.BoolOption(repairCustomizedPricingOptionName, "rc", "Options of repair price, true for customized price and false means default price."),
+		cmds.BoolOption(challengeCustomizedPricingOptionName, "cc", "Options of challenge price, true for customized price and false means default price."),
+		cmds.Uint64Option(repairPriceDefaultOptionName, "rpd", "Host repair default price refer to market."),
+		cmds.Uint64Option(repairPriceCustomizedOptionName, "rpc", "Customized repair price provides by enabled Host."),
+		cmds.Uint64Option(challengePriceDefaultOptionName, "cpd", "Host challenge default price refer to market."),
+		cmds.Uint64Option(challengePriceCustomizedOptionName, "cpc", "Customized challenge price provides by enabled Host."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
@@ -70,12 +88,47 @@ $ btfs storage announce --host-storage-price=1000000`,
 			}
 		}
 
+		rm, rmFound := req.Options[repairHostEnabledOptionName].(bool)
+		if rmFound {
+			if rm != cfg.Experimental.HostRepairEnabled {
+				cfg.Experimental.HostRepairEnabled = rm
+				err = n.Repo.SetConfig(cfg)
+				if err != nil {
+					return err
+				}
+			}
+			if !rm {
+				return nil
+			}
+		}
+
+		cm, cmFound := req.Options[challengeHostEnabledOptionName].(bool)
+		if cmFound {
+			if cm != cfg.Experimental.HostChallengeEnabled {
+				cfg.Experimental.HostChallengeEnabled = cm
+				err = n.Repo.SetConfig(cfg)
+				if err != nil {
+					return err
+				}
+			}
+			if !cm {
+				return nil
+			}
+		}
+
 		sp, spFound := req.Options[hostStoragePriceOptionName].(uint64)
 		bp, bpFound := req.Options[hostBandwidthPriceOptionName].(uint64)
 		cp, cpFound := req.Options[hostCollateralPriceOptionName].(uint64)
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
 		sm, smFound := req.Options[hostStorageMaxOptionName].(uint64)
+
+		rc, rcFound := req.Options[repairCustomizedPricingOptionName].(bool)
+		cc, ccFound := req.Options[challengeCustomizedPricingOptionName].(bool)
+		rpd, rpdFound := req.Options[repairPriceDefaultOptionName].(uint64)
+		rpc, rpcFound := req.Options[repairPriceCustomizedOptionName].(uint64)
+		cpd, cpdFound := req.Options[challengePriceDefaultOptionName].(uint64)
+		cpc, cpcFound := req.Options[challengePriceCustomizedOptionName].(uint64)
 
 		if sp > bttTotalSupply || cp > bttTotalSupply || bp > bttTotalSupply {
 			return fmt.Errorf("maximum price is %d", bttTotalSupply)
@@ -113,6 +166,24 @@ $ btfs storage announce --host-storage-price=1000000`,
 			if err != nil {
 				return err
 			}
+		}
+		if rcFound {
+			ns.RepairCustomizedPricing = rc
+		}
+		if ccFound {
+			ns.ChallengeCustomizedPricing = cc
+		}
+		if rpdFound {
+			ns.RepairPriceDefault = rpd
+		}
+		if rpcFound {
+			ns.RepairPriceCustomized = rpc
+		}
+		if cpdFound {
+			ns.ChallengePriceDefault = cpd
+		}
+		if cpcFound {
+			ns.ChallengePriceCustomized = cpc
 		}
 
 		err = helper.PutHostStorageConfig(n, ns)
