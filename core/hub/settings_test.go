@@ -14,7 +14,7 @@ func TestGetSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defNs := &nodepb.Node_Settings{StoragePriceAsk: 250000, StorageTimeMin: 30}
+	defNs := &nodepb.Node_Settings{StoragePriceAsk: 250000, StorageTimeMin: 30, StoragePriceDefault: 250000}
 	if !reflect.DeepEqual(ns, defNs) {
 		t.Fatal("default settings not equal")
 	}
