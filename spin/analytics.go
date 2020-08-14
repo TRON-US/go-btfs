@@ -165,6 +165,12 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 		dc.pn.StorageTimeMin = ns.StorageTimeMin
 		dc.pn.BandwidthLimit = ns.BandwidthLimit
 		dc.pn.CollateralStake = ns.CollateralStake
+		dc.pn.RepairPriceDefault = ns.RepairPriceDefault
+		dc.pn.RepairPriceCustomized = ns.RepairPriceCustomized
+		dc.pn.RepairCustomizedPricing = ns.RepairCustomizedPricing
+		dc.pn.ChallengePriceDefault = ns.ChallengePriceDefault
+		dc.pn.ChallengePriceCustomized = ns.ChallengePriceCustomized
+		dc.pn.ChallengeCustomizedPricing = ns.ChallengeCustomizedPricing
 	}
 
 	dc.pn.UpTime = durationToSeconds(time.Since(dc.pn.TimeCreated))
@@ -236,14 +242,14 @@ func (dc *dcWrap) sendData(node *core.IpfsNode, config *config.Config) {
 
 // doPrepData gathers the latest analytics and returns (signed object, list of reporting errors, failure)
 func (dc *dcWrap) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, []error, error) {
-	errs := dc.update(btfsNode)
-	payload, err := dc.getPayload(btfsNode)
-	if err != nil {
-		return nil, errs, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
-	}
-	if dc.node.PrivateKey == nil {
-		return nil, errs, fmt.Errorf("node's private key is null")
-	}
+		errs := dc.update(btfsNode)
+		payload, err := dc.getPayload(btfsNode)
+		if err != nil {
+			return nil, errs, fmt.Errorf("failed to marshal dataCollection object to a byte array: %s", err.Error())
+		}
+		if dc.node.PrivateKey == nil {
+			return nil, errs, fmt.Errorf("node's private key is null")
+		}
 
 	signature, err := dc.node.PrivateKey.Sign(payload)
 	if err != nil {

@@ -160,14 +160,14 @@ $ btfs storage announce --host-storage-price=1000000`,
 		if rcFound {
 			ns.RepairCustomizedPricing = rc
 		}
-		if ccFound {
-			ns.ChallengeCustomizedPricing = cc
-		}
 		if rpdFound {
 			ns.RepairPriceDefault = rpd
 		}
 		if rpcFound {
 			ns.RepairPriceCustomized = rpc
+		}
+		if ccFound {
+			ns.ChallengeCustomizedPricing = cc
 		}
 		if cpdFound {
 			ns.ChallengePriceDefault = cpd
