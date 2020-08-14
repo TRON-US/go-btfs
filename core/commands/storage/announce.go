@@ -82,10 +82,6 @@ $ btfs storage announce --host-storage-price=1000000`,
 					return err
 				}
 			}
-			// turned off, do nothing
-			if !hm {
-				return nil
-			}
 		}
 
 		rm, rmFound := req.Options[repairHostEnabledOptionName].(bool)
@@ -97,9 +93,6 @@ $ btfs storage announce --host-storage-price=1000000`,
 					return err
 				}
 			}
-			if !rm {
-				return nil
-			}
 		}
 
 		cm, cmFound := req.Options[challengeHostEnabledOptionName].(bool)
@@ -110,9 +103,6 @@ $ btfs storage announce --host-storage-price=1000000`,
 				if err != nil {
 					return err
 				}
-			}
-			if !cm {
-				return nil
 			}
 		}
 
