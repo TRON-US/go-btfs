@@ -120,9 +120,29 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.StorageHostEnabled = dc.config.Experimental.StorageHostEnabled
 		dc.pn.StrategicProviding = dc.config.Experimental.StrategicProviding
 		dc.pn.UrlStoreEnabled = dc.config.Experimental.UrlstoreEnabled
+		dc.pn.RepairHostEnabled = dc.config.Experimental.HostRepairEnabled
+		dc.pn.ChallengeHostEnabled = dc.config.Experimental.HostChallengeEnabled
 	}
 
+	dc.setRoles()
 	go dc.collectionAgent(node)
+}
+
+func (dc *dcWrap) setRoles() {
+	roles := make([]nodepb.NodeRole, 0)
+	if dc.pn.StorageClientEnabled {
+		roles = append(roles, nodepb.NodeRole_RENTER)
+	}
+	if dc.pn.StorageHostEnabled {
+		roles = append(roles, nodepb.NodeRole_HOST)
+	}
+	if dc.pn.RepairHostEnabled {
+		roles = append(roles, nodepb.NodeRole_REPAIRER)
+	}
+	if dc.pn.ChallengeHostEnabled {
+		roles = append(roles, nodepb.NodeRole_CHALLENGER)
+	}
+	dc.pn.Node_Settings.Roles = roles
 }
 
 // update gets the latest analytics and returns a list of errors for reporting if available
