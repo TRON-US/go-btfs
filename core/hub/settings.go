@@ -22,8 +22,11 @@ func GetHostSettings(ctx context.Context, addr, peerId string) (*nodepb.Node_Set
 		if resp.Code != hubpb.ResponseCode_SUCCESS {
 			return errors.New(resp.Message)
 		}
-		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
 		ns.StoragePriceAsk = uint64(resp.SettingsData.StoragePriceAsk)
+		ns.StoragePriceDefault = ns.StoragePriceAsk
+		ns.CustomizedPricing = false
+		// XXX: These configs need to be controlled by a customized flag as well
+		ns.StorageTimeMin = uint64(resp.SettingsData.StorageTimeMin)
 		ns.BandwidthLimit = resp.SettingsData.BandwidthLimit
 		ns.BandwidthPriceAsk = uint64(resp.SettingsData.BandwidthPriceAsk)
 		ns.CollateralStake = uint64(resp.SettingsData.CollateralStake)

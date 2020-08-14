@@ -45,7 +45,7 @@ func Hosts(node *core.IpfsNode, env cmds.Environment) {
 		fmt.Println("Current host settings will be synced")
 		go periodicHostSync(hostSettingsSyncPeriod, hostSyncTimeout, "host settings",
 			func(ctx context.Context) error {
-				_, err = helper.GetHostStorageConfig(ctx, node)
+				_, err = helper.GetHostStorageConfigHelper(ctx, node, true)
 				return err
 			})
 	}
