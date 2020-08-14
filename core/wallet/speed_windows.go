@@ -2,7 +2,6 @@
 
 package wallet
 
-import "fmt"
 import "os"
 
 var portPath = func() string {
