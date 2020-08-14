@@ -17,6 +17,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+	cconfig "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -411,65 +412,71 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	}
 	results := make([]*nodepb.Contracts_Contract, 0)
 	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
-		func(ctx context.Context,
-			client escrowpb.EscrowServiceClient) error {
-			in := &escrowpb.SignedContractIDBatch{
-				Data: &escrowpb.ContractIDBatch{
-					Address: pkBytes,
-				},
-			}
-			for _, c := range cs {
-				in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
-			}
-			sign, err := crypto.Sign(n.PrivateKey, in.Data)
-			if err != nil {
-				contractsLog.Error("sign contractID error:", err)
-				return err
-			}
-			in.Signature = sign
-			sb, err := client.GetPayOutStatusBatch(ctx, in)
-			if err != nil {
-				contractsLog.Error("get payout status batch error:", err)
-				return err
-			}
-			if len(sb.Status) != len(cs) {
-				return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
-					len(cs), len(sb.Status))
-			}
-			for i, c := range cs {
-				s := sb.Status[i]
-				// Set dummy payout status on invalid id or error msg
-				// Reset to dummy status so we have a copy locally with invalid params
-				if s.ContractId != c.SignedGuardContract.ContractId {
-					s = &escrowpb.PayoutStatus{
-						ContractId: c.SignedGuardContract.ContractId,
-						ErrorMsg:   "mistmatched contract id",
-					}
-				} else if s.ErrorMsg != "" {
-					s = &escrowpb.PayoutStatus{
-						ContractId: c.SignedGuardContract.ContractId,
-						ErrorMsg:   s.ErrorMsg,
-					}
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			// Loop only max page size each time
+			for ci := 0; ci < len(cs); ci += cconfig.ConstRequestPayoutBatchPageSize {
+				in := &escrowpb.SignedContractIDBatch{
+					Data: &escrowpb.ContractIDBatch{
+						Address: pkBytes,
+					},
 				}
-				if s.ErrorMsg != "" {
-					contractsLog.Debug("got payout status error message:", s.ErrorMsg)
+				var total int
+				for i := ci; i < ci+cconfig.ConstRequestPayoutBatchPageSize && i < len(cs); i++ {
+					c := cs[i]
+					in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
+					total += 1
 				}
+				sign, err := crypto.Sign(n.PrivateKey, in.Data)
+				if err != nil {
+					contractsLog.Error("sign contractID error:", err)
+					return err
+				}
+				in.Signature = sign
+				sb, err := client.GetPayOutStatusBatch(ctx, in)
+				if err != nil {
+					contractsLog.Error("get payout status batch error:", err)
+					return err
+				}
+				if len(sb.Status) != total {
+					return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
+						len(cs), len(sb.Status))
+				}
+				for i := ci; i < ci+total; i++ {
+					c := cs[i]
+					s := sb.Status[i-ci]
+					// Set dummy payout status on invalid id or error msg
+					// Reset to dummy status so we have a copy locally with invalid params
+					if s.ContractId != c.SignedGuardContract.ContractId {
+						s = &escrowpb.PayoutStatus{
+							ContractId: c.SignedGuardContract.ContractId,
+							ErrorMsg:   "mismatched contract id",
+						}
+					} else if s.ErrorMsg != "" {
+						s = &escrowpb.PayoutStatus{
+							ContractId: c.SignedGuardContract.ContractId,
+							ErrorMsg:   s.ErrorMsg,
+						}
+					}
+					if s.ErrorMsg != "" {
+						contractsLog.Debug("got payout status error message:", s.ErrorMsg)
+					}
 
-				results = append(results, &nodepb.Contracts_Contract{
-					ContractId:              c.SignedGuardContract.ContractId,
-					HostId:                  c.SignedGuardContract.HostPid,
-					RenterId:                c.SignedGuardContract.RenterPid,
-					Status:                  c.SignedGuardContract.State,
-					StartTime:               c.SignedGuardContract.RentStart,
-					EndTime:                 c.SignedGuardContract.RentEnd,
-					NextEscrowTime:          s.NextPayoutTime,
-					CompensationPaid:        s.PaidAmount,
-					CompensationOutstanding: s.Amount - s.PaidAmount,
-					UnitPrice:               c.SignedGuardContract.Price,
-					ShardSize:               c.SignedGuardContract.ShardFileSize,
-					ShardHash:               c.SignedGuardContract.ShardHash,
-					FileHash:                c.SignedGuardContract.FileHash,
-				})
+					results = append(results, &nodepb.Contracts_Contract{
+						ContractId:              c.SignedGuardContract.ContractId,
+						HostId:                  c.SignedGuardContract.HostPid,
+						RenterId:                c.SignedGuardContract.RenterPid,
+						Status:                  c.SignedGuardContract.State,
+						StartTime:               c.SignedGuardContract.RentStart,
+						EndTime:                 c.SignedGuardContract.RentEnd,
+						NextEscrowTime:          s.NextPayoutTime,
+						CompensationPaid:        s.PaidAmount,
+						CompensationOutstanding: s.Amount - s.PaidAmount,
+						UnitPrice:               c.SignedGuardContract.Price,
+						ShardSize:               c.SignedGuardContract.ShardFileSize,
+						ShardHash:               c.SignedGuardContract.ShardHash,
+						FileHash:                c.SignedGuardContract.FileHash,
+					})
+				}
 			}
 			return nil
 		})
