@@ -12,13 +12,14 @@ import (
 )
 
 const (
-	hostStoragePriceOptionName    = "host-storage-price"
-	hostBandwidthPriceOptionName  = "host-bandwidth-price"
-	hostCollateralPriceOptionName = "host-collateral-price"
-	hostBandwidthLimitOptionName  = "host-bandwidth-limit"
-	hostStorageTimeMinOptionName  = "host-storage-time-min"
-	hostStorageMaxOptionName      = "host-storage-max"
-	hostStorageEnableOptionName   = "enable-host-mode"
+	hostStoragePriceOptionName             = "host-storage-price"
+	hostBandwidthPriceOptionName           = "host-bandwidth-price"
+	hostCollateralPriceOptionName          = "host-collateral-price"
+	hostBandwidthLimitOptionName           = "host-bandwidth-limit"
+	hostStorageTimeMinOptionName           = "host-storage-time-min"
+	hostStorageMaxOptionName               = "host-storage-max"
+	hostStorageEnableOptionName            = "enable-host-mode"
+	hostStorageCustomizedPricingOptionName = "host-storage-customized-pricing"
 
 	repairHostEnabledOptionName       = "repair-host-enabled"
 	repairPriceDefaultOptionName      = "repair-price-default"
@@ -52,6 +53,7 @@ $ btfs storage announce --host-storage-price=1000000`,
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
 		cmds.BoolOption(hostStorageEnableOptionName, "hm", "Enable/disable host storage mode. By default no mode change is made. When specified, toggles between enable/disable host mode."),
+		cmds.BoolOption(hostStorageCustomizedPricingOptionName, "scp", fmt.Sprintf("Disable customized pricing and use network default price instead. Can only be enabled by explicitly setting %s.", hostStoragePriceOptionName)),
 		cmds.BoolOption(repairHostEnabledOptionName, "rm", "Enable/disable repair mode. By default no mode change is made. When specified, toggles between enable/disable repair mode."),
 		cmds.BoolOption(challengeHostEnabledOptionName, "cm", "Enable/disable challenge mode. By default no mode change is made. When specified, toggles between enable/disable challenge mode."),
 		cmds.BoolOption(repairCustomizedPricingOptionName, "rc", "Options of repair price, true for customized price and false means default price."),
@@ -112,6 +114,7 @@ $ btfs storage announce --host-storage-price=1000000`,
 		bl, blFound := req.Options[hostBandwidthLimitOptionName].(float64)
 		stm, stmFound := req.Options[hostStorageTimeMinOptionName].(uint64)
 		sm, smFound := req.Options[hostStorageMaxOptionName].(uint64)
+		scp, scpFound := req.Options[hostStorageCustomizedPricingOptionName].(bool)
 
 		rc, rcFound := req.Options[repairCustomizedPricingOptionName].(bool)
 		cc, ccFound := req.Options[challengeCustomizedPricingOptionName].(bool)
@@ -132,6 +135,11 @@ $ btfs storage announce --host-storage-price=1000000`,
 		// Update fields if set
 		if spFound {
 			ns.StoragePriceAsk = sp
+			ns.CustomizedPricing = true // turns on since we've set a price
+		} else if scpFound && !scp {
+			// Can only disable if no conflict with set price
+			ns.StoragePriceAsk = ns.StoragePriceDefault
+			ns.CustomizedPricing = false
 		}
 		if bpFound {
 			ns.BandwidthPriceAsk = bp

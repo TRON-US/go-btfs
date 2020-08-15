@@ -161,6 +161,8 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 		res = append(res, fmt.Errorf("failed to get node storage config: %s", err.Error()))
 	} else {
 		dc.pn.StoragePriceAsk = ns.StoragePriceAsk
+		dc.pn.StoragePriceDefault = ns.StoragePriceDefault
+		dc.pn.CustomizedPricing = ns.CustomizedPricing
 		dc.pn.BandwidthPriceAsk = ns.BandwidthPriceAsk
 		dc.pn.StorageTimeMin = ns.StorageTimeMin
 		dc.pn.BandwidthLimit = ns.BandwidthLimit
