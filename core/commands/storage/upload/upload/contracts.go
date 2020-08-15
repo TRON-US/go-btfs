@@ -322,7 +322,11 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 		}
 	}
 	if len(cs) > 0 {
-		results, err := syncContractPayoutStatus(ctx, n, cs)
+		cts, err := ListContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
+		if err != nil {
+			return err
+		}
+		results, err := syncContractPayoutStatus(ctx, n, cs, cts)
 		if err != nil {
 			return err
 		}
@@ -397,7 +401,7 @@ func ListHostContracts(ctx context.Context, cfg *config.Config,
 // SyncContractPayoutStatus looks at local contracts, refreshes from Guard, and then
 // syncs payout status for all of them
 func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
-	cs []*shardpb.SignedContracts) ([]*nodepb.Contracts_Contract, error) {
+	cs []*shardpb.SignedContracts, cts []*nodepb.Contracts_Contract) ([]*nodepb.Contracts_Contract, error) {
 	cfg, err := n.Repo.Config()
 	if err != nil {
 		return nil, err
@@ -410,29 +414,40 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	if err != nil {
 		return nil, err
 	}
-	results := make([]*nodepb.Contracts_Contract, 0)
+	// Generate quick lookup map for existing payout contracts
+	ctsIndexMap := map[string]int{}
+	for i, ct := range cts {
+		ctsIndexMap[ct.ContractId] = i
+	}
 	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
 			// Loop only max page size each time
 			for ci := 0; ci < len(cs); ci += cconfig.ConstRequestPayoutBatchPageSize {
-				in := &escrowpb.SignedContractIDBatch{
+				in := &escrowpb.SignedModifyContractIDBatch{
 					Data: &escrowpb.ContractIDBatch{
 						Address: pkBytes,
 					},
 				}
 				var total int
+				var latestTime time.Time
 				for i := ci; i < ci+cconfig.ConstRequestPayoutBatchPageSize && i < len(cs); i++ {
 					c := cs[i]
+					// Get latest timestamp, if does not exist, then just pull everything
+					if cti, ok := ctsIndexMap[c.SignedGuardContract.ContractId]; ok &&
+						cts[cti].LastModifyTime.After(latestTime) {
+						latestTime = cts[cti].LastModifyTime
+					}
 					in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
 					total += 1
 				}
+				in.LastModifyTime = latestTime
 				sign, err := crypto.Sign(n.PrivateKey, in.Data)
 				if err != nil {
 					contractsLog.Error("sign contractID error:", err)
 					return err
 				}
 				in.Signature = sign
-				sb, err := client.GetPayOutStatusBatch(ctx, in)
+				sb, err := client.GetModifyPayOutStatusBatch(ctx, in)
 				if err != nil {
 					contractsLog.Error("get payout status batch error:", err)
 					return err
@@ -461,13 +476,14 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						contractsLog.Debug("got payout status error message:", s.ErrorMsg)
 					}
 
-					results = append(results, &nodepb.Contracts_Contract{
+					resCt := &nodepb.Contracts_Contract{
 						ContractId:              c.SignedGuardContract.ContractId,
 						HostId:                  c.SignedGuardContract.HostPid,
 						RenterId:                c.SignedGuardContract.RenterPid,
 						Status:                  c.SignedGuardContract.State,
 						StartTime:               c.SignedGuardContract.RentStart,
 						EndTime:                 c.SignedGuardContract.RentEnd,
+						LastModifyTime:          s.LastModifyTime,
 						NextEscrowTime:          s.NextPayoutTime,
 						CompensationPaid:        s.PaidAmount,
 						CompensationOutstanding: s.Amount - s.PaidAmount,
@@ -475,7 +491,14 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						ShardSize:               c.SignedGuardContract.ShardFileSize,
 						ShardHash:               c.SignedGuardContract.ShardHash,
 						FileHash:                c.SignedGuardContract.FileHash,
-					})
+					}
+					// If already exists, update existing
+					// Otherwise append/add to list
+					if cti, ok := ctsIndexMap[resCt.ContractId]; ok {
+						cts[cti] = resCt
+					} else {
+						cts = append(cts, resCt)
+					}
 				}
 			}
 			return nil
@@ -483,5 +506,5 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	if err != nil {
 		return nil, err
 	}
-	return results, nil
+	return cts, nil
 }
