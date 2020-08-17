@@ -239,7 +239,7 @@ func TestCommands(t *testing.T) {
 		"/storage/upload/sign",
 		"/storage/upload/dcrepairrouting",
 		"/storage/upload/dcrepairrouting/request",
-        "/storage/upload/dcrepairrouting/response",
+		"/storage/upload/dcrepairrouting/response",
 		"/storage/announce",
 		"/storage/info",
 		"/storage/hosts",
