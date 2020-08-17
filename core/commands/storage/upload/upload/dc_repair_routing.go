@@ -137,7 +137,6 @@ returns the repairer's signed contract to the invoker.`,
 			return err
 		}
 		repaireReq.RepairSignature = sig
-
 		return cmds.EmitOnce(res, repaireReq)
 	},
 	Type: guardpb.RepairContract{},
