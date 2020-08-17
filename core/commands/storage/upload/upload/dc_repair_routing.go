@@ -1,7 +1,9 @@
 package upload
 
 import (
+	"context"
 	"fmt"
+	"github.com/TRON-US/go-btfs-common/utils/grpc"
 	"strconv"
 	"strings"
 	"time"
@@ -64,14 +66,13 @@ This command sends request to mining host to negotiate the repair works.`,
 			return err
 		}
 		// Pass arguments through to host response endpoint
-		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepair/response",
+		_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepair/response",
 			req.Arguments[1:]...)
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, &resp)
+		return nil
 	},
-	Type: guardpb.RepairContract{},
 }
 
 var hostRepairResponseCmd = &cmds.Command{
@@ -93,7 +94,6 @@ returns the repairer's signed contract to the invoker.`,
 	},
 	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		n, err := cmdenv.GetNode(env)
 		ctxParams, err := uh.ExtractContextParams(req, env)
 		repairId := req.Arguments[5]
 		hostId := ctxParams.N.Identity.Pretty()
@@ -132,12 +132,21 @@ returns the repairer's signed contract to the invoker.`,
 			DownloadContractId:   downloadContractId,
 			RepairContractId:     repairContractId,
 		}
-		sig, err := crypto.Sign(n.PrivateKey, repaireReq)
+		sig, err := crypto.Sign(ctxParams.N.PrivateKey, repaireReq)
 		if err != nil {
 			return err
 		}
 		repaireReq.RepairSignature = sig
-		return cmds.EmitOnce(res, repaireReq)
+
+		var reapirResp *guardpb.RepairContractResponse
+		err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(req.Context, func(ctx context.Context,
+			client guardpb.GuardServiceClient) error {
+			reapirResp, err = client.SubmitRepairContract(ctx, repaireReq)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		return nil
 	},
-	Type: guardpb.RepairContract{},
 }
