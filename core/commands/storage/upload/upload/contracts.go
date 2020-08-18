@@ -429,18 +429,23 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 					},
 				}
 				var total int
-				var latestTime time.Time
+				minLatestTime := time.Unix(1<<63-62135596801, 999999999)
+				csIndexMap := map[string]int{}
 				for i := ci; i < ci+cconfig.ConstRequestPayoutBatchPageSize && i < len(cs); i++ {
 					c := cs[i]
-					// Get latest timestamp, if does not exist, then just pull everything
-					if cti, ok := ctsIndexMap[c.SignedGuardContract.ContractId]; ok &&
-						cts[cti].LastModifyTime.After(latestTime) {
-						latestTime = cts[cti].LastModifyTime
+					csIndexMap[c.SignedGuardContract.ContractId] = i
+					// Get the minimum latest timestamp, if does not exist, then just pull everything
+					if cti, ok := ctsIndexMap[c.SignedGuardContract.ContractId]; ok {
+						if cts[cti].LastModifyTime.Before(minLatestTime) {
+							minLatestTime = cts[cti].LastModifyTime
+						}
+					} else {
+						minLatestTime = time.Time{}
 					}
 					in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
 					total += 1
 				}
-				in.LastModifyTime = latestTime
+				in.LastModifyTime = minLatestTime
 				sign, err := crypto.Sign(n.PrivateKey, in.Data)
 				if err != nil {
 					contractsLog.Error("sign contractID error:", err)
@@ -452,29 +457,22 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 					contractsLog.Error("get payout status batch error:", err)
 					return err
 				}
-				if len(sb.Status) != total {
-					return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
-						len(cs), len(sb.Status))
+				var lastUpdated time.Time
+				for _, s := range sb.Status {
+					if _, ok := csIndexMap[s.ContractId]; !ok {
+						continue // Ignore bad contracts
+					}
+					// Find the latest valid timestamp for all updates
+					if s.ErrorMsg == "" && s.LastModifyTime.After(lastUpdated) {
+						lastUpdated = s.LastModifyTime
+					}
 				}
-				for i := ci; i < ci+total; i++ {
-					c := cs[i]
-					s := sb.Status[i-ci]
-					// Set dummy payout status on invalid id or error msg
-					// Reset to dummy status so we have a copy locally with invalid params
-					if s.ContractId != c.SignedGuardContract.ContractId {
-						s = &escrowpb.PayoutStatus{
-							ContractId: c.SignedGuardContract.ContractId,
-							ErrorMsg:   "mismatched contract id",
-						}
-					} else if s.ErrorMsg != "" {
-						s = &escrowpb.PayoutStatus{
-							ContractId: c.SignedGuardContract.ContractId,
-							ErrorMsg:   s.ErrorMsg,
-						}
+				for _, s := range sb.Status {
+					csi, ok := csIndexMap[s.ContractId]
+					if !ok {
+						continue // Ignore bad contracts
 					}
-					if s.ErrorMsg != "" {
-						contractsLog.Debug("got payout status error message:", s.ErrorMsg)
-					}
+					c := cs[csi]
 
 					resCt := &nodepb.Contracts_Contract{
 						ContractId:              c.SignedGuardContract.ContractId,
@@ -483,7 +481,7 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						Status:                  c.SignedGuardContract.State,
 						StartTime:               c.SignedGuardContract.RentStart,
 						EndTime:                 c.SignedGuardContract.RentEnd,
-						LastModifyTime:          s.LastModifyTime,
+						LastModifyTime:          lastUpdated, // sync time with this batch
 						NextEscrowTime:          s.NextPayoutTime,
 						CompensationPaid:        s.PaidAmount,
 						CompensationOutstanding: s.Amount - s.PaidAmount,
@@ -492,6 +490,12 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						ShardHash:               c.SignedGuardContract.ShardHash,
 						FileHash:                c.SignedGuardContract.FileHash,
 					}
+
+					if s.ErrorMsg != "" {
+						resCt.LastModifyTime = time.Time{} // reset to beginning
+						contractsLog.Debug("got payout status error message:", s.ErrorMsg)
+					}
+
 					// If already exists, update existing
 					// Otherwise append/add to list
 					if cti, ok := ctsIndexMap[resCt.ContractId]; ok {
