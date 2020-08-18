@@ -26,6 +26,7 @@ func init() {
 		"/wallet/keys",
 		"/wallet/import",
 		"/wallet/transfer",
+		"/wallet/balance",
 		"/wallet/discovery")
 }
 
