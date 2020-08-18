@@ -179,7 +179,9 @@ func (dc *dcWrap) update(node *core.IpfsNode) []error {
 	if cpus, err := cpu.Percent(0, false); err != nil {
 		res = append(res, fmt.Errorf("failed to get uptime: %s", err.Error()))
 	} else {
-		dc.pn.CpuUsed = cpus[0]
+		if dc.pn.CpuUsed = 0; len(cpus) >= 1 {
+			dc.pn.CpuUsed = cpus[0]
+		}
 	}
 	dc.pn.MemoryUsed = m.HeapAlloc / uint64(units.KiB)
 	if storage, err := dc.node.Repo.GetStorageUsage(); err != nil {
