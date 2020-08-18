@@ -108,6 +108,11 @@ func WalletDeposit(ctx context.Context, configuration *config.Config, n *core.Ip
 		return errors.New(fmt.Sprintf("deposit amount should between %d ~ %d", DepositMinAmount, DepositMaxAmount))
 	}
 
+	_, err = Balance(ctx, configuration)
+	if err != nil {
+		return err
+	}
+
 	prepareResponse, err := Deposit(ctx, n, hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon, async)
 	if err != nil {
 		log.Error("Failed to Deposit, ERR[%v]\n", err)
