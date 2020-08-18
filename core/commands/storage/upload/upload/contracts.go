@@ -32,6 +32,8 @@ import (
 var contractsLog = logging.Logger("storage/contracts")
 
 const (
+	contractsSyncPurgeOptionName = "purge"
+
 	contractsListOrderOptionName  = "order"
 	contractsListStatusOptionName = "status"
 	contractsListSizeOptionName   = "size"
@@ -81,6 +83,9 @@ This command contracts stats based on role from network(hub) to local node data 
 	Arguments: []cmds.Argument{
 		cmds.StringArg("role", true, false, "Role in BTFS storage network [host|renter|reserved]."),
 	},
+	Options: []cmds.Option{
+		cmds.BoolOption(contractsSyncPurgeOptionName, "p", "Purge local contracts cache and sync from the beginning.").WithDefault(false),
+	},
 	RunTimeout: 60 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -93,6 +98,17 @@ This command contracts stats based on role from network(hub) to local node data 
 		}
 		if role != nodepb.ContractStat_HOST {
 			return fmt.Errorf("only host contract sync is supported currently")
+		}
+		purgeOpt, _ := req.Options[contractsSyncPurgeOptionName].(bool)
+		if purgeOpt {
+			err = sessions.DeleteShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role.String())
+			if err != nil {
+				return err
+			}
+			err = Save(n.Repo.Datastore(), nil, role.String())
+			if err != nil {
+				return err
+			}
 		}
 		return SyncContracts(req.Context, n, req, env, role.String())
 	},
@@ -292,6 +308,9 @@ func ListContracts(d datastore.Datastore, peerId, role string) ([]*nodepb.Contra
 	return fcs, nil
 }
 
+// SyncContracts does the following:
+// 1) Obtain latest guard contract updates and saves into cache
+// 2) Obtain latest payout status updates and saves into cache
 func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
 	role string) error {
 	cs, err := sessions.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)

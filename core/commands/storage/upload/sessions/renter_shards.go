@@ -179,6 +179,22 @@ func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*
 	return contracts, nil
 }
 
+func DeleteShardsContracts(d datastore.Datastore, peerId string, role string) error {
+	var k string
+	if k = fmt.Sprintf(renterShardPrefix, peerId); role == nodepb.ContractStat_HOST.String() {
+		k = fmt.Sprintf(hostShardPrefix, peerId)
+	}
+	ks, err := ListKeys(d, k, "/contracts")
+	if err != nil {
+		return err
+	}
+	vs := make([]proto.Message, len(ks))
+	for range ks {
+		vs = append(vs, nil)
+	}
+	return Batch(d, ks, vs)
+}
+
 // SaveShardsContracts persists updated guard contracts from upstream, if an existing entry
 // is not available, then an empty signed escrow contract is inserted along with the
 // new guard contract.
