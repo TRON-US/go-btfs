@@ -39,7 +39,7 @@ var hostRepairRequestCmd = &cmds.Command{
 This command sends request to mining host to negotiate the repair works.`,
 	},
 	Arguments: append([]cmds.Argument{
-		cmds.StringArg("peer-id", true, false, "Host Peer ID to send repair requests."),
+		cmds.StringArg("peer-ids", true, false, "Host Peer IDs to send repair requests."),
 	}, hostRepairResponseCmd.Arguments...), // append pass-through arguments
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -65,11 +65,18 @@ This command sends request to mining host to negotiate the repair works.`,
 		if err != nil {
 			return err
 		}
-		// Pass arguments through to host response endpoint
-		_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepair/response",
-			req.Arguments[1:]...)
-		if err != nil {
-			return err
+
+		peerIds := strings.Split(req.Arguments[0], ",")
+		for _, peerId := range peerIds {
+			pi, err := remote.FindPeer(req.Context, n, peerId)
+			if err != nil {
+				return err
+			}
+			_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepairrouting/response",
+				req.Arguments[1:]...)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	},
