@@ -74,7 +74,7 @@ This command sends request to mining host to negotiate the repair works.`,
 		}
 		err = emptyCheck(fileHash, lostShardHashes, repairId, repairContractId, fileSize, downloadRewardAmount, repairRewardAmount)
 		if err != nil {
-			return nil
+			return err
 		}
 		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
