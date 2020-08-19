@@ -447,7 +447,6 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						Address: pkBytes,
 					},
 				}
-				var total int
 				minLatestTime := time.Unix(1<<63-62135596801, 999999999)
 				csIndexMap := map[string]int{}
 				for i := ci; i < ci+cconfig.ConstRequestPayoutBatchPageSize && i < len(cs); i++ {
@@ -462,7 +461,6 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 						minLatestTime = time.Time{}
 					}
 					in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
-					total += 1
 				}
 				in.LastModifyTime = minLatestTime
 				sign, err := crypto.Sign(n.PrivateKey, in.Data)
@@ -512,6 +510,7 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 
 					if s.ErrorMsg != "" {
 						resCt.LastModifyTime = time.Time{} // reset to beginning
+						resCt.NextEscrowTime = time.Time{} // reset to unknown
 						contractsLog.Debug("got payout status error message:", s.ErrorMsg)
 					}
 
