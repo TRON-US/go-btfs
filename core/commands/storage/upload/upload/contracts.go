@@ -17,6 +17,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
+	cconfig "github.com/tron-us/go-btfs-common/config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
@@ -31,6 +32,8 @@ import (
 var contractsLog = logging.Logger("storage/contracts")
 
 const (
+	contractsSyncPurgeOptionName = "purge"
+
 	contractsListOrderOptionName  = "order"
 	contractsListStatusOptionName = "status"
 	contractsListSizeOptionName   = "size"
@@ -80,6 +83,9 @@ This command contracts stats based on role from network(hub) to local node data 
 	Arguments: []cmds.Argument{
 		cmds.StringArg("role", true, false, "Role in BTFS storage network [host|renter|reserved]."),
 	},
+	Options: []cmds.Option{
+		cmds.BoolOption(contractsSyncPurgeOptionName, "p", "Purge local contracts cache and sync from the beginning.").WithDefault(false),
+	},
 	RunTimeout: 60 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -92,6 +98,17 @@ This command contracts stats based on role from network(hub) to local node data 
 		}
 		if role != nodepb.ContractStat_HOST {
 			return fmt.Errorf("only host contract sync is supported currently")
+		}
+		purgeOpt, _ := req.Options[contractsSyncPurgeOptionName].(bool)
+		if purgeOpt {
+			err = sessions.DeleteShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role.String())
+			if err != nil {
+				return err
+			}
+			err = Save(n.Repo.Datastore(), nil, role.String())
+			if err != nil {
+				return err
+			}
 		}
 		return SyncContracts(req.Context, n, req, env, role.String())
 	},
@@ -291,6 +308,9 @@ func ListContracts(d datastore.Datastore, peerId, role string) ([]*nodepb.Contra
 	return fcs, nil
 }
 
+// SyncContracts does the following:
+// 1) Obtain latest guard contract updates and saves into cache
+// 2) Obtain latest payout status updates and saves into cache
 func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env cmds.Environment,
 	role string) error {
 	cs, err := sessions.ListShardsContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
@@ -321,7 +341,11 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 		}
 	}
 	if len(cs) > 0 {
-		results, err := syncContractPayoutStatus(ctx, n, cs)
+		cts, err := ListContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
+		if err != nil {
+			return err
+		}
+		results, err := syncContractPayoutStatus(ctx, n, cs, cts)
 		if err != nil {
 			return err
 		}
@@ -396,7 +420,7 @@ func ListHostContracts(ctx context.Context, cfg *config.Config,
 // SyncContractPayoutStatus looks at local contracts, refreshes from Guard, and then
 // syncs payout status for all of them
 func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
-	cs []*shardpb.SignedContracts) ([]*nodepb.Contracts_Contract, error) {
+	cs []*shardpb.SignedContracts, cts []*nodepb.Contracts_Contract) ([]*nodepb.Contracts_Contract, error) {
 	cfg, err := n.Repo.Config()
 	if err != nil {
 		return nil, err
@@ -409,72 +433,100 @@ func syncContractPayoutStatus(ctx context.Context, n *core.IpfsNode,
 	if err != nil {
 		return nil, err
 	}
-	results := make([]*nodepb.Contracts_Contract, 0)
+	// Generate quick lookup map for existing payout contracts
+	ctsIndexMap := map[string]int{}
+	for i, ct := range cts {
+		ctsIndexMap[ct.ContractId] = i
+	}
 	err = grpc.EscrowClient(cfg.Services.EscrowDomain).WithContext(ctx,
-		func(ctx context.Context,
-			client escrowpb.EscrowServiceClient) error {
-			in := &escrowpb.SignedContractIDBatch{
-				Data: &escrowpb.ContractIDBatch{
-					Address: pkBytes,
-				},
-			}
-			for _, c := range cs {
-				in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
-			}
-			sign, err := crypto.Sign(n.PrivateKey, in.Data)
-			if err != nil {
-				contractsLog.Error("sign contractID error:", err)
-				return err
-			}
-			in.Signature = sign
-			sb, err := client.GetPayOutStatusBatch(ctx, in)
-			if err != nil {
-				contractsLog.Error("get payout status batch error:", err)
-				return err
-			}
-			if len(sb.Status) != len(cs) {
-				return fmt.Errorf("payout status batch returned wrong length of contracts, need %d, got %d",
-					len(cs), len(sb.Status))
-			}
-			for i, c := range cs {
-				s := sb.Status[i]
-				// Set dummy payout status on invalid id or error msg
-				// Reset to dummy status so we have a copy locally with invalid params
-				if s.ContractId != c.SignedGuardContract.ContractId {
-					s = &escrowpb.PayoutStatus{
-						ContractId: c.SignedGuardContract.ContractId,
-						ErrorMsg:   "mistmatched contract id",
+		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+			// Loop only max page size each time
+			for ci := 0; ci < len(cs); ci += cconfig.ConstRequestPayoutBatchPageSize {
+				in := &escrowpb.SignedModifyContractIDBatch{
+					Data: &escrowpb.ContractIDBatch{
+						Address: pkBytes,
+					},
+				}
+				minLatestTime := time.Unix(1<<63-62135596801, 999999999)
+				csIndexMap := map[string]int{}
+				for i := ci; i < ci+cconfig.ConstRequestPayoutBatchPageSize && i < len(cs); i++ {
+					c := cs[i]
+					csIndexMap[c.SignedGuardContract.ContractId] = i
+					// Get the minimum latest timestamp, if does not exist, then just pull everything
+					if cti, ok := ctsIndexMap[c.SignedGuardContract.ContractId]; ok {
+						if cts[cti].LastModifyTime.Before(minLatestTime) {
+							minLatestTime = cts[cti].LastModifyTime
+						}
+					} else {
+						minLatestTime = time.Time{}
 					}
-				} else if s.ErrorMsg != "" {
-					s = &escrowpb.PayoutStatus{
-						ContractId: c.SignedGuardContract.ContractId,
-						ErrorMsg:   s.ErrorMsg,
+					in.Data.ContractId = append(in.Data.ContractId, c.SignedGuardContract.ContractId)
+				}
+				in.LastModifyTime = minLatestTime
+				sign, err := crypto.Sign(n.PrivateKey, in.Data)
+				if err != nil {
+					contractsLog.Error("sign contractID error:", err)
+					return err
+				}
+				in.Signature = sign
+				sb, err := client.GetModifyPayOutStatusBatch(ctx, in)
+				if err != nil {
+					contractsLog.Error("get payout status batch error:", err)
+					return err
+				}
+				var lastUpdated time.Time
+				for _, s := range sb.Status {
+					if _, ok := csIndexMap[s.ContractId]; !ok {
+						continue // Ignore bad contracts
+					}
+					// Find the latest valid timestamp for all updates
+					if s.ErrorMsg == "" && s.LastModifyTime.After(lastUpdated) {
+						lastUpdated = s.LastModifyTime
 					}
 				}
-				if s.ErrorMsg != "" {
-					contractsLog.Debug("got payout status error message:", s.ErrorMsg)
-				}
+				for _, s := range sb.Status {
+					csi, ok := csIndexMap[s.ContractId]
+					if !ok {
+						continue // Ignore bad contracts
+					}
+					c := cs[csi]
 
-				results = append(results, &nodepb.Contracts_Contract{
-					ContractId:              c.SignedGuardContract.ContractId,
-					HostId:                  c.SignedGuardContract.HostPid,
-					RenterId:                c.SignedGuardContract.RenterPid,
-					Status:                  c.SignedGuardContract.State,
-					StartTime:               c.SignedGuardContract.RentStart,
-					EndTime:                 c.SignedGuardContract.RentEnd,
-					NextEscrowTime:          s.NextPayoutTime,
-					CompensationPaid:        s.PaidAmount,
-					CompensationOutstanding: s.Amount - s.PaidAmount,
-					UnitPrice:               c.SignedGuardContract.Price,
-					ShardSize:               c.SignedGuardContract.ShardFileSize,
-					ShardHash:               c.SignedGuardContract.ShardHash,
-					FileHash:                c.SignedGuardContract.FileHash,
-				})
+					resCt := &nodepb.Contracts_Contract{
+						ContractId:              c.SignedGuardContract.ContractId,
+						HostId:                  c.SignedGuardContract.HostPid,
+						RenterId:                c.SignedGuardContract.RenterPid,
+						Status:                  c.SignedGuardContract.State,
+						StartTime:               c.SignedGuardContract.RentStart,
+						EndTime:                 c.SignedGuardContract.RentEnd,
+						LastModifyTime:          lastUpdated, // sync time with this batch
+						NextEscrowTime:          s.NextPayoutTime,
+						CompensationPaid:        s.PaidAmount,
+						CompensationOutstanding: s.Amount - s.PaidAmount,
+						UnitPrice:               c.SignedGuardContract.Price,
+						ShardSize:               c.SignedGuardContract.ShardFileSize,
+						ShardHash:               c.SignedGuardContract.ShardHash,
+						FileHash:                c.SignedGuardContract.FileHash,
+					}
+
+					if s.ErrorMsg != "" {
+						resCt.LastModifyTime = time.Time{} // reset to beginning
+						resCt.NextEscrowTime = time.Time{} // reset to unknown
+						contractsLog.Debug("got payout status error message:", s.ErrorMsg)
+					}
+
+					// If already exists, update existing
+					// Otherwise append/add to list
+					if cti, ok := ctsIndexMap[resCt.ContractId]; ok {
+						cts[cti] = resCt
+					} else {
+						cts = append(cts, resCt)
+					}
+				}
 			}
 			return nil
 		})
 	if err != nil {
 		return nil, err
 	}
-	return results, nil
+	return cts, nil
 }
