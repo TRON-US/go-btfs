@@ -300,7 +300,7 @@ the shard and replies back to client for the next challenge step.`,
 				return nil
 			}()
 			if tmp != nil {
-				log.Error(tmp)
+				log.Debug(tmp)
 			}
 		}()
 		return nil
@@ -358,7 +358,6 @@ func checkPaymentFromClient(ctxParams *uh.ContextParams, paidIn chan bool, contr
 		return errors.New("reach max retry times")
 	}, uh.CheckPaymentBo)
 	if err != nil {
-		log.Error("Check escrow IsPaidin failed", err)
 		paidIn <- paid
 	}
 }
