@@ -105,7 +105,7 @@ This command sends request to mining host to negotiate the repair works.`,
 					if err != nil {
 						return err
 					}
-					_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepairrouting/response",
+					_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepairrouter/response",
 						req.Arguments[1:]...)
 					if err != nil {
 						return err
