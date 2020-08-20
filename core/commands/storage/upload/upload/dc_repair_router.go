@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	"github.com/alecthomas/units"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +19,8 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
+
+	"go.uber.org/zap"
 )
 
 var StorageDcRepairRouterCmd = &cmds.Command{
@@ -37,7 +40,6 @@ type RepairContractParams struct {
 	FileHash             string
 	FileSize             int64
 	RepairPid            string
-	RepairSignTime       time.Time
 	LostShardHashes      []string
 	RepairContractId     string
 	RepairRewardAmount   int64
@@ -76,16 +78,6 @@ This command sends request to mining host to negotiate the repair works.`,
 		if err != nil {
 			return err
 		}
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-		if !cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
-		}
-		if !cfg.Experimental.HostRepairEnabled {
-			return fmt.Errorf("host repair api not enabled")
-		}
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -114,7 +106,7 @@ This command sends request to mining host to negotiate the repair works.`,
 					return nil
 				}()
 				if err != nil {
-					log.Debug("P2P call error for peerId %s", peerId)
+					log.Error("P2P call error", zap.Error(err), zap.String("peerId", peerId))
 				}
 				wg.Done()
 			}()
@@ -173,6 +165,12 @@ returns the repairer's signed contract to the invoker.`,
 		if err != nil {
 			return err
 		}
+		if !ctxParams.Cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+		if !ctxParams.Cfg.Experimental.HostRepairEnabled {
+			return fmt.Errorf("host repair api not enabled")
+		}
 		ns, err := helper.GetHostStorageConfig(ctxParams.Ctx, ctxParams.N)
 		if err != nil {
 			return err
@@ -183,14 +181,17 @@ returns the repairer's signed contract to the invoker.`,
 		} else {
 			price = ns.RepairPriceDefault
 		}
-		if price > uint64(repairRewardAmount) {
-			return fmt.Errorf("host desired price %d is greater than request price %d", price, repairRewardAmount)
+		totalPrice := uint64(float64(fileSize) / float64(units.GiB) * float64(price))
+		if totalPrice <= 0 {
+			totalPrice = 1
+		}
+		if totalPrice > uint64(repairRewardAmount) {
+			return fmt.Errorf("host desired price %d is greater than request price %d", totalPrice, repairRewardAmount)
 		}
 		submitSignedRepairContract(ctxParams, &RepairContractParams{
 			FileHash:             fileHash,
 			FileSize:             fileSize,
 			RepairPid:            repairId,
-			RepairSignTime:       time.Now(),
 			LostShardHashes:      lostShardHashes,
 			RepairContractId:     repairContractId,
 			DownloadContractId:   downloadContractId,
@@ -255,11 +256,11 @@ func emptyCheck(fileHash string, lostShardHashes []string, RepairPid string, rep
 	if len(lostShardHashes) == 0 {
 		return fmt.Errorf("lost shard hashes do not specify")
 	}
-	if DownloadRewardAmount == 0 {
-		return fmt.Errorf("download reward amount is 0")
+	if DownloadRewardAmount <= 0 {
+		return fmt.Errorf("download reward amount should be bigger than 0")
 	}
-	if RepairRewardAmount == 0 {
-		return fmt.Errorf("repair reward amount is 0")
+	if RepairRewardAmount <= 0 {
+		return fmt.Errorf("repair reward amount should be bigger than 0")
 	}
 	return nil
 }
