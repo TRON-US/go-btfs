@@ -86,7 +86,7 @@ This command contracts stats based on role from network(hub) to local node data 
 	Options: []cmds.Option{
 		cmds.BoolOption(contractsSyncPurgeOptionName, "p", "Purge local contracts cache and sync from the beginning.").WithDefault(false),
 	},
-	RunTimeout: 60 * time.Second,
+	RunTimeout: 10 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -334,11 +334,14 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 		if err != nil {
 			return err
 		}
-		_, err := rm.RmDag(ctx, stale, n, req, env, true)
-		if err != nil {
-			// may have been cleaned up already, ignore
-			contractsLog.Error("stale contracts clean up error:", err)
-		}
+		go func() {
+			// Use a new context that can clean up in the background
+			_, err := rm.RmDag(context.Background(), stale, n, req, env, true)
+			if err != nil {
+				// may have been cleaned up already, ignore
+				contractsLog.Error("stale contracts clean up error:", err)
+			}
+		}()
 	}
 	if len(cs) > 0 {
 		cts, err := ListContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)

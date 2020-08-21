@@ -42,18 +42,18 @@ This command updates host information and broadcasts to the BTFS network.
 
 Examples
 
-To set the min price per GiB to 1000000 JUST (1 BTT):
+To set the min price per GiB to 1000000 µBTT (1 BTT):
 $ btfs storage announce --host-storage-price=1000000`,
 	},
 	Options: []cmds.Option{
-		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Min price per GiB of storage per day in JUST."),
-		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Min price per MiB of bandwidth in JUST."),
-		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in JUST."),
+		cmds.Uint64Option(hostStoragePriceOptionName, "s", "Min price per GiB of storage per day in µBTT."),
+		cmds.Uint64Option(hostBandwidthPriceOptionName, "b", "Min price per MiB of bandwidth in µBTT."),
+		cmds.Uint64Option(hostCollateralPriceOptionName, "cl", "Max collateral stake per hour per GiB in µBTT."),
 		cmds.FloatOption(hostBandwidthLimitOptionName, "l", "Max bandwidth limit per MB/s."),
 		cmds.Uint64Option(hostStorageTimeMinOptionName, "d", "Min number of days for storage."),
 		cmds.Uint64Option(hostStorageMaxOptionName, "m", "Max number of GB this host provides for storage."),
 		cmds.BoolOption(hostStorageEnableOptionName, "hm", "Enable/disable host storage mode. By default no mode change is made. When specified, toggles between enable/disable host mode."),
-		cmds.BoolOption(hostStorageCustomizedPricingOptionName, "scp", fmt.Sprintf("Disable customized pricing and use network default price instead. Can only be enabled by explicitly setting %s.", hostStoragePriceOptionName)),
+		cmds.BoolOption(hostStorageCustomizedPricingOptionName, "scp", fmt.Sprintf("Control customized pricing feature. Set false to disable and use network default price instead. Can only be enabled by explicitly setting %s.", hostStoragePriceOptionName)),
 		cmds.BoolOption(repairHostEnabledOptionName, "rm", "Enable/disable repair mode. By default no mode change is made. When specified, toggles between enable/disable repair mode."),
 		cmds.BoolOption(challengeHostEnabledOptionName, "cm", "Enable/disable challenge mode. By default no mode change is made. When specified, toggles between enable/disable challenge mode."),
 		cmds.BoolOption(repairCustomizedPricingOptionName, "rc", "Options of repair price, true for customized price and false means default price."),
