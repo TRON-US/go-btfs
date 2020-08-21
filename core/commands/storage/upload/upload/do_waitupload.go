@@ -104,7 +104,8 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 				m := make(map[string]int)
 				for _, c := range meta.Contracts {
 					m[c.State.String()]++
-					if c.State == guardpb.Contract_READY_CHALLENGE || c.State == guardpb.Contract_UPLOADED {
+					switch c.State {
+					case guardpb.Contract_READY_CHALLENGE, guardpb.Contract_REQUEST_CHALLENGE, guardpb.Contract_UPLOADED:
 						num++
 					}
 					shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, c.ShardHash, int(c.ShardIndex))

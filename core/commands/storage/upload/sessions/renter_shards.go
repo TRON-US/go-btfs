@@ -179,6 +179,22 @@ func ListShardsContracts(d datastore.Datastore, peerId string, role string) ([]*
 	return contracts, nil
 }
 
+func DeleteShardsContracts(d datastore.Datastore, peerId string, role string) error {
+	var k string
+	if k = fmt.Sprintf(renterShardPrefix, peerId); role == nodepb.ContractStat_HOST.String() {
+		k = fmt.Sprintf(hostShardPrefix, peerId)
+	}
+	ks, err := ListKeys(d, k, "/contracts")
+	if err != nil {
+		return err
+	}
+	vs := make([]proto.Message, len(ks))
+	for range ks {
+		vs = append(vs, nil)
+	}
+	return Batch(d, ks, vs)
+}
+
 // SaveShardsContracts persists updated guard contracts from upstream, if an existing entry
 // is not available, then an empty signed escrow contract is inserted along with the
 // new guard contract.
@@ -193,10 +209,16 @@ func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
 	activeShards := map[string]bool{}      // active shard hash -> has one file hash (bool)
 	activeFiles := map[string]bool{}       // active file hash -> has one shard hash (bool)
 	invalidShards := map[string][]string{} // invalid shard hash -> (maybe) invalid file hash list
+	var key string
+	if role == nodepb.ContractStat_HOST.String() {
+		key = hostShardContractsKey
+	} else {
+		key = renterShardContractsKey
+	}
 	for _, c := range scs {
 		// only append the updated contracts
 		if gc, ok := gmap[c.SignedGuardContract.ContractId]; ok {
-			ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, c.SignedGuardContract.ContractId))
+			ks = append(ks, fmt.Sprintf(key, peerID, c.SignedGuardContract.ContractId))
 			// update
 			c.SignedGuardContract = gc
 			vs = append(vs, c)
@@ -213,7 +235,7 @@ func SaveShardsContracts(ds datastore.Datastore, scs []*shardpb.SignedContracts,
 	}
 	// append what's left in guard map as new contracts
 	for contractID, gc := range gmap {
-		ks = append(ks, fmt.Sprintf(renterShardContractsKey, peerID, contractID))
+		ks = append(ks, fmt.Sprintf(key, peerID, contractID))
 		// add a new (guard contract only) signed contracts
 		c := &shardpb.SignedContracts{SignedGuardContract: gc}
 		scs = append(scs, c)

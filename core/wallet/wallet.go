@@ -108,6 +108,11 @@ func WalletDeposit(ctx context.Context, configuration *config.Config, n *core.Ip
 		return errors.New(fmt.Sprintf("deposit amount should between %d ~ %d", DepositMinAmount, DepositMaxAmount))
 	}
 
+	_, err = Balance(ctx, configuration)
+	if err != nil {
+		return err
+	}
+
 	prepareResponse, err := Deposit(ctx, n, hostWallet.ledgerAddress, amount, hostWallet.privateKey, runDaemon, async)
 	if err != nil {
 		log.Error("Failed to Deposit, ERR[%v]\n", err)
@@ -240,10 +245,7 @@ func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bo
 	var balance int64 = 0
 	err := grpc.EscrowClient(configuration.Services.EscrowDomain).WithContext(ctx,
 		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			res, err := client.BalanceOf(ctx, &ledgerpb.SignedCreateAccountRequest{
-				Key:       lgSignedPubKey.Key,
-				Signature: lgSignedPubKey.Signature,
-			})
+			res, err := client.BalanceOf(ctx, ledger.NewSignedCreateAccountRequest(lgSignedPubKey.Key, lgSignedPubKey.Signature))
 			if err != nil {
 				return err
 			}
