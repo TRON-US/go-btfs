@@ -16,7 +16,7 @@ This command displays host information synchronized from the BTFS network.
 By default it shows local host node information.`,
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self.").EnableStdin(),
+		cmds.StringArg("peer-id", false, false, "Peer ID to show storage-related information. Default to self."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		cfg, err := cmdenv.GetConfig(env)
