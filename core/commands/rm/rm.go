@@ -36,6 +36,7 @@ func RmDag(ctx context.Context, hashes []string, n *core.IpfsNode, req *cmds.Req
 		if err != nil {
 			return nil, err
 		}
+
 		if pinned {
 			// Since we are removing a file, we need to set recursive flag to true
 			err = api.Pin().Rm(ctx, p, options.Pin.RmRecursive(true), options.Pin.RmForce(force))
