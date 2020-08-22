@@ -179,9 +179,11 @@ var (
 
 type ByTime []*nodepb.Contracts_Contract
 
-func (a ByTime) Len() int           { return len(a) }
-func (a ByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByTime) Less(i, j int) bool { return a[i].StartTime.UnixNano() < a[j].StartTime.UnixNano() }
+func (a ByTime) Len() int      { return len(a) }
+func (a ByTime) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByTime) Less(i, j int) bool {
+	return a[i].NextEscrowTime.UnixNano() < a[j].NextEscrowTime.UnixNano()
+}
 
 // sub-commands: btfs storage contracts list
 var storageContractsListCmd = &cmds.Command{
