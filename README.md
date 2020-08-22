@@ -158,14 +158,41 @@ Successfully tagged btfs_docker:latest
 
 Start the container based on the new image. Starting the container also initializes and starts the BTFS daemon.
 ```
-$ docker container run --publish 5001:8080 --detach --name btfs1 btfs_docker
+$ docker container run --publish 8080:5001 --detach --name btfs1 btfs_docker
 ```
 
 The CLI flags are as such:
 
-* `--publish` asks Docker to forward traffic incoming on the host’s port 5001, to the container’s port 8080. 
+* `--publish` asks Docker to forward traffic incoming on the host’s port 8080, to the container’s port 5001. 
 * `--detach` asks Docker to run this container in the background.
 * `--name` specifies a name with which you can refer to your container in subsequent commands, in this case btfs1.
+
+Configure cross-origin(CORS)
+You need to configure cross-origin (CORS) to access the container from the host.
+```
+(host) docker exec -it btfs1 /bin/sh // Enter the container's shell
+```
+
+Then configure cross-origin(CORS) with btfs
+
+```
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://$IP:$PORT"]'
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+```
+
+E.g:
+```
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://localhost:8080"]'
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+```
+
+Exit the container and restart the container
+```
+(container) exit
+(host) docker restart btfs1
+```
+
+You can access the container from the host with http://localhost:8080/hostui .
 
 Execute commands within the docker container:
 ```
