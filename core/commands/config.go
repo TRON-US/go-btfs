@@ -83,7 +83,7 @@ Set the value of the 'Datastore.Path' key:
 
 		// This is a temporary fix until we move the private key out of the config file
 		switch strings.ToLower(key) {
-		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid":
+		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid", "identity.password":
 			return fmt.Errorf("cannot show or change %s through API", key)
 		default:
 		}
@@ -183,7 +183,7 @@ NOTE: For security reasons, this command will omit your private key. If you woul
 			return err
 		}
 
-		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag} {
+		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag, config.PasswordTag} {
 			err = scrubValue(cfg, []string{config.IdentityTag, k})
 			if err != nil {
 				return err
