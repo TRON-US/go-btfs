@@ -40,16 +40,17 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":         walletInitCmd,
-		"deposit":      walletDepositCmd,
-		"withdraw":     walletWithdrawCmd,
-		"balance":      walletBalanceCmd,
-		"password":     walletPasswordCmd,
-		"keys":         walletKeysCmd,
-		"transactions": walletTransactionsCmd,
-		"import":       walletImportCmd,
-		"transfer":     walletTransferCmd,
-		"discovery":    walletDiscoveryCmd,
+		"init":              walletInitCmd,
+		"deposit":           walletDepositCmd,
+		"withdraw":          walletWithdrawCmd,
+		"balance":           walletBalanceCmd,
+		"password":          walletPasswordCmd,
+		"keys":              walletKeysCmd,
+		"transactions":      walletTransactionsCmd,
+		"import":            walletImportCmd,
+		"transfer":          walletTransferCmd,
+		"discovery":         walletDiscoveryCmd,
+		"validate_password": walletCheckPasswordCmd,
 	},
 }
 
@@ -99,6 +100,7 @@ var walletDepositCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(asyncOptionName, "a", "Deposit asynchronously."),
+		cmds.StringOption(passwordOptionName, "p", "password"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -160,7 +162,9 @@ var walletWithdrawCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("amount", true, false, "amount to deposit."),
 	},
-	Options: []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -269,12 +273,40 @@ var walletPasswordCmd = &cmds.Command{
 		}
 		cfg.Identity.EncryptedMnemonic = cipherMnemonic
 		cfg.Identity.EncryptedPrivKey = cipherPrivKey
-		cfg.Identity.Password = req.Arguments[0]
 		err = n.Repo.SetConfig(cfg)
 		if err != nil {
 			return err
 		}
 		return cmds.EmitOnce(res, &MessageOutput{"Password set."})
+	},
+	Type: MessageOutput{},
+}
+
+var walletCheckPasswordCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "check password",
+		ShortDescription: "check password",
+	},
+	Arguments: []cmds.Argument{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		if !cfg.UI.Wallet.Initialized {
+			return errors.New("can not perform the operation before password is set")
+		}
+		if err := validatePassword(cfg, req); err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, &MessageOutput{"Password is correct."})
 	},
 	Type: MessageOutput{},
 }
@@ -386,8 +418,12 @@ func validatePassword(cfg *config.Config, req *cmds.Request) error {
 	if password == "" {
 		return errors.New("need password")
 	}
-	if password != cfg.Identity.Password {
-		return errors.New("wrong password")
+	privK, err := wallet.DecryptWithAES(password, cfg.Identity.EncryptedPrivKey)
+	if err != nil {
+		return errors.New("incorrect password")
+	}
+	if cfg.Identity.PrivKey != privK {
+		return errors.New("incorrect password")
 	}
 	return nil
 }
