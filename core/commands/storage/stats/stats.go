@@ -74,7 +74,7 @@ func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode, env
 	if err != nil {
 		return err
 	}
-	du, err := disk.Usage(cfgRoot)
+	du, err := disk.UsageWithContext(ctx, cfgRoot)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ This command get node stats in the network from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		du, err := disk.Usage(cfgRoot)
+		du, err := disk.UsageWithContext(req.Context, cfgRoot)
 		if err != nil {
 			return err
 		}

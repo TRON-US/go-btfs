@@ -160,7 +160,7 @@ $ btfs storage announce --host-storage-price=1000000`,
 				return err
 			}
 			sm = sm * uint64(units.GB)
-			_, err = helper.CheckAndValidateHostStorageMax(cfgRoot, n.Repo, &sm, false)
+			_, err = helper.CheckAndValidateHostStorageMax(req.Context, cfgRoot, n.Repo, &sm, false)
 			if err != nil {
 				return err
 			}
