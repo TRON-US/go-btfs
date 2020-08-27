@@ -217,7 +217,7 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 		err := func() error {
 			repairContractResp, err := submitSignedRepairContract(ctxParams, params)
 			if err != nil {
-				return nil
+				return err
 			}
 			if repairContractResp.Status == guardpb.RepairContractResponse_BOTH_SIGNED {
 				// check payment
