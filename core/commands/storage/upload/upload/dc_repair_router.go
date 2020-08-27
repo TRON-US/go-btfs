@@ -537,7 +537,7 @@ func challengeShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairContr
 		if err != nil {
 			return err
 		}
-		if count == len(repairReq.LostShardHash)-1 {
+		if count == len(repairReq.LostShardHash) {
 			break
 		}
 	}
