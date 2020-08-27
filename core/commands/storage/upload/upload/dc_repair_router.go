@@ -277,7 +277,7 @@ func submitSignedRepairContract(ctxParams *uh.ContextParams, params *RepairContr
 	sig, err := crypto.Sign(ctxParams.N.PrivateKey, repairReq)
 	if err != nil {
 		return nil, err
-	} //RepairContractResponse_ContractResponseStatus
+	}
 	repairReq.RepairSignature = sig
 	var repairResp *guardpb.RepairContractResponse
 	err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
@@ -360,13 +360,15 @@ func uploadShards(ctxParams *uh.ContextParams, repairContract *guardpb.RepairCon
 				guardContract.HostPid = host
 				guardContract.State = guardpb.Contract_RENEWED
 				guardContractBytes, err := proto.Marshal(guardContract)
+				if err != nil {
+					return nil
+				}
 				repairPid := ctxParams.N.Identity
 				hostPid, err := peer.IDB58Decode(host)
 				if err != nil {
 					log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
 					return err
 				}
-				// init and err check
 				cb := make(chan error)
 				ShardErrChanMap.Set(guardContract.ContractId, cb)
 				go func() {
