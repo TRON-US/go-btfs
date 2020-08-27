@@ -269,6 +269,7 @@ func TestCommands(t *testing.T) {
 		"/wallet/transfer",
 		"/wallet/import",
 		"/wallet/discovery",
+		"/wallet/validate_password",
 		"/tron",
 		"/tron/prepare",
 		"/tron/send",
