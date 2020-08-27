@@ -15,6 +15,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
+	"github.com/TRON-US/go-btfs-config"
 )
 
 func init() {
@@ -39,16 +40,17 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":         walletInitCmd,
-		"deposit":      walletDepositCmd,
-		"withdraw":     walletWithdrawCmd,
-		"balance":      walletBalanceCmd,
-		"password":     walletPasswordCmd,
-		"keys":         walletKeysCmd,
-		"transactions": walletTransactionsCmd,
-		"import":       walletImportCmd,
-		"transfer":     walletTransferCmd,
-		"discovery":    walletDiscoveryCmd,
+		"init":              walletInitCmd,
+		"deposit":           walletDepositCmd,
+		"withdraw":          walletWithdrawCmd,
+		"balance":           walletBalanceCmd,
+		"password":          walletPasswordCmd,
+		"keys":              walletKeysCmd,
+		"transactions":      walletTransactionsCmd,
+		"import":            walletImportCmd,
+		"transfer":          walletTransferCmd,
+		"discovery":         walletDiscoveryCmd,
+		"validate_password": walletCheckPasswordCmd,
 	},
 }
 
@@ -81,12 +83,15 @@ var walletInitCmd = &cmds.Command{
 	Type: MessageOutput{},
 }
 
-const asyncOptionName = "async"
+const (
+	asyncOptionName    = "async"
+	passwordOptionName = "password"
+)
 
 var walletDepositCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet deposit",
-		ShortDescription: "BTFS wallet deposit from block chain to ledger.",
+		ShortDescription: "BTFS wallet deposit from block chain to ledger. Use '-p=<password>' to specific password.",
 		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
@@ -95,6 +100,7 @@ var walletDepositCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(asyncOptionName, "a", "Deposit asynchronously."),
+		cmds.StringOption(passwordOptionName, "p", "password"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
@@ -105,7 +111,9 @@ var walletDepositCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-
+		if err := validatePassword(cfg, req); err != nil {
+			return err
+		}
 		async, _ := req.Options[asyncOptionName].(bool)
 
 		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
@@ -147,14 +155,16 @@ var walletDepositCmd = &cmds.Command{
 var walletWithdrawCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet withdraw",
-		ShortDescription: "BTFS wallet withdraw from ledger to block chain.",
+		ShortDescription: "BTFS wallet withdraw from ledger to block chain. Use '-p=<password>' to specific password.",
 		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
 		cmds.StringArg("amount", true, false, "amount to deposit."),
 	},
-	Options: []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -164,7 +174,9 @@ var walletWithdrawCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-
+		if err := validatePassword(cfg, req); err != nil {
+			return err
+		}
 		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
 		if err != nil {
 			return err
@@ -270,6 +282,35 @@ var walletPasswordCmd = &cmds.Command{
 	Type: MessageOutput{},
 }
 
+var walletCheckPasswordCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "check password",
+		ShortDescription: "check password",
+	},
+	Arguments: []cmds.Argument{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		if !cfg.UI.Wallet.Initialized {
+			return errors.New("can not perform the operation before password is set")
+		}
+		if err := validatePassword(cfg, req); err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, &MessageOutput{"Password is correct."})
+	},
+	Type: MessageOutput{},
+}
+
 var walletKeysCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet keys",
@@ -332,13 +373,15 @@ var walletTransactionsCmd = &cmds.Command{
 var walletTransferCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "Send to another BTT wallet",
-		ShortDescription: "Send to another BTT wallet from current BTT wallet",
+		ShortDescription: "Send to another BTT wallet from current BTT wallet. Use '-p=<password>' to specific password.",
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("to", true, false, "address of another BTFS wallet to transfer to."),
 		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer."),
 	},
-	Options: []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -346,6 +389,9 @@ var walletTransferCmd = &cmds.Command{
 		}
 		cfg, err := n.Repo.Config()
 		if err != nil {
+			return err
+		}
+		if err := validatePassword(cfg, req); err != nil {
 			return err
 		}
 		amount, err := strconv.ParseInt(req.Arguments[1], 10, 64)
@@ -362,6 +408,24 @@ var walletTransferCmd = &cmds.Command{
 		})
 	},
 	Type: &TransferResult{},
+}
+
+func validatePassword(cfg *config.Config, req *cmds.Request) error {
+	if !cfg.UI.Wallet.Initialized {
+		return errors.New("can not perform the operation before password is set")
+	}
+	password, _ := req.Options[passwordOptionName].(string)
+	if password == "" {
+		return errors.New("need password")
+	}
+	privK, err := wallet.DecryptWithAES(password, cfg.Identity.EncryptedPrivKey)
+	if err != nil {
+		return errors.New("incorrect password")
+	}
+	if cfg.Identity.PrivKey != privK {
+		return errors.New("incorrect password")
+	}
+	return nil
 }
 
 type TransferResult struct {
