@@ -83,7 +83,7 @@ Set the value of the 'Datastore.Path' key:
 
 		// This is a temporary fix until we move the private key out of the config file
 		switch strings.ToLower(key) {
-		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid", "identity.password":
+		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid":
 			return fmt.Errorf("cannot show or change %s through API", key)
 		default:
 		}
