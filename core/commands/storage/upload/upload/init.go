@@ -112,6 +112,7 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 		guardContractMeta := halfSignedGuardContract.ContractMeta
+
 		// get renter's public key
 		pid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
@@ -292,12 +293,12 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 	resp := &guardpb.ResponseChallengeQuestion{
 		Answer: &guardpb.ChallengeQuestion{
 			ShardHash:    question.Question.ShardHash,
-			HostPid:      ctxParams.N.Identity.Pretty(), //question.Question.HostPid,
+			HostPid:      question.Question.HostPid,
 			ChunkIndex:   int32(sc.CIndex),
 			Nonce:        sc.Nonce,
 			ExpectAnswer: sc.Hash,
 		},
-		HostPid:     ctxParams.N.Identity.Pretty(), //question.Question.HostPid,
+		HostPid:     question.Question.HostPid,
 		ResolveTime: time.Now(),
 		IsRepair:    isRepair,
 	}

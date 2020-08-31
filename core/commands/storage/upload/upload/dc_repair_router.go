@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
@@ -26,7 +25,7 @@ import (
 
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v4"
-	cidlib "github.com/ipfs/go-cid"
+	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/protobuf/proto"
 
@@ -232,22 +231,18 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 				if !paid {
 					return fmt.Errorf("contract is not paid: %s", params.RepairContractId)
 				}
-
 				_, err = downloadAndRebuildFile(ctxParams, repairContract.FileHash, repairContract.LostShardHash)
 				if err != nil {
 					return err
 				}
-
-				err = challengeShards(ctxParams, repairContract)
+				err = challengeLostShards(ctxParams, repairContract)
 				if err != nil {
 					return err
 				}
-
 				fileStatus, err := uploadShards(ctxParams, repairContract)
 				if err != nil {
 					return err
 				}
-
 				err = submitFileStatus(ctxParams.Ctx, ctxParams.Cfg, fileStatus)
 				if err != nil {
 					return err
@@ -306,23 +301,35 @@ func uploadShards(ctxParams *uh.ContextParams, repairContract *guardpb.RepairCon
 	}
 	repairContractReq.RepairSignature = sig
 	var statusMeta *guardpb.FileStoreStatus
-	err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
-		client guardpb.GuardServiceClient) error {
-		repairContractResp, err := client.RequestForRepairContracts(ctx, repairContractReq)
-		if err != nil {
-			return err
+	var repairContractResp *guardpb.ResponseRepairContracts
+
+	tick := time.Tick(5 * time.Second)
+FOR:
+	for true {
+		select {
+		case <-tick:
+			err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
+				client guardpb.GuardServiceClient) error {
+				repairContractResp, err = client.RequestForRepairContracts(ctx, repairContractReq)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_READY {
+				statusMeta = repairContractResp.Status
+				break FOR
+			}
 		}
-		statusMeta = repairContractResp.Status
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 	contracts := statusMeta.Contracts
 	if len(contracts) <= 0 {
 		return nil, errors.New("length of contracts is 0")
 	}
-	ssId, _ := uh.SplitContractId(contracts[0].ContractId)
+	ssId := uuid.New().String()
 	shardIndexes := make([]int, 0)
 	shardHashes := make([]string, 0)
 	contractMap := map[string]*guardpb.Contract{}
@@ -434,96 +441,20 @@ func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, rs []s
 	return ioutil.ReadAll(resp.Output)
 }
 
-func challengeShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairContract) error {
+func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairContract) error {
 	errChan := make(chan error, len(repairReq.LostShardHash))
 	for _, lostShardHash := range repairReq.LostShardHash {
 		go func() {
 			err := func() error {
-				in := &guardpb.ReadyForChallengeRequest{
+				err := challengeShard(ctxParams, lostShardHash, true, &guardpb.ContractMeta{
 					//RenterPid:   repairReq.RepairPid,
-					FileHash:    repairReq.FileHash,
-					ShardHash:   lostShardHash,
-					ContractId:  repairReq.RepairContractId,
-					HostPid:     repairReq.RepairPid,
-					PrepareTime: repairReq.RepairSignTime,
-					IsRepair:    true,
-				}
-				sign, err := crypto.Sign(ctxParams.N.PrivateKey, in)
+					FileHash:   repairReq.FileHash,
+					ShardHash:  lostShardHash,
+					ContractId: repairReq.RepairContractId,
+					HostPid:    repairReq.RepairPid,
+					RentStart:  repairReq.RepairSignTime,
+				})
 				if err != nil {
-					return err
-				}
-				in.Signature = sign
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-				defer cancel()
-				var question *guardpb.RequestChallengeQuestion
-				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
-					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						for i := 0; i < 3; i++ {
-							question, err = client.RequestChallenge(ctx, in)
-							if err == nil {
-								break
-							}
-							time.Sleep(30 * time.Second)
-						}
-						return err
-					})
-				if err != nil {
-					return err
-				}
-				if question == nil {
-					return errors.New("question is nil")
-				}
-				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-				defer cancel()
-
-				fileHash, err := cidlib.Parse(repairReq.FileHash)
-				if err != nil {
-					return err
-				}
-				shardHash, err := cidlib.Parse(question.Question.ShardHash)
-				if err != nil {
-					return err
-				}
-				sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
-					fileHash, shardHash, "", false, 0)
-				if err != nil {
-					return err
-				}
-				err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
-				if err != nil {
-					return err
-				}
-				resp := &guardpb.ResponseChallengeQuestion{
-					Answer: &guardpb.ChallengeQuestion{
-						ShardHash:    question.Question.ShardHash,
-						HostPid:      question.Question.HostPid,
-						ChunkIndex:   int32(sc.CIndex),
-						Nonce:        sc.Nonce,
-						ExpectAnswer: sc.Hash,
-					},
-					HostPid:     question.Question.HostPid,
-					ResolveTime: time.Now(),
-					IsRepair:    true,
-				}
-				privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
-				if err != nil {
-					return err
-				}
-				sig, err := crypto.Sign(privKey, resp)
-				if err != nil {
-					return err
-				}
-				resp.Signature = sig
-				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
-					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						_, err = client.ResponseChallenge(ctx, resp)
-						if err != nil {
-							return err
-						}
-						return nil
-					})
-				if err != nil {
-					log.Debug(err)
 					return err
 				}
 				return nil
