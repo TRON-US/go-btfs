@@ -215,91 +215,9 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				in := &guardpb.ReadyForChallengeRequest{
-					RenterPid:   guardContractMeta.RenterPid,
-					FileHash:    guardContractMeta.FileHash,
-					ShardHash:   guardContractMeta.ShardHash,
-					ContractId:  guardContractMeta.ContractId,
-					HostPid:     guardContractMeta.HostPid,
-					PrepareTime: guardContractMeta.RentStart,
-				}
-				sign, err := crypto.Sign(ctxParams.N.PrivateKey, in)
+				fileHash := req.Arguments[1]
+				err = challengeShard(ctxParams, fileHash, false, &guardContractMeta)
 				if err != nil {
-					return err
-				}
-				in.Signature = sign
-				// Need to renew another 5 mins due to downloading shard could have already made
-				// req.Context obsolete
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-				defer cancel()
-				var question *guardpb.RequestChallengeQuestion
-				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
-					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						for i := 0; i < 3; i++ {
-							question, err = client.RequestChallenge(ctx, in)
-							if err == nil {
-								break
-							}
-							time.Sleep(30 * time.Second)
-						}
-						return err
-					})
-				if err != nil {
-					return err
-				}
-				if question == nil {
-					return errors.New("question is nil")
-				}
-				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-				defer cancel()
-
-				fileHash, err := cidlib.Parse(req.Arguments[1])
-				if err != nil {
-					return err
-				}
-				shardHash, err := cidlib.Parse(question.Question.ShardHash)
-				if err != nil {
-					return err
-				}
-				sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
-					fileHash, shardHash, "", false, 0)
-				if err != nil {
-					return err
-				}
-				err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
-				if err != nil {
-					return err
-				}
-				resp := &guardpb.ResponseChallengeQuestion{
-					Answer: &guardpb.ChallengeQuestion{
-						ShardHash:    question.Question.ShardHash,
-						HostPid:      question.Question.HostPid,
-						ChunkIndex:   int32(sc.CIndex),
-						Nonce:        sc.Nonce,
-						ExpectAnswer: sc.Hash,
-					},
-					HostPid:     question.Question.HostPid,
-					ResolveTime: time.Now(),
-				}
-				privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
-				if err != nil {
-					return err
-				}
-				sig, err := crypto.Sign(privKey, resp)
-				if err != nil {
-					return err
-				}
-				resp.Signature = sig
-				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
-					func(ctx context.Context, client guardpb.GuardServiceClient) error {
-						_, err := client.ResponseChallenge(ctx, resp)
-						if err != nil {
-							return err
-						}
-						return nil
-					})
-				if err != nil {
-					log.Debug(err)
 					return err
 				}
 				if err := shard.Complete(); err != nil {
@@ -313,6 +231,99 @@ the shard and replies back to client for the next challenge step.`,
 		}()
 		return nil
 	},
+}
+
+func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool, guardContractMeta *guardpb.ContractMeta) error {
+	in := &guardpb.ReadyForChallengeRequest{
+		RenterPid:   guardContractMeta.RenterPid,
+		FileHash:    guardContractMeta.FileHash,
+		ShardHash:   guardContractMeta.ShardHash,
+		ContractId:  guardContractMeta.ContractId,
+		HostPid:     guardContractMeta.HostPid,
+		PrepareTime: guardContractMeta.RentStart,
+		IsRepair:    isRepair,
+	}
+	sign, err := crypto.Sign(ctxParams.N.PrivateKey, in)
+	if err != nil {
+		return err
+	}
+	in.Signature = sign
+	// Need to renew another 5 mins due to downloading shard could have already made
+	// req.Context obsolete
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	var question *guardpb.RequestChallengeQuestion
+	err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
+		func(ctx context.Context, client guardpb.GuardServiceClient) error {
+			for i := 0; i < 3; i++ {
+				question, err = client.RequestChallenge(ctx, in)
+				if err == nil {
+					break
+				}
+				time.Sleep(30 * time.Second)
+			}
+			return err
+		})
+	if err != nil {
+		return err
+	}
+	if question == nil {
+		return errors.New("question is nil")
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	fileHashCid, err := cidlib.Parse(fileHash)
+	if err != nil {
+		return err
+	}
+	shardHashCid, err := cidlib.Parse(question.Question.ShardHash)
+	if err != nil {
+		return err
+	}
+	sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
+		fileHashCid, shardHashCid, "", false, 0)
+	if err != nil {
+		return err
+	}
+	err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
+	if err != nil {
+		return err
+	}
+	resp := &guardpb.ResponseChallengeQuestion{
+		Answer: &guardpb.ChallengeQuestion{
+			ShardHash:    question.Question.ShardHash,
+			HostPid:      question.Question.HostPid,
+			ChunkIndex:   int32(sc.CIndex),
+			Nonce:        sc.Nonce,
+			ExpectAnswer: sc.Hash,
+		},
+		HostPid:     question.Question.HostPid,
+		ResolveTime: time.Now(),
+		IsRepair:    isRepair,
+	}
+	privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
+	if err != nil {
+		return err
+	}
+	sig, err := crypto.Sign(privKey, resp)
+	if err != nil {
+		return err
+	}
+	resp.Signature = sig
+	err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
+		func(ctx context.Context, client guardpb.GuardServiceClient) error {
+			_, err := client.ResponseChallenge(ctx, resp)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	if err != nil {
+		log.Debug(err)
+		return err
+	}
+	return nil
 }
 
 func signEscrowContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
