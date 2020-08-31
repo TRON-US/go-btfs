@@ -66,7 +66,7 @@ func (p *CustomizedHostsProvider) AddIndex() (int, error) {
 	defer p.Unlock()
 	p.current++
 	if p.current >= len(p.hosts) {
-		return -1, errors.New("Index exceeds array bounds.")
+		return -1, errors.New(failMsg)
 	}
 	return p.current, nil
 }
@@ -151,7 +151,7 @@ func (p *HostsProvider) AddIndex() (int, error) {
 	defer p.Unlock()
 	p.current++
 	if p.current >= len(p.hosts) {
-		return -1, errors.New("Array out of bounds")
+		return -1, errors.New(failMsg)
 	}
 	return p.current, nil
 }
@@ -248,6 +248,9 @@ LOOP:
 				continue
 			}
 		} else {
+			if err == nil {
+				err = errors.New(failMsg)
+			}
 			return "", err
 		}
 	}
