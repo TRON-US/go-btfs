@@ -2,9 +2,11 @@ package storage
 
 import (
 	"fmt"
-	cmds "github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
@@ -46,6 +48,20 @@ By default it shows local host node information.`,
 		if err != nil {
 			return err
 		}
+		roles := make([]nodepb.NodeRole, 0)
+		if cfg.Experimental.StorageClientEnabled {
+			roles = append(roles, nodepb.NodeRole_RENTER)
+		}
+		if cfg.Experimental.StorageHostEnabled {
+			roles = append(roles, nodepb.NodeRole_HOST)
+		}
+		if cfg.Experimental.HostRepairEnabled {
+			roles = append(roles, nodepb.NodeRole_REPAIRER)
+		}
+		if cfg.Experimental.HostChallengeEnabled {
+			roles = append(roles, nodepb.NodeRole_CHALLENGER)
+		}
+		data.Roles = roles
 		return cmds.EmitOnce(res, data)
 	},
 	Type: nodepb.Node_Settings{},
