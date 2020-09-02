@@ -32,6 +32,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const requestInterval = 5 //minutes
+
 var StorageDcRepairRouterCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Interact with Host repair requests and responses for negotiation of shards repair.",
@@ -257,7 +259,6 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 }
 
 func submitSignedRepairContract(ctxParams *uh.ContextParams, params *RepairContractParams) (*guardpb.RepairContractResponse, error) {
-
 	repairReq := &guardpb.RepairContract{
 		FileHash:             params.FileHash,
 		FileSize:             params.FileSize,
@@ -302,8 +303,9 @@ func uploadShards(ctxParams *uh.ContextParams, repairContract *guardpb.RepairCon
 	repairContractReq.RepairSignature = sig
 	var statusMeta *guardpb.FileStoreStatus
 	var repairContractResp *guardpb.ResponseRepairContracts
+	duration := time.Duration(requestInterval)
+	tick := time.Tick(duration * time.Minute)
 
-	tick := time.Tick(5 * time.Second)
 FOR:
 	for true {
 		select {
@@ -319,9 +321,23 @@ FOR:
 			if err != nil {
 				return nil, err
 			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_REQUEST_AGAIN {
+				log.Info(fmt.Sprintf("request repair contract again in %d minutes", requestInterval))
+				continue
+			}
 			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_READY {
 				statusMeta = repairContractResp.Status
 				break FOR
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_DOWNLOAD_NOT_DONE {
+				unpinLocalStorage(ctxParams, repairContract.FileHash)
+				log.Info("download and challenge can not be completed for lost shards")
+				return nil, nil
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_CLOSED {
+				unpinLocalStorage(ctxParams, repairContract.FileHash)
+				log.Info("repair contract has been closed", zap.String("contract id", repairContract.RepairContractId))
+				return nil, nil
 			}
 		}
 	}
@@ -329,7 +345,6 @@ FOR:
 	if len(contracts) <= 0 {
 		return nil, errors.New("length of contracts is 0")
 	}
-	ssId := uuid.New().String()
 	shardIndexes := make([]int, 0)
 	shardHashes := make([]string, 0)
 	contractMap := map[string]*guardpb.Contract{}
@@ -340,6 +355,7 @@ FOR:
 			shardIndexes = append(shardIndexes, int(contract.ShardIndex))
 		}
 	}
+	ssId := uuid.New().String()
 	rss, err := sessions.GetRenterSession(ctxParams, ssId, repairContract.FileHash, shardHashes)
 	if err != nil {
 		return nil, err
@@ -427,9 +443,9 @@ func updateRepairContract(contracts []*guardpb.Contract, contractMap map[string]
 	}
 }
 
-func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, rs []string) ([]byte, error) {
+func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, repairShards []string) ([]byte, error) {
 	url := fmt.Sprint(strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[2], ":", strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[4])
-	resp, err := shell.NewShell(url).Request("get", fileHash).Option("rs", rs).Send(ctxParams.Ctx)
+	resp, err := shell.NewShell(url).Request("get", fileHash).Option("repair-shards", repairShards).Send(ctxParams.Ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -439,6 +455,15 @@ func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, rs []s
 		return nil, resp.Error
 	}
 	return ioutil.ReadAll(resp.Output)
+}
+
+func unpinLocalStorage(ctxParams *uh.ContextParams, fishHash string) error {
+	url := fmt.Sprint(strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[2], ":", strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[4])
+	err := shell.NewShell(url).Request("pin/rm", fishHash).Option("recursive", true).Exec(ctxParams.Ctx, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairContract) error {
