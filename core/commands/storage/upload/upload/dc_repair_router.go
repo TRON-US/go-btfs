@@ -331,7 +331,7 @@ FOR:
 			}
 			if repairContractResp.State == guardpb.ResponseRepairContracts_DOWNLOAD_NOT_DONE {
 				unpinLocalStorage(ctxParams, repairContract.FileHash)
-				log.Info("download and challenge can not be completed for lost shards")
+				log.Info("download and challenge can not be completed for lost shards", zap.String("repairer id", repairContract.RepairPid))
 				return nil, nil
 			}
 			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_CLOSED {
