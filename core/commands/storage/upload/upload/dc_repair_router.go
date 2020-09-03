@@ -52,9 +52,7 @@ type RepairContractParams struct {
 	FileSize             int64
 	RepairPid            string
 	LostShardHashes      []string
-	RepairContractId     string
 	RepairRewardAmount   int64
-	DownloadContractId   string
 	DownloadRewardAmount int64
 }
 
@@ -70,8 +68,6 @@ This command sends request to mining host to negotiate the repair works.`,
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fileHash := req.Arguments[1]
-		repairId := req.Arguments[6]
-		repairContractId := req.Arguments[8]
 		lostShardHashes := strings.Split(req.Arguments[2], ",")
 		fileSize, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
@@ -85,7 +81,7 @@ This command sends request to mining host to negotiate the repair works.`,
 		if err != nil {
 			return err
 		}
-		err = emptyCheck(fileHash, lostShardHashes, repairId, repairContractId, fileSize, downloadRewardAmount, repairRewardAmount)
+		err = emptyCheck(fileHash, lostShardHashes, fileSize, downloadRewardAmount, repairRewardAmount)
 		if err != nil {
 			return err
 		}
@@ -98,7 +94,7 @@ This command sends request to mining host to negotiate the repair works.`,
 			return err
 		}
 		peerIds := strings.Split(req.Arguments[0], ",")
-		reapirIds := make([]string, len(peerIds))
+		repairIds := make([]string, len(peerIds))
 		var wg sync.WaitGroup
 		wg.Add(len(peerIds))
 		for index, peerId := range peerIds {
@@ -113,7 +109,7 @@ This command sends request to mining host to negotiate the repair works.`,
 					if err != nil {
 						return err
 					}
-					reapirIds[index] = peerId
+					repairIds[index] = peerId
 					return nil
 				}()
 				if err != nil {
@@ -123,7 +119,7 @@ This command sends request to mining host to negotiate the repair works.`,
 			}()
 		}
 		wg.Wait()
-		return cmds.EmitOnce(res, &peerIdList{reapirIds})
+		return cmds.EmitOnce(res, &peerIdList{repairIds})
 	},
 	Type: peerIdList{},
 }
@@ -145,16 +141,10 @@ returns the repairer's signed contract to the invoker.`,
 		cmds.StringArg("file-size", true, false, "Size of the repair file."),
 		cmds.StringArg("download-reward-amount", true, false, "Reward amount for download workload."),
 		cmds.StringArg("repair-reward-amount", true, false, "Reward amount for repair workload."),
-		cmds.StringArg("repair-pid", true, false, "Host Peer ID to send repair requests."),
-		cmds.StringArg("download_contract_id", true, false, " Contract ID associated with the download requests."),
-		cmds.StringArg("repair_contract_id", true, false, "Contract ID associated with the require requests."),
 	},
 	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fileHash := req.Arguments[0]
-		repairId := req.Arguments[5]
-		downloadContractId := req.Arguments[6]
-		repairContractId := req.Arguments[7]
 		lostShardHashes := strings.Split(req.Arguments[1], ",")
 		fileSize, err := strconv.ParseInt(req.Arguments[2], 10, 64)
 		if err != nil {
@@ -168,7 +158,7 @@ returns the repairer's signed contract to the invoker.`,
 		if err != nil {
 			return err
 		}
-		err = emptyCheck(fileHash, lostShardHashes, repairId, repairContractId, fileSize, downloadRewardAmount, repairRewardAmount)
+		err = emptyCheck(fileHash, lostShardHashes, fileSize, downloadRewardAmount, repairRewardAmount)
 		if err != nil {
 			return err
 		}
@@ -176,6 +166,7 @@ returns the repairer's signed contract to the invoker.`,
 		if err != nil {
 			return err
 		}
+		repairId := ctxParams.N.Identity.Pretty()
 		if !ctxParams.Cfg.Experimental.StorageClientEnabled {
 			return fmt.Errorf("storage client api not enabled")
 		}
@@ -204,8 +195,6 @@ returns the repairer's signed contract to the invoker.`,
 			FileSize:             fileSize,
 			RepairPid:            repairId,
 			LostShardHashes:      lostShardHashes,
-			RepairContractId:     repairContractId,
-			DownloadContractId:   downloadContractId,
 			RepairRewardAmount:   repairRewardAmount,
 			DownloadRewardAmount: downloadRewardAmount,
 		})
@@ -231,7 +220,7 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
 				paid := <-paidIn
 				if !paid {
-					return fmt.Errorf("contract is not paid: %s", params.RepairContractId)
+					return fmt.Errorf("contract is not paid: %s", repairContract.RepairContractId)
 				}
 				_, err = downloadAndRebuildFile(ctxParams, repairContract.FileHash, repairContract.LostShardHash)
 				if err != nil {
@@ -265,8 +254,6 @@ func submitSignedRepairContract(ctxParams *uh.ContextParams, params *RepairContr
 		RepairPid:            params.RepairPid,
 		LostShardHash:        params.LostShardHashes,
 		RepairSignTime:       time.Now().UTC(),
-		RepairContractId:     params.RepairContractId,
-		DownloadContractId:   params.DownloadContractId,
 		RepairRewardAmount:   params.RepairRewardAmount,
 		DownloadRewardAmount: params.DownloadRewardAmount,
 	}
@@ -500,15 +487,9 @@ func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairC
 	return nil
 }
 
-func emptyCheck(fileHash string, lostShardHashes []string, RepairPid string, repairContractId string, fileSize int64, DownloadRewardAmount int64, RepairRewardAmount int64) error {
+func emptyCheck(fileHash string, lostShardHashes []string, fileSize int64, DownloadRewardAmount int64, RepairRewardAmount int64) error {
 	if fileHash == "" {
 		return fmt.Errorf("file Hash is empty")
-	}
-	if RepairPid == "" {
-		return fmt.Errorf("repair id is empty")
-	}
-	if repairContractId == "" {
-		return fmt.Errorf("repair contract id is empty")
 	}
 	if fileSize == 0 {
 		return fmt.Errorf("file size is 0")
