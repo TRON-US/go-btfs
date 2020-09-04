@@ -402,9 +402,10 @@ var walletTransferCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		msg := fmt.Sprintf("transaction %v sent", ret.TxId)
 		return cmds.EmitOnce(res, &TransferResult{
 			Result:  ret.Result,
-			Message: ret.Message,
+			Message: msg,
 		})
 	},
 	Type: &TransferResult{},
