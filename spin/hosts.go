@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
+	"github.com/TRON-US/go-btfs/core/commands/storage/stats"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
@@ -32,7 +33,7 @@ func Hosts(node *core.IpfsNode, env cmds.Environment) {
 		fmt.Printf("Storage host info will be synced at [%s] mode\n", m)
 		go periodicHostSync(hostSyncPeriod, hostSyncTimeout+hostSortTimeout, "hosts",
 			func(ctx context.Context) error {
-				_, err := storage.SyncHosts(ctx, node, m)
+				_, err := hosts.SyncHosts(ctx, node, m)
 				return err
 			})
 	}
@@ -40,7 +41,7 @@ func Hosts(node *core.IpfsNode, env cmds.Environment) {
 		fmt.Println("Current host stats will be synced")
 		go periodicHostSync(hostStatsSyncPeriod, hostSyncTimeout, "host stats",
 			func(ctx context.Context) error {
-				return storage.SyncStats(ctx, cfg, node, env)
+				return stats.SyncStats(ctx, cfg, node, env)
 			})
 		fmt.Println("Current host settings will be synced")
 		go periodicHostSync(hostSettingsSyncPeriod, hostSyncTimeout, "host settings",

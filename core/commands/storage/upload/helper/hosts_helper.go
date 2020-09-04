@@ -104,7 +104,6 @@ func (p *HostsProvider) init() (err error) {
 	if err != nil {
 		return err
 	}
-	p.hosts = make([]*hubpb.Host, 0)
 	peers, err := p.cp.Api.Swarm().Peers(p.cp.Ctx)
 	if err != nil {
 		log.Debug(err)

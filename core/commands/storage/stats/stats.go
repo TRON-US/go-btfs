@@ -1,4 +1,4 @@
-package storage
+package stats
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	"github.com/TRON-US/go-btfs/core/corerepo"
 	"github.com/TRON-US/go-btfs/core/hub"
 
@@ -13,7 +14,9 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
+	ds "github.com/ipfs/go-datastore"
 	"github.com/shirou/gopsutil/disk"
+	"github.com/tron-us/protobuf/proto"
 )
 
 const (
@@ -156,4 +159,42 @@ This command get node stats in the network from the local node data store.`,
 		})
 	},
 	Type: nodepb.StorageStat{},
+}
+
+const (
+	HostStatStorePrefix = "/host_stats/" // from btfs-hub
+)
+
+// GetHostStatsFromDatastore retrieves host storage stats based on node id
+func GetHostStatsFromDatastore(ctx context.Context, node *core.IpfsNode, nodeId string) (*nodepb.StorageStat_Host, error) {
+	rds := node.Repo.Datastore()
+	qr, err := rds.Get(GetHostStatStorageKey(nodeId))
+	if err != nil {
+		return nil, err
+	}
+	var hs nodepb.StorageStat_Host
+	err = proto.Unmarshal(qr, &hs)
+	if err != nil {
+		return nil, err
+	}
+	return &hs, nil
+}
+
+func GetHostStatStorageKey(pid string) ds.Key {
+	return helper.NewKeyHelper(HostStatStorePrefix, pid)
+}
+
+// SaveHostStatsIntoDatastore overwrites host storage stats based on node id
+func SaveHostStatsIntoDatastore(ctx context.Context, node *core.IpfsNode, nodeId string,
+	stats *nodepb.StorageStat_Host) error {
+	rds := node.Repo.Datastore()
+	b, err := proto.Marshal(stats)
+	if err != nil {
+		return err
+	}
+	err = rds.Put(GetHostStatStorageKey(nodeId), b)
+	if err != nil {
+		return err
+	}
+	return nil
 }

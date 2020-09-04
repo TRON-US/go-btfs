@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	storage "github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/wallet"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
@@ -402,9 +402,10 @@ var walletTransferCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		msg := fmt.Sprintf("transaction %v sent", ret.TxId)
 		return cmds.EmitOnce(res, &TransferResult{
 			Result:  ret.Result,
-			Message: ret.Message,
+			Message: msg,
 		})
 	},
 	Type: &TransferResult{},
@@ -459,7 +460,7 @@ var walletImportCmd = &cmds.Command{
 			return err
 		}
 		go func() error {
-			restartCmd := exec.Command(storage.Excutable, "restart")
+			restartCmd := exec.Command(path.Excutable, "restart")
 			if err := restartCmd.Run(); err != nil {
 				log.Errorf("restart error, %v", err)
 				return err

@@ -1,4 +1,4 @@
-package upload
+package contracts
 
 import (
 	"context"

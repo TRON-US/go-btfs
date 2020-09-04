@@ -1,4 +1,4 @@
-package storage
+package hosts
 
 import (
 	"context"
