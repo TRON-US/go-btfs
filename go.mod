@@ -161,6 +161,4 @@ replace github.com/TRON-US/go-btfs-cmds => github.com/TRON-US/go-btfs-cmds v0.2.
 
 replace github.com/TRON-US/go-btfs-config => github.com/TRON-US/go-btfs-config v0.6.11
 
-replace github.com/TRON-US/interface-go-btfs-core => ../interface-go-btfs-core
-
 go 1.14
