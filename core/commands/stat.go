@@ -29,6 +29,7 @@ for your BTFS node.`,
 		"bw":      statBwCmd,
 		"repo":    repoStatCmd,
 		"bitswap": bitswapStatCmd,
+		"dht":     statDhtCmd,
 	},
 }
 
