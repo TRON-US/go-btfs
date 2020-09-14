@@ -42,8 +42,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				errChan := make(chan error, 2)
 				go func() {
 					tmp := func() error {
-						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning,
-							renterId, contractId)
+						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
 						if err != nil {
 							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
 							return err
