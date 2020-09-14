@@ -236,8 +236,6 @@ func TestGatewayGet(t *testing.T) {
 }
 
 func TestPretty404(t *testing.T) {
-	//TODO
-	t.SkipNow()
 	ns := mockNamesys{}
 	ts, api, ctx := newTestServerAndNode(t, ns)
 	defer ts.Close()
@@ -255,7 +253,7 @@ func TestPretty404(t *testing.T) {
 	}
 
 	host := "example.net"
-	ns["/ipns/"+host] = path.FromString(k.String())
+	ns["/btns/"+host] = path.FromString(k.String())
 
 	for _, test := range []struct {
 		path   string
@@ -267,7 +265,7 @@ func TestPretty404(t *testing.T) {
 		{"/nope", "text/html", http.StatusNotFound, "Custom 404"},
 		{"/nope", "text/*", http.StatusNotFound, "Custom 404"},
 		{"/nope", "*/*", http.StatusNotFound, "Custom 404"},
-		{"/nope", "application/json", http.StatusNotFound, "ipfs resolve -r /ipns/example.net/nope: no link named \"nope\" under QmcmnF7XG5G34RdqYErYDwCKNFQ6jb8oKVR21WAJgubiaj\n"},
+		{"/nope", "application/json", http.StatusNotFound, "btfs resolve -r /btns/example.net/nope: no link named \"nope\" under QmcmnF7XG5G34RdqYErYDwCKNFQ6jb8oKVR21WAJgubiaj\n"},
 		{"/deeper/nope", "text/html", http.StatusNotFound, "Deep custom 404"},
 		{"/deeper/", "text/html", http.StatusOK, ""},
 		{"/deeper", "text/html", http.StatusOK, ""},
@@ -390,8 +388,6 @@ func TestIPNSHostnameRedirect(t *testing.T) {
 }
 
 func TestIPNSHostnameBacklinks(t *testing.T) {
-	//TODO
-	t.SkipNow()
 	ns := mockNamesys{}
 	ts, api, ctx := newTestServerAndNode(t, ns)
 	t.Logf("test server url: %s", ts.URL)
@@ -446,7 +442,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 	s := string(body)
 	t.Logf("body: %s\n", string(body))
 
-	if !strings.Contains(s, "Index of /ipns/example.net/foo? #&lt;&#39;/") {
+	if !strings.Contains(s, "Index of /btns/example.net/foo? #&lt;&#39;/") {
 		t.Fatalf("expected a path in directory listing")
 	}
 	if !strings.Contains(s, "<a href=\"/foo%3F%20%23%3C%27/./..\">") {
@@ -512,7 +508,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 	s = string(body)
 	t.Logf("body: %s\n", string(body))
 
-	if !strings.Contains(s, "Index of /ipns/example.net/foo? #&lt;&#39;/bar/") {
+	if !strings.Contains(s, "Index of /btns/example.net/foo? #&lt;&#39;/bar/") {
 		t.Fatalf("expected a path in directory listing")
 	}
 	if !strings.Contains(s, "<a href=\"/foo%3F%20%23%3C%27/bar/./..\">") {
@@ -546,7 +542,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 	s = string(body)
 	t.Logf("body: %s\n", string(body))
 
-	if !strings.Contains(s, "Index of /ipns/example.net") {
+	if !strings.Contains(s, "Index of /btns/example.net") {
 		t.Fatalf("expected a path in directory listing")
 	}
 	if !strings.Contains(s, "<a href=\"/good-prefix/\">") {
