@@ -74,26 +74,28 @@ func (p *CustomizedHostsProvider) AddIndex() (int, error) {
 type HostsProvider struct {
 	cp *ContextParams
 	sync.Mutex
-	mode           string
-	current        int
-	hosts          []*hubpb.Host
-	blacklist      []string
-	backupList     []string
-	backupListLock sync.Mutex
-	ctx            context.Context
-	cancel         context.CancelFunc
-	times          int
+	mode            string
+	current         int
+	hosts           []*hubpb.Host
+	blacklist       []string
+	backupList      []string
+	backupListLock  sync.Mutex
+	ctx             context.Context
+	cancel          context.CancelFunc
+	times           int
+	needHigherPrice bool
 }
 
 func GetHostsProvider(cp *ContextParams, blacklist []string) IHostsProvider {
 	ctx, cancel := context.WithTimeout(cp.Ctx, 10*time.Minute)
 	p := &HostsProvider{
-		cp:        cp,
-		mode:      cp.Cfg.Experimental.HostsSyncMode,
-		current:   -1,
-		blacklist: blacklist,
-		ctx:       ctx,
-		cancel:    cancel,
+		cp:              cp,
+		mode:            cp.Cfg.Experimental.HostsSyncMode,
+		current:         -1,
+		blacklist:       blacklist,
+		ctx:             ctx,
+		cancel:          cancel,
+		needHigherPrice: false,
 	}
 	p.init()
 	return p
@@ -150,7 +152,7 @@ func (p *HostsProvider) AddIndex() (int, error) {
 	defer p.Unlock()
 	p.current++
 	if p.current >= len(p.hosts) {
-		return -1, errors.New(failMsg)
+		return -1, errors.New(p.getMsg())
 	}
 	return p.current, nil
 }
@@ -204,14 +206,13 @@ func (p *HostsProvider) PickFromBackupHosts() (string, error) {
 }
 
 func (p *HostsProvider) NextValidHost(price int64) (string, error) {
-	needHigherPrice := false
 	endOfBackup := false
 LOOP:
 	for true {
 		select {
 		case <-p.ctx.Done():
 			p.cancel()
-			return "", errors.New(failMsg)
+			return "", errors.New(p.getMsg())
 		default:
 		}
 		p.Lock()
@@ -226,7 +227,7 @@ LOOP:
 			}
 			id, err := peer.IDB58Decode(host.NodeId)
 			if err != nil || int64(host.StoragePriceAsk) > price {
-				needHigherPrice = true
+				p.needHigherPrice = true
 				continue
 			}
 			ctx, _ := context.WithTimeout(p.ctx, 3*time.Second)
@@ -247,15 +248,16 @@ LOOP:
 				continue
 			}
 		} else {
-			if err == nil {
-				err = errors.New(failMsg)
-			}
-			return "", err
+			return "", errors.New(p.getMsg())
 		}
 	}
+	return "", errors.New(p.getMsg())
+}
+
+func (p *HostsProvider) getMsg() string {
 	msg := failMsg
-	if needHigherPrice {
+	if p.needHigherPrice {
 		msg += " or raise price"
 	}
-	return "", errors.New(msg)
+	return msg
 }
