@@ -6,7 +6,7 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
-	github.com/TRON-US/go-btfs-cmds v0.2.5
+	github.com/TRON-US/go-btfs-cmds v0.2.6-pre2
 	github.com/TRON-US/go-btfs-config v0.6.10
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
@@ -157,8 +157,6 @@ replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.1.2
 replace github.com/ipld/go-car => github.com/TRON-US/go-car v0.2.1
 
 replace github.com/ipld/go-ipld-prime-proto => github.com/TRON-US/go-ipld-prime-proto v0.0.2
-
-replace github.com/TRON-US/go-btfs-cmds => github.com/TRON-US/go-btfs-cmds v0.2.6-pre
 
 replace github.com/TRON-US/go-btfs-config => github.com/TRON-US/go-btfs-config v0.6.11
 
