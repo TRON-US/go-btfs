@@ -63,7 +63,7 @@ endef
 
 test_go_test: $$(DEPS_GO)
 #	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) ./...
-	$(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) $(MY_PKGS)
+	echo $(go-flags-with-tags) && $(GOCC) test $(go-flags-with-tags) $(GOTFLAGS) $(MY_PKGS)
 .PHONY: test_go_test
 
 #Used to display coverage per function an total at the end

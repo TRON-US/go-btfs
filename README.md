@@ -196,10 +196,20 @@ You can access the container from the host with http://localhost:8080/hostui .
 
 Execute commands within the docker container:
 ```
-docker exec CONTAINER btfs add chunker=reed-solomon FILE
+docker exec CONTAINER btfs add --chunker=reed-solomon FILE
 ```
 
-## Usage
+### Some things to try
+
+Basic proof of 'ipfs working' locally:
+
+    echo "hello world" > hello
+    btfs add --chunker=reed-solomon hello
+    # This should output a hash string that looks something like:
+    # QmaN4MmXMduZe7Y7XoMKFPuDFunvEZU6DWtBPg3L8kkAuS
+    btfs cat <that hash>
+
+### Usage
 
 ```
   btfs - Global p2p merkle-dag filesystem.
@@ -223,7 +233,7 @@ SUBCOMMANDS
   
   ADVANCED COMMANDS
     daemon        Start a long-running daemon process
-    mount         Mount an BTFS read-only mountpoint
+    mount         Mount an BTFS read-only mount point
     resolve       Resolve any type of name
     name          Publish and resolve IPNS names
     key           Create and list IPNS name keypairs
@@ -246,9 +256,7 @@ SUBCOMMANDS
     config        Manage configuration
     version       Show btfs version information
     commands      List all available commands
-    cid           Convert and discover properties of CIDs
-    log           Manage and show logs of running daemon
-  
+ 
   Use 'btfs <command> --help' to learn more about each command.
   
   btfs uses a repository in the local file system. By default, the repo is
