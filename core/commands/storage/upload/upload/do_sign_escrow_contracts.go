@@ -17,13 +17,12 @@ import (
 )
 
 func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
-	offlineSigning bool, offSignPid peer.ID,
-	contractId string) ([]byte, error) {
+	offlineSigning bool, offSignPid peer.ID, contractId string, storageLength int) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
 	if err != nil {
 		return nil, err
 	}
-	escrowContract, err := newContract(rss, hostPid, totalPay, false, 0, offSignPid, contractId)
+	escrowContract, err := newContract(rss, hostPid, totalPay, false, 0, offSignPid, contractId, storageLength)
 	if err != nil {
 		return nil, fmt.Errorf("create escrow contract failed: [%v] ", err)
 	}
@@ -62,7 +61,7 @@ func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, sha
 }
 
 func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, customizedSchedule bool, period int,
-	pid peer.ID, contractId string) (*escrowpb.EscrowContract, error) {
+	pid peer.ID, contractId string, storageLength int) (*escrowpb.EscrowContract, error) {
 	var err error
 	payerPubKey, err := pid.ExtractPublicKey()
 	if err != nil {
@@ -86,7 +85,7 @@ func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, c
 		p = period
 	}
 	return ledger.NewEscrowContract(contractId, payerPubKey, hostPubKey, authPubKey, totalPay, ps,
-		int32(p), escrowpb.ContractType_REGULAR, 0)
+		int32(p), escrowpb.ContractType_REGULAR, 0, storageLength)
 
 }
 
