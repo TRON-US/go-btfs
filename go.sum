@@ -1282,6 +1282,8 @@ github.com/tron-us/go-common/v2 v2.1.1 h1:0Nj07cBrOFT38Q0kIHnqM4o4T6GNNxMr2rs5ye
 github.com/tron-us/go-common/v2 v2.1.1/go.mod h1:YIEJZF9Ph79g0zZWOvfNDtJhvO5OqSNPAb/TM1i+KvQ=
 github.com/tron-us/go-common/v2 v2.1.9 h1:xPW8PGvmIVxlo0N/Hv9clegchLkfnesqpx4dGn4xafE=
 github.com/tron-us/go-common/v2 v2.1.9/go.mod h1:YIEJZF9Ph79g0zZWOvfNDtJhvO5OqSNPAb/TM1i+KvQ=
+github.com/tron-us/go-common/v2 v2.2.1 h1:/ncjeASqDKDcD6b9piWHuRNBB/jTkjofmlOcUBIn/8Q=
+github.com/tron-us/go-common/v2 v2.2.1/go.mod h1:YIEJZF9Ph79g0zZWOvfNDtJhvO5OqSNPAb/TM1i+KvQ=
 github.com/tron-us/protobuf v1.3.4 h1:oqokl6jMAfe1fb/B6t1UMllbw/KtfdJcCn8plxPkHM8=
 github.com/tron-us/protobuf v1.3.4/go.mod h1:INMJF54ZV6c8ZMc3imHsMl1kqIpe4VnbCUK4zYcVHqE=
 github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c h1:u6SKchux2yDvFQnDHS3lPnIRmfVJ5Sxy3ao2SIdysLQ=
