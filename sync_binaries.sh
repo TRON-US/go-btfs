@@ -29,7 +29,9 @@ echo "=== Completed deleting old files ==="
 #download files for darwin and linux
 for OS in ${OS_VALUE[@]}; do
     for ARCH in ${ARCH_VALUE[@]}; do
+
         if [[ ${goos} = "darwin" && ( ${goarch} = "arm64" || ${goarch} = "arm" ) ]]; then continue; fi
+
         echo "=== Performing dload for "$OS" "$ARCH" ==="
         cd "$OS"/"$ARCH"
         wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/btfs-"$OS"-"$ARCH".tar.gz 
