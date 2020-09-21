@@ -10,7 +10,7 @@ then
 fi
 
 declare -a OS_VALUE=("darwin" "linux")
-declare -a ARCH_VALUE=("386" "amd64")
+declare -a ARCH_VALUE=("386" "amd64" "arm" "arm64")
 
 cd ../btfs-binary-releases
 
@@ -20,6 +20,8 @@ rm -rf ./darwin/386/*
 rm -rf ./darwin/amd64/*
 rm -rf ./linux/386/*
 rm -rf ./linux/amd64/*
+rm -rf ./linux/arm/*
+rm -rf ./linux/arm64/*
 rm -rf ./windows/386/*
 rm -rf ./windows/amd64/*
 echo "=== Completed deleting old files ==="
@@ -27,6 +29,7 @@ echo "=== Completed deleting old files ==="
 #download files for darwin and linux
 for OS in ${OS_VALUE[@]}; do
     for ARCH in ${ARCH_VALUE[@]}; do
+        if [[ ${goos} = "darwin" && ( ${goarch} = "arm64" || ${goarch} = "arm" ) ]]; then continue; fi
         echo "=== Performing dload for "$OS" "$ARCH" ==="
         cd "$OS"/"$ARCH"
         wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/btfs-"$OS"-"$ARCH".tar.gz 
