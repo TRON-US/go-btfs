@@ -7,12 +7,13 @@ version=`cat version.go | tail -n +7 | head -n +1 | awk '{print $4}'`
 echo "==========>Get btfs version [${version}]"
 
 os=( darwin linux windows )
-arch=( amd64 386 )
+arch=( amd64 386 arm64 arm )
 
 for goos in ${os[@]}
 do
     for goarch in ${arch[@]}
     do
+        if [[ ( ${goos} = "windows" || ${goos} = "darwin" ) && ( ${goarch} = "arm64" || ${goarch} = "arm" ) ]]; then continue; fi
         echo "=============>OS: [${goos}] ARCH: [${goarch}] automatic compiler begin."
         ext=""
         if [[ ${goos} = "windows" ]]; then
