@@ -300,9 +300,6 @@ var walletCheckPasswordCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if !cfg.UI.Wallet.Initialized {
-			return errors.New("can not perform the operation before password is set")
-		}
 		if err := validatePassword(cfg, req); err != nil {
 			return err
 		}
@@ -412,9 +409,6 @@ var walletTransferCmd = &cmds.Command{
 }
 
 func validatePassword(cfg *config.Config, req *cmds.Request) error {
-	if !cfg.UI.Wallet.Initialized {
-		return errors.New("can not perform the operation before password is set")
-	}
 	password, _ := req.Options[passwordOptionName].(string)
 	if password == "" {
 		return errors.New("need password")
