@@ -291,9 +291,9 @@ var PathAddCmd = &cmds.Command{
 		ShortDescription: "add folder",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("parent", true, true,
+		cmds.StringArg("parent", true, false,
 			"parent path, should be absolute path."),
-		cmds.StringArg("name", true, true,
+		cmds.StringArg("name", true, false,
 			"path name"),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
