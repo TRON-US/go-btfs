@@ -8,13 +8,14 @@ import (
 )
 
 func list(root string) ([]string, error) {
+	root = filepath.Clean(root)
 	result := make([]string, 0)
 	files, err := ReadDir(root)
 	if err != nil {
 		return result, err
 	}
 	for _, f := range files {
-		if hid, err := isHidden(f.Name()); err != nil || hid {
+		if hid, err := isHidden(filepath.Join(root, f.Name())); err != nil || hid {
 			continue
 		}
 		if !f.IsDir() {

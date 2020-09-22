@@ -2,8 +2,12 @@
 
 package path
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
-func isHidden(name string) (bool, error) {
+func isHidden(path string) (bool, error) {
+	_, name := filepath.Split(path)
 	return strings.HasPrefix(name, "."), nil
 }
