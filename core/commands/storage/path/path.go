@@ -266,6 +266,10 @@ var PathMigrateCmd = &cmds.Command{
 }
 
 var PathDirCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "directories",
+		ShortDescription: "directories",
+	},
 	Subcommands: map[string]*cmds.Command{
 		"ls":  PathDirLsCmd,
 		"add": PathDirAddCmd,
