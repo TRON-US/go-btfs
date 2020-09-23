@@ -105,6 +105,9 @@ func toHex(address string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if len(bytes) <= 4 {
+			return "", errors.New("invalid address")
+		}
 		address = hexutils.BytesToHex(bytes[:len(bytes)-4])
 	}
 	return address, nil
