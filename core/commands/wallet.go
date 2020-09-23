@@ -411,7 +411,8 @@ var walletTransferCmd = &cmds.Command{
 func validatePassword(cfg *config.Config, req *cmds.Request) error {
 	password, _ := req.Options[passwordOptionName].(string)
 	if password == "" {
-		return errors.New("need password")
+		return errors.New(
+			"Password required but not set. please read the helper text and set password. `btfs wallet password --help`.")
 	}
 	privK, err := wallet.DecryptWithAES(password, cfg.Identity.EncryptedPrivKey)
 	if err != nil {
