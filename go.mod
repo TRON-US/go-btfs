@@ -7,7 +7,7 @@ require (
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
 	github.com/TRON-US/go-btfs-cmds v0.2.6
-	github.com/TRON-US/go-btfs-config v0.6.10
+	github.com/TRON-US/go-btfs-config v0.6.11
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
 	github.com/TRON-US/go-btns v0.1.0
@@ -120,7 +120,7 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	github.com/tron-us/go-btfs-common v0.6.0
+	github.com/tron-us/go-btfs-common v0.6.1
 	github.com/tron-us/go-common/v2 v2.2.1
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
@@ -157,7 +157,5 @@ replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.1.2
 replace github.com/ipld/go-car => github.com/TRON-US/go-car v0.2.1
 
 replace github.com/ipld/go-ipld-prime-proto => github.com/TRON-US/go-ipld-prime-proto v0.0.2
-
-replace github.com/TRON-US/go-btfs-config => github.com/TRON-US/go-btfs-config v0.6.11
 
 go 1.14
