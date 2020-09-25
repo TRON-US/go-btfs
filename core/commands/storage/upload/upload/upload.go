@@ -88,7 +88,7 @@ Use status command to check for completion:
 		cmds.StringArg("upload-signature", false, false, "Session signature when upload upload."),
 	},
 	Options: []cmds.Option{
-		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in JUST."),
+		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in µBTT (=0.000001BTT)."),
 		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),

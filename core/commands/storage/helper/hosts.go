@@ -186,7 +186,8 @@ func SaveHostsIntoDatastore(ctx context.Context, node *core.IpfsNode, mode strin
 // disk space max, if not, corrects this value.
 // Optionally, this function can take a new max and sets the max to this value.
 // Optionally, maxAllowed enables reducing unreasonable settings down to an allowed value.
-func CheckAndValidateHostStorageMax(cfgRoot string, r repo.Repo, newMax *uint64, maxAllowed bool) (uint64, error) {
+func CheckAndValidateHostStorageMax(ctx context.Context, cfgRoot string, r repo.Repo,
+	newMax *uint64, maxAllowed bool) (uint64, error) {
 	cfg, err := r.Config()
 	if err != nil {
 		return 0, err
@@ -197,7 +198,7 @@ func CheckAndValidateHostStorageMax(cfgRoot string, r repo.Repo, newMax *uint64,
 	if err != nil {
 		return 0, err
 	}
-	du, err := disk.Usage(cfgRoot)
+	du, err := disk.UsageWithContext(ctx, cfgRoot)
 	if err != nil {
 		return 0, err
 	}
