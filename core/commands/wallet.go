@@ -412,8 +412,8 @@ func validatePassword(cfg *config.Config, req *cmds.Request) error {
 	password, _ := req.Options[passwordOptionName].(string)
 	if password == "" {
 		return errors.New(
-			`Password required, please use '-p' to pass the password. 
-				Try 'btfs wallet password --help' and assign a password if password is not set.`)
+			`Password required, please use '-p <password>' to specify the password. 
+Try 'btfs wallet password --help' and assign a password if password is not set.`)
 	}
 	privK, err := wallet.DecryptWithAES(password, cfg.Identity.EncryptedPrivKey)
 	if err != nil || cfg.Identity.PrivKey != privK {
