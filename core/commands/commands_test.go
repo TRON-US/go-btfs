@@ -249,6 +249,7 @@ func TestCommands(t *testing.T) {
 		"/storage/stats",
 		"/storage/stats/info",
 		"/storage/stats/sync",
+		"/storage/stats/list",
 		"/storage/contracts",
 		"/storage/contracts/list",
 		"/storage/contracts/stat",
