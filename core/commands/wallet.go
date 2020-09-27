@@ -412,13 +412,11 @@ func validatePassword(cfg *config.Config, req *cmds.Request) error {
 	password, _ := req.Options[passwordOptionName].(string)
 	if password == "" {
 		return errors.New(
-			"Password required but not set. please read the helper text and set password. `btfs wallet password --help`.")
+			`Password required, please use '-p' to pass the password. 
+				Try 'btfs wallet password --help' and assign a password if password is not set.`)
 	}
 	privK, err := wallet.DecryptWithAES(password, cfg.Identity.EncryptedPrivKey)
-	if err != nil {
-		return errors.New("incorrect password")
-	}
-	if cfg.Identity.PrivKey != privK {
+	if err != nil || cfg.Identity.PrivKey != privK {
 		return errors.New("incorrect password")
 	}
 	return nil
