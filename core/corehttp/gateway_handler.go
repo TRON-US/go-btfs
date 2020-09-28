@@ -11,15 +11,19 @@ import (
 	gopath "path"
 	"regexp"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
 	files "github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/go-btfs/assets"
 	mfs "github.com/TRON-US/go-mfs"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	ipath "github.com/TRON-US/interface-go-btfs-core/path"
+
 	"github.com/Workiva/go-datastructures/cache"
 	humanize "github.com/dustin/go-humanize"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/ipfs/go-cid"
 	dag "github.com/ipfs/go-merkledag"
 	path "github.com/ipfs/go-path"
@@ -137,6 +141,15 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	switch r.Method {
+	case http.MethodGet, http.MethodHead:
+		i.getOrHeadHandler(w, r)
+		return
+	case http.MethodOptions:
+		i.optionsHandler(w, r)
+		return
+	}
+
 	errmsg := "Method " + r.Method + " not allowed: "
 	var status int
 	if !i.config.Writable {
@@ -212,13 +225,28 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// Resolve path to the final DAG node for reed solomon directory differrently
 	// from normal files / directories.
 	var (
-		resolvedPath              ipath.Resolved
 		rootPath                  string
 		escapedRootPath           string
 		resolvedRootPath          ipath.Resolved
 		dr                        files.Node
 		isReedSolomonSubdirOrFile bool // Is ReedSolomon non-root subdirectory or file?
 	)
+
+	// Resolve path to the final DAG node for the ETag
+	resolvedPath, err := i.api.ResolvePath(r.Context(), parsedPath)
+	switch err {
+	case nil:
+	case coreiface.ErrOffline:
+		webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusServiceUnavailable)
+		return
+	default:
+		if i.servePretty404IfPresent(w, r, parsedPath) {
+			return
+		}
+
+		webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusNotFound)
+		return
+	}
 
 	top, err := i.isTopLevelEntryPath(w, r, parsedPath.String(), escapedURLPath)
 	if err != nil {
@@ -303,6 +331,31 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	var responseEtag string
+
+	// we need to figure out whether this is a directory before doing most of the heavy lifting below
+	_, ok := dr.(files.Directory)
+
+	if ok && assets.BindataVersionHash != "" {
+		responseEtag = `"DirIndex-` + assets.BindataVersionHash + `_CID-` + resolvedPath.Cid().String() + `"`
+	} else {
+		responseEtag = `"` + resolvedPath.Cid().String() + `"`
+	}
+
+	// Check etag sent back to us
+	if r.Header.Get("If-None-Match") == responseEtag || r.Header.Get("If-None-Match") == `W/`+responseEtag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	i.addUserHeaders(w) // ok, _now_ write user's headers.
+	w.Header().Set("X-IPFS-Path", urlPath)
+	w.Header().Set("Etag", responseEtag)
+
+	// set these headers _after_ the error, for we may just not have it
+	// and don't want the client to cache a 500 response...
+	// and only if it's /ipfs!
+	// TODO: break this out when we split /ipfs /ipns routes.
 	modtime := time.Now()
 
 	if f, ok := dr.(files.File); ok {
@@ -359,6 +412,18 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	// See statusResponseWriter.WriteHeader
+	// and https://github.com/ipfs/go-ipfs/issues/7164
+	// Note: this needs to occur before listingTemplate.Execute otherwise we get
+	// superfluous response.WriteHeader call from prometheus/client_golang
+	if w.Header().Get("Location") != "" {
+		w.WriteHeader(http.StatusMovedPermanently)
+		return
+	}
+
+	// A HTML directory index will be presented, be sure to set the correct
+	// type instead of relying on autodetection (which may fail).
+	w.Header().Set("Content-Type", "text/html")
 	if r.Method == http.MethodHead {
 		return
 	}
@@ -424,26 +489,14 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	var hash string
-	if !strings.HasPrefix(urlPath, ipfsPathPrefix) {
-		hash = resolvedPath.Cid().String()
-	}
+	hash := resolvedPath.Cid().String()
 
 	// See comment above where originalUrlPath is declared.
 	tplData := listingTemplateData{
 		Listing:  dirListing,
-		Path:     originalUrlPath,
+		Path:     urlPath,
 		BackLink: backLink,
 		Hash:     hash,
-	}
-
-	// See statusResponseWriter.WriteHeader
-	// and https://github.com/ipfs/go-ipfs/issues/7164
-	// Note: this needs to occur before listingTemplate.Execute otherwise we get
-	// superfluous response.WriteHeader call from prometheus/client_golang
-	if w.Header().Get("Location") != "" {
-		w.WriteHeader(http.StatusMovedPermanently)
-		return
 	}
 
 	err = listingTemplate.Execute(w, tplData)
@@ -473,10 +526,16 @@ func (i *gatewayHandler) serveFile(w http.ResponseWriter, req *http.Request, nam
 	} else {
 		ctype = mime.TypeByExtension(gopath.Ext(name))
 		if ctype == "" {
-			buf := make([]byte, 512)
-			n, _ := io.ReadFull(content, buf[:])
-			ctype = http.DetectContentType(buf[:n])
-			_, err := content.Seek(0, io.SeekStart)
+			// uses https://github.com/gabriel-vasile/mimetype library to determine the content type.
+			// Fixes https://github.com/ipfs/go-ipfs/issues/7252
+			mimeType, err := mimetype.DetectReader(content)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("cannot detect content-type: %s", err.Error()), http.StatusInternalServerError)
+				return
+			}
+
+			ctype = mimeType.String()
+			_, err = content.Seek(0, io.SeekStart)
 			if err != nil {
 				http.Error(w, "seeker can't seek", http.StatusInternalServerError)
 				return
@@ -494,6 +553,36 @@ func (i *gatewayHandler) serveFile(w http.ResponseWriter, req *http.Request, nam
 
 	w = &statusResponseWriter{w}
 	http.ServeContent(w, req, name, modtime, content)
+}
+
+func (i *gatewayHandler) servePretty404IfPresent(w http.ResponseWriter, r *http.Request, parsedPath ipath.Path) bool {
+	resolved404Path, ctype, err := i.searchUpTreeFor404(r, parsedPath)
+	if err != nil {
+		return false
+	}
+
+	dr, err := i.api.Unixfs().Get(r.Context(), resolved404Path)
+	if err != nil {
+		return false
+	}
+	defer dr.Close()
+
+	f, ok := dr.(files.File)
+	if !ok {
+		return false
+	}
+
+	size, err := f.Size()
+	if err != nil {
+		return false
+	}
+
+	log.Debugf("using pretty 404 file for %s", parsedPath.String())
+	w.Header().Set("Content-Type", ctype)
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	w.WriteHeader(http.StatusNotFound)
+	_, err = io.CopyN(w, f, size)
+	return err == nil
 }
 
 func (i *gatewayHandler) postHandler(w http.ResponseWriter, r *http.Request) {
@@ -803,4 +892,46 @@ func getDirRootPath(path string) (string, error) {
 		idx++
 	}
 	return path[:idx-1], nil
+}
+
+func (i *gatewayHandler) searchUpTreeFor404(r *http.Request, parsedPath ipath.Path) (ipath.Resolved, string, error) {
+	filename404, ctype, err := preferred404Filename(r.Header.Values("Accept"))
+	if err != nil {
+		return nil, "", err
+	}
+
+	pathComponents := strings.Split(parsedPath.String(), "/")
+
+	for idx := len(pathComponents); idx >= 3; idx-- {
+		pretty404 := gopath.Join(append(pathComponents[0:idx], filename404)...)
+		parsed404Path := ipath.New("/" + pretty404)
+		if parsed404Path.IsValid() != nil {
+			break
+		}
+		resolvedPath, err := i.api.ResolvePath(r.Context(), parsed404Path)
+		if err != nil {
+			continue
+		}
+		return resolvedPath, ctype, nil
+	}
+
+	return nil, "", fmt.Errorf("no pretty 404 in any parent folder")
+}
+
+func preferred404Filename(acceptHeaders []string) (string, string, error) {
+	// If we ever want to offer a 404 file for a different content type
+	// then this function will need to parse q weightings, but for now
+	// the presence of anything matching HTML is enough.
+	for _, acceptHeader := range acceptHeaders {
+		accepted := strings.Split(acceptHeader, ",")
+		for _, spec := range accepted {
+			contentType := strings.SplitN(spec, ";", 1)[0]
+			switch contentType {
+			case "*/*", "text/*", "text/html":
+				return "ipfs-404.html", "text/html", nil
+			}
+		}
+	}
+
+	return "", "", fmt.Errorf("there is no 404 file for the requested content types")
 }

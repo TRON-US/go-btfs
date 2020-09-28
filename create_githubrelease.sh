@@ -52,7 +52,7 @@ echo "$API_RESPONSE_STATUS"
 
 #Upload assets
 RELEASE_ID=$(echo "$API_RESPONSE_STATUS" | grep -m 1 '"id":' | grep -E -o '[0-9]+')
-for file in $(find ../btfs-binary-releases/{darwin,linux,windows}/{386,amd64} -type f) #Change the location for btfs-binary-releases used by sync_binaries.sh accordingly
+for file in $(find ../btfs-binary-releases/{darwin,linux,windows}/{386,amd64,arm,arm64} -type f 2>/dev/null) #Change the location for btfs-binary-releases used by sync_binaries.sh accordingly
 do
 	curl -H "Authorization: token $GITHUB_ACCESS_TOKEN" \
 		-H "Content-Type: $(file -b --mime-type $file)" \

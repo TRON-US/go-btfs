@@ -1,6 +1,8 @@
 package upload
 
 import (
+	"github.com/TRON-US/go-btfs/core/commands/storage/contracts"
+
 	config "github.com/TRON-US/go-btfs-config"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/protos/node"
@@ -46,7 +48,7 @@ func (h *HostManager) AcceptContract(ds datastore.Datastore, peerId string, shar
 }
 
 func (h *Count) Count(ds datastore.Datastore, peerId string, status guardpb.Contract_ContractState) (int, error) {
-	contracts, err := ListContracts(ds, peerId, node.ContractStat_HOST.String())
+	contracts, err := contracts.ListContracts(ds, peerId, node.ContractStat_HOST.String())
 	if err != nil {
 		return 0, err
 	}

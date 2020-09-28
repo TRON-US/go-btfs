@@ -99,7 +99,8 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.BtfsVersion = BTFSVersion
 		dc.pn.OsType = runtime.GOOS
 		dc.pn.ArchType = runtime.GOARCH
-		if storageMax, err := helper.CheckAndValidateHostStorageMax(cfgRoot, node.Repo, nil, true); err == nil {
+		if storageMax, err := helper.CheckAndValidateHostStorageMax(node.Context(), cfgRoot,
+			node.Repo, nil, true); err == nil {
 			dc.pn.StorageVolumeCap = storageMax
 		} else {
 			log.Warning(err.Error())
@@ -113,7 +114,6 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 		dc.pn.HostsSyncMode = dc.config.Experimental.HostsSyncMode
 		dc.pn.Libp2PStreamMounting = dc.config.Experimental.Analytics
 		dc.pn.P2PHttpProxy = dc.config.Experimental.P2pHttpProxy
-		dc.pn.Quic = dc.config.Experimental.QUIC
 		dc.pn.RemoveOnUnpin = dc.config.Experimental.RemoveOnUnpin
 		dc.pn.ShardingEnabled = dc.config.Experimental.ShardingEnabled
 		dc.pn.StorageClientEnabled = dc.config.Experimental.StorageClientEnabled

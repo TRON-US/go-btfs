@@ -43,6 +43,7 @@ BASIC COMMANDS
 
 BTFS COMMANDS
   storage       Manage client and host storage features
+  rm            Clean up locally stored files and objects
 
 DATA STRUCTURE COMMANDS
   block         Interact with raw blocks in the datastore
@@ -53,7 +54,7 @@ DATA STRUCTURE COMMANDS
 
 ADVANCED COMMANDS
   daemon        Start a long-running daemon process
-  mount         Mount an BTFS read-only mountpoint
+  mount         Mount an BTFS read-only mount point
   resolve       Resolve any type of name
   name          Publish and resolve BTNS names
   key           Create and list BTNS name keypairs

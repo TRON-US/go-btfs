@@ -94,6 +94,7 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		Message: string(tx.Result.Message),
 		Result:  tx.Result.Result,
 		Code:    tx.Result.Code.String(),
+		TxId:    hex.EncodeToString(tx.Txid),
 	}, nil
 }
 
@@ -104,6 +105,9 @@ func toHex(address string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if len(bytes) <= 4 {
+			return "", errors.New("invalid address")
+		}
 		address = hexutils.BytesToHex(bytes[:len(bytes)-4])
 	}
 	return address, nil
@@ -113,6 +117,7 @@ type TronRet struct {
 	Message string
 	Result  bool
 	Code    string
+	TxId    string
 }
 
 func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, amount int64) (*tronPb.TransactionExtention, error) {
