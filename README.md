@@ -20,8 +20,9 @@ contracts.
 - [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
-- [Packages](#packages)
-- [Soter](#soter)
+- [Development](#development)
+  - [Development Dependencies](#development-dependencies)
+  - [BTFS Gateway](#btfs-gateway)
 - [License](#license)
 
 
@@ -201,7 +202,7 @@ docker exec CONTAINER btfs add --chunker=reed-solomon FILE
 
 ### Some things to try
 
-Basic proof of 'ipfs working' locally:
+Basic proof of 'btfs working' locally:
 
     echo "hello world" > hello
     btfs add --chunker=reed-solomon hello
@@ -295,12 +296,12 @@ Some places to get you started on the codebase:
 
 If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
 
-### Soter
+### BTFS Gateway
 
-BTFS Soter is a charging service gateway based on the TRON Network and BTFS cluster. Users can access the BTFS network via the Soter gateway.
+BTFS Gateway is a free service that allows you to retrieve files from the BTFS network in your browser directly.
 
-[Soter Interface Document](https://btfssoter.readme.io/docs/soter-interface-documentation)
+[How to use BTFS Gateway](https://docs.btfs.io/docs/btfs-gateway-user-guide)
 
-### License
+## License
 
 [MIT](./LICENSE)
