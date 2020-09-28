@@ -193,7 +193,7 @@ Headers.
 		cmds.BoolOption(migrateKwd, "If true, assume yes at the migrate prompt. If false, assume no.").WithDefault(true),
 		cmds.BoolOption(enablePubSubKwd, "Instantiate the btfs daemon with the experimental pubsub feature enabled."),
 		cmds.BoolOption(enableIPNSPubSubKwd, "Enable BTNS record distribution through pubsub; enables pubsub."),
-		cmds.BoolOption(enableMultiplexKwd, "Add the experimental 'go-multiplex' stream muxer to libp2p on construction.").WithDefault(true),
+		cmds.BoolOption(enableMultiplexKwd, "DEPRECATED"),
 		cmds.StringOption(hValueKwd, "H-value identifies the BitTorrent client this daemon is started by. None if not started by a BitTorrent client."),
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
@@ -352,7 +352,10 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	offline, _ := req.Options[offlineKwd].(bool)
 	ipnsps, _ := req.Options[enableIPNSPubSubKwd].(bool)
 	pubsub, _ := req.Options[enablePubSubKwd].(bool)
-	mplex, _ := req.Options[enableMultiplexKwd].(bool)
+	if _, hasMplex := req.Options[enableMultiplexKwd]; hasMplex {
+		log.Errorf("The mplex multiplexer has been enabled by default and the experimental %s flag has been removed.")
+		log.Errorf("To disable this multiplexer, please configure `Swarm.Transports.Multiplexers'.")
+	}
 
 	// Btfs auto update.
 	url := fmt.Sprint(strings.Split(cfg.Addresses.API[0], "/")[2], ":", strings.Split(cfg.Addresses.API[0], "/")[4])
@@ -372,7 +375,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		ExtraOpts: map[string]bool{
 			"pubsub": pubsub,
 			"ipnsps": ipnsps,
-			"mplex":  mplex,
 		},
 		//TODO(Kubuxu): refactor Online vs Offline by adding Permanent vs Ephemeral
 	}

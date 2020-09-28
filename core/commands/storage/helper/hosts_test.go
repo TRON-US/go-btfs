@@ -97,7 +97,7 @@ func TestCheckAndValidateHostStorageMax(t *testing.T) {
 
 	// test normal case of checking for current storage
 	node := unixtest.HelpTestMockRepo(t, newSmCfg("1GB"))
-	m, err := CheckAndValidateHostStorageMax(pwd, node.Repo, nil, false)
+	m, err := CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,14 +107,14 @@ func TestCheckAndValidateHostStorageMax(t *testing.T) {
 
 	// test oversetting case of checking for current storage
 	node = unixtest.HelpTestMockRepo(t, newSmCfg("1PB"))
-	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, nil, false)
+	_, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, nil, false)
 	if err == nil {
 		t.Fatal("should return an error for current max")
 	}
 
 	// test oversetting case of checking for current storage, then correct to max allowed
 	node = unixtest.HelpTestMockRepo(t, newSmCfg("1PB"))
-	m, err = CheckAndValidateHostStorageMax(pwd, node.Repo, nil, true)
+	m, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestCheckAndValidateHostStorageMax(t *testing.T) {
 	// test normal case of setting a new reasonable max
 	node = unixtest.HelpTestMockRepo(t, newSmCfg("500MB"))
 	nm := uint64(units.GB)
-	m, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, false)
+	m, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, &nm, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,11 +136,11 @@ func TestCheckAndValidateHostStorageMax(t *testing.T) {
 	// test normal case of setting a new unreasonable max
 	node = unixtest.HelpTestMockRepo(t, newSmCfg("500MB"))
 	nm = uint64(units.PB)
-	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, false)
+	_, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, &nm, false)
 	if err == nil {
 		t.Fatal("should return error for too large of a new max")
 	}
-	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, true)
+	_, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, &nm, true)
 	if err == nil {
 		t.Fatal("should return error for too large of a new max (even on max allowed flag)")
 	}
@@ -151,11 +151,11 @@ func TestCheckAndValidateHostStorageMax(t *testing.T) {
 	mn := node.Repo.(*repo.Mock)
 	mn.Used = 10000
 	nm = uint64(1000)
-	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, false)
+	_, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, &nm, false)
 	if err == nil {
 		t.Fatal("should return error for too small of a new max")
 	}
-	_, err = CheckAndValidateHostStorageMax(pwd, node.Repo, &nm, true)
+	_, err = CheckAndValidateHostStorageMax(context.Background(), pwd, node.Repo, &nm, true)
 	if err == nil {
 		t.Fatal("should return error for too small of a new max (even on max allowed flag)")
 	}
