@@ -470,7 +470,9 @@ var walletDiscoveryCmd = &cmds.Command{
 		ShortDescription: "Speed wallet discovery",
 	},
 	Arguments: []cmds.Argument{},
-	Options:   []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -483,7 +485,7 @@ var walletDiscoveryCmd = &cmds.Command{
 		if cfg.UI.Wallet.Initialized {
 			return errors.New("Already init, cannot discovery.")
 		}
-		key, err := wallet.DiscoverySpeedKey()
+		key, err := wallet.DiscoverySpeedKey(req.Options[passwordOptionName].(string))
 		if err != nil {
 			return err
 		}
