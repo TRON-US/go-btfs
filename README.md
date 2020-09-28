@@ -17,9 +17,9 @@ contracts.
   - [MacOS](#macos)
   - [Linux VM](#linux-vm)
   - [Docker](#docker)
-- [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
+  - [Usage](#usage)
 - [Development](#development)
   - [Development Dependencies](#development-dependencies)
   - [BTFS Gateway](#btfs-gateway)
@@ -200,6 +200,8 @@ Execute commands within the docker container:
 docker exec CONTAINER btfs add --chunker=reed-solomon FILE
 ```
 
+## Getting Started
+
 ### Some things to try
 
 Basic proof of 'btfs working' locally:
@@ -267,19 +269,6 @@ SUBCOMMANDS
     export BTFS_PATH=/path/to/btfsrepo
 ```
 
-## Getting Started
-
-### Some things to try
-
-Basic proof of 'btfs working' locally:
-
-	echo "hello world" > hello
-	btfs add hello
-	# This should output a hash string that looks something like:
-	# QmT78zSuBmuS4z925WZfrqQ1qHaJ56DQaTfyMUF7F8ff5o
-	btfs cat <that hash>
-
-
 ## Development
 
 Some places to get you started on the codebase:
@@ -290,7 +279,6 @@ Some places to get you started on the codebase:
   - libp2p: [libp2p](https://github.com/libp2p/go-libp2p)
   - DHT: [DHT](https://github.com/libp2p/go-libp2p-kad-dht)
   - PubSub: [PubSub](https://github.com/libp2p/go-libp2p-pubsub)
-
 
 ### Development Dependencies
 
