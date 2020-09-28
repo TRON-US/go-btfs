@@ -43,6 +43,7 @@ BASIC COMMANDS
 
 BTFS COMMANDS
   storage       Manage client and host storage features
+  rm            Clean up locally stored files and objects
 
 DATA STRUCTURE COMMANDS
   block         Interact with raw blocks in the datastore
