@@ -147,7 +147,7 @@ storage location, a specified path as a parameter need to be passed.
 			return err
 		}
 
-		usage, err := disk.Usage(filepath.Dir(StorePath))
+		usage, err := disk.UsageWithContext(req.Context, filepath.Dir(StorePath))
 		if err != nil {
 			return err
 		}
@@ -232,7 +232,7 @@ var PathCapacityCmd = &cmds.Command{
 			return fmt.Errorf("path %s is not empty", path)
 		}
 		valid := true
-		usage, err := disk.Usage(filepath.Dir(path))
+		usage, err := disk.UsageWithContext(req.Context, filepath.Dir(path))
 		if err != nil {
 			return err
 		}

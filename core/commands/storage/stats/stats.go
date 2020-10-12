@@ -78,7 +78,7 @@ func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode, env
 	if err != nil {
 		return err
 	}
-	du, err := disk.Usage(cfgRoot)
+	du, err := disk.UsageWithContext(ctx, cfgRoot)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ This command get node stats in the network from the local node data store.`,
 		if err != nil {
 			return err
 		}
-		du, err := disk.Usage(cfgRoot)
+		du, err := disk.UsageWithContext(req.Context, cfgRoot)
 		if err != nil {
 			return err
 		}
@@ -178,11 +178,6 @@ This command list node stats in the network from the local node data store.`,
 	},
 	RunTimeout: 30 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
-		if err != nil {
-			return err
-		}
-
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -201,33 +196,10 @@ This command list node stats in the network from the local node data store.`,
 			return err
 		}
 
-		for _, hs := range list {
-			// Refresh latest repo stats
-			stat, err := corerepo.RepoStat(req.Context, n)
-			if err != nil {
-				return err
-			}
-
-			cfgRoot, err := cmdenv.GetConfigRoot(env)
-			if err != nil {
-				return err
-			}
-			du, err := disk.Usage(cfgRoot)
-			if err != nil {
-				return err
-			}
-
-			hs.Stat.Online = cfg.Experimental.StorageHostEnabled
-			hs.Stat.StorageUsed = int64(stat.RepoSize)
-			hs.Stat.StorageCap = int64(stat.StorageMax)
-			hs.Stat.StorageDiskTotal = int64(du.Total)
-			hs.Stat.StorageDiskAvailable = int64(du.Free)
-		}
-
 		// Only host stats for now
 		return cmds.EmitOnce(res, list)
 	},
-	Type: make([]*Stat_HostWithTimeStamp, 0),
+	Type: []*Stat_HostWithTimeStamp{},
 }
 
 const (
