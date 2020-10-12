@@ -2,7 +2,7 @@ package path
 
 import (
 	"fmt"
-	. "io/ioutil"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -10,7 +10,7 @@ import (
 func list(root string) ([]string, error) {
 	root = filepath.Clean(root)
 	result := make([]string, 0)
-	files, err := ReadDir(root)
+	files, err := ioutil.ReadDir(root)
 	if err != nil {
 		return result, err
 	}

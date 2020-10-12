@@ -101,7 +101,8 @@ storage location, a specified path as a parameter need to be passed.
 		"status":   PathStatusCmd,
 		"capacity": PathCapacityCmd,
 		"migrate":  PathMigrateCmd,
-		"dir":      PathDirCmd,
+		"list":     PathListCmd,
+		"mkdir":    PathMkdirCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -265,18 +266,7 @@ var PathMigrateCmd = &cmds.Command{
 	},
 }
 
-var PathDirCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "directories",
-		ShortDescription: "directories",
-	},
-	Subcommands: map[string]*cmds.Command{
-		"ls":  PathDirLsCmd,
-		"add": PathDirAddCmd,
-	},
-}
-
-var PathDirLsCmd = &cmds.Command{
+var PathListCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "list directories",
 		ShortDescription: "list directories",
@@ -295,7 +285,7 @@ var PathDirLsCmd = &cmds.Command{
 	Type: []string{},
 }
 
-var PathDirAddCmd = &cmds.Command{
+var PathMkdirCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "add folder",
 		ShortDescription: "add folder",
