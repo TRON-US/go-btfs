@@ -101,6 +101,8 @@ storage location, a specified path as a parameter need to be passed.
 		"status":   PathStatusCmd,
 		"capacity": PathCapacityCmd,
 		"migrate":  PathMigrateCmd,
+		"list":     PathListCmd,
+		"mkdir":    PathMkdirCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -261,6 +263,45 @@ var PathMigrateCmd = &cmds.Command{
 		}
 		fmt.Printf("Writing \"%s\" to %s\n", req.Arguments[0], fileName)
 		return ioutil.WriteFile(fileName, []byte(req.Arguments[0]), os.ModePerm)
+	},
+}
+
+var PathListCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "list directories",
+		ShortDescription: "list directories",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("parent", true, true,
+			"parent path, should be absolute path."),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		list, err := list(req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, stringList{Strings: list})
+	},
+	Type: stringList{},
+}
+
+type stringList struct {
+	Strings []string
+}
+
+var PathMkdirCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "add folder",
+		ShortDescription: "add folder",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("parent", true, false,
+			"parent path, should be absolute path."),
+		cmds.StringArg("name", true, false,
+			"path name"),
+	},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		return add(req.Arguments[0], req.Arguments[1])
 	},
 }
 
