@@ -280,9 +280,13 @@ var PathListCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, list)
+		return cmds.EmitOnce(res, stringList{Strings: list})
 	},
-	Type: []string{},
+	Type: stringList{},
+}
+
+type stringList struct {
+	Strings []string
 }
 
 var PathMkdirCmd = &cmds.Command{
