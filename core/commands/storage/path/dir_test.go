@@ -12,5 +12,8 @@ func TestList(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	add("/tmp", "abc")
+	err := add("/tmp", "abc")
+	if err != nil {
+		t.Fatal(err)
+	}
 }
