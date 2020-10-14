@@ -111,7 +111,14 @@ var walletDepositCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if err := validatePassword(cfg, req); err != nil {
+		if err := checkWhetherPasswordSet(cfg); err != nil {
+			return err
+		}
+		password, err := getPassword(req)
+		if err != nil {
+			return err
+		}
+		if err := validatePassword(cfg, password); err != nil {
 			return err
 		}
 		async, _ := req.Options[asyncOptionName].(bool)
@@ -174,7 +181,14 @@ var walletWithdrawCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if err := validatePassword(cfg, req); err != nil {
+		if err := checkWhetherPasswordSet(cfg); err != nil {
+			return err
+		}
+		password, err := getPassword(req)
+		if err != nil {
+			return err
+		}
+		if err := validatePassword(cfg, password); err != nil {
 			return err
 		}
 		amount, err := strconv.ParseInt(req.Arguments[0], 10, 64)
@@ -248,9 +262,11 @@ var walletPasswordCmd = &cmds.Command{
 		ShortDescription: "set password for BTFS wallet",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("password", true, false, "password of BTFS wallet."),
+		cmds.StringArg("password", true, false, "new password of BTFS wallet."),
 	},
-	Options: []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "old password").WithDefault(""),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -260,8 +276,14 @@ var walletPasswordCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if cfg.UI.Wallet.Initialized {
-			return errors.New("Already init, cannot set password again.")
+		if err := checkWhetherPasswordSet(cfg); err == nil {
+			pw, err := getPassword(req)
+			if err != nil {
+				return err
+			}
+			if err := validatePassword(cfg, pw); err != nil {
+				return err
+			}
 		}
 		cipherMnemonic, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
 		if err != nil {
@@ -300,7 +322,14 @@ var walletCheckPasswordCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if err := validatePassword(cfg, req); err != nil {
+		if err := checkWhetherPasswordSet(cfg); err != nil {
+			return err
+		}
+		password, err := getPassword(req)
+		if err != nil {
+			return err
+		}
+		if err := validatePassword(cfg, password); err != nil {
 			return err
 		}
 		return cmds.EmitOnce(res, &MessageOutput{"Password is correct."})
@@ -388,7 +417,14 @@ var walletTransferCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if err := validatePassword(cfg, req); err != nil {
+		if err := checkWhetherPasswordSet(cfg); err != nil {
+			return err
+		}
+		password, err := getPassword(req)
+		if err != nil {
+			return err
+		}
+		if err := validatePassword(cfg, password); err != nil {
 			return err
 		}
 		amount, err := strconv.ParseInt(req.Arguments[1], 10, 64)
@@ -408,13 +444,23 @@ var walletTransferCmd = &cmds.Command{
 	Type: &TransferResult{},
 }
 
-func validatePassword(cfg *config.Config, req *cmds.Request) error {
+func checkWhetherPasswordSet(cfg *config.Config) error {
+	if cfg.Identity.EncryptedPrivKey == "" {
+		return errors.New(`Password required, but none set.
+Read 'btfs wallet password --help' and assign a password.`)
+	}
+	return nil
+}
+
+func getPassword(req *cmds.Request) (string, error) {
 	password, _ := req.Options[passwordOptionName].(string)
 	if password == "" {
-		return errors.New(
-			`Password required, please use '-p <password>' to specify the password. 
-Try 'btfs wallet password --help' and assign a password if password is not set.`)
+		return "", errors.New("Password required, please use '-p <password>' to specify the password.")
 	}
+	return password, nil
+}
+
+func validatePassword(cfg *config.Config, password string) error {
 	privK, err := wallet.DecryptWithAES(password, cfg.Identity.EncryptedPrivKey)
 	if err != nil || cfg.Identity.PrivKey != privK {
 		return errors.New("incorrect password")
