@@ -250,7 +250,9 @@ var walletPasswordCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("password", true, false, "password of BTFS wallet."),
 	},
-	Options: []cmds.Option{},
+	Options: []cmds.Option{
+		cmds.StringOption(passwordOptionName, "p", "password"),
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
@@ -260,8 +262,8 @@ var walletPasswordCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		if cfg.UI.Wallet.Initialized {
-			return errors.New("Already init, cannot set password again.")
+		if err := validatePassword(cfg, req); err != nil {
+			return err
 		}
 		cipherMnemonic, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
 		if err != nil {
