@@ -38,11 +38,13 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 		}
 		from = keys.HexAddress
 	}
-	txId := ""
-
 	tx, err := PrepareTx(ctx, cfg, from, to, amount)
 	if err != nil {
 		return nil, err
+	}
+	txId := ""
+	if tx.Txid != nil {
+		txId = hex.EncodeToString(tx.Txid)
 	}
 	raw, err := privKey.Raw()
 	if err != nil {
