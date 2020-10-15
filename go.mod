@@ -29,8 +29,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.1.0
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/mock v1.4.3 // indirect
-	github.com/golang/protobuf v1.4.0
+	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/golang-lru v0.5.4
@@ -87,7 +86,7 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.2.6
 	github.com/libp2p/go-libp2p-pubsub v0.3.1
 	github.com/libp2p/go-libp2p-pubsub-router v0.3.0
-	github.com/libp2p/go-libp2p-quic-transport v0.6.0
+	github.com/libp2p/go-libp2p-quic-transport v0.8.2
 	github.com/libp2p/go-libp2p-record v0.1.3
 	github.com/libp2p/go-libp2p-routing-helpers v0.2.3
 	github.com/libp2p/go-libp2p-secio v0.2.2
@@ -136,7 +135,7 @@ require (
 	golang.org/x/sys v0.0.0-20200523222454-059865788121
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
