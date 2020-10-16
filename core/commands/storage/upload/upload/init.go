@@ -132,6 +132,7 @@ the shard and replies back to client for the next challenge step.`,
 		}
 		ok, err = crypto.Verify(payerPubKey, &guardContractMeta, s)
 		if !ok || err != nil {
+			fmt.Println("crypto.Verify err", err)
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
@@ -142,11 +143,13 @@ the shard and replies back to client for the next challenge step.`,
 			halfSignedEscrowContract := &escrowpb.SignedEscrowContract{}
 			err = proto.Unmarshal(halfSignedEscrowContBytes, halfSignedEscrowContract)
 			if err != nil {
+				fmt.Println(" proto.Unmarshal halfSignedEscrowContract err", err)
 				return err
 			}
 			escrowContract := halfSignedEscrowContract.GetContract()
 			ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
 			if !ok || err != nil {
+				fmt.Println("can't verify escrow contract err", err)
 				return fmt.Errorf("can't verify escrow contract: %v", err)
 			}
 			// Verify price
@@ -159,6 +162,7 @@ the shard and replies back to client for the next challenge step.`,
 			signedEscrowContractBytes, err = signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
 				ctxParams.N.PrivateKey)
 			if err != nil {
+				fmt.Println("signEscrowContractAndMarshal err", err)
 				return err
 			}
 		}
@@ -186,6 +190,7 @@ the shard and replies back to client for the next challenge step.`,
 					signedGuardContractBytes,
 				)
 				if err != nil {
+					fmt.Println("remote.P2PCall recvcontract err", err)
 					return err
 				}
 
@@ -218,6 +223,7 @@ the shard and replies back to client for the next challenge step.`,
 				fileHash := req.Arguments[1]
 				err = challengeShard(ctxParams, fileHash, false, &guardContractMeta)
 				if err != nil {
+					fmt.Println("challengeShard err", err)
 					return err
 				}
 				if err := shard.Complete(); err != nil {
@@ -243,8 +249,12 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 		PrepareTime: guardContractMeta.RentStart,
 		IsRepair:    isRepair,
 	}
+
+	fmt.Println("Ready For ChallengeRequest fileHash", fileHash, "guardContractMeta", guardContractMeta)
+
 	sign, err := crypto.Sign(ctxParams.N.PrivateKey, in)
 	if err != nil {
+		fmt.Println("challenge Shard crypto.Sign", err)
 		return err
 	}
 	in.Signature = sign
@@ -257,6 +267,7 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 		func(ctx context.Context, client guardpb.GuardServiceClient) error {
 			for i := 0; i < 3; i++ {
 				question, err = client.RequestChallenge(ctx, in)
+				fmt.Println("challenge question", question)
 				if err == nil {
 					break
 				}
@@ -284,45 +295,60 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 	sc, err := challenge.NewStorageChallengeResponse(ctx, ctxParams.N, ctxParams.Api,
 		fileHashCid, shardHashCid, "", false, 0)
 	if err != nil {
+		fmt.Println("challenge shard sc", err)
 		return err
 	}
 	err = sc.SolveChallenge(int(question.Question.ChunkIndex), question.Question.Nonce)
 	if err != nil {
+		fmt.Println("challenge shard sc.SolveChallenge", err)
 		return err
 	}
 	resp := &guardpb.ResponseChallengeQuestion{
 		Answer: &guardpb.ChallengeQuestion{
 			ShardHash:    question.Question.ShardHash,
-			HostPid:      question.Question.HostPid,
+			HostPid:      ctxParams.N.Identity.Pretty(), //question.Question.HostPid,
 			ChunkIndex:   int32(sc.CIndex),
 			Nonce:        sc.Nonce,
 			ExpectAnswer: sc.Hash,
 		},
-		HostPid:     question.Question.HostPid,
+		HostPid:     ctxParams.N.Identity.Pretty(), //question.Question.HostPid,
 		ResolveTime: time.Now(),
 		IsRepair:    isRepair,
 	}
+
+	fmt.Println("question.Question.ShardHash", question.Question.ShardHash, "question.Question.HostPid", question.Question.HostPid,
+		"ChunkIndex", int32(sc.CIndex), "Nonce", sc.Nonce, "ExpectAnswer", sc.Hash)
+	fmt.Println("======")
+	fmt.Println("ResponseChallengeQuestion info", resp)
+	fmt.Println("======")
 	privKey, err := ctxParams.Cfg.Identity.DecodePrivateKey("")
 	if err != nil {
+		fmt.Println("challenge shard privKey err", err)
 		return err
 	}
 	sig, err := crypto.Sign(privKey, resp)
 	if err != nil {
+		fmt.Println("challenge shard sig err", err)
+		fmt.Println("======")
 		return err
 	}
 	resp.Signature = sig
 	err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
 		func(ctx context.Context, client guardpb.GuardServiceClient) error {
-			_, err := client.ResponseChallenge(ctx, resp)
+			result, err := client.ResponseChallenge(ctx, resp)
+			fmt.Println("Response Challenge result", result)
 			if err != nil {
+				fmt.Println("challenge shard result err", err)
 				return err
 			}
 			return nil
 		})
 	if err != nil {
+		fmt.Println("challenge shard err", err)
 		log.Debug(err)
 		return err
 	}
+	fmt.Println("challenge Shard done")
 	return nil
 }
 

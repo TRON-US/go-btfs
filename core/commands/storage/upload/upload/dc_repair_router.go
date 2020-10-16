@@ -71,18 +71,22 @@ This command sends request to mining host to negotiate the repair works.`,
 		lostShardHashes := strings.Split(req.Arguments[2], ",")
 		fileSize, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
+			fmt.Println("fileSize parse err", err)
 			return err
 		}
 		downloadRewardAmount, err := strconv.ParseInt(req.Arguments[4], 10, 64)
 		if err != nil {
+			fmt.Println("downloadRewardAmount parse err", err)
 			return err
 		}
 		repairRewardAmount, err := strconv.ParseInt(req.Arguments[5], 10, 64)
 		if err != nil {
 			return err
 		}
+		fmt.Println("fileHash", fileHash, "lostShardHashes", lostShardHashes, "fileSize", fileSize, "downloadRewardAmount", downloadRewardAmount, "repairRewardAmount", repairRewardAmount)
 		err = emptyCheck(fileHash, lostShardHashes, fileSize, downloadRewardAmount, repairRewardAmount)
 		if err != nil {
+			fmt.Println("Router empty check with err", err)
 			return err
 		}
 		n, err := cmdenv.GetNode(env)
@@ -102,17 +106,20 @@ This command sends request to mining host to negotiate the repair works.`,
 				err = func() error {
 					pi, err := remote.FindPeer(req.Context, n, peerId)
 					if err != nil {
+						fmt.Println("remote.FindPeer with err", err)
 						return err
 					}
 					_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepairrouter/response",
 						req.Arguments[1:]...)
 					if err != nil {
+						fmt.Println("remote.P2PCallStrings with err", err)
 						return err
 					}
 					repairIds[index] = peerId
 					return nil
 				}()
 				if err != nil {
+					fmt.Println("P2P call error", zap.Error(err), zap.String("peerId", peerId))
 					log.Error("P2P call error", zap.Error(err), zap.String("peerId", peerId))
 				}
 				wg.Done()
@@ -160,6 +167,7 @@ returns the repairer's signed contract to the invoker.`,
 		}
 		err = emptyCheck(fileHash, lostShardHashes, fileSize, downloadRewardAmount, repairRewardAmount)
 		if err != nil {
+			fmt.Println("Repairer empty check with err", err)
 			return err
 		}
 		ctxParams, err := uh.ExtractContextParams(req, env)
@@ -206,7 +214,10 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 	go func() {
 		err := func() error {
 			repairContractResp, err := submitSignedRepairContract(ctxParams, params)
+			fmt.Println("repairContractResp status", repairContractResp.Status)
+			fmt.Println("repairContractResp contract", repairContractResp.Contract)
 			if err != nil {
+				fmt.Println("submitSignedRepairContract err", err)
 				return err
 			}
 			if repairContractResp.Status == guardpb.RepairContractResponse_BOTH_SIGNED {
@@ -214,34 +225,42 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 				repairContract := repairContractResp.Contract
 				signedContractID, err := signContractID(repairContract.RepairContractId, ctxParams.N.PrivateKey)
 				if err != nil {
+					fmt.Println("obtain signContractID err", err)
 					return err
 				}
+				fmt.Println("signedContractID", signedContractID)
 				paidIn := make(chan bool)
 				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
 				paid := <-paidIn
 				if !paid {
+					fmt.Println("contract is not paid", repairContract.RepairContractId)
 					return fmt.Errorf("contract is not paid: %s", repairContract.RepairContractId)
 				}
 				_, err = downloadAndRebuildFile(ctxParams, repairContract.FileHash, repairContract.LostShardHash)
 				if err != nil {
+					fmt.Println("downloadAndRebuildFile err", err)
 					return err
 				}
 				err = challengeLostShards(ctxParams, repairContract)
 				if err != nil {
+					fmt.Println("challengeLostShards err", err)
 					return err
 				}
 				fileStatus, err := uploadShards(ctxParams, repairContract)
 				if err != nil {
+					fmt.Println("uploadShards err", err)
 					return err
 				}
 				err = submitFileStatus(ctxParams.Ctx, ctxParams.Cfg, fileStatus)
 				if err != nil {
+					fmt.Println("submitFileStatus err", err)
 					return err
 				}
 			}
 			return nil
 		}()
 		if err != nil {
+			fmt.Println("repair error:", err.Error())
 			log.Errorf("repair error: %s", err.Error())
 		}
 	}()
@@ -259,6 +278,7 @@ func submitSignedRepairContract(ctxParams *uh.ContextParams, params *RepairContr
 	}
 	sig, err := crypto.Sign(ctxParams.N.PrivateKey, repairReq)
 	if err != nil {
+		fmt.Println("crypto.Sign err", err)
 		return nil, err
 	}
 	repairReq.RepairSignature = sig
@@ -267,11 +287,13 @@ func submitSignedRepairContract(ctxParams *uh.ContextParams, params *RepairContr
 		client guardpb.GuardServiceClient) error {
 		repairResp, err = client.SubmitRepairContract(ctx, repairReq)
 		if err != nil {
+			fmt.Println("client.SubmitRepairContract", err)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
+		fmt.Println("grpc.GuardClient err", err)
 		return nil, err
 	}
 	return repairResp, nil
@@ -285,6 +307,7 @@ func uploadShards(ctxParams *uh.ContextParams, repairContract *guardpb.RepairCon
 	}
 	sig, err := crypto.Sign(ctxParams.N.PrivateKey, repairContractReq)
 	if err != nil {
+		fmt.Println("repairContractReq err", err)
 		return nil, err
 	}
 	repairContractReq.RepairSignature = sig
@@ -293,43 +316,51 @@ func uploadShards(ctxParams *uh.ContextParams, repairContract *guardpb.RepairCon
 	duration := time.Duration(requestInterval)
 	tick := time.Tick(duration * time.Minute)
 
-FOR:
-	for true {
-		select {
-		case <-tick:
-			err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
-				client guardpb.GuardServiceClient) error {
-				repairContractResp, err = client.RequestForRepairContracts(ctx, repairContractReq)
+	FOR:
+		for true {
+			select {
+			case <-tick:
+				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
+					client guardpb.GuardServiceClient) error {
+					repairContractResp, err = client.RequestForRepairContracts(ctx, repairContractReq)
+					if err != nil {
+						fmt.Println("RequestForRepairContracts err", err)
+						return err
+					}
+					return nil
+				})
 				if err != nil {
-					return err
+					fmt.Println("grpc.GuardClient err", err)
+					return nil, err
 				}
-				return nil
-			})
-			if err != nil {
-				return nil, err
-			}
-			if repairContractResp.State == guardpb.ResponseRepairContracts_REQUEST_AGAIN {
-				log.Info(fmt.Sprintf("request repair contract again in %d minutes", requestInterval))
-				continue
-			}
-			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_READY {
-				statusMeta = repairContractResp.Status
-				break FOR
-			}
-			if repairContractResp.State == guardpb.ResponseRepairContracts_DOWNLOAD_NOT_DONE {
-				unpinLocalStorage(ctxParams, repairContract.FileHash)
-				log.Info("download and challenge can not be completed for lost shards", zap.String("repairer id", repairContract.RepairPid))
-				return nil, nil
-			}
-			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_CLOSED {
-				unpinLocalStorage(ctxParams, repairContract.FileHash)
-				log.Info("repair contract has been closed", zap.String("contract id", repairContract.RepairContractId))
-				return nil, nil
+				fmt.Println("client.RequestForRepairContract state", repairContractResp.State)
+				if repairContractResp.State == guardpb.ResponseRepairContracts_REQUEST_AGAIN {
+					fmt.Println("repairer in REQUEST_AGAIN status", repairContract.RepairPid)
+					log.Info(fmt.Sprintf("request repair contract again in %d minutes", requestInterval))
+					continue
+				}
+				if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_READY {
+					fmt.Println("repairer in DOWNLOAD_NOT_DONE status", repairContract.RepairPid)
+					statusMeta = repairContractResp.Status
+					break FOR
+				}
+				if repairContractResp.State == guardpb.ResponseRepairContracts_DOWNLOAD_NOT_DONE {
+					fmt.Println("repairer in DOWNLOAD_NOT_DONE status", repairContract.RepairPid)
+					unpinLocalStorage(ctxParams, repairContract.FileHash)
+					log.Info("download and challenge can not be completed for lost shards", zap.String("repairer id", repairContract.RepairPid))
+					return nil, nil
+				}
+				if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_CLOSED {
+					fmt.Println("repairer in CONTRACT_CLOSED status", repairContract.RepairPid)
+					unpinLocalStorage(ctxParams, repairContract.FileHash)
+					log.Info("repair contract has been closed", zap.String("contract id", repairContract.RepairContractId))
+					return nil, nil
+				}
 			}
 		}
-	}
 	contracts := statusMeta.Contracts
 	if len(contracts) <= 0 {
+		fmt.Println("length of contracts is 0")
 		return nil, errors.New("length of contracts is 0")
 	}
 	shardIndexes := make([]int, 0)
@@ -345,6 +376,7 @@ FOR:
 	ssId := uuid.New().String()
 	rss, err := sessions.GetRenterSession(ctxParams, ssId, repairContract.FileHash, shardHashes)
 	if err != nil {
+		fmt.Println("get rss err", err)
 		return nil, err
 	}
 	hp := uh.GetHostsProvider(ctxParams, make([]string, 0))
@@ -359,6 +391,7 @@ FOR:
 					break
 				}
 				host, err := hp.NextValidHost(m.Price)
+				fmt.Println("host peer id", host)
 				if err != nil {
 					terr := rss.To(sessions.RssToErrorEvent, err)
 					if terr != nil {
@@ -376,6 +409,7 @@ FOR:
 				repairPid := ctxParams.N.Identity
 				hostPid, err := peer.IDB58Decode(host)
 				if err != nil {
+					fmt.Println("shard decodes host_pid error", h, err)
 					log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
 					return err
 				}
@@ -396,6 +430,7 @@ FOR:
 						repairPid,
 					)
 					if err != nil {
+						fmt.Println("remote.P2PCall", hostPid, h, err)
 						cb <- err
 					}
 				}()
@@ -406,10 +441,12 @@ FOR:
 					ShardErrChanMap.Remove(guardContract.ContractId)
 					return err
 				case <-tick:
+					fmt.Println("host timeout")
 					return errors.New("host timeout")
 				}
 			}, uh.HandleShardBo)
 			if err != nil {
+				fmt.Println("timeout: failed to setup contract in "+uh.HandleShardBo.MaxElapsedTime.String())
 				_ = rss.To(sessions.RssToErrorEvent,
 					errors.New("timeout: failed to setup contract in "+uh.HandleShardBo.MaxElapsedTime.String()))
 			}
@@ -424,6 +461,7 @@ func updateRepairContract(contracts []*guardpb.Contract, contractMap map[string]
 		if contract.State == guardpb.Contract_LOST {
 			if v, ok := contractMap[contract.ShardHash]; ok {
 				contract = v
+				fmt.Println("renew contract", contract)
 				delete(contractMap, contract.ShardHash)
 			}
 		}
@@ -467,6 +505,8 @@ func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairC
 					RentStart:  repairReq.RepairSignTime,
 				})
 				if err != nil {
+					fmt.Println("challenge Shard err", err)
+					fmt.Println("ContractId", repairReq.RepairContractId, "ShardHash", lostShardHash, "FileHash", repairReq.FileHash, "HostPid", repairReq.RepairPid)
 					return err
 				}
 				return nil
@@ -484,6 +524,7 @@ func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairC
 			break
 		}
 	}
+	fmt.Println("challenge Shards without err")
 	return nil
 }
 
