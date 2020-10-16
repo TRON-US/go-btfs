@@ -20,15 +20,9 @@ const (
 var StorageForceRepair = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
-		//cmds.StringArg("upload-peer-id", false, false, "Peer id when upload upload."),
-		//cmds.StringArg("upload-nonce-ts", false, false, "Nounce timestamp when upload."),
-		//cmds.StringArg("upload-signature", false, false, "Session signature when upload upload."),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-
-		//fmt.Println("Test Debugging")
-		//time.Sleep(time.Second * 20)
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -81,25 +75,3 @@ type Return struct {
 	FileHash  string
 }
 
-/*func forceRebuild(c guard.GuardServiceClient, status *guard.FileStoreStatus) {
-	forceRequest := guard.ForceRepairRequest{
-		RenterPid: status.RenterPid,
-		FileHash:  status.FileHash,
-		AuthPid:   config.GuardPidPretty,
-		Signature: nil,
-	}
-
-	signature, err := crypto.Sign(config.GuardPrivateKey, &forceRequest)
-
-	if err != nil {
-		log.Panic("got error to sign the ready for challenge request", zap.Error(err))
-	}
-	forceRequest.Signature = signature
-
-	response, err := c.ForceRepair(context.Background(), &forceRequest)
-	if err != nil {
-		log.Panic("send force repair build request error", zap.Error(err))
-	}
-
-	log.Info("send force repair build request ", zap.String("response", response.Code.String()))
-}*/
