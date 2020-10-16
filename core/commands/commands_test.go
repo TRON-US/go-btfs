@@ -230,6 +230,7 @@ func TestCommands(t *testing.T) {
 		"/storage/path/migrate",
 		"/storage/upload",
 		"/storage/upload/init",
+		"/storage/upload/forcerepair",
 		"/storage/upload/recvcontract",
 		"/storage/upload/status",
 		"/storage/upload/repair",

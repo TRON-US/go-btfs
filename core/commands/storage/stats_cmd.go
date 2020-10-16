@@ -77,21 +77,22 @@ func SyncStats(ctx context.Context, cfg *config.Config, node *core.IpfsNode, env
 	}
 	hs := &nodepb.StorageStat_Host{
 		Online:               cfg.Experimental.StorageHostEnabled,
-		Uptime:               sr.Uptime,
-		Score:                sr.Score,
-		UptimeScore:          sr.UptimeScore,
-		AgeScore:             sr.AgeScore,
-		VersionScore:         sr.VersionScore,
-		SpeedScore:           sr.SpeedScore,
-		UptimeWeight:         sr.UptimeWeight,
-		AgeWeight:            sr.AgeWeight,
-		VersionWeight:        sr.VersionWeight,
-		SpeedWeight:          sr.SpeedWeight,
+		//Uptime:               sr.Uptime,
+		//Score:                sr.Score,
+		//UptimeScore:          sr.UptimeScore,
+		//AgeScore:             sr.AgeScore,
+		//VersionScore:         sr.VersionScore,
+		//SpeedScore:           sr.SpeedScore,
+		//UptimeWeight:         sr.UptimeWeight,
+		//AgeWeight:            sr.AgeWeight,
+		//VersionWeight:        sr.VersionWeight,
+		//SpeedWeight:          sr.SpeedWeight,
 		StorageUsed:          int64(stat.RepoSize),
 		StorageCap:           int64(stat.StorageMax),
 		StorageDiskTotal:     int64(du.Total),
 		StorageDiskAvailable: int64(du.Free),
 	}
+	hs.StorageStat_HostStats = sr.StorageStat_HostStats
 	return SaveHostStatsIntoDatastore(ctx, node, node.Identity.Pretty(), hs)
 }
 

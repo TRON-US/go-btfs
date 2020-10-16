@@ -2,6 +2,7 @@ package upload
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
@@ -34,6 +35,7 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 				}()
 			}
 			if err != nil {
+				fmt.Println("doRecv err", err)
 				return err
 			}
 		}
@@ -49,11 +51,13 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	}
 	requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 	if !ok {
+		fmt.Println("failed to get remote peer id")
 		err = errors.New("failed to get remote peer id")
 		return
 	}
 	rpk, err := requestPid.ExtractPublicKey()
 	if err != nil {
+		fmt.Println("requestPid.ExtractPublicKey", err)
 		return
 	}
 
@@ -62,6 +66,7 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 	guardContract := new(guardpb.Contract)
 	err = proto.Unmarshal(guardContractBytes, guardContract)
 	if err != nil {
+		fmt.Println("proto.Unmarshal guardContract recvcontract", err)
 		return
 	}
 	bytes, err := proto.Marshal(&guardContract.ContractMeta)
@@ -73,6 +78,7 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 		return
 	}
 	if !valid || guardContract.ContractMeta.GetHostPid() != requestPid.Pretty() {
+		fmt.Println("invalid guard contract bytes")
 		err = errors.New("invalid guard contract bytes")
 		return
 	}
