@@ -16,6 +16,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 	"github.com/TRON-US/go-btfs-config"
+	"github.com/TRON-US/go-btfs/core"
 )
 
 func init() {
@@ -67,20 +68,8 @@ var walletInitCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		cfg, err := n.Repo.Config()
-		if err != nil {
-			return err
-		}
-		wallet.Init(req.Context, cfg)
-		return nil
+		return doSetKeys(n, "", "")
 	},
-	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *MessageOutput) error {
-			fmt.Fprint(w, out.Message)
-			return nil
-		}),
-	},
-	Type: MessageOutput{},
 }
 
 const (
@@ -494,20 +483,26 @@ var walletImportCmd = &cmds.Command{
 
 		privKey, _ := req.Options[privateKeyOptionName].(string)
 		mnemonic, _ := req.Options[mnemonicOptionName].(string)
-		err = wallet.ImportKeys(n, privKey, mnemonic)
-		if err != nil {
+		if privKey == "" && mnemonic == "" {
+			return errors.New("required private key or mnemonic")
+		}
+		return doSetKeys(n, privKey, mnemonic)
+	},
+}
+
+func doSetKeys(n *core.IpfsNode, privKey string, mnemonic string) error {
+	if err := wallet.SetKeys(n, privKey, mnemonic); err != nil {
+		return err
+	}
+	go func() error {
+		restartCmd := exec.Command(path.Excutable, "restart")
+		if err := restartCmd.Run(); err != nil {
+			log.Errorf("restart error, %v", err)
 			return err
 		}
-		go func() error {
-			restartCmd := exec.Command(path.Excutable, "restart")
-			if err := restartCmd.Run(); err != nil {
-				log.Errorf("restart error, %v", err)
-				return err
-			}
-			return nil
-		}()
 		return nil
-	},
+	}()
+	return nil
 }
 
 var walletDiscoveryCmd = &cmds.Command{

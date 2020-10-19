@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 )
 
-func ImportKeys(n *core.IpfsNode, privKey string, mnemonic string) (err error) {
+func SetKeys(n *core.IpfsNode, privKey string, mnemonic string) (err error) {
 	var privK, m string
 	if mnemonic != "" {
 		mnemonic = strings.ReplaceAll(mnemonic, " ", ",")
@@ -31,8 +30,6 @@ func ImportKeys(n *core.IpfsNode, privKey string, mnemonic string) (err error) {
 		if err != nil {
 			return err
 		}
-	} else {
-		return errors.New("need privKey or Mnemonic")
 	}
 	identity, err := config.IdentityConfig(os.Stdout, util.NBitsForKeypairDefault, "Secp256k1", privK, m)
 	if err != nil {
