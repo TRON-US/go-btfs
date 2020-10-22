@@ -80,7 +80,7 @@ Use status command to check for completion:
 		"signcontractbatch": offline.StorageUploadSignContractBatchCmd,
 		"getunsigned":       offline.StorageUploadGetUnsignedCmd,
 		"sign":              offline.StorageUploadSignCmd,
-		"forcerepair":       StorageForceRepair,
+		"forcerepair":       StorageForceRepairCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
