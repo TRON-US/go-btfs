@@ -2,6 +2,7 @@ package stats
 
 import (
 	"context"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -221,6 +222,7 @@ type Stat_HostWithTimeStamp struct {
 func ListHostStatsFromDatastore(ctx context.Context, node *core.IpfsNode, nodeId string, from int64, to int64) ([]*Stat_HostWithTimeStamp, error) {
 	rds := node.Repo.Datastore()
 	keys, err := sessions.ListKeys(rds, HostStatStorePrefix+nodeId+"/", "")
+	sort.Strings(keys)
 	if err != nil {
 		return nil, err
 	}
