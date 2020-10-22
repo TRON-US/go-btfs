@@ -43,7 +43,7 @@ such repair job, sign and send to the guard for confirmation `,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"request":  hostRepairRequestCmd,
-		"response": hostRepairResponseCmd,
+		"response": HostRepairResponseCmd,
 	},
 }
 
@@ -64,7 +64,7 @@ This command sends request to mining host to negotiate the repair works.`,
 	},
 	Arguments: append([]cmds.Argument{
 		cmds.StringArg("peer-ids", true, false, "Host Peer IDs to send repair requests."),
-	}, hostRepairResponseCmd.Arguments...), // append pass-through arguments
+	}, HostRepairResponseCmd.Arguments...), // append pass-through arguments
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		fileHash := req.Arguments[1]
@@ -109,7 +109,7 @@ This command sends request to mining host to negotiate the repair works.`,
 						fmt.Println("remote.FindPeer with err", err)
 						return err
 					}
-					_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/upload/dcrepairrouter/response",
+					_, err = remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/dcrepair/response",
 						req.Arguments[1:]...)
 					if err != nil {
 						fmt.Println("remote.P2PCallStrings with err", err)
@@ -135,7 +135,7 @@ type peerIdList struct {
 	Strings []string
 }
 
-var hostRepairResponseCmd = &cmds.Command{
+var HostRepairResponseCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Host responds to repair requests.",
 		ShortDescription: `
@@ -175,11 +175,11 @@ returns the repairer's signed contract to the invoker.`,
 			return err
 		}
 		repairId := ctxParams.N.Identity.Pretty()
-		if !ctxParams.Cfg.Experimental.StorageClientEnabled {
-			return fmt.Errorf("storage client api not enabled")
+		if !ctxParams.Cfg.Experimental.StorageHostEnabled {
+			return fmt.Errorf("storage host api not enabled")
 		}
 		if !ctxParams.Cfg.Experimental.HostRepairEnabled {
-			return fmt.Errorf("host repair api not enabled")
+			return fmt.Errorf("storage repair api not enabled")
 		}
 		ns, err := helper.GetHostStorageConfig(ctxParams.Ctx, ctxParams.N)
 		if err != nil {
@@ -198,6 +198,7 @@ returns the repairer's signed contract to the invoker.`,
 		if totalPrice > uint64(repairRewardAmount) {
 			return fmt.Errorf("host desired price %d is greater than request price %d", totalPrice, repairRewardAmount)
 		}
+		fmt.Println("fileHash", fileHash, "lostShardHashes", lostShardHashes, "fileSize", fileSize, "downloadRewardAmount", downloadRewardAmount, "repairRewardAmount", repairRewardAmount)
 		doRepair(ctxParams, &RepairContractParams{
 			FileHash:             fileHash,
 			FileSize:             fileSize,
@@ -206,6 +207,7 @@ returns the repairer's signed contract to the invoker.`,
 			RepairRewardAmount:   repairRewardAmount,
 			DownloadRewardAmount: downloadRewardAmount,
 		})
+		fmt.Println("decentralized repair process done")
 		return nil
 	},
 }
