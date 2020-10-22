@@ -137,7 +137,7 @@ type peerIdList struct {
 
 var HostRepairResponseCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Host responds to repair requests.",
+		Tagline: "Host responds to repair jobs.",
 		ShortDescription: `
 This command enquires the repairer with the contract, if agrees with the contract after negotiation,
 returns the repairer's signed contract to the invoker.`,

@@ -17,7 +17,7 @@ const (
 	guardPrivKey = "CAISIJJTFKM777Y0S+pjlSSyKQtZTc7vEQDdAJReLgUMoGpz"
 )
 
-var StorageForceRepair = &cmds.Command{
+var StorageForceRepairCmd = &cmds.Command{
 	Arguments: []cmds.Argument{
 		cmds.StringArg("file-hash", true, false, "Hash of file to upload."),
 	},
