@@ -76,7 +76,6 @@ Use status command to check for completion:
 		"recvcontract":      StorageUploadRecvContractCmd,
 		"status":            StorageUploadStatusCmd,
 		"repair":            StorageUploadRepairCmd,
-		"dcrepairrouter":    StorageDcRepairRouterCmd,
 		"getcontractbatch":  offline.StorageUploadGetContractBatchCmd,
 		"signcontractbatch": offline.StorageUploadSignContractBatchCmd,
 		"getunsigned":       offline.StorageUploadGetUnsignedCmd,
