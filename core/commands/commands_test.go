@@ -263,7 +263,7 @@ func TestCommands(t *testing.T) {
 		"/guard/test",
 		"/guard/test/send-challenges",
 		"/wallet",
-		"/wallet/init",
+		"/wallet/generate_key",
 		"/wallet/balance",
 		"/wallet/withdraw",
 		"/wallet/deposit",

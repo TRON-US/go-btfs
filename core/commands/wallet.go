@@ -3,6 +3,8 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/cmd/btfs/util"
+	"github.com/tron-us/go-btfs-common/crypto"
 	"io"
 	"os/exec"
 	"strconv"
@@ -29,7 +31,9 @@ func init() {
 		"/wallet/import",
 		"/wallet/transfer",
 		"/wallet/balance",
-		"/wallet/discovery")
+		"/wallet/discovery",
+		"/wallet/generate_keys",
+	)
 }
 
 var WalletCmd = &cmds.Command{
@@ -41,7 +45,6 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"init":              walletInitCmd,
 		"deposit":           walletDepositCmd,
 		"withdraw":          walletWithdrawCmd,
 		"balance":           walletBalanceCmd,
@@ -52,24 +55,39 @@ withdraw and query balance of token used in BTFS.`,
 		"transfer":          walletTransferCmd,
 		"discovery":         walletDiscoveryCmd,
 		"validate_password": walletCheckPasswordCmd,
+		"generate_key":      walletGenerateKeyCmd,
 	},
 }
 
-var walletInitCmd = &cmds.Command{
+var walletGenerateKeyCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "Init BTFS wallet",
-		ShortDescription: "Init BTFS wallet.",
+		Tagline:          "Generate new private_key and Mnemonic",
+		ShortDescription: "Generate new private_key and Mnemonic",
 	},
 
 	Arguments: []cmds.Argument{},
 	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		n, err := cmdenv.GetNode(env)
+		k, m, err := util.GenerateKey("", "BIP39", "")
 		if err != nil {
-			return err
+			return nil
 		}
-		return doSetKeys(n, "", "")
+		ks, err := crypto.FromPrivateKey(k)
+		if err != nil {
+			return nil
+		}
+		k64, err := crypto.Hex64ToBase64(ks.HexPrivateKey)
+		if err != nil {
+			return nil
+		}
+		return cmds.EmitOnce(res, Keys{
+			PrivateKey: k64,
+			Mnemonic:   m,
+			SkInBase64: k64,
+			SkInHex:    ks.HexPrivateKey,
+		})
 	},
+	Type: Keys{},
 }
 
 const (
@@ -362,6 +380,8 @@ var walletKeysCmd = &cmds.Command{
 type Keys struct {
 	PrivateKey string
 	Mnemonic   string
+	SkInBase64 string
+	SkInHex    string
 }
 
 var walletTransactionsCmd = &cmds.Command{
