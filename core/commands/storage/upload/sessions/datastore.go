@@ -38,8 +38,7 @@ func Get(d ds.Datastore, key string, m proto.Message) error {
 	if err != nil {
 		return err
 	}
-	err = proto.Unmarshal(bytes, m)
-	return err
+	return proto.Unmarshal(bytes, m)
 }
 
 func Remove(d ds.Datastore, key string) error {

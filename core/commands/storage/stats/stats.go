@@ -2,6 +2,7 @@ package stats
 
 import (
 	"context"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -221,10 +222,12 @@ type Stat_HostWithTimeStamp struct {
 func ListHostStatsFromDatastore(ctx context.Context, node *core.IpfsNode, nodeId string, from int64, to int64) ([]*Stat_HostWithTimeStamp, error) {
 	rds := node.Repo.Datastore()
 	keys, err := sessions.ListKeys(rds, HostStatStorePrefix+nodeId+"/", "")
+	sort.Strings(keys)
 	if err != nil {
 		return nil, err
 	}
 	hosts := make([]*Stat_HostWithTimeStamp, 0)
+	ly, lm, ld := -1, "", -1
 	for _, k := range keys {
 		qr, err := rds.Get(ds.NewKey(k))
 		if err != nil {
@@ -237,12 +240,14 @@ func ListHostStatsFromDatastore(ctx context.Context, node *core.IpfsNode, nodeId
 		}
 		split := strings.Split(k, "/")
 		t, err := strconv.ParseInt(split[len(split)-1], 10, 64)
-		if err != nil {
+		if err != nil || t < from || t > to {
 			continue
 		}
-		if t < from || t > to {
+		year, month, day := time.Unix(t, 0).Date()
+		if ly == year && lm == month.String() && ld == day {
 			continue
 		}
+		ly, lm, ld = year, month.String(), day
 		hosts = append(hosts, &Stat_HostWithTimeStamp{
 			Stat:      hs,
 			Timestamp: t,
