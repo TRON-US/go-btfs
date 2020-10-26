@@ -3,13 +3,13 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/cmd/btfs/util"
-	"github.com/tron-us/go-btfs-common/crypto"
 	"io"
 	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/TRON-US/go-btfs/cmd/btfs/util"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/wallet"
@@ -18,7 +18,9 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 	"github.com/TRON-US/go-btfs-config"
-	"github.com/TRON-US/go-btfs/core"
+	"github.com/tron-us/go-btfs-common/crypto"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func init() {
@@ -32,7 +34,6 @@ func init() {
 		"/wallet/transfer",
 		"/wallet/balance",
 		"/wallet/discovery",
-		"/wallet/generate_keys",
 	)
 }
 
@@ -45,6 +46,7 @@ withdraw and query balance of token used in BTFS.`,
 	},
 
 	Subcommands: map[string]*cmds.Command{
+		"init":              walletInitCmd,
 		"deposit":           walletDepositCmd,
 		"withdraw":          walletWithdrawCmd,
 		"balance":           walletBalanceCmd,
@@ -56,6 +58,48 @@ withdraw and query balance of token used in BTFS.`,
 		"discovery":         walletDiscoveryCmd,
 		"validate_password": walletCheckPasswordCmd,
 		"generate_key":      walletGenerateKeyCmd,
+	},
+}
+
+var walletInitCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "initialize BTFS wallet",
+		ShortDescription: "initialize BTFS wallet",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("privateKey", true, false, "private key"),
+		cmds.StringArg("encrypted_private_key", true, false, "encrypted private key"),
+		cmds.StringArg("encrypted_mnemonic", true, false, "encrypted mnemonic"),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		cfg.Identity.PrivKey = req.Arguments[0]
+		cfg.Identity.Mnemonic = ""
+		cfg.Identity.EncryptedPrivKey = req.Arguments[1]
+		cfg.Identity.EncryptedMnemonic = req.Arguments[2]
+		ks, err := crypto.ToPrivKey(req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		id, err := peer.IDFromPrivateKey(ks)
+		if err != nil {
+			return err
+		}
+		cfg.Identity.PeerID = id.String()
+		cfg.UI.Wallet.Initialized = true
+		if err = n.Repo.SetConfig(cfg); err != nil {
+			return err
+		}
+		go doRestart()
+		return nil
 	},
 }
 
@@ -506,22 +550,24 @@ var walletImportCmd = &cmds.Command{
 		if privKey == "" && mnemonic == "" {
 			return errors.New("required private key or mnemonic")
 		}
-		return doSetKeys(n, privKey, mnemonic)
+		if err = doSetKeys(n, privKey, mnemonic); err != nil {
+			return err
+		}
+		go doRestart()
+		return nil
 	},
 }
 
 func doSetKeys(n *core.IpfsNode, privKey string, mnemonic string) error {
-	if err := wallet.SetKeys(n, privKey, mnemonic); err != nil {
+	return wallet.SetKeys(n, privKey, mnemonic)
+}
+
+func doRestart() error {
+	restartCmd := exec.Command(path.Excutable, "restart")
+	if err := restartCmd.Run(); err != nil {
+		log.Errorf("restart error, %v", err)
 		return err
 	}
-	go func() error {
-		restartCmd := exec.Command(path.Excutable, "restart")
-		if err := restartCmd.Run(); err != nil {
-			log.Errorf("restart error, %v", err)
-			return err
-		}
-		return nil
-	}()
 	return nil
 }
 
