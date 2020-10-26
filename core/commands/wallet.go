@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/TRON-US/go-btfs/cmd/btfs/util"
 	"github.com/TRON-US/go-btfs/core"
@@ -34,6 +35,7 @@ func init() {
 		"/wallet/transfer",
 		"/wallet/balance",
 		"/wallet/discovery",
+		"/wallet/generate_key",
 	)
 }
 
@@ -67,7 +69,7 @@ var walletInitCmd = &cmds.Command{
 		ShortDescription: "initialize BTFS wallet",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("privateKey", true, false, "private key"),
+		cmds.StringArg("private_key", true, false, "private key"),
 		cmds.StringArg("encrypted_private_key", true, false, "encrypted private key"),
 		cmds.StringArg("encrypted_mnemonic", true, false, "encrypted mnemonic"),
 	},
@@ -114,15 +116,15 @@ var walletGenerateKeyCmd = &cmds.Command{
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		k, m, err := util.GenerateKey("", "BIP39", "")
 		if err != nil {
-			return nil
+			return err
 		}
 		ks, err := crypto.FromPrivateKey(k)
 		if err != nil {
-			return nil
+			return err
 		}
 		k64, err := crypto.Hex64ToBase64(ks.HexPrivateKey)
 		if err != nil {
-			return nil
+			return err
 		}
 		return cmds.EmitOnce(res, Keys{
 			PrivateKey: k64,
@@ -563,7 +565,8 @@ func doSetKeys(n *core.IpfsNode, privKey string, mnemonic string) error {
 }
 
 func doRestart() error {
-	restartCmd := exec.Command(path.Excutable, "restart")
+	time.Sleep(2 * time.Second)
+	restartCmd := exec.Command(path.Executable, "restart")
 	if err := restartCmd.Run(); err != nil {
 		log.Errorf("restart error, %v", err)
 		return err

@@ -62,7 +62,7 @@ func init() {
 	SetEnvVariables()
 }
 
-var Excutable = func() string {
+var Executable = func() string {
 	if ex, err := os.Executable(); err == nil {
 		return ex
 	}
@@ -162,7 +162,7 @@ storage location, a specified path as a parameter need to be passed.
 				promisedStorageSize, usage.Free)
 		}
 
-		restartCmd := exec.Command(Excutable, "restart", "-p")
+		restartCmd := exec.Command(Executable, "restart", "-p")
 		if err := restartCmd.Run(); err != nil {
 			return fmt.Errorf("restart command: %s", err)
 		}
