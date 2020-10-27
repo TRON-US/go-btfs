@@ -7,7 +7,10 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/TRON-US/go-btfs/cmd/btfs/util"
+	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/wallet"
@@ -16,7 +19,9 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs-cmds/http"
 	"github.com/TRON-US/go-btfs-config"
-	"github.com/TRON-US/go-btfs/core"
+	"github.com/tron-us/go-btfs-common/crypto"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func init() {
@@ -29,7 +34,9 @@ func init() {
 		"/wallet/import",
 		"/wallet/transfer",
 		"/wallet/balance",
-		"/wallet/discovery")
+		"/wallet/discovery",
+		"/wallet/generate_key",
+	)
 }
 
 var WalletCmd = &cmds.Command{
@@ -52,24 +59,81 @@ withdraw and query balance of token used in BTFS.`,
 		"transfer":          walletTransferCmd,
 		"discovery":         walletDiscoveryCmd,
 		"validate_password": walletCheckPasswordCmd,
+		"generate_key":      walletGenerateKeyCmd,
 	},
 }
 
 var walletInitCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "Init BTFS wallet",
-		ShortDescription: "Init BTFS wallet.",
+		Tagline:          "initialize BTFS wallet",
+		ShortDescription: "initialize BTFS wallet",
 	},
-
-	Arguments: []cmds.Argument{},
-	Options:   []cmds.Option{},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("private_key", true, false, "private key"),
+		cmds.StringArg("encrypted_private_key", true, false, "encrypted private key"),
+		cmds.StringArg("encrypted_mnemonic", true, false, "encrypted mnemonic"),
+	},
+	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
 		}
-		return doSetKeys(n, "", "")
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		cfg.Identity.PrivKey = req.Arguments[0]
+		cfg.Identity.Mnemonic = ""
+		cfg.Identity.EncryptedPrivKey = req.Arguments[1]
+		cfg.Identity.EncryptedMnemonic = req.Arguments[2]
+		ks, err := crypto.ToPrivKey(req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		id, err := peer.IDFromPrivateKey(ks)
+		if err != nil {
+			return err
+		}
+		cfg.Identity.PeerID = id.String()
+		cfg.UI.Wallet.Initialized = true
+		if err = n.Repo.SetConfig(cfg); err != nil {
+			return err
+		}
+		go doRestart()
+		return nil
 	},
+}
+
+var walletGenerateKeyCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "Generate new private_key and Mnemonic",
+		ShortDescription: "Generate new private_key and Mnemonic",
+	},
+
+	Arguments: []cmds.Argument{},
+	Options:   []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		k, m, err := util.GenerateKey("", "BIP39", "")
+		if err != nil {
+			return err
+		}
+		ks, err := crypto.FromPrivateKey(k)
+		if err != nil {
+			return err
+		}
+		k64, err := crypto.Hex64ToBase64(ks.HexPrivateKey)
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, Keys{
+			PrivateKey: k64,
+			Mnemonic:   m,
+			SkInBase64: k64,
+			SkInHex:    ks.HexPrivateKey,
+		})
+	},
+	Type: Keys{},
 }
 
 const (
@@ -362,6 +426,8 @@ var walletKeysCmd = &cmds.Command{
 type Keys struct {
 	PrivateKey string
 	Mnemonic   string
+	SkInBase64 string
+	SkInHex    string
 }
 
 var walletTransactionsCmd = &cmds.Command{
@@ -486,22 +552,25 @@ var walletImportCmd = &cmds.Command{
 		if privKey == "" && mnemonic == "" {
 			return errors.New("required private key or mnemonic")
 		}
-		return doSetKeys(n, privKey, mnemonic)
+		if err = doSetKeys(n, privKey, mnemonic); err != nil {
+			return err
+		}
+		go doRestart()
+		return nil
 	},
 }
 
 func doSetKeys(n *core.IpfsNode, privKey string, mnemonic string) error {
-	if err := wallet.SetKeys(n, privKey, mnemonic); err != nil {
+	return wallet.SetKeys(n, privKey, mnemonic)
+}
+
+func doRestart() error {
+	time.Sleep(2 * time.Second)
+	restartCmd := exec.Command(path.Executable, "restart")
+	if err := restartCmd.Run(); err != nil {
+		log.Errorf("restart error, %v", err)
 		return err
 	}
-	go func() error {
-		restartCmd := exec.Command(path.Excutable, "restart")
-		if err := restartCmd.Run(); err != nil {
-			log.Errorf("restart error, %v", err)
-			return err
-		}
-		return nil
-	}()
 	return nil
 }
 
