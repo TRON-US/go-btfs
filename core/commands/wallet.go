@@ -453,12 +453,13 @@ var walletTransactionsCmd = &cmds.Command{
 
 var walletTransferCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "Send to another BTT wallet",
+		Tagline:          "Send to another BTT wallet.",
 		ShortDescription: "Send to another BTT wallet from current BTT wallet. Use '-p=<password>' to specific password.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("to", true, false, "address of another BTFS wallet to transfer to."),
-		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer."),
+		cmds.StringArg("to", true, false, "address of another BTFS wallet to transfer to"),
+		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer"),
+		cmds.StringArg("memo", false, false, "attached memo"),
 	},
 	Options: []cmds.Option{
 		cmds.StringOption(passwordOptionName, "p", "password"),
@@ -486,7 +487,11 @@ var walletTransferCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		ret, err := wallet.TransferBTT(req.Context, n, cfg, nil, "", req.Arguments[0], amount)
+		memo := ""
+		if len(req.Arguments) == 3 {
+			memo = req.Arguments[2]
+		}
+		ret, err := wallet.TransferBTTWithMemo(req.Context, n, cfg, nil, "", req.Arguments[0], amount, memo)
 		if err != nil {
 			return err
 		}

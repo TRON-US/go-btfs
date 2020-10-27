@@ -24,6 +24,11 @@ import (
 
 func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, privKey ic.PrivKey,
 	from string, to string, amount int64) (*TronRet, error) {
+	return TransferBTTWithMemo(ctx, n, cfg, privKey, from, to, amount, "")
+}
+
+func TransferBTTWithMemo(ctx context.Context, n *core.IpfsNode, cfg *config.Config, privKey ic.PrivKey,
+	from string, to string, amount int64, memo string) (*TronRet, error) {
 	var err error
 	if privKey == nil {
 		privKey, err = crypto.ToPrivKey(cfg.Identity.PrivKey)
@@ -54,6 +59,7 @@ func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, priv
 	if err != nil {
 		return nil, err
 	}
+	tx.Transaction.RawData.Data = []byte(memo)
 	bs, err := proto.Marshal(tx.Transaction.RawData)
 	if err != nil {
 		return nil, err
