@@ -37,8 +37,8 @@ func TestTransferBTT(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ret, err := TransferBTT(context.Background(), node, cfg, privKey, "41BC8E7F3E2BB11310B75D6B0B6E8537D069CDB72E",
-		"416E2FFC26BDF48B1983CCC9EC2521867F98667760", 1)
+	ret, err := TransferBTTWithMemo(context.Background(), node, cfg, privKey, "41BC8E7F3E2BB11310B75D6B0B6E8537D069CDB72E",
+		"416E2FFC26BDF48B1983CCC9EC2521867F98667760", 1, "Yet another memo")
 	if err != nil {
 		t.Fatal(err)
 	}
