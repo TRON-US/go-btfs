@@ -24,12 +24,13 @@ import (
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/mr-tron/base58/base58"
 	"github.com/status-im/keycard-go/hexutils"
-	"github.com/thedevsaddam/gojsonq"
+	"github.com/thedevsaddam/gojsonq/v2"
 )
 
 var (
 	txUrl     = "https://api.trongrid.io/v1/accounts/%s/transactions?only_to=true&order_by=block_timestamp,asc&limit=1"
 	curUrlKey = "/accounts/%s/transactions/current"
+	client    = http.DefaultClient
 )
 
 func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Datastore) ([]*TxData, error) {
@@ -44,7 +45,11 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 		isFirst = false
 	}
 	log.Debug("sync tx called", url)
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +59,11 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 	}
 	resp.Body.Close()
 	jq := gojsonq.New().FromString(string(body))
-	if s := jq.Find("success"); s == nil || !s.(bool) {
+	if s, ok := jq.Find("success").(bool); !ok || !s {
 		return nil, errors.New("fail to get latest transactions")
 	} else {
-		if n := jq.Reset().Find("meta.links.next"); n != nil {
-			url = n.(string)
+		if n, ok := jq.Reset().Find("meta.links.next").(string); ok && n != "" {
+			url = n
 			defer SyncTxFromTronGrid(ctx, cfg, ds)
 		} else if !isFirst {
 			return nil, errors.New("no new transaction found")
@@ -66,7 +71,11 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 	}
 
 	if !isFirst {
-		resp, err = http.Get(url)
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +98,10 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 		if v := jq.Reset().Find(pfx + ".raw_data.contract.[0].parameter.value"); v == nil {
 			break
 		} else {
-			m := v.(map[string]interface{})
+			m, ok := v.(map[string]interface{})
+			if !ok {
+				continue
+			}
 			if m["asset_name"] != TokenId {
 				continue
 			}

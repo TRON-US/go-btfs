@@ -22,23 +22,9 @@ func BttTransactions(node *core.IpfsNode, env cmds.Environment) {
 		return
 	}
 
-	go periodicBttTxsSync(bttTxSyncPeriod, bttTxSyncTimeout, "btt-tx",
+	go periodicSync(bttTxSyncPeriod, bttTxSyncTimeout, "btt-tx",
 		func(ctx context.Context) error {
 			_, err := wallet.SyncTxFromTronGrid(ctx, cfg, node.Repo.Datastore())
 			return err
 		})
-}
-
-func periodicBttTxsSync(period, timeout time.Duration, msg string, syncFunc func(context.Context) error) {
-	tick := time.NewTicker(period)
-	defer tick.Stop()
-	// Force tick on immediate start
-	for ; true; <-tick.C {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		err := syncFunc(ctx)
-		if err != nil {
-			log.Debugf("Failed to sync %s: %s", msg, err)
-		}
-	}
 }
