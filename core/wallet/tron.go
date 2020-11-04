@@ -28,9 +28,9 @@ import (
 )
 
 var (
-	txUrl     = "https://api.trongrid.io/v1/accounts/%s/transactions?only_to=true&order_by=block_timestamp,asc&limit=1"
-	curUrlKey = "/accounts/%s/transactions/current"
-	client    = http.DefaultClient
+	txUrlTemplate = "%s/v1/accounts/%s/transactions?only_to=true&order_by=block_timestamp,asc&limit=1"
+	curUrlKey     = "/accounts/%s/transactions/current"
+	client        = http.DefaultClient
 )
 
 func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Datastore) ([]*TxData, error) {
@@ -38,7 +38,7 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 	if err != nil {
 		return nil, err
 	}
-	url := fmt.Sprintf(txUrl, keys.Base58Address)
+	url := fmt.Sprintf(txUrlTemplate, cfg.Services.TrongridDomain, keys.Base58Address)
 	isFirst := true
 	if v, err := ds.Get(datastore.NewKey(fmt.Sprintf(curUrlKey, keys.Base58Address))); err == nil {
 		url = string(v)
@@ -102,7 +102,7 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 			if !ok {
 				continue
 			}
-			if m["asset_name"] != TokenId {
+			if m["asset_name"] != getTokenId(cfg) {
 				continue
 			}
 			from, err := hexToBase58(m["owner_address"].(string))
@@ -185,7 +185,7 @@ func TransferBTTWithMemo(ctx context.Context, n *core.IpfsNode, cfg *config.Conf
 		}
 		from = keys.HexAddress
 	}
-	tx, err := PrepareTx(ctx, cfg, from, to, amount)
+	tx, err := PrepareTx(ctx, cfg, from, to, amount, memo)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,6 @@ func TransferBTTWithMemo(ctx context.Context, n *core.IpfsNode, cfg *config.Conf
 	if err != nil {
 		return nil, err
 	}
-	tx.Transaction.RawData.Data = []byte(memo)
 	bs, err := proto.Marshal(tx.Transaction.RawData)
 	if err != nil {
 		return nil, err
@@ -270,7 +269,7 @@ type TronRet struct {
 	TxId    string
 }
 
-func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, amount int64) (*tronPb.TransactionExtention, error) {
+func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, amount int64, memo string) (*tronPb.TransactionExtention, error) {
 	var (
 		tx  *tronPb.TransactionExtention
 		err error
@@ -314,6 +313,7 @@ func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, 
 	if err != nil {
 		return nil, err
 	}
+	tx.Transaction.RawData.Data = []byte(memo)
 	return tx, nil
 }
 

@@ -65,12 +65,12 @@ func TestTransactions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	txUrl = "https://api.shasta.trongrid.io/v1/accounts/%s/transactions?only_to=true&order_by=block_timestamp,asc&limit=1"
+	cfg.Services.EscrowDomain = "https://escrow-staging.btfs.io"
+	cfg.Services.TrongridDomain = "https://api.trongrid.io"
 	cfg.Identity.PrivKey = "CAISIPxQDgGUHZF20nrEwFUw32MHNtzYmmiKgzxn5C6cqD3m"
-	TokenId = "1000252"
 	_, err = SyncTxFromTronGrid(context.Background(), cfg, node.Repo.Datastore())
 	if err != nil {
-		//FIXME: workaround from jenkins unit test failure.
+		// FIXME: workaround from jenkins unit test failure.
 		// it works locally
 		//t.Fatal(err)
 		fmt.Println("err", err)
