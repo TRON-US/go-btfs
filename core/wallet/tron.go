@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,10 +20,149 @@ import (
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/ipfs/go-datastore"
 	ic "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/mr-tron/base58/base58"
 	"github.com/status-im/keycard-go/hexutils"
+	"github.com/thedevsaddam/gojsonq/v2"
 )
+
+var (
+	txUrlTemplate = "%s/v1/accounts/%s/transactions?only_to=true&order_by=block_timestamp,asc&limit=1"
+	curUrlKey     = "/accounts/%s/transactions/current"
+	client        = http.DefaultClient
+)
+
+func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Datastore) ([]*TxData, error) {
+	keys, err := crypto.FromPrivateKey(cfg.Identity.PrivKey)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf(txUrlTemplate, cfg.Services.TrongridDomain, keys.Base58Address)
+	isFirst := true
+	if v, err := ds.Get(datastore.NewKey(fmt.Sprintf(curUrlKey, keys.Base58Address))); err == nil {
+		url = string(v)
+		isFirst = false
+	}
+	log.Debug("sync tx called", url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body.Close()
+	jq := gojsonq.New().FromString(string(body))
+	if s, ok := jq.Find("success").(bool); !ok || !s {
+		return nil, errors.New("fail to get latest transactions")
+	} else {
+		if n, ok := jq.Reset().Find("meta.links.next").(string); ok && n != "" {
+			url = n
+			defer SyncTxFromTronGrid(ctx, cfg, ds)
+		} else if !isFirst {
+			return nil, errors.New("no new transaction found")
+		}
+	}
+
+	if !isFirst {
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		resp.Body.Close()
+		jq := gojsonq.New().FromString(string(body))
+		if !jq.Find("success").(bool) {
+			return nil, errors.New("fail to get latest transactions")
+		}
+	}
+
+	i := -1
+	tds := make([]*TxData, 0)
+	for true {
+		i++
+		pfx := fmt.Sprintf("data.[%d]", i)
+		if v := jq.Reset().Find(pfx + ".raw_data.contract.[0].parameter.value"); v == nil {
+			break
+		} else {
+			m, ok := v.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if m["asset_name"] != getTokenId(cfg) {
+				continue
+			}
+			from, err := hexToBase58(m["owner_address"].(string))
+			if err != nil {
+				continue
+			}
+			to, err := hexToBase58(m["to_address"].(string))
+			if err != nil {
+				continue
+			}
+			td := &TxData{
+				amount:    int64(m["amount"].(float64)),
+				assetName: m["asset_name"].(string),
+				from:      from,
+				to:        to,
+			}
+			if t := jq.Reset().Find(pfx + ".raw_data.timestamp"); t == nil {
+				continue
+			} else {
+				td.timestamp = int64(t.(float64))
+			}
+			if txId := jq.Reset().Find(pfx + ".txID"); txId == nil {
+				continue
+			} else {
+				if err := PersistTx(ds, cfg.Identity.PeerID, txId.(string), td.amount, td.from, td.to,
+					StatusSuccess, walletpb.TransactionV1_ON_CHAIN); err != nil {
+					log.Error(err)
+				}
+			}
+			tds = append(tds, td)
+		}
+	}
+	if len(tds) > 0 {
+		err := ds.Put(datastore.NewKey(fmt.Sprintf(curUrlKey, keys.Base58Address)), []byte(url))
+		if err != nil {
+			log.Debug(err)
+		}
+	}
+	return tds, nil
+}
+
+func hexToBase58(h string) (string, error) {
+	bs, err := hex.DecodeString(h)
+	if err != nil {
+		return "", err
+	}
+	rs, err := crypto.Encode58Check(bs)
+	if err != nil {
+		return "", err
+	}
+	return rs, nil
+}
+
+type TxData struct {
+	amount    int64
+	assetName string
+	from      string
+	to        string
+	timestamp int64
+}
 
 func TransferBTT(ctx context.Context, n *core.IpfsNode, cfg *config.Config, privKey ic.PrivKey,
 	from string, to string, amount int64) (*TronRet, error) {
@@ -43,7 +185,7 @@ func TransferBTTWithMemo(ctx context.Context, n *core.IpfsNode, cfg *config.Conf
 		}
 		from = keys.HexAddress
 	}
-	tx, err := PrepareTx(ctx, cfg, from, to, amount)
+	tx, err := PrepareTx(ctx, cfg, from, to, amount, memo)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +201,6 @@ func TransferBTTWithMemo(ctx context.Context, n *core.IpfsNode, cfg *config.Conf
 	if err != nil {
 		return nil, err
 	}
-	tx.Transaction.RawData.Data = []byte(memo)
 	bs, err := proto.Marshal(tx.Transaction.RawData)
 	if err != nil {
 		return nil, err
@@ -128,7 +269,7 @@ type TronRet struct {
 	TxId    string
 }
 
-func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, amount int64) (*tronPb.TransactionExtention, error) {
+func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, amount int64, memo string) (*tronPb.TransactionExtention, error) {
 	var (
 		tx  *tronPb.TransactionExtention
 		err error
@@ -172,6 +313,7 @@ func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, 
 	if err != nil {
 		return nil, err
 	}
+	tx.Transaction.RawData.Data = []byte(memo)
 	return tx, nil
 }
 

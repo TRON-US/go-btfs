@@ -544,6 +544,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if params, err := helper.ExtractContextParams(req, env); err == nil {
 		spin.NewWalletWrap(params).UpdateStatus()
 	}
+	spin.BttTransactions(node, env)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {
