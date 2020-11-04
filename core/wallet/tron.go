@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -314,6 +315,12 @@ func PrepareTx(ctx context.Context, cfg *config.Config, from string, to string, 
 		return nil, err
 	}
 	tx.Transaction.RawData.Data = []byte(memo)
+	bs, err := proto.Marshal(tx.Transaction.RawData)
+	if err != nil {
+		return nil, err
+	}
+	hashed := sha256.Sum256(bs)
+	tx.Txid = hashed[:]
 	return tx, nil
 }
 
