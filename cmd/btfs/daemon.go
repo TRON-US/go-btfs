@@ -223,11 +223,14 @@ func defaultMux(path string) corehttp.ServeOption {
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
 
 	cctx := env.(*oldcmds.Context)
-	c := cctx.ConfigRoot
-	if bs, err := ioutil.ReadFile(path.PropertiesFileName); err == nil && len(bs) > 0 {
-		c = string(bs)
+	_, b := os.LookupEnv(path.BtfsPathKey)
+	if !b {
+		c := cctx.ConfigRoot
+		if bs, err := ioutil.ReadFile(path.PropertiesFileName); err == nil && len(bs) > 0 {
+			c = string(bs)
+		}
+		cctx.ConfigRoot = c
 	}
-	cctx.ConfigRoot = c
 
 	// Inject metrics before we do anything
 	err := mprome.Inject()
