@@ -23,12 +23,12 @@ import (
 const (
 	defaultPath = "~/.btfs"
 	properties  = ".btfs.properties"
-	key         = "BTFS_PATH"
+	BtfsPathKey = "BTFS_PATH"
 )
 
 var (
-	fileName      string
-	srcProperties string
+	PropertiesFileName string
+	srcProperties      string
 )
 
 /* can be dir of `btfs` or path like `/private/var/folders/q0/lc8cmwd93gv50ygrsy3bwfyc0000gn/T`,
@@ -47,10 +47,10 @@ func init() {
 		return
 	}
 	srcProperties = filepath.Join(home, properties)
-	fileName = filepath.Join(exPath, properties)
+	PropertiesFileName = filepath.Join(exPath, properties)
 	// .btfs.properties migration
-	if !CheckExist(fileName) && CheckExist(srcProperties) {
-		if err := copyFile(srcProperties, fileName); err != nil {
+	if !CheckExist(PropertiesFileName) && CheckExist(srcProperties) {
+		if err := copyFile(srcProperties, PropertiesFileName); err != nil {
 			log.Errorf("error occurred when copy .btfs.properties", err)
 			return
 		}
@@ -137,7 +137,7 @@ storage location, a specified path as a parameter need to be passed.
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
-		} else if envBtfsPath := os.Getenv(key); envBtfsPath != "" {
+		} else if envBtfsPath := os.Getenv(BtfsPathKey); envBtfsPath != "" {
 			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
@@ -220,7 +220,7 @@ var PathCapacityCmd = &cmds.Command{
 			} else {
 				return fmt.Errorf("specifed path is same with current path")
 			}
-		} else if envBtfsPath := os.Getenv(key); envBtfsPath != "" {
+		} else if envBtfsPath := os.Getenv(BtfsPathKey); envBtfsPath != "" {
 			OriginPath = envBtfsPath
 		} else if home, err := homedir.Expand(defaultPath); err == nil && home != "" {
 			OriginPath = home
@@ -258,11 +258,11 @@ var PathMigrateCmd = &cmds.Command{
 			"Current BTFS Path. Should be absolute path."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		if _, k := os.LookupEnv(key); k || CheckExist(srcProperties) || CheckExist(fileName) {
+		if _, k := os.LookupEnv(BtfsPathKey); k || CheckExist(srcProperties) || CheckExist(PropertiesFileName) {
 			return errors.New("no need to migrate")
 		}
-		fmt.Printf("Writing \"%s\" to %s\n", req.Arguments[0], fileName)
-		return ioutil.WriteFile(fileName, []byte(req.Arguments[0]), os.ModePerm)
+		fmt.Printf("Writing \"%s\" to %s\n", req.Arguments[0], PropertiesFileName)
+		return ioutil.WriteFile(PropertiesFileName, []byte(req.Arguments[0]), os.ModePerm)
 	},
 }
 
@@ -330,15 +330,15 @@ type PathCapacity struct {
 }
 
 func WriteProperties() error {
-	if !CheckExist(fileName) {
-		newFile, err := os.Create(fileName)
+	if !CheckExist(PropertiesFileName) {
+		newFile, err := os.Create(PropertiesFileName)
 		defer newFile.Close()
 		if err != nil {
 			return err
 		}
 	}
 	data := []byte(StorePath)
-	err := ioutil.WriteFile(fileName, data, 0666)
+	err := ioutil.WriteFile(PropertiesFileName, data, 0666)
 	if err == nil {
 		fmt.Printf("Storage location was reset in %v\n", StorePath)
 	}
@@ -440,16 +440,16 @@ func CheckDirEmpty(dirname string) bool {
 }
 
 func SetEnvVariables() {
-	if CheckExist(fileName) {
-		btfsPath = ReadProperties(fileName)
+	if CheckExist(PropertiesFileName) {
+		btfsPath = ReadProperties(PropertiesFileName)
 		btfsPath = strings.Replace(btfsPath, " ", "", -1)
 		btfsPath = strings.Replace(btfsPath, "\n", "", -1)
 		btfsPath = strings.Replace(btfsPath, "\r", "", -1)
 		if btfsPath != "" {
 			newPath := btfsPath
-			_, b := os.LookupEnv(key)
+			_, b := os.LookupEnv(BtfsPathKey)
 			if !b {
-				err := os.Setenv(key, newPath)
+				err := os.Setenv(BtfsPathKey, newPath)
 				if err != nil {
 					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
 				}

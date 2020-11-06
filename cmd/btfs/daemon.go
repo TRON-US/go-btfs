@@ -4,6 +4,7 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -20,6 +21,7 @@ import (
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
@@ -219,6 +221,17 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
+
+	cctx := env.(*oldcmds.Context)
+	_, b := os.LookupEnv(path.BtfsPathKey)
+	if !b {
+		c := cctx.ConfigRoot
+		if bs, err := ioutil.ReadFile(path.PropertiesFileName); err == nil && len(bs) > 0 {
+			c = string(bs)
+		}
+		cctx.ConfigRoot = c
+	}
+
 	// Inject metrics before we do anything
 	err := mprome.Inject()
 	if err != nil {
@@ -246,8 +259,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 			log.Errorf("setting file descriptor limit: %s", err)
 		}
 	}
-
-	cctx := env.(*oldcmds.Context)
 
 	// check transport encryption flag.
 	unencrypted, _ := req.Options[unencryptTransportKwd].(bool)
