@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -65,7 +66,14 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 	} else {
 		if n, ok := jq.Reset().Find("meta.links.next").(string); ok && n != "" {
 			url = n
-			defer SyncTxFromTronGrid(ctx, cfg, ds)
+			defer func() {
+				ctx, cancel := helper.NewGoContext(context.Background())
+				defer cancel()
+				_, err = SyncTxFromTronGrid(ctx, cfg, ds)
+				if err != nil {
+					log.Debug(err)
+				}
+			}()
 		} else if !isFirst {
 			return nil, errors.New("no new transaction found")
 		}
