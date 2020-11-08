@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core"
-	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	walletpb "github.com/TRON-US/go-btfs/protos/wallet"
 
 	config "github.com/TRON-US/go-btfs-config"
@@ -30,9 +30,9 @@ import (
 )
 
 var (
-	txUrlTemplate = "%s/v1/accounts/%s/transactions?only_to=true&order_by=block_timestamp,asc&limit=1"
-	curUrlKey     = "/accounts/%s/transactions/current"
-	client        = http.DefaultClient
+	txUrlTemplate        = "%s/v1/accounts/%s/transactions?limit=200&only_to=true&order_by=block_timestamp,asc&min_block_timestamp=%d"
+	curBlockTimestampKey = "/accounts/%s/transactions/current/block_timestamp"
+	client               = http.DefaultClient
 )
 
 func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Datastore) ([]*TxData, error) {
@@ -40,11 +40,13 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 	if err != nil {
 		return nil, err
 	}
-	url := fmt.Sprintf(txUrlTemplate, cfg.Services.TrongridDomain, keys.Base58Address)
-	isFirst := true
-	if v, err := ds.Get(datastore.NewKey(fmt.Sprintf(curUrlKey, keys.Base58Address))); err == nil {
-		url = string(v)
-		isFirst = false
+	url := fmt.Sprintf(txUrlTemplate, cfg.Services.TrongridDomain, keys.Base58Address, 0)
+	if v, err := ds.Get(datastore.NewKey(fmt.Sprintf(curBlockTimestampKey, keys.Base58Address))); err == nil {
+		blockTimestamp, err := strconv.ParseInt(string(v), 10, 64)
+		url = fmt.Sprintf(txUrlTemplate, cfg.Services.TrongridDomain, keys.Base58Address, blockTimestamp)
+		if err != nil {
+			return nil, err
+		}
 	}
 	log.Debug("sync tx called", url)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -63,44 +65,10 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 	jq := gojsonq.New().FromString(string(body))
 	if s, ok := jq.Find("success").(bool); !ok || !s {
 		return nil, errors.New("fail to get latest transactions")
-	} else {
-		if n, ok := jq.Reset().Find("meta.links.next").(string); ok && n != "" {
-			url = n
-			defer func() {
-				ctx, cancel := helper.NewGoContext(context.Background())
-				defer cancel()
-				_, err = SyncTxFromTronGrid(ctx, cfg, ds)
-				if err != nil {
-					log.Debug(err)
-				}
-			}()
-		} else if !isFirst {
-			return nil, errors.New("no new transaction found")
-		}
 	}
-
-	if !isFirst {
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		resp.Body.Close()
-		jq := gojsonq.New().FromString(string(body))
-		if !jq.Find("success").(bool) {
-			return nil, errors.New("fail to get latest transactions")
-		}
-	}
-
 	i := -1
 	tds := make([]*TxData, 0)
+	var lastBlockTimestamp int64 = 0
 	for true {
 		i++
 		pfx := fmt.Sprintf("data.[%d]", i)
@@ -132,6 +100,7 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 				continue
 			} else {
 				td.timestamp = int64(t.(float64))
+				lastBlockTimestamp = td.timestamp
 			}
 			if txId := jq.Reset().Find(pfx + ".txID"); txId == nil {
 				continue
@@ -145,7 +114,8 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 		}
 	}
 	if len(tds) > 0 {
-		err := ds.Put(datastore.NewKey(fmt.Sprintf(curUrlKey, keys.Base58Address)), []byte(url))
+		err := ds.Put(datastore.NewKey(fmt.Sprintf(curBlockTimestampKey, keys.Base58Address)),
+			[]byte(strconv.FormatInt(lastBlockTimestamp, 10)))
 		if err != nil {
 			log.Debug(err)
 		}
