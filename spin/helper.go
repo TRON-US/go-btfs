@@ -14,7 +14,7 @@ func periodicSync(period, timeout time.Duration, msg string, syncFunc func(conte
 		defer cancel()
 		err := syncFunc(ctx)
 		if err != nil {
-			log.Debugf("Failed to sync %s: %s", msg, err)
+			log.Errorf("Failed to sync %s: %s", msg, err)
 		}
 	}
 }

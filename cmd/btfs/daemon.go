@@ -347,7 +347,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// Print self information for logging and debugging purposes
 	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
-	fmt.Printf("peer identity: %s\n", cfg.Identity.PeerID)
+	fmt.Printf("Peer identity: %s\n", cfg.Identity.PeerID)
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
