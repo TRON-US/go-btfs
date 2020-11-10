@@ -1,8 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-#this script downloads the necessary files from distributions.btfs.io into the btfs-binary-releases repo
-
-#make sure the S3Location is set
+# Make sure S3Location is set
 if [ -z "$S3Location" ]
 then
     echo "\$S3Location must be set. Please set the S3Location"
@@ -14,8 +12,8 @@ declare -a ARCH_VALUE=("386" "amd64" "arm" "arm64")
 
 cd ../btfs-binary-releases
 
-#delete existing files
-echo "=== Deleting old files ==="
+# Delete existing files
+echo "=== Deleting existing files ==="
 rm -rf ./darwin/386/*
 rm -rf ./darwin/amd64/*
 rm -rf ./linux/386/*
@@ -24,29 +22,49 @@ rm -rf ./linux/arm/*
 rm -rf ./linux/arm64/*
 rm -rf ./windows/386/*
 rm -rf ./windows/amd64/*
-echo "=== Completed deleting old files ==="
+echo "=== Completed deleting existing files ==="
 
-#download files for darwin and linux
+# Get the version for fs-repo-migrations
+curl -fsSL -O https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/versions
+if [ $? -eq 0 ]
+then
+    VERSION=$(cat versions | sort -V | tail -n 1)
+else
+    echo "Download of fs-repo-migrations version file failed, confirm your internet connection to GitHub is working and rerun this script."
+    exit 1
+fi
+
+# Download files for macOS and Linux
 for OS in ${OS_VALUE[@]}; do
     for ARCH in ${ARCH_VALUE[@]}; do
 
-        if [[ ${goos} = "darwin" && ( ${goarch} = "arm64" || ${goarch} = "arm" ) ]]; then continue; fi
+        if [[ ${OS} = "darwin" && ( ${ARCH} = "arm64" || ${ARCH} = "arm" ) ]]; then continue; fi
 
         echo "=== Performing dload for "$OS" "$ARCH" ==="
         cd "$OS"/"$ARCH"
-        wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/btfs-"$OS"-"$ARCH".tar.gz 
-        gunzip btfs-"$OS"-"$ARCH".tar.gz 
+        wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/btfs-"$OS"-"$ARCH".tar.gz
+        gunzip btfs-"$OS"-"$ARCH".tar.gz
         tar -xf btfs-"$OS"-"$ARCH".tar
         wget -q distributions.btfs.io/"$S3Location"/"$OS"/"$ARCH"/update-"$OS"-"$ARCH".tar.gz
-        tar -xf update-"$OS"-"$ARCH".tar.gz
+        tar -xzf update-"$OS"-"$ARCH".tar.gz
         rm update-"$OS"-"$ARCH".tar.gz
+        URL="https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/${VERSION}/fs-repo-migrations_${VERSION}_${OS}-${ARCH}.tar.gz"
+        wget -q "$URL"
+        tar -xzf fs-repo-migrations_${VERSION}_${OS}-${ARCH}.tar.gz
+        mv fs-repo-migrations/fs-repo-migrations fs-repo-migrations-${OS}-${ARCH}
+        rm -f fs-repo-migrations_${VERSION}_${OS}-${ARCH}.tar.gz
+        rm -rf fs-repo-migrations
 
         cd ../..
     done
 done
 
-#download files for windows
+# Download files for Windows
+OS="windows"
 for ARCH in ${ARCH_VALUE[@]}; do
+
+    if [[ ${ARCH} = "arm64" || ${ARCH} = "arm" ]]; then continue; fi
+
     echo "=== Performing dload for windows "$ARCH" ==="
     cd windows/"$ARCH"
     wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/btfs-windows-"$ARCH".zip
@@ -54,6 +72,12 @@ for ARCH in ${ARCH_VALUE[@]}; do
     wget -q distributions.btfs.io/"$S3Location"/windows/"$ARCH"/update-windows-"$ARCH".zip
     unzip -q update-windows-"$ARCH".zip
     rm update-windows-"$ARCH".zip
-
+    URL="https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/${VERSION}/fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip"
+    wget -q "$URL"
+    unzip fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip
+    mv fs-repo-migrations/fs-repo-migrations.exe fs-repo-migrations-${OS}-${ARCH}.exe
+    rm -f fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip
+    rm -rf fs-repo-migrations
+    
     cd ../..
 done
