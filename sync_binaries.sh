@@ -74,7 +74,7 @@ for ARCH in ${ARCH_VALUE[@]}; do
     rm update-windows-"$ARCH".zip
     URL="https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/${VERSION}/fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip"
     wget -q "$URL"
-    unzip fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip
+    unzip -q fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip
     mv fs-repo-migrations/fs-repo-migrations.exe fs-repo-migrations-${OS}-${ARCH}.exe
     rm -f fs-repo-migrations_${VERSION}_${OS}-${ARCH}.zip
     rm -rf fs-repo-migrations
