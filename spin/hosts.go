@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"github.com/TRON-US/go-btfs/core/commands/storage/stats"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/core"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 	hostSortTimeout        = 5 * time.Minute
 )
 
-func Hosts(node *core.IpfsNode, env cmds.Environment) {
+func Hosts(node *core.IpfsNode, req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) {
 	cfg, err := node.Repo.Config()
 	if err != nil {
 		log.Errorf("Failed to get configuration %s", err)
@@ -49,6 +50,10 @@ func Hosts(node *core.IpfsNode, env cmds.Environment) {
 				_, err = helper.GetHostStorageConfigHelper(ctx, node, true)
 				return err
 			})
+	}
+	if cfg.Experimental.HostRepairEnabled {
+		fmt.Println("Current host is requesting for challenge")
+		go challenge.RequestChallenge(req, res, env, cfg)
 	}
 }
 

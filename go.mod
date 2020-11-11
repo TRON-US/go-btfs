@@ -17,6 +17,7 @@ require (
 	github.com/TRON-US/interface-go-btfs-core v0.6.1
 	github.com/Workiva/go-datastructures v1.0.52
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
+	github.com/aws/aws-sdk-go v1.25.48
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
 	github.com/btcsuite/btcutil v1.0.2 // indirect
@@ -120,7 +121,7 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	github.com/tron-us/go-btfs-common v0.6.2
+	github.com/tron-us/go-btfs-common v0.6.3-Pre3
 	github.com/tron-us/go-common/v2 v2.2.1
 	github.com/tron-us/protobuf v1.3.4
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564

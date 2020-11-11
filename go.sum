@@ -121,6 +121,7 @@ github.com/andybalholm/brotli v0.0.0-20190621154722-5f990b63d2d6/go.mod h1:+lx6/
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/aristanetworks/goarista v0.0.0-20170210015632-ea17b1a17847/go.mod h1:D/tb0zPVXnP7fmsLZjtdUhSsumbK/ij54UXjjVgMGxQ=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
+github.com/aws/aws-sdk-go v1.25.48 h1:J82DYDGZHOKHdhx6hD24Tm30c2C3GchYGfN0mf9iKUk=
 github.com/aws/aws-sdk-go v1.25.48/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/benbjohnson/clock v1.0.1 h1:lVM1R/o5khtrr7t3qAr+sS6uagZOP+7iprc7gS3V9CE=
 github.com/benbjohnson/clock v1.0.1/go.mod h1:bGMdMPoPVvcYyt1gHDf4J2KE153Yf9BuiUKYMaxlTDM=
@@ -616,6 +617,7 @@ github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
+github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
 github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
@@ -1276,8 +1278,8 @@ github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e h1:
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
 github.com/tron-us/go-btfs-common v0.2.11/go.mod h1:9ND33JahGMg52sCC2/gO5DakLsd1Pg2lVe2CihW7lBE=
 github.com/tron-us/go-btfs-common v0.3.7/go.mod h1:FbYoo6ZrtnJH3TKdyJTGQrUP2rbwNVATQpxplwaYQ/c=
-github.com/tron-us/go-btfs-common v0.6.2 h1:wQa+Q4nzlHuifhP133rgsgIQfucKrlDEIpszHLoAoK8=
-github.com/tron-us/go-btfs-common v0.6.2/go.mod h1:0T4AmMiAWKkT6qgi/QSONy/KlX2OeKiAcYOFMwVo97I=
+github.com/tron-us/go-btfs-common v0.6.3-Pre3 h1:wkfmb6ZpXaBKqO9Y0UjHxyQu5Qqa+b+4rWgXZsXYcS0=
+github.com/tron-us/go-btfs-common v0.6.3-Pre3/go.mod h1:0T4AmMiAWKkT6qgi/QSONy/KlX2OeKiAcYOFMwVo97I=
 github.com/tron-us/go-common/v2 v2.0.5/go.mod h1:GiKX9noBLHotkZAU+7ET4h7N0DYWnm3OcGHOFJg1Q68=
 github.com/tron-us/go-common/v2 v2.1.1 h1:0Nj07cBrOFT38Q0kIHnqM4o4T6GNNxMr2rs5yeqlZ8Y=
 github.com/tron-us/go-common/v2 v2.1.1/go.mod h1:YIEJZF9Ph79g0zZWOvfNDtJhvO5OqSNPAb/TM1i+KvQ=

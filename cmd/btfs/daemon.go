@@ -539,7 +539,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// Spin jobs in the background
 	spin.RenterSessions(req, env)
 	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
-	spin.Hosts(node, env)
+	spin.Hosts(node, req, re, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
 	if params, err := helper.ExtractContextParams(req, env); err == nil {
 		spin.NewWalletWrap(params).UpdateStatus()
