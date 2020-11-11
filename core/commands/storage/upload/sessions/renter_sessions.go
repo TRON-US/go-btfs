@@ -196,9 +196,8 @@ func (rs *RenterSession) Status() (*renterpb.RenterSessionStatus, error) {
 	err := Get(rs.CtxParams.N.Repo.Datastore(), fmt.Sprintf(RenterSessionStatusKey, rs.PeerId, rs.SsId), status)
 	if err == datastore.ErrNotFound {
 		return &renterpb.RenterSessionStatus{
-			Status:      RssInitStatus,
-			Message:     helperText[RssInitStatus],
-			ShardHashes: rs.ShardHashes,
+			Status:  RssErrorStatus,
+			Message: "session not found",
 		}, nil
 	}
 	return status, err
