@@ -317,7 +317,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		if err != nil {
 			return err
 		}
-		// Set to get migrations to work without hacks
+		// Set to get ipfs' fs-repo-migrations to work without hacks
 		os.Setenv("IPFS_PATH", curPath)
 		err = migrate.RunMigration(fsrepo.RepoVersion)
 		if err != nil {
