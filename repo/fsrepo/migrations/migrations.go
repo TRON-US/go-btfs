@@ -46,7 +46,6 @@ func RunMigration(newv int) error {
 		return err
 	}
 	exMigrateBin := filepath.Join(filepath.Dir(ex), migrateBin)
-	var err error
 	// Check if the migrate bin is valid
 	exMigrateBin, err = exec.LookPath(migrateBin)
 	if err == nil {

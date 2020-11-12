@@ -27,8 +27,17 @@ import (
 const (
 	LatestConfigFile  = "config_%s_%s.yaml"
 	CurrentConfigFile = "config.yaml"
-	UpdateBinary      = "update-%s-%s%s"
-	LatestBtfsBinary  = "btfs-%s-%s%s"
+)
+
+var (
+	Binaries = map[string]string{
+		UpdateBinaryKey:           "update-%s-%s%s",
+		BtfsBinaryKey:             "btfs-%s-%s%s",
+		FsRepoMigrationsBinaryKey: "fs-repo-migrations-%s-%s%s",
+	}
+	UpdateBinaryKey           = "update"
+	BtfsBinaryKey             = "btfs"
+	FsRepoMigrationsBinaryKey = "fs-repo-migrations"
 )
 
 type Config struct {
@@ -66,18 +75,8 @@ func update(url, hval string) {
 		compressed: true,
 	}
 
-	var latestConfigFile string
-	var updateBinary string
-	var updateBinaryCompressed string
-	var latestBtfsBinary string
-	var latestBtfsBinaryCompressed string
-
-	var latestConfigPath string
-	var currentConfigPath string
-	var latestBtfsBinaryPath string
-	var latestBtfsBinaryPathCompressed string
-	var updateBinaryPath string
-	var updateBinaryPathCompressed string
+	var latestConfigFile, latestConfigPath, currentConfigPath string
+	latestBinaryFiles := map[string]map[string]string{}
 
 	// Select binary files based on operating system.
 	if (runtime.GOOS == "darwin" || runtime.GOOS == "linux" || runtime.GOOS == "windows") && (runtime.GOARCH == "amd64" || runtime.GOARCH == "386" || runtime.GOARCH == "arm64" || runtime.GOARCH == "arm") {
@@ -91,17 +90,21 @@ func update(url, hval string) {
 		}
 
 		latestConfigFile = fmt.Sprintf(LatestConfigFile, runtime.GOOS, runtime.GOARCH)
-		updateBinary = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, ext)
-		updateBinaryCompressed = fmt.Sprintf(UpdateBinary, runtime.GOOS, runtime.GOARCH, compressedExt)
-		latestBtfsBinary = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, ext)
-		latestBtfsBinaryCompressed = fmt.Sprintf(LatestBtfsBinary, runtime.GOOS, runtime.GOARCH, compressedExt)
-
 		latestConfigPath = fmt.Sprint(defaultBtfsPath, sep, latestConfigFile)
 		currentConfigPath = fmt.Sprint(defaultBtfsPath, sep, CurrentConfigFile)
-		latestBtfsBinaryPath = fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinary)
-		latestBtfsBinaryPathCompressed = fmt.Sprint(defaultBtfsPath, sep, latestBtfsBinaryCompressed)
-		updateBinaryPath = fmt.Sprint(defaultBtfsPath, sep, updateBinary)
-		updateBinaryPathCompressed = fmt.Sprint(defaultBtfsPath, sep, updateBinaryCompressed)
+		for key, binFmt := range Binaries {
+			bin := fmt.Sprintf(binFmt, runtime.GOOS, runtime.GOARCH, ext)
+			binCompressed := fmt.Sprintf(binFmt, runtime.GOOS, runtime.GOARCH, compressedExt)
+			path := fmt.Sprint(defaultBtfsPath, sep, bin)
+			pathCompressed := fmt.Sprint(defaultBtfsPath, sep, binCompressed)
+			pathMap := map[string]string{
+				"bin":            bin,
+				"binCompressed":  binCompressed,
+				"path":           path,
+				"pathCompressed": pathCompressed,
+			}
+			latestBinaryFiles[key] = pathMap
+		}
 	} else {
 		log.Errorf("Operating system [%s], arch [%s] does not support automatic updates", runtime.GOOS, runtime.GOARCH)
 		return
@@ -192,132 +195,102 @@ func update(url, hval string) {
 			continue
 		}
 
-		// Determine if the btfs latest binary file exists.
-		if pathExists(latestBtfsBinaryPath) {
-			// Delete the btfs latest binary file.
-			err = os.Remove(latestBtfsBinaryPath)
-			if err != nil {
-				log.Errorf("Remove btfs latest binary file error, reasons: [%v]", err)
-				continue
-			}
-		}
-
 		fmt.Println("BTFS auto update begin.")
 
-		if configRepo.compressed {
-			// Delete the newly downloaded config file since the compressed file contains the config file
-			if pathExists(latestConfigPath) {
-				// Delete the latest btfs config file.
-				err = os.Remove(latestConfigPath)
+		for key, pathMap := range latestBinaryFiles {
+			// Determine if the latest binary file exists.
+			if pathExists(pathMap["path"]) {
+				// Delete the btfs latest binary file.
+				err = os.Remove(pathMap["path"])
 				if err != nil {
-					log.Errorf("Remove latest btfs config file error, reasons: [%v]", err)
+					log.Errorf("Remove %s latest binary file error, reasons: [%v]", key, err)
 					continue
 				}
 			}
 
-			// Get the btfs latest compressed file.
-			err = download(latestBtfsBinaryPathCompressed, fmt.Sprint(configRepo.url, routePath, latestBtfsBinaryCompressed))
-			if err != nil {
-				log.Errorf("Download btfs latest compressed file error, reasons: [%v]", err)
-				continue
-			}
-			fmt.Println("Download btfs latest compressed file success!")
+			if configRepo.compressed {
+				// Delete the newly downloaded config file since the compressed file contains the config file
+				// This is only included as part of btfs binary compressed
+				if key == BtfsBinaryKey && pathExists(latestConfigPath) {
+					// Delete the latest btfs config file.
+					err = os.Remove(latestConfigPath)
+					if err != nil {
+						log.Errorf("Remove latest btfs config file error, reasons: [%v]", err)
+						continue
+					}
+				}
 
-			// Unarchive the tar.gz or .zip binary file
-			err = archiver.Unarchive(latestBtfsBinaryPathCompressed, defaultBtfsPath)
-			if err != nil {
-				log.Errorf("Unarchive of btfs latest binary file error, reasons: [%v]", err)
-				continue
-			}
-
-			// Delete the archive file.
-			err = removeCompressedFile(latestBtfsBinaryPathCompressed)
-			if err != nil {
-				log.Errorf("Remove btfs latest compressed file error, reasons: [%v]", err)
-				continue
-			}
-			// Verify config file is present after unarchiving compressed file
-			if pathExists(latestConfigPath) == false {
-				// Re-download the config file
-				err = download(latestConfigPath, fmt.Sprint(configRepo.url, routePath, latestConfigFile))
+				// Get the latest compressed file.
+				err = download(pathMap["pathCompressed"], fmt.Sprint(configRepo.url, routePath,
+					pathMap["binCompressed"]))
 				if err != nil {
-					log.Errorf("Re-download latest btfs config file error, reasons: [%v]", err)
+					log.Errorf("Download %s latest compressed file error, reasons: [%v]", key, err)
 					continue
 				}
+
+				fmt.Printf("Download %s latest compressed file success!\n", key)
+
+				// Unarchive the tar.gz or .zip binary file
+				err = archiver.Unarchive(pathMap["pathCompressed"], defaultBtfsPath)
+				if err != nil {
+					log.Errorf("Unarchive of %s latest binary file error, reasons: [%v]", key, err)
+					continue
+				}
+
+				// Delete the archive file.
+				err = removeCompressedFile(pathMap["pathCompressed"])
+				if err != nil {
+					log.Errorf("Remove %s latest compressed file error, reasons: [%v]", key, err)
+					continue
+				}
+
+				// Verify config file is present after unarchiving compressed file
+				// This is only included as part of btfs binary compressed
+				if key == BtfsBinaryKey && !pathExists(latestConfigPath) {
+					// Re-download the config file
+					err = download(latestConfigPath, fmt.Sprint(configRepo.url, routePath, latestConfigFile))
+					if err != nil {
+						log.Errorf("Re-download latest btfs config file error, reasons: [%v]", err)
+						continue
+					}
+				}
+
+			} else {
+				err = download(pathMap["path"], fmt.Sprint(configRepo.url, routePath, pathMap["bin"]))
+				if err != nil {
+					log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
+					continue
+				}
+				fmt.Println("Download btfs binary file success!")
 			}
 
-		} else {
-			err = download(latestBtfsBinaryPath, fmt.Sprint(configRepo.url, routePath, latestBtfsBinary))
-			if err != nil {
-				log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
-				continue
-			}
-			fmt.Println("Download btfs binary file success!")
-		}
+			// MD5 check only availlable for btfs binary
+			// Md5 encode file.
+			if key == BtfsBinaryKey {
+				latestMd5Hash, err := md5Encode(pathMap["path"])
+				if err != nil {
+					log.Errorf("MD5 encode %s latest binary file error, reasons: [%v].", key, err)
+					continue
+				}
 
-		// Md5 encode file.
-		latestMd5Hash, err := md5Encode(latestBtfsBinaryPath)
-		if err != nil {
-			log.Error("Md5 encode file failed.")
-			continue
-		}
+				if latestMd5Hash != latestConfig.Md5Check {
+					log.Errorf("MD5 verify %s latest binary file failed.", key)
+					continue
+				}
 
-		if latestMd5Hash != latestConfig.Md5Check {
-			log.Error("Md5 verify failed.")
-			continue
-		}
-
-		fmt.Println("Md5 check btfs binary file success!")
-
-		// Delete the update binary file if exists.
-		if pathExists(updateBinaryPath) {
-			err = os.Remove(updateBinaryPath)
-			if err != nil {
-				log.Errorf("Remove update binary file error, reasons: [%v]", err)
-				continue
-			}
-		}
-
-		if configRepo.compressed {
-			// Get the update binary compressed file.
-			err = download(updateBinaryPathCompressed, fmt.Sprint(configRepo.url, routePath, updateBinaryCompressed))
-			if err != nil {
-				log.Error("Download update compressed file failed.")
-				continue
-			}
-
-			fmt.Println("Download update compressed file success!")
-
-			// Unarchive the tar.gz or .zip update binary file
-			err = archiver.Unarchive(updateBinaryPathCompressed, defaultBtfsPath)
-			if err != nil {
-				log.Errorf("Unarchive of update btfs binary file error, reasons: [%v]", err)
-				continue
-			}
-
-			// Delete the update archive file.
-			err = removeCompressedFile(updateBinaryPathCompressed)
-			if err != nil {
-				log.Errorf("Remove compressed files error, reasons: [%v]", err)
-				continue
-			}
-		} else {
-			// Get the update binary file.
-			err = download(updateBinaryPath, fmt.Sprint(configRepo.url, routePath, updateBinary))
-			if err != nil {
-				log.Error("Download update binary file failed.")
-				continue
+				fmt.Printf("MD5 check %s binary file success!\n", key)
 			}
 		}
+
 		// Add executable permissions to update binary file.
-		err = os.Chmod(updateBinaryPath, 0775)
+		err = os.Chmod(latestBinaryFiles[UpdateBinaryKey]["path"], 0775)
 		if err != nil {
-			log.Error("Chmod file 775 error, reasons: [%v]", err)
+			log.Error("Chmod latest update binary file 775 error, reasons: [%v]", err)
 			continue
 		}
 
 		// Start the btfs-updater binary process.
-		cmd := exec.Command(updateBinaryPath,
+		cmd := exec.Command(latestBinaryFiles[UpdateBinaryKey]["path"],
 			"-url", url,
 			"-project", defaultBtfsPath+string(os.PathSeparator),
 			"-download", defaultBtfsPath+string(os.PathSeparator),
@@ -325,9 +298,10 @@ func update(url, hval string) {
 		)
 		err = cmd.Start()
 		if err != nil {
-			log.Error(err)
+			log.Errorf("Update start failed: [%v]", err)
 			continue
 		}
+
 		fmt.Println("Process will exit now and restart after the update completes.")
 		os.Exit(0)
 	}
