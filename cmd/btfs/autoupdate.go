@@ -115,6 +115,7 @@ func update(url, hval string) {
 	autoupdateFlg := true
 	routePath := fmt.Sprint(runtime.GOOS, "/", runtime.GOARCH, "/")
 
+updateLoop:
 	for {
 		time.Sleep(time.Second * time.Duration(sleepTimeSeconds))
 
@@ -204,7 +205,7 @@ func update(url, hval string) {
 				err = os.Remove(pathMap["path"])
 				if err != nil {
 					log.Errorf("Remove %s latest binary file error, reasons: [%v]", key, err)
-					continue
+					continue updateLoop
 				}
 			}
 
@@ -216,7 +217,7 @@ func update(url, hval string) {
 					err = os.Remove(latestConfigPath)
 					if err != nil {
 						log.Errorf("Remove latest btfs config file error, reasons: [%v]", err)
-						continue
+						continue updateLoop
 					}
 				}
 
@@ -225,7 +226,7 @@ func update(url, hval string) {
 					pathMap["binCompressed"]))
 				if err != nil {
 					log.Errorf("Download %s latest compressed file error, reasons: [%v]", key, err)
-					continue
+					continue updateLoop
 				}
 
 				fmt.Printf("Download %s latest compressed file success!\n", key)
@@ -234,14 +235,14 @@ func update(url, hval string) {
 				err = archiver.Unarchive(pathMap["pathCompressed"], defaultBtfsPath)
 				if err != nil {
 					log.Errorf("Unarchive of %s latest binary file error, reasons: [%v]", key, err)
-					continue
+					continue updateLoop
 				}
 
 				// Delete the archive file.
 				err = removeCompressedFile(pathMap["pathCompressed"])
 				if err != nil {
 					log.Errorf("Remove %s latest compressed file error, reasons: [%v]", key, err)
-					continue
+					continue updateLoop
 				}
 
 				// Verify config file is present after unarchiving compressed file
@@ -251,15 +252,15 @@ func update(url, hval string) {
 					err = download(latestConfigPath, fmt.Sprint(configRepo.url, routePath, latestConfigFile))
 					if err != nil {
 						log.Errorf("Re-download latest btfs config file error, reasons: [%v]", err)
-						continue
+						continue updateLoop
 					}
 				}
 
 			} else {
 				err = download(pathMap["path"], fmt.Sprint(configRepo.url, routePath, pathMap["bin"]))
 				if err != nil {
-					log.Errorf("Download btfs latest binary file error, reasons: [%v]", err)
-					continue
+					log.Errorf("Download %s latest binary file error, reasons: [%v]", key, err)
+					continue updateLoop
 				}
 				fmt.Println("Download btfs binary file success!")
 			}
@@ -270,12 +271,12 @@ func update(url, hval string) {
 				latestMd5Hash, err := md5Encode(pathMap["path"])
 				if err != nil {
 					log.Errorf("MD5 encode %s latest binary file error, reasons: [%v].", key, err)
-					continue
+					continue updateLoop
 				}
 
 				if latestMd5Hash != latestConfig.Md5Check {
 					log.Errorf("MD5 verify %s latest binary file failed.", key)
-					continue
+					continue updateLoop
 				}
 
 				fmt.Printf("MD5 check %s binary file success!\n", key)
