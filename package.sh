@@ -41,14 +41,14 @@ do
             URL="https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/${VERSION}/fs-repo-migrations_${VERSION}_${goos}-${goarch}.tar.gz"
             wget -q "$URL"
             tar -xzf fs-repo-migrations_${VERSION}_${goos}-${goarch}.tar.gz
-            mv fs-repo-migrations/fs-repo-migrations fs-repo-migrations-${goos}-${goarch}
+            mv fs-repo-migrations/fs-repo-migrations ../btfs-binary-releases/${goos}/${goarch}/fs-repo-migrations-${goos}-${goarch}
             rm -f fs-repo-migrations_${VERSION}_${goos}-${goarch}.tar.gz
             rm -rf fs-repo-migrations
         else
             URL="https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/${VERSION}/fs-repo-migrations_${VERSION}_${goos}-${goarch}.zip"
             wget -q "$URL"
             unzip -q fs-repo-migrations_${VERSION}_${goos}-${goarch}.zip
-            mv fs-repo-migrations/fs-repo-migrations.exe fs-repo-migrations-${goos}-${goarch}.exe
+            mv fs-repo-migrations/fs-repo-migrations.exe ../btfs-binary-releases/${goos}/${goarch}/fs-repo-migrations-${goos}-${goarch}.exe
             rm -f fs-repo-migrations_${VERSION}_${goos}-${goarch}.zip
             rm -rf fs-repo-migrations
         fi
