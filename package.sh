@@ -36,7 +36,7 @@ do
         md5=`openssl md5 ./cmd/btfs/btfs | awk '{print $2}'`
         mv ./cmd/btfs/btfs ../btfs-binary-releases/${goos}/${goarch}/btfs-${goos}-${goarch}${ext}
         mv update-${goos}-${goarch}${ext} ../btfs-binary-releases/${goos}/${goarch}/update-${goos}-${goarch}${ext}
-        if [[ ${goos} != "windows"]]
+        if [[ ${goos} != "windows" ]]
         then
             URL="https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-migrations/${VERSION}/fs-repo-migrations_${VERSION}_${goos}-${goarch}.tar.gz"
             wget -q "$URL"
