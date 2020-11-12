@@ -29,6 +29,7 @@ curl -fsSL -O https://github.com/TRON-US/btfs-distributions/raw/master/fs-repo-m
 if [ $? -eq 0 ]
 then
     VERSION=$(cat versions | sort -V | tail -n 1)
+    rm -f versions
 else
     echo "Download of fs-repo-migrations version file failed, confirm your internet connection to GitHub is working and rerun this script."
     exit 1
