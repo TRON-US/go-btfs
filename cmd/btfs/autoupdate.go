@@ -406,6 +406,11 @@ func download(downloadPath, url string) error {
 		log.Errorf("Http get error, reasons: [%v]", err)
 		return err
 	}
+	if res.StatusCode != http.StatusOK {
+		msg := fmt.Sprintf("Download failed with %d, message: %s", res.StatusCode, res.Status)
+		log.Error(msg)
+		return fmt.Errorf(msg)
+	}
 
 	// Create file on local.
 	f, err := os.Create(downloadPath)
@@ -425,7 +430,7 @@ func download(downloadPath, url string) error {
 		return err
 	}
 
-	log.Infof("Download success, file size :[%f]M", float32(written)/(1024*1024))
+	log.Infof("Download success, file size: [%f]MiB", float32(written)/(1024*1024))
 	return nil
 }
 
