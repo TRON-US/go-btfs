@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs-api"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -105,7 +104,7 @@ func rollback(wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath, url s
 func backupAndSetLatest(curPath, backupPath, latestPath, filename string, exec, backup bool) error {
 	// Delete backup file.
 	if pathExists(backupPath) {
-		err = os.Remove(backupPath)
+		err := os.Remove(backupPath)
 		if err != nil {
 			return fmt.Errorf("Delete backup %s file error, reasons: [%v]", filename, err)
 		}
@@ -115,7 +114,7 @@ func backupAndSetLatest(curPath, backupPath, latestPath, filename string, exec, 
 
 	// Move current file to backup if exists.
 	if pathExists(curPath) {
-		err = os.Rename(curPath, backupPath)
+		err := os.Rename(curPath, backupPath)
 		if err != nil {
 			return fmt.Errorf("Move current %s file to backup error, reasons: [%v]", filename, err)
 		}
@@ -123,7 +122,7 @@ func backupAndSetLatest(curPath, backupPath, latestPath, filename string, exec, 
 
 	// Move latest file (if exists) to current file.
 	if latestPath != "" {
-		err = os.Rename(latestPath, curPath)
+		err := os.Rename(latestPath, curPath)
 		if err != nil {
 			return fmt.Errorf("Move latest %s file to current error, reasons: [%v]\n", filename, err)
 		}
@@ -131,7 +130,7 @@ func backupAndSetLatest(curPath, backupPath, latestPath, filename string, exec, 
 
 	if exec {
 		// Add executable permissions to binary.
-		err = os.Chmod(curPath, 0775)
+		err := os.Chmod(curPath, 0775)
 		if err != nil {
 			return fmt.Errorf("Chmod %s file to execute permissions error, reasons: [%v]\n", filename, err)
 		}
@@ -257,4 +256,5 @@ func getProjectPath(defaultProjectPath, defaultDownloadPath string) (
 			runtime.GOOS, runtime.GOARCH)
 		err = fmt.Errorf(msg)
 	}
+	return
 }
