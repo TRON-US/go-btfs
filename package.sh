@@ -20,6 +20,8 @@ else
     exit 1
 fi
 
+if ! command -v unzip > /dev/null; then apt-get update; apt-get -y install unzip; fi
+
 for goos in ${os[@]}
 do
     for goarch in ${arch[@]}
