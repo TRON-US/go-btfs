@@ -62,6 +62,9 @@ func PKCS5Padding(ciphertext []byte, blockSize int) ([]byte, error) {
 }
 
 func PKCS5Unpadding(encrypt []byte) ([]byte, error) {
+	if len(encrypt) == 0 {
+		return nil, errors.New("array index out of bound")
+	}
 	padding := encrypt[len(encrypt)-1]
 	if len(encrypt) < int(padding) {
 		return nil, errors.New("array index out of bound")

@@ -126,6 +126,9 @@ This command print upload and payment status by the time queried.`,
 			}
 		}
 		status.Shards = shards
+		if len(status.Shards) == 0 && status.Status == sessions.RssInitStatus {
+			status.Message = "session not found"
+		}
 		return res.Emit(status)
 	},
 	Type: StatusRes{},
