@@ -21,6 +21,7 @@ import (
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
@@ -549,7 +550,12 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	// Spin jobs in the background
 	spin.RenterSessions(req, env)
-	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
+
+	api, err := cmdenv.GetApi(env, req)
+	if err != nil {
+		return err
+	}
+	spin.Analytics(api, cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
 	if params, err := helper.ExtractContextParams(req, env); err == nil {
