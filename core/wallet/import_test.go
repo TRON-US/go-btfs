@@ -40,7 +40,7 @@ func TestImportPrivateKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range testCases {
-		err := ImportKeys(n, tc.privKey, tc.mnemonic)
+		err := SetKeys(n, tc.privKey, tc.mnemonic)
 		assert.Equal(t, tc.returnErr, err != nil)
 		if err == nil {
 			assert.Equal(t, tc.expectedPrivKey, cfg.Identity.PrivKey)

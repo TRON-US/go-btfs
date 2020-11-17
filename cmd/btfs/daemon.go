@@ -4,6 +4,7 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -20,6 +21,7 @@ import (
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
@@ -219,6 +221,17 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
+
+	cctx := env.(*oldcmds.Context)
+	_, b := os.LookupEnv(path.BtfsPathKey)
+	if !b {
+		c := cctx.ConfigRoot
+		if bs, err := ioutil.ReadFile(path.PropertiesFileName); err == nil && len(bs) > 0 {
+			c = string(bs)
+		}
+		cctx.ConfigRoot = c
+	}
+
 	// Inject metrics before we do anything
 	err := mprome.Inject()
 	if err != nil {
@@ -246,8 +259,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 			log.Errorf("setting file descriptor limit: %s", err)
 		}
 	}
-
-	cctx := env.(*oldcmds.Context)
 
 	// check transport encryption flag.
 	unencrypted, _ := req.Options[unencryptTransportKwd].(bool)
@@ -306,7 +317,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		if err != nil {
 			return err
 		}
-		// Set to get migrations to work without hacks
+		// Set to get ipfs' fs-repo-migrations to work without hacks
 		os.Setenv("IPFS_PATH", curPath)
 		err = migrate.RunMigration(fsrepo.RepoVersion)
 		if err != nil {
@@ -336,7 +347,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// Print self information for logging and debugging purposes
 	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
-	fmt.Printf("Node ID: %s\n", cfg.Identity.PeerID)
+	fmt.Printf("Peer identity: %s\n", cfg.Identity.PeerID)
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
@@ -544,6 +555,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if params, err := helper.ExtractContextParams(req, env); err == nil {
 		spin.NewWalletWrap(params).UpdateStatus()
 	}
+	spin.BttTransactions(node, env)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {

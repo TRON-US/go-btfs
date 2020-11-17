@@ -22,7 +22,7 @@ func Contracts(n *core.IpfsNode, req *cmds.Request, env cmds.Environment, role s
 		return
 	}
 	if cfg.Experimental.StorageHostEnabled {
-		go periodicHostSync(hostContractsSyncPeriod, hostContractsSyncTimeout, role+" contracts",
+		go periodicSync(hostContractsSyncPeriod, hostContractsSyncTimeout, role+" contracts",
 			func(ctx context.Context) error {
 				return contracts.SyncContracts(ctx, n, req, env, role)
 			})
