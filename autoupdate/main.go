@@ -69,24 +69,21 @@ func rollback(wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath, url s
 	}
 
 	// Rollback backup config file to current
-	err = backupAndSetLatest(backupConfigPath, currentConfigPath, "", "config", false, true)
+	err = backupAndSetLatest(currentConfigPath, backupConfigPath+".tmp", backupConfigPath, "config", false, true)
 	if err != nil {
 		log.Errorf("Rollback error: %v", err)
-		return
 	}
 
 	// Rollback backup btfs file to current
-	err = backupAndSetLatest(btfsBackupPath, btfsBinaryPath, "", "btfs", true, true)
+	err = backupAndSetLatest(btfsBinaryPath, btfsBackupPath+".tmp", btfsBackupPath, "btfs", true, true)
 	if err != nil {
 		log.Errorf("Rollback error: %v", err)
-		return
 	}
 
 	// Rollback backup fs-repo-migrations file to current
-	err = backupAndSetLatest(frmBackupPath, frmBinaryPath, "", "fs-repo-migrations", true, true)
+	err = backupAndSetLatest(frmBinaryPath, frmBackupPath+".tmp", frmBackupPath, "fs-repo-migrations", true, true)
 	if err != nil {
 		log.Errorf("Rollback error: %v", err)
-		return
 	}
 
 	// Start the btfs daemon
@@ -102,14 +99,17 @@ func rollback(wg *sync.WaitGroup, defaultProjectPath, defaultDownloadPath, url s
 }
 
 func backupAndSetLatest(curPath, backupPath, latestPath, filename string, exec, backup bool) error {
+	// If backed up file isn't available, do nothing
+	if backup && !pathExists(latestPath) {
+		return fmt.Errorf("Backup %s file is not available", filename)
+	}
+
 	// Delete backup file.
 	if pathExists(backupPath) {
 		err := os.Remove(backupPath)
 		if err != nil {
 			return fmt.Errorf("Delete backup %s file error, reasons: [%v]", filename, err)
 		}
-	} else if backup {
-		return fmt.Errorf("Backup %s file must exist - rollback is impossible!", filename)
 	}
 
 	// Move current file to backup if exists.
@@ -121,10 +121,16 @@ func backupAndSetLatest(curPath, backupPath, latestPath, filename string, exec, 
 	}
 
 	// Move latest file (if exists) to current file.
-	if latestPath != "" {
-		err := os.Rename(latestPath, curPath)
+	err := os.Rename(latestPath, curPath)
+	if err != nil {
+		return fmt.Errorf("Move latest %s file to current error, reasons: [%v]\n", filename, err)
+	}
+
+	// Do an extra move to correct "backup" file location.
+	if backup && pathExists(backupPath) {
+		err := os.Rename(backupPath, latestPath)
 		if err != nil {
-			return fmt.Errorf("Move latest %s file to current error, reasons: [%v]\n", filename, err)
+			return fmt.Errorf("Move temp backup %s file to backup error, reasons: [%v]", filename, err)
 		}
 	}
 
@@ -167,46 +173,57 @@ func update() int {
 		return 1
 	}
 
+	var fileErr error
+
 	// Set latest config file to current
 	err = backupAndSetLatest(currentConfigPath, backupConfigPath, latestConfigPath, "config", false, false)
 	if err != nil {
 		log.Errorf("Update error: %v", err)
-		return 1
+		fileErr = err
 	}
 
 	// Set latest btfs file to current
 	err = backupAndSetLatest(btfsBinaryPath, btfsBackupPath, latestBtfsBinaryPath, "btfs", true, false)
 	if err != nil {
 		log.Errorf("Update error: %v", err)
-		return 1
+		fileErr = err
 	}
 
 	// Set latest fs-repo-migrations file to current
 	err = backupAndSetLatest(frmBinaryPath, frmBackupPath, latestFrmBinaryPath, "fs-repo-migrations", true, false)
 	if err != nil {
 		log.Errorf("Update error: %v", err)
-		return 1
+		fileErr = err
 	}
 
+	// Daemon args
 	daemonArgs := []string{"daemon"}
 	if *defaultHval != "" {
 		daemonArgs = append(daemonArgs, "--hval="+*defaultHval)
 	}
 
+	// Start the btfs daemon if all files are done moving
+	// Otherwise use rollback to revert files
+	if fileErr == nil {
+		cmd := exec.Command(btfsBinaryPath, daemonArgs...)
+		err = cmd.Start()
+		if err != nil {
+			log.Errorf("Error starting new BTFS process, reasons: [%v]", err)
+			// Cannot start is also an indication of rollback
+			fileErr = err
+		}
+	}
+
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go rollback(wg, *defaultProjectPath, *defaultDownloadPath, *url, daemonArgs)
-
-	// Start the btfs daemon
-	cmd := exec.Command(btfsBinaryPath, daemonArgs...)
-	err = cmd.Start()
-	if err != nil {
-		log.Errorf("Error starting new BTFS process, reasons: [%v]", err)
-		return 1
-	}
-
 	// Wait for the rollback program to complete.
 	wg.Wait()
+
+	if fileErr != nil {
+		log.Info("BTFS auto update FAIL!")
+		return 1 // failed
+	}
 
 	log.Info("BTFS auto update SUCCESS!")
 	return 0
