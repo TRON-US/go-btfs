@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	authPid     = "16Uiu2HAm1yEfFmzC1enfBcfbwf51YA15e4tRd9VRT65TELA1ykAD" //GuardPidPretty
+	authPid      = "16Uiu2HAm1yEfFmzC1enfBcfbwf51YA15e4tRd9VRT65TELA1ykAD" //GuardPidPretty
 	guardPrivKey = "CAISIJJTFKM777Y0S+pjlSSyKQtZTc7vEQDdAJReLgUMoGpz"
 )
 
