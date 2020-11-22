@@ -187,7 +187,7 @@ func (s *Root) Lookup(ctx context.Context, name string) (fs.Node, error) {
 		return nil, errors.New("invalid path from btns record")
 	}
 
-	return &Link{s.IpfsRoot + "/" + strings.TrimPrefix("/btfs/", resolved.String())}, nil
+	return &Link{s.IpfsRoot + "/" + strings.TrimPrefix(resolved.String(), "/btfs/")}, nil
 }
 
 func (r *Root) Close() error {

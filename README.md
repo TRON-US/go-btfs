@@ -17,11 +17,12 @@ contracts.
   - [MacOS](#macos)
   - [Linux VM](#linux-vm)
   - [Docker](#docker)
-- [Usage](#usage)
 - [Getting Started](#getting-started)
   - [Some things to try](#some-things-to-try)
-- [Packages](#packages)
-- [Soter](#soter)
+  - [Usage](#usage)
+- [Development](#development)
+  - [Development Dependencies](#development-dependencies)
+  - [BTFS Gateway](#btfs-gateway)
 - [License](#license)
 
 
@@ -158,24 +159,63 @@ Successfully tagged btfs_docker:latest
 
 Start the container based on the new image. Starting the container also initializes and starts the BTFS daemon.
 ```
-$ docker container run --publish 5001:8080 --detach --name btfs1 btfs_docker
+$ docker container run --publish 8080:5001 --detach --name btfs1 btfs_docker
 ```
 
 The CLI flags are as such:
 
-* `--publish` asks Docker to forward traffic incoming on the host’s port 5001, to the container’s port 8080. 
+* `--publish` asks Docker to forward traffic incoming on the host’s port 8080, to the container’s port 5001. 
 * `--detach` asks Docker to run this container in the background.
 * `--name` specifies a name with which you can refer to your container in subsequent commands, in this case btfs1.
 
+Configure cross-origin(CORS)
+You need to configure cross-origin (CORS) to access the container from the host.
+```
+(host) docker exec -it btfs1 /bin/sh // Enter the container's shell
+```
+
+Then configure cross-origin(CORS) with btfs
+
+```
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://$IP:$PORT"]'
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+```
+
+E.g:
+```
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["http://localhost:8080"]'
+(container) btfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+```
+
+Exit the container and restart the container
+```
+(container) exit
+(host) docker restart btfs1
+```
+
+You can access the container from the host with http://localhost:8080/hostui .
+
 Execute commands within the docker container:
 ```
-docker exec CONTAINER btfs add chunker=reed-solomon FILE
+docker exec CONTAINER btfs add --chunker=reed-solomon FILE
 ```
 
-## Usage
+## Getting Started
+
+### Some things to try
+
+Basic proof of 'btfs working' locally:
+
+    echo "hello world" > hello
+    btfs add --chunker=reed-solomon hello
+    # This should output a hash string that looks something like:
+    # QmaN4MmXMduZe7Y7XoMKFPuDFunvEZU6DWtBPg3L8kkAuS
+    btfs cat <that hash>
+
+### Usage
 
 ```
-  btfs - Global p2p merkle-dag filesystem.
+  btfs  - Global p2p merkle-dag filesystem.
 
   btfs [--config=<config> | -c] [--debug | -D] [--help] [-h] [--api=<api>] [--offline] [--cid-base=<base>] [--upgrade-cidv0-in-output] [--encoding=<encoding> | --enc] [--timeout=<timeout>] <command> ...
 
@@ -187,26 +227,31 @@ SUBCOMMANDS
     get <ref>     Download BTFS objects
     ls <ref>      List links from an object
     refs <ref>    List hashes of links from an object
-  
+
+  BTFS COMMANDS
+    storage       Manage client and host storage features
+    rm            Clean up locally stored files and objects
+
   DATA STRUCTURE COMMANDS
     block         Interact with raw blocks in the datastore
     object        Interact with raw dag nodes
     files         Interact with objects as if they were a unix filesystem
     dag           Interact with IPLD documents (experimental)
-  
+    metadata      Interact with metadata for BTFS files
+
   ADVANCED COMMANDS
     daemon        Start a long-running daemon process
-    mount         Mount an BTFS read-only mountpoint
+    mount         Mount an BTFS read-only mount point
     resolve       Resolve any type of name
-    name          Publish and resolve IPNS names
-    key           Create and list IPNS name keypairs
+    name          Publish and resolve BTNS names
+    key           Create and list BTNS name keypairs
     dns           Resolve DNS links
     pin           Pin objects to local storage
     repo          Manipulate the BTFS repository
     stats         Various operational stats
     p2p           Libp2p stream mounting
     filestore     Manage the filestore (experimental)
-  
+
   NETWORK COMMANDS
     id            Show info about BTFS peers
     bootstrap     Add or remove bootstrap peers
@@ -214,35 +259,22 @@ SUBCOMMANDS
     dht           Query the DHT for values or peers
     ping          Measure the latency of a connection
     diag          Print diagnostics
-  
+
   TOOL COMMANDS
     config        Manage configuration
     version       Show btfs version information
     commands      List all available commands
     cid           Convert and discover properties of CIDs
     log           Manage and show logs of running daemon
-  
+
   Use 'btfs <command> --help' to learn more about each command.
-  
+
   btfs uses a repository in the local file system. By default, the repo is
   located at ~/.btfs. To change the repo location, set the $BTFS_PATH
   environment variable:
-  
+
     export BTFS_PATH=/path/to/btfsrepo
 ```
-
-## Getting Started
-
-### Some things to try
-
-Basic proof of 'btfs working' locally:
-
-	echo "hello world" > hello
-	btfs add hello
-	# This should output a hash string that looks something like:
-	# QmT78zSuBmuS4z925WZfrqQ1qHaJ56DQaTfyMUF7F8ff5o
-	btfs cat <that hash>
-
 
 ## Development
 
@@ -255,17 +287,16 @@ Some places to get you started on the codebase:
   - DHT: [DHT](https://github.com/libp2p/go-libp2p-kad-dht)
   - PubSub: [PubSub](https://github.com/libp2p/go-libp2p-pubsub)
 
-
 ### Development Dependencies
 
 If you make changes to the protocol buffers, you will need to install the [protoc compiler](https://github.com/google/protobuf).
 
-### Soter
+### BTFS Gateway
 
-BTFS Soter is a charging service gateway based on the TRON Network and BTFS cluster. Users can access the BTFS network via the Soter gateway.
+BTFS Gateway is a free service that allows you to retrieve files from the BTFS network in your browser directly.
 
-[Soter Interface Document](https://btfssoter.readme.io/docs/soter-interface-documentation)
+[How to use BTFS Gateway](https://docs.btfs.io/docs/btfs-gateway-user-guide)
 
-### License
+## License
 
 [MIT](./LICENSE)

@@ -19,8 +19,6 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	inet "github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-core/peer"
-	swarm "github.com/libp2p/go-libp2p-swarm"
-	mafilter "github.com/libp2p/go-maddr-filter"
 	ma "github.com/multiformats/go-multiaddr"
 	madns "github.com/multiformats/go-multiaddr-dns"
 	mamask "github.com/whyrusleeping/multiaddr-filter"
@@ -558,14 +556,8 @@ Filters default to those specified under the "Swarm.AddrFilters" config key.
 			return ErrNotOnline
 		}
 
-		// FIXME(steb)
-		swrm, ok := n.PeerHost.Network().(*swarm.Swarm)
-		if !ok {
-			return errors.New("failed to cast network to swarm network")
-		}
-
 		var output []string
-		for _, f := range swrm.Filters.FiltersForAction(mafilter.ActionDeny) {
+		for _, f := range n.Filters.FiltersForAction(ma.ActionDeny) {
 			s, err := mamask.ConvertIPNet(&f)
 			if err != nil {
 				return err
@@ -602,12 +594,6 @@ add your filters to the btfs config file.
 			return ErrNotOnline
 		}
 
-		// FIXME(steb)
-		swrm, ok := n.PeerHost.Network().(*swarm.Swarm)
-		if !ok {
-			return errors.New("failed to cast network to swarm network")
-		}
-
 		if len(req.Arguments) == 0 {
 			return errors.New("no filters to add")
 		}
@@ -628,7 +614,7 @@ add your filters to the btfs config file.
 				return err
 			}
 
-			swrm.Filters.AddFilter(*mask, mafilter.ActionDeny)
+			n.Filters.AddFilter(*mask, ma.ActionDeny)
 		}
 
 		added, err := filtersAdd(r, cfg, req.Arguments)
@@ -666,11 +652,6 @@ remove your filters from the btfs config file.
 			return ErrNotOnline
 		}
 
-		swrm, ok := n.PeerHost.Network().(*swarm.Swarm)
-		if !ok {
-			return errors.New("failed to cast network to swarm network")
-		}
-
 		r, err := fsrepo.Open(env.(*commands.Context).ConfigRoot)
 		if err != nil {
 			return err
@@ -682,9 +663,9 @@ remove your filters from the btfs config file.
 		}
 
 		if req.Arguments[0] == "all" || req.Arguments[0] == "*" {
-			fs := swrm.Filters.FiltersForAction(mafilter.ActionDeny)
+			fs := n.Filters.FiltersForAction(ma.ActionDeny)
 			for _, f := range fs {
-				swrm.Filters.RemoveLiteral(f)
+				n.Filters.RemoveLiteral(f)
 			}
 
 			removed, err := filtersRemoveAll(r, cfg)
@@ -701,7 +682,7 @@ remove your filters from the btfs config file.
 				return err
 			}
 
-			swrm.Filters.RemoveLiteral(*mask)
+			n.Filters.RemoveLiteral(*mask)
 		}
 
 		removed, err := filtersRemove(r, cfg, req.Arguments)

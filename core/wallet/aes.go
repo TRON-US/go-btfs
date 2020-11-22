@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/md5"
 	"encoding/base64"
+	"errors"
 )
 
 var iv = []byte{0x02, 0x00, 0x01, 0x06, 0x00, 0x08, 0x01, 0x04, 0x02, 0x00, 0x01, 0x06, 0x00, 0x08, 0x01, 0x04}
@@ -40,7 +41,10 @@ func DecryptWithAES(key, message string) (string, error) {
 		return "", err
 	}
 
-	messageData, _ := base64.StdEncoding.DecodeString(message)
+	messageData, err := base64.StdEncoding.DecodeString(message)
+	if err != nil {
+		return "", err
+	}
 	dec := cipher.NewCBCDecrypter(block, iv)
 	decrypted := make([]byte, len(messageData))
 	dec.CryptBlocks(decrypted, messageData)
@@ -58,6 +62,12 @@ func PKCS5Padding(ciphertext []byte, blockSize int) ([]byte, error) {
 }
 
 func PKCS5Unpadding(encrypt []byte) ([]byte, error) {
+	if len(encrypt) == 0 {
+		return nil, errors.New("array index out of bound")
+	}
 	padding := encrypt[len(encrypt)-1]
+	if len(encrypt) < int(padding) {
+		return nil, errors.New("array index out of bound")
+	}
 	return encrypt[:len(encrypt)-int(padding)], nil
 }

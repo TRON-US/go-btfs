@@ -30,9 +30,10 @@ var prepareCmd = &cmds.Command{
 		ShortDescription: "prepare transaction",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("from", true, false, "address for the token transfer from."),
-		cmds.StringArg("to", true, false, "address for the token transfer to."),
-		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer."),
+		cmds.StringArg("from", true, false, "address for the token transfer from"),
+		cmds.StringArg("to", true, false, "address for the token transfer to"),
+		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer"),
+		cmds.StringArg("memo", false, false, "memo"),
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -48,7 +49,11 @@ var prepareCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		tx, err := wallet.PrepareTx(req.Context, cfg, req.Arguments[0], req.Arguments[1], amount)
+		memo := ""
+		if len(req.Arguments) >= 4 {
+			memo = req.Arguments[3]
+		}
+		tx, err := wallet.PrepareTx(req.Context, cfg, req.Arguments[0], req.Arguments[1], amount, memo)
 		if err != nil {
 			return err
 		}

@@ -15,10 +15,11 @@ import (
 	"strings"
 )
 
-var DistPath = "https://ipfs.io/ipfs/QmUgfXycSjF9R8F4Tyauaz6LZ4bj5nbksg54G9GdF4fit6"
+var DistPath = "https://raw.githubusercontent.com/TRON-US/btfs-distributions/master"
 
 func init() {
-	if dist := os.Getenv("IPFS_DIST_PATH"); dist != "" {
+	// Possible for the download path to be overwritten from command line
+	if dist := os.Getenv("BTFS_DIST_PATH"); dist != "" {
 		DistPath = dist
 	}
 }
@@ -39,11 +40,27 @@ func RunMigration(newv int) error {
 
 	fmt.Println("  => Looking for suitable fs-repo-migrations binary.")
 
-	var err error
-	migrateBin, err = exec.LookPath(migrateBin)
+	// Check BTFS binary directory first
+	ex, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exMigrateBin := filepath.Join(filepath.Dir(ex), migrateBin)
+	// Check if the migrate bin is valid
+	exMigrateBin, err = exec.LookPath(migrateBin)
 	if err == nil {
 		// check to make sure migrations binary supports our target version
-		err = verifyMigrationSupportsVersion(migrateBin, newv)
+		err = verifyMigrationSupportsVersion(exMigrateBin, newv)
+	}
+	// Re-check the migrate bin by looking up bins by $PATH
+	if err != nil {
+		migrateBin, err = exec.LookPath(migrateBin)
+		if err == nil {
+			// check to make sure migrations binary supports our target version
+			err = verifyMigrationSupportsVersion(migrateBin, newv)
+		}
+	} else {
+		migrateBin = exMigrateBin // use found bin
 	}
 
 	if err != nil {

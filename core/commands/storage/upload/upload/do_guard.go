@@ -184,7 +184,7 @@ func submitFileStatus(ctx context.Context, cfg *config.Config,
 			return err
 		}
 		if res.Code != guardpb.ResponseCode_SUCCESS {
-			return fmt.Errorf("failed to execute submit file status to gurad: %v", res.Message)
+			return fmt.Errorf("failed to execute submit file status to guard: %v", res.Message)
 		}
 		return nil
 	})

@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"github.com/mitchellh/go-homedir"
 	"github.com/tron-us/go-btfs-common/crypto"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,11 @@ import (
 func TestReadPort(t *testing.T) {
 	switch runtime.GOOS {
 	case "darwin":
-		assert.Equal(t, "~/Library/Application Support/uTorrent Web/BitTorrentHelper/", portPath)
+		e, err := homedir.Expand("~/Library/Application Support/uTorrent Web/BitTorrentHelper/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, e, portPath)
 	case "windows":
 		assert.Equal(t, "%AppData%/../Local/BitTorrentHelper/", portPath)
 	default:

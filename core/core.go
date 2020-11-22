@@ -11,6 +11,7 @@ package core
 
 import (
 	"context"
+	"github.com/TRON-US/go-btfs/peering"
 	"io"
 
 	"github.com/TRON-US/go-btfs/core/bootstrap"
@@ -47,6 +48,7 @@ import (
 	record "github.com/libp2p/go-libp2p-record"
 	"github.com/libp2p/go-libp2p/p2p/discovery"
 	p2pbhost "github.com/libp2p/go-libp2p/p2p/host/basic"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 var log = logging.Logger("core")
@@ -81,6 +83,8 @@ type IpfsNode struct {
 
 	// Online
 	PeerHost      p2phost.Host            `optional:"true"` // the network host (server+client)
+	Peering       peering.PeeringService  `optional:"true"`
+	Filters       *ma.Filters             `optional:"true"`
 	Bootstrapper  io.Closer               `optional:"true"` // the periodic bootstrapper
 	Routing       routing.Routing         `optional:"true"` // the routing system. recommend ipfs-dht
 	Exchange      exchange.Interface      // the block exchange + strategy (bitswap)

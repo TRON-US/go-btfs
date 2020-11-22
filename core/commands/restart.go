@@ -5,10 +5,10 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/path"
+
 	"github.com/TRON-US/go-btfs-cmds"
 	"github.com/cenkalti/backoff/v4"
-
-	path "github.com/TRON-US/go-btfs/core/commands/storage"
 )
 
 var daemonStartup = func() *backoff.ExponentialBackOff {
@@ -35,7 +35,7 @@ And if specified a new btfs path, it will be applied.
 	Options: []cmds.Option{
 		cmds.BoolOption(postPathModificationName, "p", "post path modification").WithDefault(false),
 	}, Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		shutdownCmd := exec.Command(path.Excutable, "shutdown")
+		shutdownCmd := exec.Command(path.Executable, "shutdown")
 		if err := shutdownCmd.Run(); err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ And if specified a new btfs path, it will be applied.
 			}
 		}
 
-		daemonCmd := exec.Command(path.Excutable, "daemon")
+		daemonCmd := exec.Command(path.Executable, "daemon")
 		if err := daemonCmd.Start(); err != nil {
 			return err
 		}

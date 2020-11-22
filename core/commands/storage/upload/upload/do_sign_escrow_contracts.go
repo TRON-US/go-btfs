@@ -17,8 +17,7 @@ import (
 )
 
 func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
-	offlineSigning bool, offSignPid peer.ID,
-	contractId string, storageLength int) ([]byte, error) {
+	offlineSigning bool, offSignPid peer.ID, contractId string, storageLength int) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
 	if err != nil {
 		return nil, err
@@ -87,6 +86,7 @@ func newContract(rss *sessions.RenterSession, hostPid peer.ID, totalPay int64, c
 	}
 	return ledger.NewEscrowContract(contractId, payerPubKey, hostPubKey, authPubKey, totalPay, ps,
 		int32(p), escrowpb.ContractType_REGULAR, 0, storageLength)
+
 }
 
 func signContractAndMarshalOffSign(unsignedContract *escrowpb.EscrowContract, signedBytes []byte,

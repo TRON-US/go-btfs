@@ -15,7 +15,7 @@ import (
 
 const (
 	portFileName  = "port"
-	keyUrlPattern = "http://127.0.0.1:%d/api/private_key"
+	keyUrlPattern = "http://127.0.0.1:%d/api/private_key?pw=%s"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 )
 
 // return speed key in base64
-func DiscoverySpeedKey() (string, error) {
+func DiscoverySpeedKey(password string) (string, error) {
 	if err := validateOs(); err != nil {
 		return "", err
 	}
@@ -35,7 +35,7 @@ func DiscoverySpeedKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf(keyUrlPattern, port)
+	url := fmt.Sprintf(keyUrlPattern, port, password)
 	key, err := getHexKey(url)
 	if err != nil {
 		return "", err
