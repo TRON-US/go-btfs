@@ -384,7 +384,7 @@ FOR:
 	return fileStatus, nil
 }
 
-func downloadAndSignContracts(contract *guardpb.Contract, rss *sessions.RenterSession, ctx context.Context, hp uh.IHostsProvider) { //(map[int]string, error){
+func downloadAndSignContracts(contract *guardpb.Contract, rss *sessions.RenterSession, ctx context.Context, hp uh.IHostsProvider) {
 	signContractErr := make([]string, 0)
 	go func() {
 		err := backoff.Retry(func() error {
