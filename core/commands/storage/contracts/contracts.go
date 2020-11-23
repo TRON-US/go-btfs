@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -46,6 +47,8 @@ const (
 	guardTimeout = 360 * time.Second
 
 	guardContractPageSize = 100
+
+	notSupportErr = "only host and renter contract sync are supported currently"
 )
 
 // Storage Contracts
@@ -96,8 +99,8 @@ This command contracts stats based on role from network(hub) to local node data 
 		if err != nil {
 			return err
 		}
-		if role != nodepb.ContractStat_HOST {
-			return fmt.Errorf("only host contract sync is supported currently")
+		if role != nodepb.ContractStat_HOST && role != nodepb.ContractStat_RENTER {
+			return fmt.Errorf(notSupportErr)
 		}
 		purgeOpt, _ := req.Options[contractsSyncPurgeOptionName].(bool)
 		if purgeOpt {
@@ -325,9 +328,20 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 			latest = &c.SignedGuardContract.LastModifyTime
 		}
 	}
-	updated, err := GetUpdatedGuardContracts(ctx, n, latest)
-	if err != nil {
-		return err
+	var updated []*guardpb.Contract
+	switch role {
+	case nodepb.ContractStat_HOST.String():
+		updated, err = GetUpdatedGuardContractsForHost(ctx, n, latest)
+		if err != nil {
+			return err
+		}
+	case nodepb.ContractStat_RENTER.String():
+		updated, err = GetUpdatedGuardContractsForRenter(ctx, n, latest)
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New(notSupportErr)
 	}
 	if len(updated) > 0 {
 		// save and retrieve updated signed contracts
@@ -359,9 +373,9 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 	return nil
 }
 
-// GetUpdatedGuardContracts retrieves updated guard contracts from remote based on latest timestamp
+// GetUpdatedGuardContractsForHost retrieves updated guard contracts from remote based on latest timestamp
 // and returns the list updated
-func GetUpdatedGuardContracts(ctx context.Context, n *core.IpfsNode,
+func GetUpdatedGuardContractsForHost(ctx context.Context, n *core.IpfsNode,
 	lastUpdatedTime *time.Time) ([]*guardpb.Contract, error) {
 	// Loop until all pages are obtained
 	var contracts []*guardpb.Contract
@@ -393,6 +407,67 @@ func GetUpdatedGuardContracts(ctx context.Context, n *core.IpfsNode,
 
 		contracts = append(contracts, cs...)
 		if last {
+			break
+		}
+	}
+	return contracts, nil
+}
+
+// GetUpdatedGuardContractsForRenter retrieves updated guard contracts from remote based on latest timestamp
+// and returns the list updated
+func GetUpdatedGuardContractsForRenter(ctx context.Context, n *core.IpfsNode,
+	lastUpdatedTime *time.Time) ([]*guardpb.Contract, error) {
+	// Loop until all pages are obtained
+	var contracts []*guardpb.Contract
+	for i := 0; ; i++ {
+		now := time.Now()
+		req := &guardpb.ListRenterFileInfoRequest{
+			RenterPid:        n.Identity.Pretty(),
+			RequesterPid:     n.Identity.Pretty(),
+			RequestPageSize:  guardContractPageSize,
+			RequestPageIndex: int32(i),
+			LastModifyTime:   lastUpdatedTime,
+			RequestTime:      &now,
+		}
+		signedReq, err := crypto.Sign(n.PrivateKey, req)
+		if err != nil {
+			return nil, err
+		}
+		req.Signature = signedReq
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return nil, err
+		}
+		cb := grpc.GuardClient(cfg.Services.GuardDomain)
+		cb.Timeout(guardTimeout)
+		lastPage := false
+		cb.WithContext(ctx, func(ctx context.Context, client guardpb.GuardServiceClient) error {
+			info, err := client.RetrieveFileInfo(ctx, req)
+			if err != nil {
+				return err
+			}
+			for _, mt := range info.FileStoreMeta {
+				req := &guardpb.CheckFileStoreMetaRequest{
+					FileHash:     mt.FileHash,
+					RenterPid:    mt.RenterPid,
+					RequesterPid: n.Identity.Pretty(),
+					RequestTime:  now,
+				}
+				signedReq, err := crypto.Sign(n.PrivateKey, req)
+				if err != nil {
+					return err
+				}
+				req.Signature = signedReq
+				meta, err := client.CheckFileStoreMeta(ctx, req)
+				if err != nil {
+					return err
+				}
+				contracts = append(contracts, meta.Contracts...)
+			}
+			lastPage = info.Count < info.Request.RequestPageSize
+			return nil
+		})
+		if lastPage {
 			break
 		}
 	}
