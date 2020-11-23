@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/TRON-US/go-btfs-cmds"
@@ -162,13 +163,17 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("Not enough disk space, expect: ge %v bytes, actual: %v bytes",
 				promisedStorageSize, usage.Free)
 		}
-
-		restartCmd := exec.Command(Executable, "restart", "-p")
-		if err := restartCmd.Run(); err != nil {
-			return fmt.Errorf("restart command: %s", err)
-		}
+		go DoRestart()
 		return nil
 	},
+}
+
+func DoRestart() {
+	time.Sleep(2 * time.Second)
+	restartCmd := exec.Command(Executable, "restart")
+	if err := restartCmd.Run(); err != nil {
+		log.Errorf("restart error, %v", err)
+	}
 }
 
 var PathStatusCmd = &cmds.Command{
