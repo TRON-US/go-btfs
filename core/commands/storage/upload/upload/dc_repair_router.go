@@ -305,41 +305,41 @@ func uploadShards(ctxParams *uh.ContextParams, repairContract *guardpb.RepairCon
 	tick := time.Tick(duration * time.Minute)
 	ctxParams.Ctx = context.Background()
 
-	FOR:
-		for true {
-			select {
-			case <-tick:
-				err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
-					client guardpb.GuardServiceClient) error {
-					repairContractResp, err = client.RequestForRepairContracts(ctx, repairContractReq)
-					if err != nil {
-						return err
-					}
-					return nil
-				})
+FOR:
+	for true {
+		select {
+		case <-tick:
+			err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctxParams.Ctx, func(ctx context.Context,
+				client guardpb.GuardServiceClient) error {
+				repairContractResp, err = client.RequestForRepairContracts(ctx, repairContractReq)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				if repairContractResp.State == guardpb.ResponseRepairContracts_REQUEST_AGAIN {
-					log.Info(fmt.Sprintf("request repair contract again in %d minutes", requestInterval))
-					continue
-				}
-				if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_READY {
-					statusMeta = repairContractResp.Status
-					break FOR
-				}
-				if repairContractResp.State == guardpb.ResponseRepairContracts_DOWNLOAD_NOT_DONE {
-					unpinLocalStorage(ctxParams, repairContract.FileHash)
-					log.Info("download and challenge can not be completed for lost shards", zap.String("repairer id", repairContract.RepairPid))
-					return nil, nil
-				}
-				if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_CLOSED {
-					unpinLocalStorage(ctxParams, repairContract.FileHash)
-					log.Info("repair contract has been closed", zap.String("contract id", repairContract.RepairContractId))
-					return nil, nil
-				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_REQUEST_AGAIN {
+				log.Info(fmt.Sprintf("request repair contract again in %d minutes", requestInterval))
+				continue
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_READY {
+				statusMeta = repairContractResp.Status
+				break FOR
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_DOWNLOAD_NOT_DONE {
+				unpinLocalStorage(ctxParams, repairContract.FileHash)
+				log.Info("download and challenge can not be completed for lost shards", zap.String("repairer id", repairContract.RepairPid))
+				return nil, nil
+			}
+			if repairContractResp.State == guardpb.ResponseRepairContracts_CONTRACT_CLOSED {
+				unpinLocalStorage(ctxParams, repairContract.FileHash)
+				log.Info("repair contract has been closed", zap.String("contract id", repairContract.RepairContractId))
+				return nil, nil
 			}
 		}
+	}
 
 	if statusMeta == nil {
 		return nil, fmt.Errorf("file store status is nil")
@@ -403,6 +403,7 @@ func downloadAndSignContracts(contract *guardpb.Contract, rss *sessions.RenterSe
 			if err != nil {
 				terr := rss.To(sessions.RssToErrorEvent, err)
 				if terr != nil {
+					log.Debugf("original err: %s, transition err: %s", err.Error(), terr.Error())
 				}
 				return nil
 			}
@@ -419,14 +420,14 @@ func downloadAndSignContracts(contract *guardpb.Contract, rss *sessions.RenterSe
 			contract.GuardSignature = nil
 			guardContractBytes, err := proto.Marshal(contract)
 			if err != nil {
-				return nil
+				return err
 			}
+
 			hostPid, err := peer.IDB58Decode(host)
 			if err != nil {
 				log.Errorf("shard %s decodes host_pid error: %s", shardHash, err.Error())
 				return err
 			}
-
 			cb := make(chan error)
 			ShardErrChanMap.Set(contract.ContractMeta.ContractId, cb)
 			go func() {

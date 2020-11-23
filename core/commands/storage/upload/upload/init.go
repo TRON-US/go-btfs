@@ -292,13 +292,13 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 	resp := &guardpb.ResponseChallengeQuestion{
 		Answer: &guardpb.ChallengeQuestion{
 			ShardHash:    question.Question.ShardHash,
-			HostPid:      question.Question.HostPid, //ctxParams.N.Identity.Pretty(),
+			HostPid:      question.Question.HostPid,
 			ChunkIndex:   int32(sc.CIndex),
 			Nonce:        sc.Nonce,
 			ExpectAnswer: sc.Hash,
 		},
 		FileHash:    fileHash,
-		HostPid:     question.Question.HostPid, //ctxParams.N.Identity.Pretty(), //
+		HostPid:     question.Question.HostPid,
 		ResolveTime: time.Now(),
 		IsRepair:    isRepair,
 	}
