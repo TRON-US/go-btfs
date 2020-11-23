@@ -105,8 +105,8 @@ func SyncTxFromTronGrid(ctx context.Context, cfg *config.Config, ds datastore.Da
 			if txId := jq.Reset().Find(pfx + ".txID"); txId == nil {
 				continue
 			} else {
-				if err := PersistTx(ds, cfg.Identity.PeerID, txId.(string), td.amount, td.from, td.to,
-					StatusSuccess, walletpb.TransactionV1_ON_CHAIN); err != nil {
+				if err := PersistTxWithTime(ds, cfg.Identity.PeerID, txId.(string), td.amount, td.from, td.to,
+					StatusSuccess, walletpb.TransactionV1_ON_CHAIN, time.Unix(td.timestamp/1000, td.timestamp%1000)); err != nil {
 					log.Error(err)
 				}
 			}

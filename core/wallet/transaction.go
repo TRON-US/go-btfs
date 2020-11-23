@@ -425,10 +425,15 @@ var (
 
 func PersistTx(d ds.Datastore, peerId string, txId string, amount int64,
 	from string, to string, status string, txType walletpb.TransactionV1_Type) error {
+	return PersistTxWithTime(d, peerId, txId, amount, from, to, status, txType, time.Now())
+}
+
+func PersistTxWithTime(d ds.Datastore, peerId string, txId string, amount int64,
+	from string, to string, status string, txType walletpb.TransactionV1_Type, timeCreate time.Time) error {
 	return sessions.Save(d, fmt.Sprintf(walletTransactionV1Key, peerId, txId),
 		&walletpb.TransactionV1{
 			Id:         txId,
-			TimeCreate: time.Now(),
+			TimeCreate: timeCreate,
 			Amount:     amount,
 			From:       from,
 			To:         to,
