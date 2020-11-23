@@ -149,7 +149,6 @@ returns the repairer's signed contract to the invoker.`,
 		repairId := ctxParams.N.Identity.Pretty()
 		fileHash := req.Arguments[0]
 		if requestFileHash == fileHash {
-			fmt.Printf("file {%s} has been repairing on the host {%s}", fileHash, repairId)
 			return fmt.Errorf("file {%s} has been repairing on the host {%s}", fileHash, repairId)
 		}
 		requestFileHash = fileHash
