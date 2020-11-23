@@ -249,7 +249,7 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 	in.Signature = sign
 	// Need to renew another 6 mins due to downloading shard could have already made
 	// req.Context obsolete
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	var question *guardpb.RequestChallengeQuestion
 	err = grpc.GuardClient(ctxParams.Cfg.Services.GuardDomain).WithContext(ctx,
@@ -287,7 +287,7 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 	if err != nil {
 		return err
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), 5 * time.Minute)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	resp := &guardpb.ResponseChallengeQuestion{
 		Answer: &guardpb.ChallengeQuestion{

@@ -243,7 +243,7 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) {
 				if fileStatus == nil {
 					return nil
 				}
-				ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Minute)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
 				err = submitFileStatus(ctx, ctxParams.Cfg, fileStatus)
 				if err != nil {
@@ -361,7 +361,7 @@ FOR:
 	}
 	hp := uh.GetHostsProvider(ctxParams, make([]string, 0))
 	shardMap := make(map[int]string)
-	ctx, _ := context.WithTimeout(rss.Ctx, 10 * time.Minute)
+	ctx, _ := context.WithTimeout(rss.Ctx, 10*time.Minute)
 	for _, contract := range contracts {
 		if isContained(shardHashes, contract.ShardHash) {
 			shardMap[int(contract.ShardIndex)] = contract.ShardHash
@@ -431,7 +431,7 @@ func downloadAndSignContracts(contract *guardpb.Contract, rss *sessions.RenterSe
 			cb := make(chan error)
 			ShardErrChanMap.Set(contract.ContractMeta.ContractId, cb)
 			go func() {
-				newCtx, _ := context.WithTimeout(ctx, 10 * time.Second)
+				newCtx, _ := context.WithTimeout(ctx, 10*time.Second)
 				_, err := remote.P2PCall(newCtx, rss.CtxParams.N, rss.CtxParams.Api, hostPid, "/storage/upload/init",
 					rss.SsId,
 					rss.Hash,
@@ -471,7 +471,7 @@ func downloadAndSignContracts(contract *guardpb.Contract, rss *sessions.RenterSe
 func retrieveUpdatedContracts(shardMap map[int]string, rss *sessions.RenterSession) ([]*guardpb.Contract, error) {
 	tick := time.Tick(5 * time.Second)
 	updatedContracts := make([]*guardpb.Contract, 0)
-	ctx, cancel := context.WithTimeout(rss.Ctx, 10 * time.Minute)
+	ctx, cancel := context.WithTimeout(rss.Ctx, 10*time.Minute)
 	defer cancel()
 	for true {
 		select {
@@ -520,7 +520,7 @@ func queryUpdatedContracts(shardMap map[int]string, rss *sessions.RenterSession)
 }
 
 func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, repairShards []string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	url := fmt.Sprint(strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[2], ":", strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[4])
 	resp, err := shell.NewShell(url).Request("get", fileHash).Option("rs", strings.Join(repairShards, ",")).Send(ctx)
