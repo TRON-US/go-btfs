@@ -124,20 +124,21 @@ func retrieveChallengeQuestion(req *cmds.Request, res cmds.ResponseEmitter, env 
 						Nonce:     question.Nonce,
 						Result:    storageChallengeRes.Answer,
 					}
-					challengeResults = append(challengeResults, challengeResult)
 				}()
 				select {
 				case err := <-errChan:
 					return err
 				case <-time.After(hostChallengeTimeout):
-					//please add timeout flat in the challengeResult in btfs common
 					challengeResult.IsTimeout = true
-					return fmt.Errorf("challenge shard {%s} timeout for host id {%s}", question.ShardHash, question.HostPid)
+					return nil
+					//fmt.Errorf("challenge shard {%s} timeout for host id {%s}", question.ShardHash, question.HostPid)
 				}
 			}, challengeHostBo)
 			if err != nil {
 				fmt.Printf("failed to challenge shard {%s} for host id {%s}: %v\n", question.ShardHash, question.HostPid, err)
 				log.Errorf("failed to challenge shard {%s} for host id {%s}: %v", question.ShardHash, question.HostPid, err)
+			} else {
+				challengeResults = append(challengeResults, challengeResult)
 			}
 		}()
 	}
