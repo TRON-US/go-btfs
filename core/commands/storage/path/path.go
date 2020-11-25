@@ -98,11 +98,12 @@ storage location, a specified path as a parameter need to be passed.
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"status":   PathStatusCmd,
-		"capacity": PathCapacityCmd,
-		"migrate":  PathMigrateCmd,
-		"list":     PathListCmd,
-		"mkdir":    PathMkdirCmd,
+		"status":     PathStatusCmd,
+		"capacity":   PathCapacityCmd,
+		"migrate":    PathMigrateCmd,
+		"list":       PathListCmd,
+		"mkdir":      PathMkdirCmd,
+		"partitions": PathPartitionsCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -283,6 +284,34 @@ var PathListCmd = &cmds.Command{
 		return cmds.EmitOnce(res, stringList{Strings: list})
 	},
 	Type: stringList{},
+}
+
+var PathPartitionsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "list disk partitions",
+		ShortDescription: "list disk partitions",
+	},
+	Arguments: []cmds.Argument{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		ps, err := partitions()
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, stringList{Strings: ps})
+	},
+	Type: stringList{},
+}
+
+func partitions() ([]string, error) {
+	var ps []string
+	infos, err := disk.Partitions(false)
+	if err != nil {
+		return nil, err
+	}
+	for _, info := range infos {
+		ps = append(ps, info.Mountpoint)
+	}
+	return ps, nil
 }
 
 type stringList struct {
