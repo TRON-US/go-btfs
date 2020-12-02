@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/TRON-US/go-btfs-cmds"
@@ -98,11 +99,12 @@ storage location, a specified path as a parameter need to be passed.
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"status":   PathStatusCmd,
-		"capacity": PathCapacityCmd,
-		"migrate":  PathMigrateCmd,
-		"list":     PathListCmd,
-		"mkdir":    PathMkdirCmd,
+		"status":     PathStatusCmd,
+		"capacity":   PathCapacityCmd,
+		"migrate":    PathMigrateCmd,
+		"list":       PathListCmd,
+		"mkdir":      PathMkdirCmd,
+		"partitions": PathPartitionsCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -161,13 +163,17 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("Not enough disk space, expect: ge %v bytes, actual: %v bytes",
 				promisedStorageSize, usage.Free)
 		}
-
-		restartCmd := exec.Command(Executable, "restart", "-p")
-		if err := restartCmd.Run(); err != nil {
-			return fmt.Errorf("restart command: %s", err)
-		}
+		go DoRestart()
 		return nil
 	},
+}
+
+func DoRestart() {
+	time.Sleep(2 * time.Second)
+	restartCmd := exec.Command(Executable, "restart")
+	if err := restartCmd.Run(); err != nil {
+		log.Errorf("restart error, %v", err)
+	}
 }
 
 var PathStatusCmd = &cmds.Command{
@@ -283,6 +289,34 @@ var PathListCmd = &cmds.Command{
 		return cmds.EmitOnce(res, stringList{Strings: list})
 	},
 	Type: stringList{},
+}
+
+var PathPartitionsCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "list disk partitions",
+		ShortDescription: "list disk partitions",
+	},
+	Arguments: []cmds.Argument{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		ps, err := partitions()
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, stringList{Strings: ps})
+	},
+	Type: stringList{},
+}
+
+func partitions() ([]string, error) {
+	var ps []string
+	infos, err := disk.Partitions(false)
+	if err != nil {
+		return nil, err
+	}
+	for _, info := range infos {
+		ps = append(ps, info.Mountpoint)
+	}
+	return ps, nil
 }
 
 type stringList struct {

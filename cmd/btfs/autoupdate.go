@@ -288,7 +288,7 @@ updateLoop:
 		// Add executable permissions to update binary file.
 		err = os.Chmod(latestBinaryFiles[UpdateBinaryKey]["path"], 0775)
 		if err != nil {
-			log.Error("Chmod latest update binary file 775 error, reasons: [%v]", err)
+			log.Errorf("Chmod latest update binary file 775 error, reasons: [%v]", err)
 			continue
 		}
 
@@ -342,15 +342,13 @@ func versionCompare(version1, version2 string) (int, error) {
 	// Split string of version1.
 	s1 := strings.Split(version1, ".")
 	if s1 == nil || len(s1) != 3 {
-		log.Error("String fo version1 has wrong format.")
-		return UPGRADE_FLAG_ERR, errors.New("string fo version1 has wrong format")
+		return UPGRADE_FLAG_ERR, errors.New("String for major version has wrong format")
 	}
 
 	// Split string of version2.
 	s2 := strings.Split(version2, ".")
 	if s2 == nil || len(s2) != 3 {
-		log.Error("String fo version2 has wrong format.")
-		return UPGRADE_FLAG_ERR, errors.New("string fo version2 has wrong format")
+		return UPGRADE_FLAG_ERR, errors.New("String for minor version has wrong format")
 	}
 
 	// If the current config.yaml contains a dash in the last section
