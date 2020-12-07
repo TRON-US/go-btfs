@@ -10,11 +10,11 @@ require (
 	github.com/TRON-US/go-btfs-config v0.7.0
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
-	github.com/TRON-US/go-btns v0.1.0
+	github.com/TRON-US/go-btns v0.1.1
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.3.1
 	github.com/TRON-US/go-unixfs v0.6.0
-	github.com/TRON-US/interface-go-btfs-core v0.6.1
+	github.com/TRON-US/interface-go-btfs-core v0.7.0
 	github.com/Workiva/go-datastructures v1.0.52
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/blang/semver v3.5.1+incompatible
@@ -46,7 +46,7 @@ require (
 	github.com/ipfs/go-ds-measure v0.1.0
 	github.com/ipfs/go-filestore v0.0.3
 	github.com/ipfs/go-fs-lock v0.0.6
-	github.com/ipfs/go-graphsync v0.1.1
+	github.com/ipfs/go-graphsync v0.2.0
 	github.com/ipfs/go-ipfs-blockstore v0.1.4
 	github.com/ipfs/go-ipfs-ds-help v0.1.1
 	github.com/ipfs/go-ipfs-exchange-interface v0.0.1
@@ -73,7 +73,7 @@ require (
 	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-circuit v0.3.1
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.7.0
+	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-discovery v0.5.0
 	github.com/libp2p/go-libp2p-http v0.1.5
@@ -90,7 +90,7 @@ require (
 	github.com/libp2p/go-libp2p-routing-helpers v0.2.3
 	github.com/libp2p/go-libp2p-secio v0.2.2
 	github.com/libp2p/go-libp2p-swarm v0.2.8
-	github.com/libp2p/go-libp2p-testing v0.3.0
+	github.com/libp2p/go-libp2p-testing v0.2.0
 	github.com/libp2p/go-libp2p-tls v0.1.3
 	github.com/libp2p/go-libp2p-yamux v0.2.8
 	github.com/libp2p/go-socket-activation v0.0.2
@@ -141,21 +141,17 @@ require (
 
 replace github.com/ipfs/go-ipld-format => github.com/TRON-US/go-ipld-format v0.2.0
 
-replace github.com/TRON-US/interface-go-btfs-core => github.com/TRON-US/interface-go-btfs-core v0.7.0-pre
-
-replace github.com/TRON-US/go-btns => github.com/laipogo/go-btns v0.1.1-pre
-
 replace github.com/ipfs/go-cid => github.com/TRON-US/go-cid v0.3.0
 
-replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.6.0-pre
+replace github.com/libp2p/go-libp2p-core => github.com/TRON-US/go-libp2p-core v0.7.1
 
-replace github.com/libp2p/go-libp2p-kad-dht => github.com/TRON-US/go-libp2p-kad-dht v0.10.1-pre
+replace github.com/libp2p/go-libp2p-kad-dht => github.com/TRON-US/go-libp2p-kad-dht v0.10.1
 
 replace github.com/multiformats/go-multiaddr => github.com/TRON-US/go-multiaddr v0.4.0
 
 replace github.com/ipfs/go-path => github.com/TRON-US/go-path v0.2.0
 
-replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.2.1-pre
+replace github.com/ipfs/go-graphsync => github.com/TRON-US/go-graphsync v0.2.1
 
 replace github.com/ipld/go-car => github.com/TRON-US/go-car v0.3.0
 
