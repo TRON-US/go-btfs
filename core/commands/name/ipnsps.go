@@ -5,11 +5,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-
 	"github.com/TRON-US/go-btfs-cmds"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	ke "github.com/TRON-US/go-btfs/core/commands/keyencode"
+
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-record"
+	record "github.com/libp2p/go-libp2p-record"
 )
 
 type ipnsPubsubState struct {
@@ -73,7 +74,15 @@ var ipnspsSubsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Show current name subscriptions",
 	},
+	Options: []cmds.Option{
+		ke.OptionIPNSBase,
+	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		keyEnc, err := ke.KeyEncoderFromString(req.Options[ke.OptionIPNSBase.Name()].(string))
+		if err != nil {
+			return err
+		}
+
 		n, err := cmdenv.GetNode(env)
 		if err != nil {
 			return err
@@ -94,7 +103,7 @@ var ipnspsSubsCmd = &cmds.Command{
 				log.Errorf("btns key not a valid peer ID: %s", err)
 				continue
 			}
-			paths = append(paths, "/btns/"+peer.Encode(pid))
+			paths = append(paths, "/btns/"+keyEnc.FormatID(pid))
 		}
 
 		return cmds.EmitOnce(res, &stringList{paths})

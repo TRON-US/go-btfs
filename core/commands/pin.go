@@ -11,18 +11,17 @@ import (
 	core "github.com/TRON-US/go-btfs/core"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	e "github.com/TRON-US/go-btfs/core/commands/e"
-	coreapi "github.com/TRON-US/go-btfs/core/coreapi"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	pin "github.com/TRON-US/go-btfs-pinner"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	"github.com/TRON-US/interface-go-btfs-core/path"
+
 	bserv "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	cidenc "github.com/ipfs/go-cidutil/cidenc"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
-	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	verifcid "github.com/ipfs/go-verifcid"
 )
@@ -379,7 +378,7 @@ Example:
 		if len(req.Arguments) > 0 {
 			err = pinLsKeys(req, typeStr, n, api, emit)
 		} else {
-			err = pinLsAll(req, typeStr, n.Pinning, n.DAG, emit)
+			err = pinLsAll(req, typeStr, api, emit)
 		}
 		if err != nil {
 			return err
@@ -501,38 +500,45 @@ func pinLsKeys(req *cmds.Request, typeStr string, n *core.IpfsNode, api coreifac
 	return nil
 }
 
-func pinLsAll(req *cmds.Request, typeStr string, pinning pin.Pinner, dag ipld.DAGService, emit func(value interface{}) error) error {
-	pinCh, errCh := coreapi.PinLsAll(req.Context, typeStr, pinning, dag)
-
+func pinLsAll(req *cmds.Request, typeStr string, api coreiface.CoreAPI, emit func(value interface{}) error) error {
 	enc, err := cmdenv.GetCidEncoder(req)
 	if err != nil {
 		return err
 	}
 
-	ctx := req.Context
-loop:
-	for {
-		select {
-		case p, ok := <-pinCh:
-			if !ok {
-				break loop
-			}
-			if err := emit(&PinLsOutputWrapper{
-				PinLsObject: PinLsObject{
-					Type: p.Type(),
-					Cid:  enc.Encode(p.Path().Cid()),
-				},
-			}); err != nil {
-				return err
-			}
+	switch typeStr {
+	case "all", "direct", "indirect", "recursive":
+	default:
+		err = fmt.Errorf("invalid type '%s', must be one of {direct, indirect, recursive, all}", typeStr)
+		return err
+	}
 
-		case <-ctx.Done():
-			return ctx.Err()
+	opt, err := options.Pin.Ls.Type(typeStr)
+	if err != nil {
+		panic("unhandled pin type")
+	}
+
+	pins, err := api.Pin().Ls(req.Context, opt)
+	if err != nil {
+		return err
+	}
+
+	for p := range pins {
+		if p.Err() != nil {
+			return err
+		}
+		err = emit(&PinLsOutputWrapper{
+			PinLsObject: PinLsObject{
+				Type: p.Type(),
+				Cid:  enc.Encode(p.Path().Cid()),
+			},
+		})
+		if err != nil {
+			return err
 		}
 	}
 
-	err = <-errCh
-	return err
+	return nil
 }
 
 const (
