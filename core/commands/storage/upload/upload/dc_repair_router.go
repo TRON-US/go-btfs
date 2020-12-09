@@ -193,7 +193,7 @@ returns the repairer's signed contract to the invoker.`,
 		}
 		remainStorage := sizeStat.StorageMax - sizeStat.RepoSize
 		if fileSize > int64(remainStorage) {
-			errMsg := fmt.Sprintf("remaining storage space [%d] is not enough to repair file [%s]", remainStorage, fileHash)
+			errMsg := fmt.Sprintf("remaining storage space [%d] is less than required storage size [%d]", remainStorage, fileSize)
 			log.Errorf(errMsg)
 			return fmt.Errorf(errMsg)
 		}
