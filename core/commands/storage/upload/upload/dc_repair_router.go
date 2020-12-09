@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/corerepo"
 	"github.com/google/uuid"
 	"io/ioutil"
 	"strconv"
@@ -186,6 +187,16 @@ returns the repairer's signed contract to the invoker.`,
 		if !ctxParams.Cfg.Experimental.HostRepairEnabled {
 			return fmt.Errorf("storage repair api not enabled")
 		}
+		sizeStat, err := corerepo.RepoSize(req.Context, ctxParams.N)
+		if err != nil {
+			return err
+		}
+		remainStorage := sizeStat.StorageMax - sizeStat.RepoSize
+		if fileSize > int64(remainStorage) {
+			errMsg := fmt.Sprintf("remaining storage space [%d] is not enough to repair file [%s]", remainStorage, fileHash)
+			log.Errorf(errMsg)
+			return fmt.Errorf(errMsg)
+		}
 		ns, err := helper.GetHostStorageConfig(ctxParams.Ctx, ctxParams.N)
 		if err != nil {
 			log.Errorf("get host storage config error: [%v]", err)
@@ -271,6 +282,7 @@ func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) error {
 					log.Errorf("submit file store status error: [%v]", err)
 					return err
 				}
+				unpinLocalStorage(ctxParams, repairContract.FileHash)
 			}
 			return nil
 		}()
@@ -563,7 +575,7 @@ func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, repair
 
 func unpinLocalStorage(ctxParams *uh.ContextParams, fishHash string) error {
 	url := fmt.Sprint(strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[2], ":", strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[4])
-	err := shell.NewShell(url).Request("pin/rm", fishHash).Option("recursive", true).Exec(ctxParams.Ctx, nil)
+	err := shell.NewShell(url).Request("pin/rm", fishHash).Option("r", true).Exec(ctxParams.Ctx, nil)
 	if err != nil {
 		return err
 	}
