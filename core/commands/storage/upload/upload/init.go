@@ -264,7 +264,7 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 			return err
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("request challenge questions error: [%v]", err)
 	}
 	if question == nil {
 		return errors.New("question is nil")
@@ -322,7 +322,7 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 		})
 	if err != nil {
 		log.Debug(err)
-		return err
+		return fmt.Errorf("response challenge error: [%v]", err)
 	}
 	return nil
 }
