@@ -20,7 +20,7 @@ go generate .
 
 ## Updating dir-index-html
 
-Upstream: https://github.com/ipfs/dir-index-html
+Upstream: https://github.com/TRON-US/dir-index-html
 
 dir-index-html is a git submodule. To update, run the following commands from
 this directory.
