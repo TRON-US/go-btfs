@@ -4,6 +4,7 @@ require (
 	bazil.org/fuse v0.0.0-20200117225306-7b5117fecadc
 	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
+	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
 	github.com/TRON-US/go-btfs-cmds v0.2.7

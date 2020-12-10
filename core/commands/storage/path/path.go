@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
@@ -302,19 +303,27 @@ var PathPartitionsCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, stringList{Strings: ps})
+		return cmds.EmitOnce(res, ps)
 	},
-	Type: stringList{},
+	Type: []partition{},
 }
 
-func partitions() ([]string, error) {
-	var ps []string
-	infos, err := disk.Partitions(false)
+type partition struct {
+	Name       string `json:"name"`
+	MountPoint string `json:"mount_point"`
+}
+
+func partitions() ([]*partition, error) {
+	var ps []*partition
+	infos, err := disk.Partitions(true)
 	if err != nil {
 		return nil, err
 	}
 	for _, info := range infos {
-		ps = append(ps, info.Mountpoint)
+		ps = append(ps, &partition{
+			Name:       info.Device,
+			MountPoint: info.Mountpoint,
+		})
 	}
 	return ps, nil
 }
@@ -377,6 +386,20 @@ func WriteProperties() error {
 		fmt.Printf("Storage location was reset in %v\n", StorePath)
 	}
 	return err
+}
+
+type Storage struct {
+	Name       string
+	FileSystem string
+	Total      uint64
+	Free       uint64
+}
+
+type storageInfo struct {
+	Name       string
+	Size       uint64
+	FreeSpace  uint64
+	FileSystem string
 }
 
 func MoveFolder() error {

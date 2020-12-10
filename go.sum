@@ -72,6 +72,9 @@ github.com/TRON-US/go-btfs-files v0.2.0 h1:JZ+F0gX8iPmUf1OlrdOdsA8GMGxCHhwQ03jEW
 github.com/TRON-US/go-btfs-files v0.2.0/go.mod h1:Qx+rTOIC0xl3ZkosGcEoB4hqExZmTONErPys8K5suEc=
 github.com/TRON-US/go-btfs-pinner v0.1.1 h1:cqI3oGLfqoCCNjTGFoFt4Saq9JG2gLQNXiROukjJZQU=
 github.com/TRON-US/go-btfs-pinner v0.1.1/go.mod h1:4CVxKEQNNTbuW92BIYwiH9/W63eDNtlt7bK0fCnXSag=
+github.com/TRON-US/go-btns v0.1.0/go.mod h1:DQiF1iCxhDWUv5wWKueipXgi+D0PmkrRToO0btEOQ4k=
+github.com/TRON-US/go-btns v0.1.1 h1:19rUEc9QK5aIz5Z278lQh6omXbQ3Ha40ecQX1DnGnT8=
+github.com/TRON-US/go-btns v0.1.1/go.mod h1:PWfgUinn65Xzar61xNunkadza7h+v+cYFCOXpuVsixY=
 github.com/TRON-US/go-car v0.3.0 h1:7SS9O8YFqWjy9zh7iB6QxUGimSSqVeQrNjBtts9zKWI=
 github.com/TRON-US/go-car v0.3.0/go.mod h1:xVssqSpge7YwGmn8mxvIN4mjq5WRB4iVIY5suuVVrVE=
 github.com/TRON-US/go-cid v0.3.0 h1:qVqgOU/aRzJoqRRbMoedIcurPD0CUsFXGcbZrKYgjRo=
