@@ -22,7 +22,7 @@ import (
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/v3/cpu"
 )
 
 type dcWrap struct {
