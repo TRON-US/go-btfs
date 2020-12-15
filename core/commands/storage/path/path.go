@@ -164,14 +164,14 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("Not enough disk space, expect: ge %v bytes, actual: %v bytes",
 				promisedStorageSize, usage.Free)
 		}
-		go DoRestart()
+		go DoRestart(true)
 		return nil
 	},
 }
 
-func DoRestart() {
+func DoRestart(p bool) {
 	time.Sleep(2 * time.Second)
-	restartCmd := exec.Command(Executable, "restart")
+	restartCmd := exec.Command(Executable, "restart", fmt.Sprintf("-p=%v", p))
 	if err := restartCmd.Run(); err != nil {
 		log.Errorf("restart error, %v", err)
 	}
