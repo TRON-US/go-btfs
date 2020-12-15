@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	shell "github.com/TRON-US/go-btfs-api"
 	"regexp"
 	"strings"
 	"time"
@@ -156,6 +157,15 @@ func (rs *RenterSession) enterState(e *fsm.Event) {
 		rs.Cancel()
 	case RssCompleteStatus:
 		rs.Cancel()
+		// call `btfs storage contracts sync renter`
+		go func() {
+			sh := shell.NewLocalShell()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := sh.Request("storage/contracts/sync/renter").Exec(ctx, nil); err != nil {
+				log.Error(err)
+			}
+		}()
 	}
 	fmt.Printf("[%s] session: %s entered state: %s, msg: %s\n", time.Now().Format(time.RFC3339), rs.SsId, e.Dst, msg)
 	err := Batch(rs.CtxParams.N.Repo.Datastore(),
