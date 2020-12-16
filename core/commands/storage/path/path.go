@@ -100,12 +100,12 @@ storage location, a specified path as a parameter need to be passed.
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"status":     PathStatusCmd,
-		"capacity":   PathCapacityCmd,
-		"migrate":    PathMigrateCmd,
-		"list":       PathListCmd,
-		"mkdir":      PathMkdirCmd,
-		"partitions": PathPartitionsCmd,
+		"status":   PathStatusCmd,
+		"capacity": PathCapacityCmd,
+		"migrate":  PathMigrateCmd,
+		"list":     PathListCmd,
+		"mkdir":    PathMkdirCmd,
+		"volumes":  PathVolumesCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -292,40 +292,25 @@ var PathListCmd = &cmds.Command{
 	Type: stringList{},
 }
 
-var PathPartitionsCmd = &cmds.Command{
+var PathVolumesCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "list disk partitions",
-		ShortDescription: "list disk partitions",
+		Tagline:          "list disk volumes",
+		ShortDescription: "list disk volumes",
 	},
 	Arguments: []cmds.Argument{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ps, err := partitions()
+		ps, err := volumes()
 		if err != nil {
 			return err
 		}
 		return cmds.EmitOnce(res, ps)
 	},
-	Type: []partition{},
+	Type: []volume{},
 }
 
-type partition struct {
+type volume struct {
 	Name       string `json:"name"`
 	MountPoint string `json:"mount_point"`
-}
-
-func partitions() ([]*partition, error) {
-	var ps []*partition
-	infos, err := disk.Partitions(true)
-	if err != nil {
-		return nil, err
-	}
-	for _, info := range infos {
-		ps = append(ps, &partition{
-			Name:       info.Device,
-			MountPoint: info.Mountpoint,
-		})
-	}
-	return ps, nil
 }
 
 type stringList struct {

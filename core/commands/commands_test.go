@@ -233,7 +233,7 @@ func TestCommands(t *testing.T) {
 		"/storage/path/migrate",
 		"/storage/path/list",
 		"/storage/path/mkdir",
-		"/storage/path/partitions",
+		"/storage/path/volumes",
 		"/storage/upload",
 		"/storage/upload/init",
 		"/storage/upload/recvcontract",
