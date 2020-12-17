@@ -74,6 +74,7 @@ var (
 
 type ContextParams struct {
 	Req *cmds.Request
+	Env cmds.Environment
 	Ctx context.Context
 	N   *core.IpfsNode
 	Cfg *config.Config
@@ -99,6 +100,7 @@ func ExtractContextParams(req *cmds.Request, env cmds.Environment) (*ContextPara
 	ctx, _ := helper.NewGoContext(req.Context)
 	return &ContextParams{
 		Req: req,
+		Env: env,
 		Ctx: ctx,
 		N:   n,
 		Cfg: cfg,
