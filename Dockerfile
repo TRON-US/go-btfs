@@ -1,4 +1,4 @@
-FROM golang:1.14-stretch
+FROM golang:1.15
 MAINTAINER TRON-US <support@tron.network>
 
 # Install deps
