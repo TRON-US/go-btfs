@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/corerepo"
-	"github.com/google/uuid"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -16,21 +14,23 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-
-	"github.com/tron-us/go-btfs-common/crypto"
-	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
-	"github.com/tron-us/go-btfs-common/utils/grpc"
+	"github.com/TRON-US/go-btfs/core/corerepo"
 
 	shell "github.com/TRON-US/go-btfs-api"
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/tron-us/go-btfs-common/crypto"
+	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/tron-us/protobuf/proto"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 type RepairContractParams struct {
@@ -237,64 +237,57 @@ returns the repairer's signed contract to the invoker.`,
 }
 
 func doRepair(ctxParams *uh.ContextParams, params *RepairContractParams) error {
-	errChan := make(chan error, 1)
-	go func() {
-		err := func() error {
-			repairContractResp, err := submitSignedRepairContract(ctxParams, params)
+	ctx, cf := context.WithTimeout(ctxParams.Ctx, repairerTimeout)
+	defer cf()
+	eg, _ := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		repairContractResp, err := submitSignedRepairContract(ctxParams, params)
+		if err != nil {
+			log.Error("submit repair contract error", zap.Error(err), zap.String("peerId", ctxParams.N.Identity.Pretty()))
+			return err
+		}
+		if repairContractResp.Status == guardpb.RepairContractResponse_BOTH_SIGNED {
+			repairContract := repairContractResp.Contract
+			signedContractID, err := signContractID(repairContract.RepairContractId, ctxParams.N.PrivateKey)
 			if err != nil {
-				log.Error("submit repair contract error", zap.Error(err), zap.String("peerId", ctxParams.N.Identity.Pretty()))
 				return err
 			}
-			if repairContractResp.Status == guardpb.RepairContractResponse_BOTH_SIGNED {
-				repairContract := repairContractResp.Contract
-				signedContractID, err := signContractID(repairContract.RepairContractId, ctxParams.N.PrivateKey)
-				if err != nil {
-					return err
-				}
-				paidIn := make(chan bool)
-				go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
-				paid := <-paidIn
-				if !paid {
-					log.Error("contract is not paid", zap.String("contractId", repairContract.RepairContractId))
-				}
-				_, err = downloadAndRebuildFile(ctxParams, repairContract.FileHash, repairContract.LostShardHash)
-				if err != nil {
-					log.Errorf("download and rebuild file error: [%v]", err)
-					return err
-				}
-				err = challengeLostShards(ctxParams, repairContract)
-				if err != nil {
-					log.Errorf("challenge lost shards error: [%v]", err)
-					return err
-				}
-				fileStatus, err := uploadShards(ctxParams, repairContract)
-				if err != nil {
-					log.Errorf("repairer uploads shards error: [%v]", err)
-					return err
-				}
-				if fileStatus == nil {
-					return nil
-				}
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-				defer cancel()
-				err = submitFileStatus(ctx, ctxParams.Cfg, fileStatus)
-				if err != nil {
-					log.Errorf("submit file store status error: [%v]", err)
-					return err
-				}
-				unpinLocalStorage(ctxParams, repairContract.FileHash)
+			paidIn := make(chan bool)
+			go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
+			paid := <-paidIn
+			if !paid {
+				log.Error("contract is not paid", zap.String("contractId", repairContract.RepairContractId))
 			}
-			return nil
-		}()
-		errChan <- err
-	}()
-
-	select {
-	case <-time.After(repairerTimeout):
-		return fmt.Errorf("repair job timeout for peer id: %s", ctxParams.N.Identity.Pretty())
-	case err := <-errChan:
-		return err
-	}
+			_, err = downloadAndRebuildFile(ctxParams, repairContract.FileHash, repairContract.LostShardHash)
+			if err != nil {
+				log.Errorf("download and rebuild file error: [%v]", err)
+				return err
+			}
+			err = challengeLostShards(ctxParams, repairContract)
+			if err != nil {
+				log.Errorf("challenge lost shards error: [%v]", err)
+				return err
+			}
+			fileStatus, err := uploadShards(ctxParams, repairContract)
+			if err != nil {
+				log.Errorf("repairer uploads shards error: [%v]", err)
+				return err
+			}
+			if fileStatus == nil {
+				return nil
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			err = submitFileStatus(ctx, ctxParams.Cfg, fileStatus)
+			if err != nil {
+				log.Errorf("submit file store status error: [%v]", err)
+				return err
+			}
+			unpinLocalStorage(ctxParams, repairContract.FileHash)
+		}
+		return nil
+	})
+	return eg.Wait()
 }
 
 func submitSignedRepairContract(ctxParams *uh.ContextParams, params *RepairContractParams) (*guardpb.RepairContractResponse, error) {
@@ -583,38 +576,22 @@ func unpinLocalStorage(ctxParams *uh.ContextParams, fishHash string) error {
 }
 
 func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairContract) error {
-	errChan := make(chan error, len(repairReq.LostShardHash))
+	eg, _ := errgroup.WithContext(ctxParams.Ctx)
 	for _, lostShardHash := range repairReq.LostShardHash {
-		go func(shardHash string) {
-			err := func() error {
-				fileHash := repairReq.FileHash
-				err := challengeShard(ctxParams, fileHash, true, &guardpb.ContractMeta{
-					//RenterPid:   repairReq.RepairPid,
-					FileHash:   fileHash,
-					ShardHash:  shardHash,
-					ContractId: repairReq.RepairContractId,
-					HostPid:    repairReq.RepairPid,
-					RentStart:  repairReq.RepairSignTime,
-				})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			errChan <- err
-		}(lostShardHash)
+		shardHash := lostShardHash
+		eg.Go(func() error {
+			fileHash := repairReq.FileHash
+			return challengeShard(ctxParams, fileHash, true, &guardpb.ContractMeta{
+				//RenterPid:   repairReq.RepairPid,
+				FileHash:   fileHash,
+				ShardHash:  shardHash,
+				ContractId: repairReq.RepairContractId,
+				HostPid:    repairReq.RepairPid,
+				RentStart:  repairReq.RepairSignTime,
+			})
+		})
 	}
-	count := 0
-	for err := range errChan {
-		count++
-		if err != nil {
-			return err
-		}
-		if count == len(repairReq.LostShardHash) {
-			break
-		}
-	}
-	return nil
+	return eg.Wait()
 }
 
 func emptyCheck(fileHash string, lostShardHashes []string, fileSize int64, DownloadRewardAmount int64, RepairRewardAmount int64) error {

@@ -14,6 +14,7 @@ import (
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"golang.org/x/sync/errgroup"
 )
 
 func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
@@ -35,18 +36,16 @@ func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, sha
 	}
 	uh.EscrowContractMaps.Set(shardId, bytes)
 	if !offlineSigning {
-		errChan := make(chan error)
-		go func() {
+		eg, _ := errgroup.WithContext(rss.Ctx)
+		eg.Go(func() error {
 			sign, err := crypto.Sign(rss.CtxParams.N.PrivateKey, escrowContract)
 			if err != nil {
-				errChan <- err
-				return
+				return err
 			}
-			errChan <- nil
 			bc <- sign
-		}()
-		err = <-errChan
-		if err != nil {
+			return nil
+		})
+		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"golang.org/x/sync/errgroup"
 )
 
 func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price int64, shardSize int64,
@@ -39,51 +40,39 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				ShardErrChanMap.Set(contractId, cb)
 				tp := helper.TotalPay(shardSize, price, storageLength)
 				var escrowCotractBytes []byte
-				errChan := make(chan error, 2)
-				go func() {
-					tmp := func() error {
-						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
-						if err != nil {
-							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
-							return err
-						}
-						return nil
-					}()
-					errChan <- tmp
-				}()
-				var guardContractBytes []byte
-				go func() {
-					tmp := func() error {
-						guardContractBytes, err = RenterSignGuardContract(rss, &ContractParams{
-							ContractId:    contractId,
-							RenterPid:     renterId.Pretty(),
-							HostPid:       host,
-							ShardIndex:    int32(i),
-							ShardHash:     h,
-							ShardSize:     shardSize,
-							FileHash:      rss.Hash,
-							StartTime:     time.Now(),
-							StorageLength: int64(storageLength),
-							Price:         price,
-							TotalPay:      tp,
-						}, offlineSigning, rp)
-						if err != nil {
-							log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
-							return err
-						}
-						return nil
-					}()
-					errChan <- tmp
-				}()
-				c := 0
-				for err := range errChan {
-					c++
+
+				eg, _ := errgroup.WithContext(rss.Ctx)
+				eg.Go(func() error {
+					escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
 					if err != nil {
+						log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
 						return err
 					}
-					if c == 2 {
-						break
+					return nil
+				})
+				var guardContractBytes []byte
+				eg.Go(func() error {
+					guardContractBytes, err = RenterSignGuardContract(rss, &ContractParams{
+						ContractId:    contractId,
+						RenterPid:     renterId.Pretty(),
+						HostPid:       host,
+						ShardIndex:    int32(i),
+						ShardHash:     h,
+						ShardSize:     shardSize,
+						FileHash:      rss.Hash,
+						StartTime:     time.Now(),
+						StorageLength: int64(storageLength),
+						Price:         price,
+						TotalPay:      tp,
+					}, offlineSigning, rp)
+					if err != nil {
+						log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
+						return err
 					}
+					return nil
+				})
+				if err := eg.Wait(); err != nil {
+					return err
 				}
 
 				hostPid, err := peer.IDB58Decode(host)
