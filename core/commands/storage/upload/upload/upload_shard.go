@@ -79,7 +79,6 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				if err := eg.Wait(); err != nil {
 					return err
 				}
-				fmt.Println("after errGroup")
 
 				hostPid, err := peer.IDB58Decode(host)
 				if err != nil {
