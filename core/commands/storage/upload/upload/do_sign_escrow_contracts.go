@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
@@ -14,9 +15,10 @@ import (
 	"github.com/tron-us/protobuf/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"golang.org/x/sync/errgroup"
 )
 
-func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
+func renterSignEscrowContract(ctx context.Context, rss *sessions.RenterSession, shardHash string, shardIndex int, host string, totalPay int64,
 	offlineSigning bool, offSignPid peer.ID, contractId string, storageLength int) ([]byte, error) {
 	hostPid, err := peer.IDB58Decode(host)
 	if err != nil {
@@ -35,18 +37,20 @@ func renterSignEscrowContract(rss *sessions.RenterSession, shardHash string, sha
 	}
 	uh.EscrowContractMaps.Set(shardId, bytes)
 	if !offlineSigning {
-		errChan := make(chan error)
-		go func() {
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
 			sign, err := crypto.Sign(rss.CtxParams.N.PrivateKey, escrowContract)
 			if err != nil {
-				errChan <- err
-				return
+				return err
 			}
-			errChan <- nil
-			bc <- sign
-		}()
-		err = <-errChan
-		if err != nil {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case bc <- sign:
+			}
+			return nil
+		})
+		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
 	}
