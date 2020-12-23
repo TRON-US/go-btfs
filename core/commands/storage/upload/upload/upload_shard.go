@@ -46,9 +46,10 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				defer cancel()
 				eg, ctx := errgroup.WithContext(ctx)
 				eg.Go(func() error {
-					escrowCotractBytes, err = renterSignEscrowContract(ctx, rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
+					escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
 					select {
 					case <-ctx.Done():
+						return ctx.Err()
 					default:
 						return errors.Wrap(err, fmt.Sprintf("shard %s signs escrow_contract error", h))
 					}
