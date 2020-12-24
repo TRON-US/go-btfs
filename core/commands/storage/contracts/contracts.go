@@ -350,14 +350,16 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 		if err != nil {
 			return err
 		}
-		go func() {
-			// Use a new context that can clean up in the background
-			_, err := rm.RmDag(context.Background(), stale, n, req, env, true)
-			if err != nil {
-				// may have been cleaned up already, ignore
-				contractsLog.Error("stale contracts clean up error:", err)
-			}
-		}()
+		if role == nodepb.ContractStat_HOST.String() {
+			go func() {
+				// Use a new context that can clean up in the background
+				_, err := rm.RmDag(context.Background(), stale, n, req, env, true)
+				if err != nil {
+					// may have been cleaned up already, ignore
+					contractsLog.Error("stale contracts clean up error:", err)
+				}
+			}()
+		}
 	}
 	if len(cs) > 0 {
 		cts, err := ListContracts(n.Repo.Datastore(), n.Identity.Pretty(), role)
