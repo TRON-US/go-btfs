@@ -150,10 +150,10 @@ var balanceCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		amount, err := wallet.GetBalanceByWalletAddress(req.Context, cfg.Services.SolidityDomain, cfg, req.Arguments[0])
+		amountMap, err := wallet.GetBalanceByWalletAddress(req.Context, cfg.Services.SolidityDomain, req.Arguments[0])
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, map[string]int64{"balance": amount})
+		return cmds.EmitOnce(res, amountMap)
 	},
 }
