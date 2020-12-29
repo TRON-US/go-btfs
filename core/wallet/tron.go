@@ -341,7 +341,7 @@ func GetStatus(ctx context.Context, url string, txId string) (string, error) {
 	return status, nil
 }
 
-func GetBalanceByWalletAddress(ctx context.Context, cfg *config.Config, walletAddress string) (int64, error) {
+func GetBalanceByWalletAddress(ctx context.Context, url string, cfg *config.Config, walletAddress string) (int64, error) {
 	address, err := toHex(walletAddress)
 	if err != nil {
 		return 0, err
@@ -357,6 +357,7 @@ func GetBalanceByWalletAddress(ctx context.Context, cfg *config.Config, walletAd
 		strings.Contains(cfg.Services.EscrowDomain, "staging") {
 		tokenId = TokenIdDev
 	}
+	solidityService = url
 	tronBalance, err := GetTokenBalance(ctx, oa, tokenId)
 	return tronBalance, err
 }
