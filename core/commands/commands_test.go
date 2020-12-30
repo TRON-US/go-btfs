@@ -285,6 +285,7 @@ func TestCommands(t *testing.T) {
 		"/tron/prepare",
 		"/tron/send",
 		"/tron/status",
+		"/tron/balance",
 	}
 
 	cmdSet := make(map[string]struct{})

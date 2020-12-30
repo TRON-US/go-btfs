@@ -18,6 +18,7 @@ import (
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/tron-us/go-btfs-common/crypto"
 	tronPb "github.com/tron-us/go-btfs-common/protos/protocol/api"
+
 	protocol_core "github.com/tron-us/go-btfs-common/protos/protocol/core"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
@@ -339,4 +340,32 @@ func GetStatus(ctx context.Context, url string, txId string) (string, error) {
 		status = StatusFailed
 	}
 	return status, nil
+}
+
+func GetBalanceByWalletAddress(ctx context.Context, solidityUrl string, walletAddress string) (tokenMap map[string]int64, err error) {
+	address, err := toHex(walletAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	oa, err := hex.DecodeString(address)
+	if err != nil {
+		return nil, err
+	}
+
+	err = grpc.SolidityClient(solidityUrl).WithContext(ctx, func(ctx context.Context, client tronPb.WalletSolidityClient) error {
+		account := &protocol_core.Account{Address: oa}
+		myAccount, err := client.GetAccount(ctx, account)
+		if err != nil {
+			return err
+		}
+		tokenMap = myAccount.GetAssetV2()
+		if tokenMap == nil {
+			tokenMap = make(map[string]int64)
+		}
+		tokenMap["TRX"] = myAccount.Balance
+		return nil
+	})
+
+	return tokenMap, err
 }
