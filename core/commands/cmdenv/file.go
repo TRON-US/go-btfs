@@ -89,7 +89,7 @@ func GetFile(req *cmds.Request, res cmds.ResponseEmitter, api coreiface.CoreAPI,
 	}
 	res.SetLength(uint64(size))
 
-	cmplvl, err = GetCompressOptions(cmprs, cmplvl)
+	cmplvl, err = GetCompressLevel(cmprs, cmplvl)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func GetFile(req *cmds.Request, res cmds.ResponseEmitter, api coreiface.CoreAPI,
 	return reader, nil
 }
 
-func GetCompressOptions(cmprs bool, cmplvl int) (int, error) {
+func GetCompressLevel(cmprs bool, cmplvl int) (int, error) {
 	switch {
 	case !cmprs:
 		return gzip.NoCompression, nil

@@ -17,11 +17,6 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 )
 
-var (
-	cmprs  bool
-	cmplvl int
-)
-
 const (
 	outputOptionName           = "output"
 	archiveOptionName          = "archive"
@@ -69,9 +64,7 @@ If '--meta' or '-m' is enabled, this option is ignored.
 		cmds.BoolOption(quietOptionName, "q", "Quiet mode: perform get operation without writing to anywhere. Same as using -o /dev/null."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
-		cmprs, _ = req.Options["compressOptionName"].(bool)
-		cmplvl, _ = req.Options["compressionLevelOptionName"].(int)
-		_, err := cmdenv.GetCompressOptions(cmprs, cmplvl)
+		_, err := cmdenv.GetCompressLevel(getCompressOptions(req))
 		return err
 	},
 	RunTimeout: 5 * time.Minute,
@@ -86,8 +79,9 @@ If '--meta' or '-m' is enabled, this option is ignored.
 		privateKey, _ := req.Options[privateKeyName].(string)
 		meta, _ := req.Options[getMetaDisplayOptionName].(bool)
 		repairShards, _ := req.Options[repairShardsName].(string)
-		quiet, _ := req.Options["quietOptionName"].(bool)
-		archive, _ := req.Options["archiveOptionName"].(bool)
+		quiet, _ := req.Options[quietOptionName].(bool)
+		archive, _ := req.Options[archiveOptionName].(bool)
+		cmprs, cmplvl := getCompressOptions(req)
 
 		reader, err := cmdenv.GetFile(req, res, api, btfsPath, decrypt, privateKey, meta, repairShards, quiet, archive, cmprs, cmplvl)
 		if err != nil {
@@ -117,7 +111,7 @@ If '--meta' or '-m' is enabled, this option is ignored.
 
 			outPath := getOutPath(req)
 
-			cmplvl, err = cmdenv.GetCompressOptions(cmprs, cmplvl)
+			cmplvl, err := cmdenv.GetCompressLevel(getCompressOptions(req))
 			if err != nil {
 				return err
 			}
@@ -238,4 +232,10 @@ func (gw *getWriter) writeExtracted(r io.Reader, fpath string) error {
 
 	extractor := &tar.Extractor{Path: fpath, Progress: bar.Add64}
 	return extractor.Extract(r)
+}
+
+func getCompressOptions(req *cmds.Request) (bool, int) {
+	cmprs, _ := req.Options[compressOptionName].(bool)
+	cmplvl, _ := req.Options[compressionLevelOptionName].(int)
+	return cmprs, cmplvl
 }
