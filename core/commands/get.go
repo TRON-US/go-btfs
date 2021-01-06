@@ -1,30 +1,26 @@
 package commands
 
 import (
-	"bufio"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	gopath "path"
 	"path/filepath"
 	"strings"
 	"time"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/commands/e"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	files "github.com/TRON-US/go-btfs-files"
-	"github.com/TRON-US/interface-go-btfs-core/options"
-	"github.com/TRON-US/interface-go-btfs-core/path"
-	"github.com/ipfs/go-cid"
 	"github.com/whyrusleeping/tar-utils"
 	"gopkg.in/cheggaaa/pb.v1"
 )
 
-var ErrInvalidCompressionLevel = errors.New("compression level must be between 1 and 9")
+var (
+	cmprs  bool
+	cmplvl int
+)
 
 const (
 	outputOptionName           = "output"
@@ -73,64 +69,27 @@ If '--meta' or '-m' is enabled, this option is ignored.
 		cmds.BoolOption(quietOptionName, "q", "Quiet mode: perform get operation without writing to anywhere. Same as using -o /dev/null."),
 	},
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
-		_, err := getCompressOptions(req)
+		cmprs, _ = req.Options["compressOptionName"].(bool)
+		cmplvl, _ = req.Options["compressionLevelOptionName"].(int)
+		_, err := cmdenv.GetCompressOptions(cmprs, cmplvl)
 		return err
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cmplvl, err := getCompressOptions(req)
-		if err != nil {
-			return err
-		}
-
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
 		}
 
-		p := path.New(req.Arguments[0])
-
+		btfsPath := req.Arguments[0]
 		decrypt, _ := req.Options[decryptName].(bool)
 		privateKey, _ := req.Options[privateKeyName].(string)
 		meta, _ := req.Options[getMetaDisplayOptionName].(bool)
-		var repairs []cid.Cid
-		if rs, ok := req.Options[repairShardsName].(string); ok {
-			rshards := strings.Split(rs, ",")
-			for _, rshard := range rshards {
-				rcid, err := cid.Parse(rshard)
-				if err != nil {
-					return err
-				}
-				repairs = append(repairs, rcid)
-			}
-		}
+		repairShards, _ := req.Options[repairShardsName].(string)
+		quiet, _ := req.Options["quietOptionName"].(bool)
+		archive, _ := req.Options["archiveOptionName"].(bool)
 
-		opts := []options.UnixfsGetOption{
-			options.Unixfs.Decrypt(decrypt),
-			options.Unixfs.PrivateKey(privateKey),
-			options.Unixfs.Metadata(meta),
-			options.Unixfs.Repairs(repairs),
-		}
-
-		file, err := api.Unixfs().Get(req.Context, p, opts...)
-		if err != nil {
-			return err
-		}
-
-		quiet, _ := req.Options[quietOptionName].(bool)
-		if quiet {
-			return cmds.EmitOnce(res, nil)
-		}
-
-		size, err := file.Size()
-		if err != nil {
-			return err
-		}
-
-		res.SetLength(uint64(size))
-
-		archive, _ := req.Options[archiveOptionName].(bool)
-		reader, err := fileArchive(file, p.String(), archive, cmplvl)
+		reader, err := cmdenv.GetFile(req, res, api, btfsPath, decrypt, privateKey, meta, repairShards, quiet, archive, cmprs, cmplvl)
 		if err != nil {
 			return err
 		}
@@ -158,7 +117,7 @@ If '--meta' or '-m' is enabled, this option is ignored.
 
 			outPath := getOutPath(req)
 
-			cmplvl, err := getCompressOptions(req)
+			cmplvl, err = cmdenv.GetCompressOptions(cmprs, cmplvl)
 			if err != nil {
 				return err
 			}
@@ -279,109 +238,4 @@ func (gw *getWriter) writeExtracted(r io.Reader, fpath string) error {
 
 	extractor := &tar.Extractor{Path: fpath, Progress: bar.Add64}
 	return extractor.Extract(r)
-}
-
-func getCompressOptions(req *cmds.Request) (int, error) {
-	cmprs, _ := req.Options[compressOptionName].(bool)
-	cmplvl, cmplvlFound := req.Options[compressionLevelOptionName].(int)
-	switch {
-	case !cmprs:
-		return gzip.NoCompression, nil
-	case cmprs && !cmplvlFound:
-		return gzip.DefaultCompression, nil
-	case cmprs && (cmplvl < 1 || cmplvl > 9):
-		return gzip.NoCompression, ErrInvalidCompressionLevel
-	}
-	return cmplvl, nil
-}
-
-// DefaultBufSize is the buffer size for gets. for now, 1MB, which is ~4 blocks.
-// TODO: does this need to be configurable?
-var DefaultBufSize = 1048576
-
-type identityWriteCloser struct {
-	w io.Writer
-}
-
-func (i *identityWriteCloser) Write(p []byte) (int, error) {
-	return i.w.Write(p)
-}
-
-func (i *identityWriteCloser) Close() error {
-	return nil
-}
-
-func fileArchive(f files.Node, name string, archive bool, compression int) (io.Reader, error) {
-	cleaned := gopath.Clean(name)
-	_, filename := gopath.Split(cleaned)
-
-	// need to connect a writer to a reader
-	piper, pipew := io.Pipe()
-	checkErrAndClosePipe := func(err error) bool {
-		if err != nil {
-			_ = pipew.CloseWithError(err)
-			return true
-		}
-		return false
-	}
-
-	// use a buffered writer to parallelize task
-	bufw := bufio.NewWriterSize(pipew, DefaultBufSize)
-
-	// compression determines whether to use gzip compression.
-	maybeGzw, err := newMaybeGzWriter(bufw, compression)
-	if checkErrAndClosePipe(err) {
-		return nil, err
-	}
-
-	closeGzwAndPipe := func() {
-		if err := maybeGzw.Close(); checkErrAndClosePipe(err) {
-			return
-		}
-		if err := bufw.Flush(); checkErrAndClosePipe(err) {
-			return
-		}
-		pipew.Close() // everything seems to be ok.
-	}
-
-	if !archive && compression != gzip.NoCompression {
-		// the case when the node is a file
-		r := files.ToFile(f)
-		if r == nil {
-			return nil, errors.New("file is not regular")
-		}
-
-		go func() {
-			if _, err := io.Copy(maybeGzw, r); checkErrAndClosePipe(err) {
-				return
-			}
-			closeGzwAndPipe() // everything seems to be ok
-		}()
-	} else {
-		// the case for 1. archive, and 2. not archived and not compressed, in which tar is used anyway as a transport format
-
-		// construct the tar writer
-		w, err := files.NewTarWriter(maybeGzw)
-		if checkErrAndClosePipe(err) {
-			return nil, err
-		}
-
-		go func() {
-			// write all the nodes recursively
-			if err := w.WriteFile(f, filename); checkErrAndClosePipe(err) {
-				return
-			}
-			w.Close()         // close tar writer
-			closeGzwAndPipe() // everything seems to be ok
-		}()
-	}
-
-	return piper, nil
-}
-
-func newMaybeGzWriter(w io.Writer, compression int) (io.WriteCloser, error) {
-	if compression != gzip.NoCompression {
-		return gzip.NewWriterLevel(w, compression)
-	}
-	return &identityWriteCloser{w}, nil
 }
