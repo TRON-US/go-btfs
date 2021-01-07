@@ -141,7 +141,7 @@ $ docker image build -t btfs_docker .   // Builds the docker image and tags "btf
 A successful build should have an output like:
 ```
 Sending build context to Docker daemon  2.789MB
-Step 1/37 : FROM golang:1.14-stretch
+Step 1/37 : FROM golang:1.15
  ---> 4fe257ac564c
 Step 2/37 : MAINTAINER TRON-US <support@tron.network>
  ---> Using cache

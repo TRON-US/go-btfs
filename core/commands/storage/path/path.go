@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/TRON-US/go-btfs-cmds"
+
 	"github.com/dustin/go-humanize"
 	logging "github.com/ipfs/go-log"
 	"github.com/mitchellh/go-homedir"
@@ -99,12 +100,12 @@ storage location, a specified path as a parameter need to be passed.
 `,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"status":     PathStatusCmd,
-		"capacity":   PathCapacityCmd,
-		"migrate":    PathMigrateCmd,
-		"list":       PathListCmd,
-		"mkdir":      PathMkdirCmd,
-		"partitions": PathPartitionsCmd,
+		"status":   PathStatusCmd,
+		"capacity": PathCapacityCmd,
+		"migrate":  PathMigrateCmd,
+		"list":     PathListCmd,
+		"mkdir":    PathMkdirCmd,
+		"volumes":  PathVolumesCmd,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("path-name", true, false,
@@ -163,14 +164,14 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("Not enough disk space, expect: ge %v bytes, actual: %v bytes",
 				promisedStorageSize, usage.Free)
 		}
-		go DoRestart()
+		go DoRestart(true)
 		return nil
 	},
 }
 
-func DoRestart() {
+func DoRestart(p bool) {
 	time.Sleep(2 * time.Second)
-	restartCmd := exec.Command(Executable, "restart")
+	restartCmd := exec.Command(Executable, "restart", fmt.Sprintf("-p=%v", p))
 	if err := restartCmd.Run(); err != nil {
 		log.Errorf("restart error, %v", err)
 	}
@@ -291,32 +292,25 @@ var PathListCmd = &cmds.Command{
 	Type: stringList{},
 }
 
-var PathPartitionsCmd = &cmds.Command{
+var PathVolumesCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "list disk partitions",
-		ShortDescription: "list disk partitions",
+		Tagline:          "list disk volumes",
+		ShortDescription: "list disk volumes",
 	},
 	Arguments: []cmds.Argument{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		ps, err := partitions()
+		ps, err := volumes()
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, stringList{Strings: ps})
+		return cmds.EmitOnce(res, ps)
 	},
-	Type: stringList{},
+	Type: []volume{},
 }
 
-func partitions() ([]string, error) {
-	var ps []string
-	infos, err := disk.Partitions(false)
-	if err != nil {
-		return nil, err
-	}
-	for _, info := range infos {
-		ps = append(ps, info.Mountpoint)
-	}
-	return ps, nil
+type volume struct {
+	Name       string `json:"name"`
+	MountPoint string `json:"mount_point"`
 }
 
 type stringList struct {
@@ -377,6 +371,20 @@ func WriteProperties() error {
 		fmt.Printf("Storage location was reset in %v\n", StorePath)
 	}
 	return err
+}
+
+type Storage struct {
+	Name       string
+	FileSystem string
+	Total      uint64
+	Free       uint64
+}
+
+type storageInfo struct {
+	Name       string
+	Size       uint64
+	FreeSpace  uint64
+	FileSystem string
 }
 
 func MoveFolder() error {

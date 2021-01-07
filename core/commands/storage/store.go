@@ -29,5 +29,6 @@ host information sync/display operations, and BTT payment-related routines.`,
 		"stats":     stats.StorageStatsCmd,
 		"contracts": contracts.StorageContractsCmd,
 		"path":      path.PathCmd,
+		"dcrepair":  upload.StorageDcRepairRouterCmd,
 	},
 }

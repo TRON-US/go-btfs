@@ -1,4 +1,4 @@
-FROM golang:1.14-stretch
+FROM golang:1.15
 MAINTAINER TRON-US <support@tron.network>
 
 # Install deps
@@ -40,14 +40,14 @@ ENV TINI_VERSION v0.19.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
-        "amd64" | "armhf" | "arm64") tiniArch="tini-$dpkgArch" ;;\
+        "amd64" | "armhf" | "arm64") tiniArch="tini-static-$dpkgArch" ;;\
         *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
     esac; \
   cd /tmp \
   && git clone https://github.com/ncopa/su-exec.git \
   && cd su-exec \
   && git checkout -q $SUEXEC_VERSION \
-  && make \
+  && make su-exec-static \
   && cd /tmp \
   && wget -q -O tini https://github.com/krallin/tini/releases/download/$TINI_VERSION/$tiniArch \
   && chmod +x tini
@@ -60,7 +60,7 @@ MAINTAINER TRON-US <support@tron.network>
 ENV SRC_DIR /go-btfs
 COPY --from=0 $SRC_DIR/cmd/btfs/btfs /usr/local/bin/btfs
 COPY --from=0 $SRC_DIR/bin/container_daemon /usr/local/bin/start_btfs
-COPY --from=0 /tmp/su-exec/su-exec /sbin/su-exec
+COPY --from=0 /tmp/su-exec/su-exec-static /sbin/su-exec
 COPY --from=0 /tmp/tini /sbin/tini
 COPY --from=0 /bin/fusermount /usr/local/bin/fusermount
 COPY --from=0 /etc/ssl/certs /etc/ssl/certs

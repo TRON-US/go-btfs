@@ -7,11 +7,14 @@ import (
 	"time"
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	ke "github.com/TRON-US/go-btfs/core/commands/keyencode"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	iface "github.com/TRON-US/interface-go-btfs-core"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
+
+	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 var (
@@ -81,9 +84,14 @@ Alternatively, publish an <btfs-path> using a valid PeerID (as listed by
 		cmds.StringOption(ttlOptionName, "Time duration this record should be cached for. Uses the same syntax as the lifetime option. (caution: experimental)"),
 		cmds.StringOption(keyOptionName, "k", "Name of the key to be used or a valid PeerID, as listed by 'btfs key list -l'.").WithDefault("self"),
 		cmds.BoolOption(quieterOptionName, "Q", "Write only final hash."),
+		ke.OptionIPNSBase,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+		keyEnc, err := ke.KeyEncoderFromString(req.Options[ke.OptionIPNSBase.Name()].(string))
 		if err != nil {
 			return err
 		}
@@ -129,8 +137,14 @@ Alternatively, publish an <btfs-path> using a valid PeerID (as listed by
 			return err
 		}
 
+		// parse path, extract cid, re-base cid, reconstruct path
+		pid, err := peer.Decode(out.Name())
+		if err != nil {
+			return err
+		}
+
 		return cmds.EmitOnce(res, &IpnsEntry{
-			Name:  out.Name(),
+			Name:  keyEnc.FormatID(pid),
 			Value: out.Value().String(),
 		})
 	},

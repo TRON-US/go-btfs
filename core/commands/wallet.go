@@ -98,7 +98,7 @@ var walletInitCmd = &cmds.Command{
 		if err = n.Repo.SetConfig(cfg); err != nil {
 			return err
 		}
-		go path.DoRestart()
+		go path.DoRestart(false)
 		return nil
 	},
 }
@@ -558,7 +558,7 @@ var walletImportCmd = &cmds.Command{
 		if err = doSetKeys(n, privKey, mnemonic); err != nil {
 			return err
 		}
-		go path.DoRestart()
+		go path.DoRestart(false)
 		return nil
 	},
 }

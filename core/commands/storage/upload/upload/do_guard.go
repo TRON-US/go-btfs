@@ -41,7 +41,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 		cts = append(cts, contracts.SignedGuardContract)
 		selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)
 	}
-	fsStatus, err := newFileStatus(cts, rss.CtxParams.Cfg, cts[0].ContractMeta.RenterPid, rss.Hash, fileSize)
+	fsStatus, err := NewFileStatus(cts, rss.CtxParams.Cfg, cts[0].ContractMeta.RenterPid, rss.Hash, fileSize)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 	return waitUpload(rss, offlineSigning, fsStatus, false)
 }
 
-func newFileStatus(contracts []*guardpb.Contract, configuration *config.Config,
+func NewFileStatus(contracts []*guardpb.Contract, configuration *config.Config,
 	renterId string, fileHash string, fileSize int64) (*guardpb.FileStoreStatus, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(configuration)
 	if err != nil {

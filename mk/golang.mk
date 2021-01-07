@@ -1,14 +1,12 @@
 SHELL := /bin/bash # Use bash syntax
 
 # golang utilities
-GO_MIN_VERSION = 1.14
+GO_MIN_VERSION = 1.15
 export GO111MODULE=on
 
 # pre-definitions
 GOCC ?= go
 GOTAGS ?=
-unexport GOFLAGS
-GOFLAGS ?=
 GOTFLAGS ?=
 TEST_COVERAGE_OUTPUT ?= tests_coverage
 TEST_FILE_DIR ?= /tmp
@@ -22,8 +20,11 @@ MY_PKGS := $(shell cat ${MY_FILE})
 #select packages that dont contain a test dir to avoid build errors
 NON_TEST_PKGS := $(shell go list ./... | grep -v "/test")
 
+# Unexport GOFLAGS so we only apply it where we actually want it.
+unexport GOFLAGS
+# Override so we can combine with the user's go flags.
 # Try to make building as reproducible as possible by stripping the go path.
-GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
+override GOFLAGS += "-asmflags=all='-trimpath=$(GOPATH)'" "-gcflags=all='-trimpath=$(GOPATH)'"
 
 #GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out" "-coverpkg=$(COVERPKG_LIST)"
 GOTFLAGS += "-coverprofile=$(TEST_COVERAGE_OUTPUT).out"
@@ -94,7 +95,7 @@ test_go_fmt:
 .PHONY: test_go_fmt
 TEST_GO += test_go_fmt
 
-test_go_mod: 
+test_go_mod:
 	bin/test-go-mod
 .PHONY: test_go_mod
 TEST_GO += test_go_mod

@@ -21,6 +21,7 @@ var TronCmd = &cmds.Command{
 		"prepare": prepareCmd,
 		"send":    sendCmd,
 		"status":  statusCmd,
+		"balance": balanceCmd,
 	},
 }
 
@@ -128,5 +129,31 @@ var statusCmd = &cmds.Command{
 			return err
 		}
 		return cmds.EmitOnce(res, map[string]string{"status": status})
+	},
+}
+
+var balanceCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "get balance of pubaddress",
+		ShortDescription: "get status of tx",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("pubAddress", true, false, "wallet address"),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		amountMap, err := wallet.GetBalanceByWalletAddress(req.Context, cfg.Services.SolidityDomain, req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, amountMap)
 	},
 }
