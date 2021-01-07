@@ -49,6 +49,10 @@ else
   fi
   btfs config Addresses.API /ip4/0.0.0.0/tcp/5001
   btfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+  btfs config Addresses.Swarm /ip4/0.0.0.0/tcp/"$GATEWAY_NODEPORT"
+  btfs config Addresses.Swarm /ip6/::/tcp/"$GATEWAY_NODEPORT"
+  btfs config Addresses.Swarm /ip4/0.0.0.0/udp/"$GATEWAY_NODEPORT"/quic
+  btfs config Addresses.Swarm /ip6/::/udp/"$GATEWAY_NODEPORT"/quic
 
   # Set up the swarm key, if provided
 
