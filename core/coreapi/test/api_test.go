@@ -16,7 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/keystore"
 	"github.com/TRON-US/go-btfs/repo"
 
-	"github.com/TRON-US/go-btfs-config"
+	config "github.com/TRON-US/go-btfs-config"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/tests"
 	"github.com/ipfs/go-datastore"
@@ -24,7 +24,7 @@ import (
 	"github.com/ipfs/go-filestore"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p/p2p/net/mock"
+	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 )
 
 const testPeerID = "QmTFauExutTsy4XP6JbMFcw2Wa9645HJt2bTqL6qYDCKfe"
@@ -66,7 +66,7 @@ func (NodeProvider) MakeAPISwarm(ctx context.Context, fullIdentity bool, n int) 
 		}
 
 		c := config.Config{}
-		c.Addresses.Swarm = []string{fmt.Sprintf("/ip4/18.0.%d.1/tcp/4001", i)}
+		c.Addresses.Swarm = []string{fmt.Sprintf("/ip4/18.0.%d.1/tcp/31000", i)}
 		c.Identity = ident
 		c.Experimental.FilestoreEnabled = true
 
