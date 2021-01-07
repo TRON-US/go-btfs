@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/rm"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	"github.com/TRON-US/go-btfs/logger"
 	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
@@ -32,8 +34,11 @@ import (
 
 var contractsLog = logging.Logger("storage/contracts")
 
+var log = logger.InitLogger("contracts.log").Sugar()
+
 const (
-	contractsSyncPurgeOptionName = "purge"
+	contractsSyncPurgeOptionName   = "purge"
+	contractsSyncVerboseOptionName = "verbose"
 
 	contractsListOrderOptionName  = "order"
 	contractsListStatusOptionName = "status"
@@ -88,6 +93,7 @@ This command contracts stats based on role from network(hub) to local node data 
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(contractsSyncPurgeOptionName, "p", "Purge local contracts cache and sync from the beginning.").WithDefault(false),
+		cmds.BoolOption(contractsSyncVerboseOptionName, "v", "Make the operation more talkative.").WithDefault(false),
 	},
 	RunTimeout: 10 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -113,7 +119,8 @@ This command contracts stats based on role from network(hub) to local node data 
 				return err
 			}
 		}
-		return SyncContracts(req.Context, n, req, env, role.String())
+		ctx := context.WithValue(req.Context, contractsSyncVerboseOptionName, req.Options[contractsSyncVerboseOptionName].(bool))
+		return SyncContracts(ctx, n, req, env, role.String())
 	},
 }
 
@@ -369,6 +376,34 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 		results, err := syncContractPayoutStatus(ctx, n, cs, cts)
 		if err != nil {
 			return err
+		}
+
+		if b := ctx.Value(contractsSyncVerboseOptionName); b != nil && b.(bool) {
+			go func() {
+				for _, ct := range cs {
+					resCt := &nodepb.Contracts_Contract{
+						ContractId: ct.SignedGuardContract.ContractId,
+						HostId:     ct.SignedGuardContract.HostPid,
+						RenterId:   ct.SignedGuardContract.RenterPid,
+						Status:     ct.SignedGuardContract.State,
+						StartTime:  ct.SignedGuardContract.RentStart,
+						EndTime:    ct.SignedGuardContract.RentEnd,
+						UnitPrice:  ct.SignedGuardContract.Price,
+						ShardSize:  ct.SignedGuardContract.ShardFileSize,
+						ShardHash:  ct.SignedGuardContract.ShardHash,
+						FileHash:   ct.SignedGuardContract.FileHash,
+					}
+					for _, r := range results {
+						if ct.SignedGuardContract.ContractId == r.ContractId {
+							resCt = r
+							break
+						}
+					}
+					if bs, err := json.Marshal(resCt); err == nil {
+						log.Info(string(bs))
+					}
+				}
+			}()
 		}
 		return Save(n.Repo.Datastore(), results, role)
 	}
