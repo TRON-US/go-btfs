@@ -119,7 +119,7 @@ If '--meta' or '-m' is enabled, this option is ignored.
 
 		quiet, _ := req.Options[quietOptionName].(bool)
 		if quiet {
-			return res.Emit(nil)
+			return cmds.EmitOnce(res, nil)
 		}
 
 		size, err := file.Size()

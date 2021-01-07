@@ -1,0 +1,18 @@
+// +build !cgo,!noplugin
+// +build linux darwin
+
+package loader
+
+import (
+	"errors"
+
+	iplugin "github.com/TRON-US/go-btfs/plugin"
+)
+
+func init() {
+	loadPluginFunc = nocgoLoadPlugin
+}
+
+func nocgoLoadPlugin(fi string) ([]iplugin.Plugin, error) {
+	return nil, errors.New("not built with cgo support")
+}

@@ -7,12 +7,14 @@ import (
 	"math"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/contracts"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	renterpb "github.com/TRON-US/go-btfs/protos/renter"
 
 	"github.com/tron-us/go-btfs-common/crypto"
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
+	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 
 	"github.com/alecthomas/units"
@@ -134,6 +136,15 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 	}
 	if err := rss.To(sessions.RssToCompleteEvent); err != nil {
 		return err
+	} else {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := contracts.SyncContracts(ctx, rss.CtxParams.N, rss.CtxParams.Req, rss.CtxParams.Env,
+				nodepb.ContractStat_RENTER.String()); err != nil {
+				log.Debug(err)
+			}
+		}()
 	}
 	return nil
 }

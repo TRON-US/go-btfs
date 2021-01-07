@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/TRON-US/go-btfs/core/commands"
+	commands "github.com/TRON-US/go-btfs/core/commands"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 )
