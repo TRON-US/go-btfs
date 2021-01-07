@@ -14,6 +14,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/rm"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	"github.com/TRON-US/go-btfs/logger"
 	contractspb "github.com/TRON-US/go-btfs/protos/contracts"
 	shardpb "github.com/TRON-US/go-btfs/protos/shard"
 
@@ -32,6 +33,8 @@ import (
 )
 
 var contractsLog = logging.Logger("storage/contracts")
+
+var log = logger.InitLogger("contracts.log").Sugar()
 
 const (
 	contractsSyncPurgeOptionName   = "purge"
@@ -375,8 +378,8 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 			return err
 		}
 
-		go func() {
-			if b := ctx.Value(contractsSyncVerboseOptionName); b != nil && b.(bool) {
+		if b := ctx.Value(contractsSyncVerboseOptionName); b != nil && b.(bool) {
+			go func() {
 				for _, ct := range cs {
 					resCt := &nodepb.Contracts_Contract{
 						ContractId: ct.SignedGuardContract.ContractId,
@@ -396,11 +399,12 @@ func SyncContracts(ctx context.Context, n *core.IpfsNode, req *cmds.Request, env
 							break
 						}
 					}
-					bs, _ := json.Marshal(resCt)
-					fmt.Println(string(bs))
+					if bs, err := json.Marshal(resCt); err == nil {
+						log.Info(string(bs))
+					}
 				}
-			}
-		}()
+			}()
+		}
 		return Save(n.Repo.Datastore(), results, role)
 	}
 	return nil
