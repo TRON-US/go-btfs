@@ -84,7 +84,7 @@ func MockPublicNode(ctx context.Context, mn mocknet.Mocknet) (*core.IpfsNode, er
 	}
 	count := len(mn.Peers())
 	cfg.Addresses.Swarm = []string{
-		fmt.Sprintf("/ip4/18.0.%d.%d/tcp/31000", count>>16, count&0xFF),
+		fmt.Sprintf("/ip4/18.0.%d.%d/tcp/4001", count>>16, count&0xFF),
 	}
 	cfg.Datastore = config.Datastore{}
 	return core.NewNode(ctx, &core.BuildCfg{

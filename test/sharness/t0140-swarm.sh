@@ -49,7 +49,7 @@ test_expect_success "can't trigger a dial backoff with swarm connect" '
 
 test_kill_ipfs_daemon
 
-announceCfg='["/ip4/127.0.0.1/tcp/31000", "/ip4/1.2.3.4/tcp/1234"]'
+announceCfg='["/ip4/127.0.0.1/tcp/4001", "/ip4/1.2.3.4/tcp/1234"]'
 test_expect_success "test_config_set succeeds" "
   ipfs config --json Addresses.Announce '$announceCfg'
 "
