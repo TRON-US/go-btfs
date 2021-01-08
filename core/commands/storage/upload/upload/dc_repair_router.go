@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,7 +16,6 @@ import (
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/core/corerepo"
 
-	shell "github.com/TRON-US/go-btfs-api"
 	cmds "github.com/TRON-US/go-btfs-cmds"
 
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -558,7 +556,7 @@ func queryUpdatedContracts(shardMap map[int]string, rss *sessions.RenterSession)
 	return len(shardMap), queryContracts, nil
 }
 
-func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, repairShards []string) ([]byte, error) {
+/*func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, repairShards []string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	url := fmt.Sprint(strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[2], ":", strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[4])
@@ -572,16 +570,16 @@ func downloadAndRebuildFile(ctxParams *uh.ContextParams, fileHash string, repair
 		return nil, resp.Error
 	}
 	return ioutil.ReadAll(resp.Output)
-}
+}*/
 
-func unpinLocalStorage(ctxParams *uh.ContextParams, fishHash string) error {
+/*func unpinLocalStorage(ctxParams *uh.ContextParams, fishHash string) error {
 	url := fmt.Sprint(strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[2], ":", strings.Split(ctxParams.Cfg.Addresses.API[0], "/")[4])
 	err := shell.NewShell(url).Request("pin/rm", fishHash).Option("r", true).Exec(ctxParams.Ctx, nil)
 	if err != nil {
 		return err
 	}
 	return nil
-}
+}*/
 
 func challengeLostShards(ctxParams *uh.ContextParams, repairReq *guardpb.RepairContract) error {
 	eg, _ := errgroup.WithContext(ctxParams.Ctx)
