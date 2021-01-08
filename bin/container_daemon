@@ -37,7 +37,7 @@ else
     btfs config Services.HubDomain query-service:50051
     btfs config Services.StatusServerDomain status-grpc-service:50051
     btfs config --bool Experimental.DisableAutoUpdate true
-    btfs config Addresses.Swarm --json "[\"/ip4/0.0.0.0/tcp/$GATEWAY_NODEPORT\",\"/ip4/0.0.0.0/udp/$GATEWAY_NODEPORT/quic\"]"
+    btfs config Addresses.Swarm --json "[\"/ip4/0.0.0.0/tcp/$GATEWAY_NODEPORT\",\""/ip6/::/tcp/$GATEWAY_NODEPORT\",\"/ip4/0.0.0.0/udp/$GATEWAY_NODEPORT/quic\",\"/ip6/::/udp/$GATEWAY_NODEPORT/quic\"]"
   fi
   if [ "$BTFS_ENV" == "dev" ] || [ "$BTFS_ENV" == "staging" ]; then
     btfs config profile apply storage-client-dev
