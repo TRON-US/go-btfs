@@ -286,6 +286,7 @@ func (dc *dcWrap) doSendData(ctx context.Context, config *config.Config, sm *pb.
 func (dc *dcWrap) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
 	dn, err := dc.getDiscoveryNodes()
 	if err != nil {
+		dn = make([]*nodepb.DiscoveryNode, 0)
 		log.Debug(err)
 	}
 	pn := &nodepb.PayLoadInfo{
