@@ -11,6 +11,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
 
 	config "github.com/TRON-US/go-btfs-config"
+	iface "github.com/TRON-US/interface-go-btfs-core"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 	pb "github.com/tron-us/go-btfs-common/protos/status"
 	cgrpc "github.com/tron-us/go-btfs-common/utils/grpc"
@@ -21,11 +22,12 @@ import (
 	"github.com/ipfs/go-bitswap"
 	logging "github.com/ipfs/go-log"
 	ic "github.com/libp2p/go-libp2p-crypto"
-	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/v3/cpu"
 )
 
 type dcWrap struct {
 	node   *core.IpfsNode
+	api    iface.CoreAPI
 	pn     *nodepb.Node
 	config *config.Config
 }
@@ -65,7 +67,7 @@ func isAnalyticsEnabled(cfg *config.Config) bool {
 }
 
 // Analytics starts the process to collect data and starts the GoRoutine for constant collection
-func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) {
+func Analytics(api iface.CoreAPI, cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) {
 	if node == nil {
 		return
 	}
@@ -76,6 +78,7 @@ func Analytics(cfgRoot string, node *core.IpfsNode, BTFSVersion, hValue string) 
 
 	dc := new(dcWrap)
 	dc.node = node
+	dc.api = api
 	dc.pn = new(nodepb.Node)
 	dc.config = configuration
 
@@ -275,17 +278,48 @@ func (dc *dcWrap) doPrepData(btfsNode *core.IpfsNode) (*pb.SignedMetrics, []erro
 func (dc *dcWrap) doSendData(ctx context.Context, config *config.Config, sm *pb.SignedMetrics) error {
 	cb := cgrpc.StatusClient(config.Services.StatusServerDomain)
 	return cb.WithContext(ctx, func(ctx context.Context, client pb.StatusServiceClient) error {
-		_, err := client.UpdateMetrics(ctx, sm)
+		_, err := client.UpdateMetricsAndDiscovery(ctx, sm)
 		return err
 	})
 }
 
 func (dc *dcWrap) getPayload(btfsNode *core.IpfsNode) ([]byte, error) {
-	bytes, err := proto.Marshal(dc.pn)
+	dn, err := dc.getDiscoveryNodes()
+	if err != nil {
+		log.Debug(err)
+	}
+	pn := &nodepb.PayLoadInfo{
+		NodeId:         btfsNode.Identity.Pretty(),
+		Node:           dc.pn,
+		DiscoveryNodes: dn,
+		LastTime:       time.Now(),
+	}
+	bytes, err := proto.Marshal(pn)
 	if err != nil {
 		return nil, err
 	}
 	return bytes, nil
+}
+
+func (dc *dcWrap) getDiscoveryNodes() ([]*nodepb.DiscoveryNode, error) {
+	ns := make([]*nodepb.DiscoveryNode, 0)
+	ctx, cf := context.WithTimeout(context.Background(), time.Minute)
+	defer cf()
+	peers, err := dc.api.Swarm().Peers(ctx)
+	if err != nil {
+		return ns, err
+	}
+	for _, p := range peers {
+		n := &nodepb.DiscoveryNode{}
+		n.ToNodeId = p.ID().Pretty()
+		if latency, err := p.Latency(); err != nil {
+			n.ErrCode = nodepb.DiscoveryErrorCode_OTHER_REASON
+		} else {
+			n.NodeConnectLatency = int32(latency.Milliseconds())
+		}
+		ns = append(ns, n)
+	}
+	return ns, nil
 }
 
 func (dc *dcWrap) collectionAgent(node *core.IpfsNode) {
