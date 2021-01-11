@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	defaultPath = "~/.btfs"
-	properties  = ".btfs.properties"
-	BtfsPathKey = "BTFS_PATH"
+	defaultPath  = "~/.btfs"
+	properties   = ".btfs.properties"
+	BtfsPathKey  = "BTFS_PATH"
+	BtfsPathFlag = "BTFS_PATH_FLAG"
 )
 
 var (
@@ -164,7 +165,12 @@ storage location, a specified path as a parameter need to be passed.
 			return fmt.Errorf("Not enough disk space, expect: ge %v bytes, actual: %v bytes",
 				promisedStorageSize, usage.Free)
 		}
-		go DoRestart(true)
+		go func() {
+			if e := os.Unsetenv(BtfsPathFlag); e != nil {
+				log.Error(e)
+			}
+			DoRestart(true)
+		}()
 		return nil
 	},
 }
@@ -484,16 +490,18 @@ func CheckDirEmpty(dirname string) bool {
 func SetEnvVariables() {
 	if CheckExist(PropertiesFileName) {
 		btfsPath = ReadProperties(PropertiesFileName)
-		btfsPath = strings.Replace(btfsPath, " ", "", -1)
-		btfsPath = strings.Replace(btfsPath, "\n", "", -1)
-		btfsPath = strings.Replace(btfsPath, "\r", "", -1)
+		btfsPath = strings.Trim(btfsPath, " \n\r")
 		if btfsPath != "" {
 			newPath := btfsPath
-			_, b := os.LookupEnv(BtfsPathKey)
+			_, b := os.LookupEnv(BtfsPathFlag)
 			if !b {
 				err := os.Setenv(BtfsPathKey, newPath)
 				if err != nil {
 					log.Errorf("cannot set env variable of BTFS_PATH: [%v] \n", err)
+				} else {
+					if err := os.Setenv(BtfsPathFlag, "T"); err != nil {
+						log.Error(err)
+					}
 				}
 			}
 		}
