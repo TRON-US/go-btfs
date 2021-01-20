@@ -21,6 +21,7 @@ var TronCmd = &cmds.Command{
 		"prepare": prepareCmd,
 		"send":    sendCmd,
 		"status":  statusCmd,
+		"balance": balanceCmd,
 	},
 }
 
@@ -30,9 +31,10 @@ var prepareCmd = &cmds.Command{
 		ShortDescription: "prepare transaction",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("from", true, false, "address for the token transfer from."),
-		cmds.StringArg("to", true, false, "address for the token transfer to."),
-		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer."),
+		cmds.StringArg("from", true, false, "address for the token transfer from"),
+		cmds.StringArg("to", true, false, "address for the token transfer to"),
+		cmds.StringArg("amount", true, false, "amount of µBTT (=0.000001BTT) to transfer"),
+		cmds.StringArg("memo", false, false, "memo"),
 	},
 	Options: []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -48,7 +50,11 @@ var prepareCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		tx, err := wallet.PrepareTx(req.Context, cfg, req.Arguments[0], req.Arguments[1], amount)
+		memo := ""
+		if len(req.Arguments) >= 4 {
+			memo = req.Arguments[3]
+		}
+		tx, err := wallet.PrepareTx(req.Context, cfg, req.Arguments[0], req.Arguments[1], amount, memo)
 		if err != nil {
 			return err
 		}
@@ -123,5 +129,31 @@ var statusCmd = &cmds.Command{
 			return err
 		}
 		return cmds.EmitOnce(res, map[string]string{"status": status})
+	},
+}
+
+var balanceCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "get balance of pubaddress",
+		ShortDescription: "get status of tx",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("pubAddress", true, false, "wallet address"),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		amountMap, err := wallet.GetBalanceByWalletAddress(req.Context, cfg.Services.SolidityDomain, req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, amountMap)
 	},
 }

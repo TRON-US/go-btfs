@@ -4,6 +4,7 @@ import (
 	"errors"
 	_ "expvar"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -20,6 +21,8 @@ import (
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
 	commands "github.com/TRON-US/go-btfs/core/commands"
+	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/commands/storage/path"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	corehttp "github.com/TRON-US/go-btfs/core/corehttp"
 	httpremote "github.com/TRON-US/go-btfs/core/corehttp/remote"
@@ -37,10 +40,10 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
 	mprome "github.com/ipfs/go-metrics-prometheus"
-	"github.com/jbenet/goprocess"
+	goprocess "github.com/jbenet/goprocess"
 	sockets "github.com/libp2p/go-socket-activation"
 	ma "github.com/multiformats/go-multiaddr"
-	manet "github.com/multiformats/go-multiaddr-net"
+	manet "github.com/multiformats/go-multiaddr/net"
 	prometheus "github.com/prometheus/client_golang/prometheus"
 	promauto "github.com/prometheus/client_golang/prometheus/promauto"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
@@ -204,6 +207,8 @@ Headers.
 		// cmds.StringOption(swarmAddrKwd, "Address for the swarm socket (overrides config)"),
 	},
 	Subcommands: map[string]*cmds.Command{},
+	NoRemote:    true,
+	Extra:       commands.CreateCmdExtras(commands.SetDoesNotUseConfigAsInput(true)),
 	Run:         daemonFunc,
 }
 
@@ -219,6 +224,17 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
+
+	cctx := env.(*oldcmds.Context)
+	_, b := os.LookupEnv(path.BtfsPathKey)
+	if !b {
+		c := cctx.ConfigRoot
+		if bs, err := ioutil.ReadFile(path.PropertiesFileName); err == nil && len(bs) > 0 {
+			c = string(bs)
+		}
+		cctx.ConfigRoot = c
+	}
+
 	// Inject metrics before we do anything
 	err := mprome.Inject()
 	if err != nil {
@@ -246,8 +262,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 			log.Errorf("setting file descriptor limit: %s", err)
 		}
 	}
-
-	cctx := env.(*oldcmds.Context)
 
 	// check transport encryption flag.
 	unencrypted, _ := req.Options[unencryptTransportKwd].(bool)
@@ -306,7 +320,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		if err != nil {
 			return err
 		}
-		// Set to get migrations to work without hacks
+		// Set to get ipfs' fs-repo-migrations to work without hacks
 		os.Setenv("IPFS_PATH", curPath)
 		err = migrate.RunMigration(fsrepo.RepoVersion)
 		if err != nil {
@@ -336,7 +350,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	// Print self information for logging and debugging purposes
 	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
-	fmt.Printf("Node ID: %s\n", cfg.Identity.PeerID)
+	fmt.Printf("Peer identity: %s\n", cfg.Identity.PeerID)
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
@@ -538,12 +552,17 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 	// Spin jobs in the background
 	spin.RenterSessions(req, env)
-	spin.Analytics(cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
+	api, err := cmdenv.GetApi(env, req)
+	if err != nil {
+		return err
+	}
+	spin.Analytics(api, cctx.ConfigRoot, node, version.CurrentVersionNumber, hValue)
 	spin.Hosts(node, req, re, env)
 	spin.Contracts(node, req, env, nodepb.ContractStat_HOST.String())
 	if params, err := helper.ExtractContextParams(req, env); err == nil {
 		spin.NewWalletWrap(params).UpdateStatus()
 	}
+	spin.BttTransactions(node, env)
 
 	// Give the user some immediate feedback when they hit C-c
 	go func() {

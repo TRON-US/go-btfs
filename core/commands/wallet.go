@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/TRON-US/go-btfs/cmd/btfs/util"
 	"github.com/TRON-US/go-btfs/core"
@@ -100,7 +98,7 @@ var walletInitCmd = &cmds.Command{
 		if err = n.Repo.SetConfig(cfg); err != nil {
 			return err
 		}
-		go doRestart()
+		go path.DoRestart(false)
 		return nil
 	},
 }
@@ -560,23 +558,13 @@ var walletImportCmd = &cmds.Command{
 		if err = doSetKeys(n, privKey, mnemonic); err != nil {
 			return err
 		}
-		go doRestart()
+		go path.DoRestart(false)
 		return nil
 	},
 }
 
 func doSetKeys(n *core.IpfsNode, privKey string, mnemonic string) error {
 	return wallet.SetKeys(n, privKey, mnemonic)
-}
-
-func doRestart() error {
-	time.Sleep(2 * time.Second)
-	restartCmd := exec.Command(path.Executable, "restart")
-	if err := restartCmd.Run(); err != nil {
-		log.Errorf("restart error, %v", err)
-		return err
-	}
-	return nil
 }
 
 var walletDiscoveryCmd = &cmds.Command{

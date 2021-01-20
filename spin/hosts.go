@@ -32,7 +32,7 @@ func Hosts(node *core.IpfsNode, req *cmds.Request, res cmds.ResponseEmitter, env
 	if cfg.Experimental.HostsSyncEnabled {
 		m := cfg.Experimental.HostsSyncMode
 		fmt.Printf("Storage host info will be synced at [%s] mode\n", m)
-		go periodicHostSync(hostSyncPeriod, hostSyncTimeout+hostSortTimeout, "hosts",
+		go periodicSync(hostSyncPeriod, hostSyncTimeout+hostSortTimeout, "hosts",
 			func(ctx context.Context) error {
 				_, err := hosts.SyncHosts(ctx, node, m)
 				return err
@@ -40,12 +40,12 @@ func Hosts(node *core.IpfsNode, req *cmds.Request, res cmds.ResponseEmitter, env
 	}
 	if cfg.Experimental.StorageHostEnabled {
 		fmt.Println("Current host stats will be synced")
-		go periodicHostSync(hostStatsSyncPeriod, hostSyncTimeout, "host stats",
+		go periodicSync(hostStatsSyncPeriod, hostSyncTimeout, "host stats",
 			func(ctx context.Context) error {
 				return stats.SyncStats(ctx, cfg, node, env)
 			})
 		fmt.Println("Current host settings will be synced")
-		go periodicHostSync(hostSettingsSyncPeriod, hostSyncTimeout, "host settings",
+		go periodicSync(hostSettingsSyncPeriod, hostSyncTimeout, "host settings",
 			func(ctx context.Context) error {
 				_, err = helper.GetHostStorageConfigHelper(ctx, node, true)
 				return err
@@ -57,33 +57,5 @@ func Hosts(node *core.IpfsNode, req *cmds.Request, res cmds.ResponseEmitter, env
 			func(ctx context.Context) error {
 				return challenge.RequestChallenge(req, res, env, cfg)
 			})
-	}
-}
-
-func periodicHostSync(period, timeout time.Duration, msg string, syncFunc func(context.Context) error) {
-	tick := time.NewTicker(period)
-	defer tick.Stop()
-	// Force tick on immediate start
-	for ; true; <-tick.C {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		err := syncFunc(ctx)
-		if err != nil {
-			log.Errorf("Failed to sync %s: %s", msg, err)
-		}
-	}
-}
-
-func periodicChallengeReq(period time.Duration, msg string, syncFunc func(context.Context) error) {
-	tick := time.NewTicker(period)
-	defer tick.Stop()
-	for ; true; <-tick.C {
-		ctx := context.Background()
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		err := syncFunc(ctx)
-		if err != nil {
-			log.Errorf("Failed to challenge %s: %s", msg, err)
-		}
 	}
 }

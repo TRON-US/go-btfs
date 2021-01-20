@@ -73,39 +73,8 @@ order to reclaim hard disk space.
 		}
 
 		streamErrors, _ := req.Options[repoStreamErrorsOptionName].(bool)
-
-		gcOutChan := corerepo.GarbageCollectAsync(n, req.Context)
-
-		if streamErrors {
-			errs := false
-			for res := range gcOutChan {
-				if res.Error != nil {
-					if err := re.Emit(&GcResult{Error: res.Error.Error()}); err != nil {
-						return err
-					}
-					errs = true
-				} else {
-					if err := re.Emit(&GcResult{Key: res.KeyRemoved}); err != nil {
-						return err
-					}
-				}
-			}
-			if errs {
-				return errors.New("encountered errors during gc run")
-			}
-		} else {
-			err := corerepo.CollectResult(req.Context, gcOutChan, func(k cid.Cid) {
-				// Nothing to do with this error, really. This
-				// most likely means that the client is gone but
-				// we still need to let the GC finish.
-				_ = re.Emit(&GcResult{Key: k})
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		err = corerepo.RepoGc(req, re, n, streamErrors)
+		return err
 	},
 	Type: GcResult{},
 	Encoders: cmds.EncoderMap{
@@ -217,6 +186,7 @@ var repoFsckCmd = &cmds.Command{
 'ipfs repo fsck' is now a no-op.
 `,
 	},
+	NoRemote: true,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		return cmds.EmitOnce(res, &MessageOutput{"`ipfs repo fsck` is deprecated and does nothing.\n"})
 	},

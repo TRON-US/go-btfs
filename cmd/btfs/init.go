@@ -15,8 +15,9 @@ import (
 	"github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
+	"github.com/TRON-US/go-btfs/core/commands"
 	"github.com/TRON-US/go-btfs/namesys"
-	"github.com/TRON-US/go-btfs/repo/fsrepo"
+	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
@@ -69,6 +70,8 @@ environment variable:
 		// name of the file?
 		// TODO cmds.StringOption("event-logs", "l", "Location for machine-readable event logs."),
 	},
+	NoRemote: true,
+	Extra:    commands.CreateCmdExtras(commands.SetDoesNotUseRepo(true), commands.SetDoesNotUseConfigAsInput(true)),
 	PreRun: func(req *cmds.Request, env cmds.Environment) error {
 		cctx := env.(*oldcmds.Context)
 		daemonLocked, err := fsrepo.LockedByOtherProcess(cctx.ConfigRoot)

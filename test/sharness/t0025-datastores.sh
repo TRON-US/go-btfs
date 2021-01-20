@@ -6,7 +6,7 @@ test_description="Test non-standard datastores"
 
 test_expect_success "'btfs init --profile=badgerds' succeeds" '
   BITS="2048" &&
-  btfs init --bits="$BITS" --profile=badgerds
+  btfs init --profile=badgerds
 '
 
 test_expect_success "'btfs pin ls' works" '

@@ -2,7 +2,7 @@ package upload
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
@@ -11,6 +11,8 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price int64, shardSize int64,
@@ -39,51 +41,44 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				ShardErrChanMap.Set(contractId, cb)
 				tp := helper.TotalPay(shardSize, price, storageLength)
 				var escrowCotractBytes []byte
-				errChan := make(chan error, 2)
-				go func() {
-					tmp := func() error {
-						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
-						if err != nil {
-							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
-							return err
-						}
-						return nil
-					}()
-					errChan <- tmp
-				}()
+
+				ctx, cancel := context.WithTimeout(rss.Ctx, 10*time.Second)
+				defer cancel()
+				eg, ctx := errgroup.WithContext(ctx)
+				eg.Go(func() error {
+					escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+						return errors.Wrap(err, fmt.Sprintf("shard %s signs escrow_contract error", h))
+					}
+					return nil
+				})
 				var guardContractBytes []byte
-				go func() {
-					tmp := func() error {
-						guardContractBytes, err = RenterSignGuardContract(rss, &ContractParams{
-							ContractId:    contractId,
-							RenterPid:     renterId.Pretty(),
-							HostPid:       host,
-							ShardIndex:    int32(i),
-							ShardHash:     h,
-							ShardSize:     shardSize,
-							FileHash:      rss.Hash,
-							StartTime:     time.Now(),
-							StorageLength: int64(storageLength),
-							Price:         price,
-							TotalPay:      tp,
-						}, offlineSigning, rp)
-						if err != nil {
-							log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
-							return err
-						}
-						return nil
-					}()
-					errChan <- tmp
-				}()
-				c := 0
-				for err := range errChan {
-					c++
-					if err != nil {
-						return err
+				eg.Go(func() error {
+					guardContractBytes, err = RenterSignGuardContract(rss, &ContractParams{
+						ContractId:    contractId,
+						RenterPid:     renterId.Pretty(),
+						HostPid:       host,
+						ShardIndex:    int32(i),
+						ShardHash:     h,
+						ShardSize:     shardSize,
+						FileHash:      rss.Hash,
+						StartTime:     time.Now(),
+						StorageLength: int64(storageLength),
+						Price:         price,
+						TotalPay:      tp,
+					}, offlineSigning, rp)
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+						return errors.Wrap(err, fmt.Sprintf("shard %s signs guard_contract", h))
 					}
-					if c == 2 {
-						break
-					}
+				})
+				if err := eg.Wait(); err != nil {
+					return err
 				}
 
 				hostPid, err := peer.IDB58Decode(host)
@@ -121,7 +116,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 			}, helper.HandleShardBo)
 			if err != nil {
 				_ = rss.To(sessions.RssToErrorEvent,
-					errors.New("timeout: failed to setup contract in "+helper.HandleShardBo.MaxElapsedTime.String()))
+					errors.Wrap(err, "timeout: failed to setup contract in "+helper.HandleShardBo.MaxElapsedTime.String()))
 			}
 		}(shardIndexes[index], shardHash)
 	}

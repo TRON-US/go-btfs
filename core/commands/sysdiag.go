@@ -9,7 +9,8 @@ import (
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	manet "github.com/multiformats/go-multiaddr-net"
+
+	manet "github.com/multiformats/go-multiaddr/net"
 	sysi "github.com/whyrusleeping/go-sysinfo"
 )
 

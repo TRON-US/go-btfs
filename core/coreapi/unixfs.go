@@ -26,6 +26,7 @@ import (
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
 	path "github.com/TRON-US/interface-go-btfs-core/path"
+
 	blockservice "github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	cidutil "github.com/ipfs/go-cidutil"
@@ -35,6 +36,7 @@ import (
 	dag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prometheus/common/log"
 )
 
 type UnixfsAPI CoreAPI

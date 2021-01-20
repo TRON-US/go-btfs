@@ -3,15 +3,16 @@ package namesys
 import (
 	"context"
 	"crypto/rand"
-	"github.com/ipfs/go-path"
 	"testing"
 	"time"
 
 	ipns "github.com/TRON-US/go-btns"
+
 	ds "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	dshelp "github.com/ipfs/go-ipfs-ds-help"
 	mockrouting "github.com/ipfs/go-ipfs-routing/mock"
+	"github.com/ipfs/go-path"
 	ci "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	testutil "github.com/libp2p/go-libp2p-testing/net"

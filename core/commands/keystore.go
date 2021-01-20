@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	ke "github.com/TRON-US/go-btfs/core/commands/keyencode"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	options "github.com/TRON-US/interface-go-btfs-core/options"
@@ -54,8 +55,10 @@ type KeyRenameOutput struct {
 }
 
 const (
-	keyStoreTypeOptionName = "type"
-	keyStoreSizeOptionName = "size"
+	keyStoreAlgorithmDefault = options.Ed25519Key
+	keyStoreTypeOptionName   = "type"
+	keyStoreSizeOptionName   = "size"
+	oldKeyOptionName         = "oldkey"
 )
 
 var keyGenCmd = &cmds.Command{
@@ -63,8 +66,9 @@ var keyGenCmd = &cmds.Command{
 		Tagline: "Create a new keypair",
 	},
 	Options: []cmds.Option{
-		cmds.StringOption(keyStoreTypeOptionName, "t", "type of the key to create: rsa, ed25519").WithDefault("rsa"),
+		cmds.StringOption(keyStoreTypeOptionName, "t", "type of the key to create: rsa, ed25519").WithDefault(keyStoreAlgorithmDefault),
 		cmds.IntOption(keyStoreSizeOptionName, "s", "size of the key to generate"),
+		ke.OptionIPNSBase,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("name", true, false, "name of key to create"),
@@ -91,6 +95,10 @@ var keyGenCmd = &cmds.Command{
 		if sizefound {
 			opts = append(opts, options.Key.Size(size))
 		}
+		keyEnc, err := ke.KeyEncoderFromString(req.Options[ke.OptionIPNSBase.Name()].(string))
+		if err != nil {
+			return err
+		}
 
 		key, err := api.Key().Generate(req.Context, name, opts...)
 
@@ -100,7 +108,7 @@ var keyGenCmd = &cmds.Command{
 
 		return cmds.EmitOnce(res, &KeyOutput{
 			Name: name,
-			Id:   key.ID().Pretty(),
+			Id:   keyEnc.FormatID(key.ID()),
 		})
 	},
 	Encoders: cmds.EncoderMap{
@@ -118,8 +126,14 @@ var keyListCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption("l", "Show extra information about keys."),
+		ke.OptionIPNSBase,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		keyEnc, err := ke.KeyEncoderFromString(req.Options[ke.OptionIPNSBase.Name()].(string))
+		if err != nil {
+			return err
+		}
+
 		api, err := cmdenv.GetApi(env, req)
 		if err != nil {
 			return err
@@ -133,7 +147,10 @@ var keyListCmd = &cmds.Command{
 		list := make([]KeyOutput, 0, len(keys))
 
 		for _, key := range keys {
-			list = append(list, KeyOutput{Name: key.Name(), Id: key.ID().Pretty()})
+			list = append(list, KeyOutput{
+				Name: key.Name(),
+				Id:   keyEnc.FormatID(key.ID()),
+			})
 		}
 
 		return cmds.EmitOnce(res, &KeyOutputList{list})
@@ -158,9 +175,14 @@ var keyRenameCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption(keyStoreForceOptionName, "f", "Allow to overwrite an existing key."),
+		ke.OptionIPNSBase,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+		keyEnc, err := ke.KeyEncoderFromString(req.Options[ke.OptionIPNSBase.Name()].(string))
 		if err != nil {
 			return err
 		}
@@ -177,7 +199,7 @@ var keyRenameCmd = &cmds.Command{
 		return cmds.EmitOnce(res, &KeyRenameOutput{
 			Was:       name,
 			Now:       newName,
-			Id:        key.ID().Pretty(),
+			Id:        keyEnc.FormatID(key.ID()),
 			Overwrite: overwritten,
 		})
 	},
@@ -203,9 +225,14 @@ var keyRmCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption("l", "Show extra information about keys."),
+		ke.OptionIPNSBase,
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+		keyEnc, err := ke.KeyEncoderFromString(req.Options[ke.OptionIPNSBase.Name()].(string))
 		if err != nil {
 			return err
 		}
@@ -219,7 +246,10 @@ var keyRmCmd = &cmds.Command{
 				return err
 			}
 
-			list = append(list, KeyOutput{Name: name, Id: key.ID().Pretty()})
+			list = append(list, KeyOutput{
+				Name: name,
+				Id:   keyEnc.FormatID(key.ID()),
+			})
 		}
 
 		return cmds.EmitOnce(res, &KeyOutputList{list})

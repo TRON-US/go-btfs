@@ -25,6 +25,7 @@ func TestROCommands(t *testing.T) {
 		"/dag",
 		"/dag/get",
 		"/dag/resolve",
+		"/dag/stat",
 		"/dns",
 		"/get",
 		"/ls",
@@ -101,6 +102,7 @@ func TestCommands(t *testing.T) {
 		"/dag/put",
 		"/dag/import",
 		"/dag/resolve",
+		"/dag/stat",
 		"/dht",
 		"/dht/findpeer",
 		"/dht/findprovs",
@@ -231,6 +233,7 @@ func TestCommands(t *testing.T) {
 		"/storage/path/migrate",
 		"/storage/path/list",
 		"/storage/path/mkdir",
+		"/storage/path/volumes",
 		"/storage/upload",
 		"/storage/upload/init",
 		"/storage/upload/recvcontract",
@@ -248,6 +251,9 @@ func TestCommands(t *testing.T) {
 		"/storage/challenge",
 		"/storage/challenge/request",
 		"/storage/challenge/response",
+		"/storage/dcrepair",
+		"/storage/dcrepair/request",
+		"/storage/dcrepair/response",
 		"/storage/stats",
 		"/storage/stats/info",
 		"/storage/stats/sync",
@@ -279,6 +285,7 @@ func TestCommands(t *testing.T) {
 		"/tron/prepare",
 		"/tron/send",
 		"/tron/status",
+		"/tron/balance",
 	}
 
 	cmdSet := make(map[string]struct{})
