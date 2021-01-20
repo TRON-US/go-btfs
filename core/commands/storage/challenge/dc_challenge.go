@@ -109,7 +109,7 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 	}
 
 	requestChan := make(chan struct{}, challengeWorkerCount)
-	resultChan := make(chan *guardpb.ChallengeResult, len(questions))
+	resultChan := make(chan *guardpb.ShardChallengeResult, len(questions))
 	for _, question := range questions {
 		requestChan <- struct{}{}
 		go doChallenge(req, res, env, question, requestChan, resultChan)
@@ -151,12 +151,13 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 	return result, nil
 }
 
-func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *Question, requestChan <-chan struct{}, resultChan chan<- *guardpb.ChallengeResult) {
+func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *Question, requestChan <-chan struct{}, resultChan chan<- *guardpb.ShardChallengeResult) {
 	defer wg.Done()
 	wg.Add(1)
 	errChan := make(chan error)
-	challengeResult := &guardpb.ChallengeResult{
+	challengeResult := &guardpb.ShardChallengeResult{
 		HostPid:   question.HostPid,
+		FileHash:  question.FileHash,
 		ShardHash: question.ShardHash,
 		Nonce:     question.Nonce,
 	}
@@ -190,8 +191,8 @@ func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environme
 	}
 }
 
-func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ChallengeResult) []*guardpb.ChallengeResult {
-	challengeResults := make([]*guardpb.ChallengeResult, 0)
+func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ShardChallengeResult) []*guardpb.ShardChallengeResult {
+	challengeResults := make([]*guardpb.ShardChallengeResult, 0)
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
