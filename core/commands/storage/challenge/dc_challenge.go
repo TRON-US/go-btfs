@@ -3,7 +3,11 @@ package challenge
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
+	"io/ioutil"
+	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/tron-us/go-btfs-common/crypto"
@@ -14,8 +18,6 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-	"github.com/TRON-US/go-btfs/repo"
 
 	"github.com/cenkalti/backoff/v4"
 	logging "github.com/ipfs/go-log"
@@ -31,33 +33,37 @@ type Question struct {
 }
 
 const (
-	hostReqChallengePeriod = 2 * time.Second
+	challengeWorkerCount   = 10
 	hostChallengeTimeout   = 10 * time.Minute
 )
 
-var challengeHostBo = func() *backoff.ExponentialBackOff {
-	bo := backoff.NewExponentialBackOff()
-	bo.InitialInterval = 2 * time.Second
-	bo.MaxElapsedTime = hostChallengeTimeout
-	bo.Multiplier = 1
-	bo.MaxInterval = 2 * time.Second
-	return bo
-}()
+var (
+	wg = sync.WaitGroup{}
+	isReadyChallenge = true
+	log = logging.Logger("dc_challenge")
+	challengeHostBo = func() *backoff.ExponentialBackOff {
+		bo := backoff.NewExponentialBackOff()
+		bo.InitialInterval = 10 * time.Second
+		bo.MaxElapsedTime = hostChallengeTimeout
+		bo.Multiplier = 1
+		bo.MaxInterval = 10 * time.Second
+		return bo
+	}()
+)
 
-var log = logging.Logger("dc_challenge")
-
-func RequestChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, cfg *config.Config) {
-	timer := time.NewTimer(hostReqChallengePeriod)
-	defer timer.Stop()
-	for ; true; <-timer.C {
-		result, err := retrieveChallengeQuestion(req, res, env, cfg)
-		if err != nil || result != nil {
-			timer.Reset(hostReqChallengePeriod)
-		}
+func RequestChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, cfg *config.Config) error {
+	if !isReadyChallenge {
+		return nil
 	}
+	isReadyChallenge = false
+	result, err := retrieveQuestionAndChallenge(req, res, env, cfg)
+	if result != nil || err != nil {
+		isReadyChallenge = true
+	}
+	return err
 }
 
-func retrieveChallengeQuestion(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, cfg *config.Config) (*guardpb.Result, error) {
+func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, cfg *config.Config) (*guardpb.Result, error) {
 	n, err := cmdenv.GetNode(env)
 	peerId := n.Identity.Pretty()
 
@@ -72,77 +78,45 @@ func retrieveChallengeQuestion(req *cmds.Request, res cmds.ResponseEmitter, env 
 	}
 	challengeReq.Signature = sig
 
-	ctx, _ := helper.NewGoContext(req.Context)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var challengeResp *guardpb.ChallengeJobResponse
 	err = grpc.GuardClient(cfg.Services.GuardDomain).WithContext(ctx, func(ctx context.Context,
 		client guardpb.GuardServiceClient) error {
 		challengeResp, err = client.RequestForChallengeJob(ctx, challengeReq)
 		if err != nil {
-			fmt.Printf("client.SubmitRepairContract err for peer id {%s}: %v\n", challengeReq.NodePid, err)
+			fmt.Printf("unable to request challenge job for peer id {%s}: %v\n", peerId, err)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println("grpc.GuardClient err", err)
+		fmt.Printf("grpc error of request challenge job for peer id {%s}: %v\n", peerId, err)
 		return nil, err
 	}
-	if challengeResp == nil || challengeResp.PackageQuestionsCount == 0 {
-		fmt.Printf("failed to reuqest challenge job for peer id: {%s}\n", n.Identity.Pretty())
-		return nil, fmt.Errorf("failed to reuqest challenge job for peer id: {%s}", n.Identity.Pretty())
+	if challengeResp == nil || challengeResp.PackageUrl == "" || challengeResp.PackageQuestionsCount == 0 {
+		fmt.Printf("challenge response for peer id {%s} is not available\n", peerId)
+		return nil, fmt.Errorf("challenge response for peer id {%s} is not available", peerId)
 	}
 
-	rawData, err := repo.DefaultS3Connection.RetrieveData(challengeResp.PackageUrl)
+	fmt.Println("question url received:", zap.String("url", challengeResp.PackageUrl))
+	questions, err := requestQuestions(challengeResp.PackageUrl)
 	if err != nil {
-		fmt.Printf("can not get challenge questions from S3 for peer id {%s}: %v\n", challengeReq.NodePid, err)
+		fmt.Printf("request questions error for url: {%s}\n", challengeResp.PackageUrl)
 		return nil, err
 	}
-	if len(rawData) == 0 {
-		fmt.Printf("failed to retrieve challenge question for peer id: %s\n", n.Identity.Pretty())
-		return nil, fmt.Errorf("failed to retrieve challenge question for peer id: %s", n.Identity.Pretty())
-	}
 
-	var data []Question
-	if err := json.Unmarshal(rawData, &data); err != nil {
-		return nil, err
+	requestChan := make(chan struct{}, challengeWorkerCount)
+	resultChan := make(chan *guardpb.ChallengeResult, len(questions))
+	for _, question := range questions {
+		requestChan <- struct{}{}
+		go doChallenge(req, res, env, question, requestChan, resultChan)
 	}
-	challengeResults := make([]*guardpb.ChallengeResult, 0, len(data))
-	for _, question := range data {
-		errChan := make(chan error)
-		var challengeResult *guardpb.ChallengeResult
-		go func() {
-			err := backoff.Retry(func() error {
-				go func() {
-					chunkIndex := strconv.Itoa(int(question.ChunkIndex))
-					storageChallengeRes, err := ReqChallengeStorage(req, res, env, question.HostPid, question.FileHash, question.ShardHash, chunkIndex, question.Nonce)
-					if err != nil {
-						errChan <- err
-					}
-					challengeResult = &guardpb.ChallengeResult{
-						HostPid:   question.HostPid,
-						ShardHash: question.FileHash,
-						Nonce:     question.Nonce,
-						Result:    storageChallengeRes.Answer,
-					}
-				}()
-				select {
-				case err := <-errChan:
-					return err
-				case <-time.After(hostChallengeTimeout):
-					challengeResult.IsTimeout = true
-					return nil
-					//fmt.Errorf("challenge shard {%s} timeout for host id {%s}", question.ShardHash, question.HostPid)
-				}
-			}, challengeHostBo)
-			if err != nil {
-				fmt.Printf("failed to challenge shard {%s} for host id {%s}: %v\n", question.ShardHash, question.HostPid, err)
-				log.Errorf("failed to challenge shard {%s} for host id {%s}: %v", question.ShardHash, question.HostPid, err)
-			} else {
-				challengeResults = append(challengeResults, challengeResult)
-			}
-		}()
-	}
+	wg.Wait()
 
+	challengeResults := checkChallengeResults(len(questions), resultChan)
 	challengeJobResult := &guardpb.ChallengeJobResult{
 		NodePid:    peerId,
 		JobId:      challengeResp.JobId,
@@ -151,7 +125,7 @@ func retrieveChallengeQuestion(req *cmds.Request, res cmds.ResponseEmitter, env 
 	}
 	sig, err = crypto.Sign(n.PrivateKey, challengeJobResult)
 	if err != nil {
-		fmt.Println("crypto.Sign err", err)
+		fmt.Printf("sign challenge job result error for peer id {%s}: %v\n", peerId, err)
 		return nil, err
 	}
 	challengeJobResult.Signature = sig
@@ -161,18 +135,93 @@ func retrieveChallengeQuestion(req *cmds.Request, res cmds.ResponseEmitter, env 
 		client guardpb.GuardServiceClient) error {
 		result, err = client.SubmitChallengeJobResult(ctx, challengeJobResult)
 		if err != nil {
-			fmt.Printf("unable to submit challenge job result for peer id {%s}: %v\n", challengeJobResult.NodePid, err)
+			fmt.Printf("unable to submit challenge job result for peer id {%s}: %v\n", peerId, err)
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("grpc err for peer id {%s} : %v\n", challengeJobResult.NodePid, err)
+		fmt.Printf("grpc error of submit challenge job result for peer id {%s} : %v\n", peerId, err)
 		return nil, err
 	}
 	if result.Code != guardpb.ResponseCode_SUCCESS {
-		fmt.Printf("submit challenge job response err for peer id {%s}, response code {%d}\n", challengeJobResult.NodePid, result.Code)
-		return nil, fmt.Errorf("submit challenge job response err for peer id {%s}, response code {%d}", challengeJobResult.NodePid, result.Code)
+		fmt.Printf("submit challenge job response error for peer id {%s}, response code {%d}\n", peerId, result.Code)
+		return nil, fmt.Errorf("submit challenge job response error for peer id {%s}, response code {%d}", peerId, result.Code)
 	}
 	return result, nil
+}
+
+func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *Question, requestChan <-chan struct{}, resultChan chan<- *guardpb.ChallengeResult) {
+	defer wg.Done()
+	wg.Add(1)
+	errChan := make(chan error)
+	challengeResult := &guardpb.ChallengeResult{
+		HostPid:   question.HostPid,
+		ShardHash: question.ShardHash,
+		Nonce:     question.Nonce,
+	}
+	go func() {
+		err := backoff.Retry(func() error {
+			chunkIndex := strconv.Itoa(int(question.ChunkIndex))
+			storageChallengeRes, err := ReqChallengeStorage(req, res, env, question.HostPid, question.FileHash, question.ShardHash, chunkIndex, question.Nonce)
+			if err != nil {
+				return err
+			}
+			challengeResult.IsTimeout = false
+			challengeResult.Result = storageChallengeRes.Answer
+			return nil
+		}, challengeHostBo)
+		errChan <- err
+	}()
+	select {
+	case err := <-errChan:
+		if err != nil {
+			fmt.Println("failed to challenge shard", zap.String("shard hash", question.ShardHash), zap.String("host pid", question.HostPid), zap.Error(err))
+		}
+		resultChan <- challengeResult
+		<-requestChan
+		return
+	case <-time.After(hostChallengeTimeout):
+		challengeResult.IsTimeout = true
+		resultChan <- challengeResult
+		<-requestChan
+		fmt.Println("challenge shard timeout", zap.String("shard hash", question.ShardHash), zap.String("host pid", question.HostPid))
+		return
+	}
+}
+
+func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ChallengeResult) []*guardpb.ChallengeResult {
+	challengeResults := make([]*guardpb.ChallengeResult, 0)
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		if questionNum == len(resultChan) {
+			for result := range resultChan {
+				challengeResults = append(challengeResults, result)
+			}
+			break
+		}
+	}
+	return challengeResults
+}
+
+func requestQuestions(questionUrl string) ([]*Question, error) {
+	resp, err := http.Get(questionUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("receive wrong status code %d response: %s", resp.StatusCode, string(rawData))
+	}
+
+	var questions []*Question
+	if err := json.Unmarshal(rawData, &questions); err != nil {
+		return nil, err
+	}
+	return questions, nil
 }

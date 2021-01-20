@@ -51,9 +51,12 @@ func Hosts(node *core.IpfsNode, req *cmds.Request, res cmds.ResponseEmitter, env
 				return err
 			})
 	}
-	if cfg.Experimental.HostRepairEnabled {
+	if cfg.Experimental.HostChallengeEnabled {
 		fmt.Println("Current host is requesting for challenge")
-		go challenge.RequestChallenge(req, res, env, cfg)
+		go periodicChallengeReq(hostSettingsSyncPeriod, "challenge requests",
+			func(ctx context.Context) error {
+				return challenge.RequestChallenge(req, res, env, cfg)
+			})
 	}
 }
 
@@ -67,6 +70,20 @@ func periodicHostSync(period, timeout time.Duration, msg string, syncFunc func(c
 		err := syncFunc(ctx)
 		if err != nil {
 			log.Errorf("Failed to sync %s: %s", msg, err)
+		}
+	}
+}
+
+func periodicChallengeReq(period time.Duration, msg string, syncFunc func(context.Context) error) {
+	tick := time.NewTicker(period)
+	defer tick.Stop()
+	for ; true; <-tick.C {
+		ctx := context.Background()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		err := syncFunc(ctx)
+		if err != nil {
+			log.Errorf("Failed to challenge %s: %s", msg, err)
 		}
 	}
 }
