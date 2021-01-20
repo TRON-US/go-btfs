@@ -18,3 +18,17 @@ func periodicSync(period, timeout time.Duration, msg string, syncFunc func(conte
 		}
 	}
 }
+
+func periodicChallengeReq(period time.Duration, msg string, syncFunc func(context.Context) error) {
+	tick := time.NewTicker(period)
+	defer tick.Stop()
+	for ; true; <-tick.C {
+		ctx := context.Background()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		err := syncFunc(ctx)
+		if err != nil {
+			log.Errorf("Failed to challenge %s: %s", msg, err)
+		}
+	}
+}
