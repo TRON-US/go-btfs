@@ -33,15 +33,15 @@ type Question struct {
 }
 
 const (
-	challengeWorkerCount   = 10
-	hostChallengeTimeout   = 10 * time.Minute
+	challengeWorkerCount = 10
+	hostChallengeTimeout = 10 * time.Minute
 )
 
 var (
-	wg = sync.WaitGroup{}
+	wg               = sync.WaitGroup{}
 	isReadyChallenge = true
-	log = logging.Logger("dc_challenge")
-	challengeHostBo = func() *backoff.ExponentialBackOff {
+	log              = logging.Logger("dc_challenge")
+	challengeHostBo  = func() *backoff.ExponentialBackOff {
 		bo := backoff.NewExponentialBackOff()
 		bo.InitialInterval = 10 * time.Second
 		bo.MaxElapsedTime = hostChallengeTimeout
