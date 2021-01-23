@@ -34,3 +34,4 @@ jobs:
           push: true
           tags: |
             ghcr.io/$GITHUB_REPOSITORY:latest
+            ghcr.io/$GITHUB_REPOSITORY:$GITHUB_REF
