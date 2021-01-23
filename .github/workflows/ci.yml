@@ -9,6 +9,9 @@ on:
     branches: 
       - 'master'
       - 'release'
+  release:
+    types:
+      - created
 
 jobs:
   multi:
