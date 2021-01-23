@@ -21,22 +21,29 @@ jobs:
         id: extract_repo
       
       # extract branch name
-      - name: Extract branch name
+      - 
+        name: Extract branch name
         if: github.event_name != 'pull_request'
         shell: bash
         run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_REF#refs/heads/})"
 
       # extract branch name on pull request
-      - name: Extract tag name from PR
+      - 
+        name: Extract tag name from PR
         if: github.event_name == 'pull_request'
         run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_HEAD_REF})"
       
        # extract tag name
-      - name: Extract tag name
+      - 
+        name: Extract tag name
         if: github.event_name == 'release'
         shell: bash
         run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_REF#refs/tags/})"
-      
+      - 
+        name: Get Image tag
+        shell: bash
+        run: echo "##[set-output name=tag;]$(echo ${IMAGE_TAG})"
+        id: extract_image_tag
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -59,7 +66,7 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ steps.extract_repo.outputs.repo }}:${IMAGE_TAG}
+            ghcr.io/${{ steps.extract_repo.outputs.repo }}:${{ steps.extract_image_tag.outputs.tag }}
      
       -
         name: Build and push if master
