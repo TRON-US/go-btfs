@@ -11,6 +11,11 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v2
+      - 
+        name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -22,8 +27,8 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GH_PAT }}
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_PAT }}
       -
         name: Build and push
         uses: docker/build-push-action@v2
@@ -33,5 +38,5 @@ jobs:
           platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            ghcr.io/$GITHUB_REPOSITORY:latest
-            ghcr.io/$GITHUB_REPOSITORY:$GITHUB_REF
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.extract_branch.outputs.branch }}
