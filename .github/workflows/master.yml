@@ -1,8 +1,11 @@
-name: master-ci
+name: ci
 
 on:
+  pull_request:
   push:
-    branches: 'master'
+    branches: 
+      - 'master'
+      - 'release'
 
 jobs:
   multi:
@@ -16,11 +19,24 @@ jobs:
         shell: bash
         run: echo "##[set-output name=repo;]$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')"
         id: extract_repo
-      - 
-        name: Extract branch name
+      
+      # extract branch name
+      - name: Extract branch name
+        if: github.event_name != 'pull_request'
         shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
+        run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_REF#refs/heads/})"
+
+      # extract branch name on pull request
+      - name: Extract tag name from PR
+        if: github.event_name == 'pull_request'
+        run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_HEAD_REF})"
+      
+       # extract tag name
+      - name: Extract tag name
+        if: github.event_name == 'release'
+        shell: bash
+        run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_REF#refs/tags/})"
+      
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -40,8 +56,19 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.extract_repo.outputs.repo }}:${IMAGE_TAG}
+     
+      -
+        name: Build and push if master
+        if: ${IMAGE_TAG} == 'master'
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ steps.extract_repo.outputs.repo }}:latest
-            ghcr.io/${{ steps.extract_repo.outputs.repo }}:${{ steps.extract_branch.outputs.branch }}
