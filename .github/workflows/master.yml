@@ -23,22 +23,23 @@ jobs:
       # extract branch name
       - 
         name: Extract branch name
-        if: github.event_name != 'pull_request'
-        shell: bash
-        run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_REF#refs/heads/})"
+        if: github.event_name != 'pull_request' && github.event_name != 'release'
+        run: |
+          echo IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})  >> $GITHUB_ENV
 
       # extract branch name on pull request
       - 
-        name: Extract tag name from PR
-        if: github.event_name == 'pull_request'
-        run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_HEAD_REF})"
+        name: Extract branch from PR
+        if: github.event_name == 'pull_request' && github.event_name != 'release'
+        run: |
+          echo IMAGE_TAG=$(echo ${GITHUB_HEAD_REF})  >> $GITHUB_ENV
       
        # extract tag name
       - 
-        name: Extract tag name
+        name: Extract git tag
         if: github.event_name == 'release'
-        shell: bash
-        run: echo "::set-env name=IMAGE_TAG::$(echo ${GITHUB_REF#refs/tags/})"
+        run: |
+          echo IMAGE_TAG=$(echo ${GITHUB_REF#refs/tags/})  >> $GITHUB_ENV
       - 
         name: Get Image tag
         shell: bash
