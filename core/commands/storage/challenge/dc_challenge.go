@@ -39,8 +39,8 @@ const (
 
 var (
 	wg               = sync.WaitGroup{}
-	isReadyChallenge = true
 	log              = logging.Logger("dc_challenge")
+	isReadyChallenge = true
 	challengeHostBo  = func() *backoff.ExponentialBackOff {
 		bo := backoff.NewExponentialBackOff()
 		bo.InitialInterval = 10 * time.Second
