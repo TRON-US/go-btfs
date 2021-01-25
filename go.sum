@@ -84,8 +84,8 @@ github.com/TRON-US/go-btfs-api v0.3.0 h1:oTnzpvYC8t6ppCRg2lCMkWiKq3SpL6r861+UUGv
 github.com/TRON-US/go-btfs-api v0.3.0/go.mod h1:surmr8ztnpbVY7y2H7dbb7npNXfdaV0UH6cFwhtJPw0=
 github.com/TRON-US/go-btfs-chunker v0.3.0 h1:06/rAYKtC3BQRYVxMtEKvqFFHhSB+XKcqt3JZ0CjD4o=
 github.com/TRON-US/go-btfs-chunker v0.3.0/go.mod h1:m0xvt42kqLskWsLF6SQ51AA9cqPzWoweydOcDgSDX/U=
-github.com/TRON-US/go-btfs-cmds v0.2.7 h1:LkcDcvfVaQV19eb2zfXVTLmjF1Xp5nVypV51xg7YKlg=
-github.com/TRON-US/go-btfs-cmds v0.2.7/go.mod h1:GLPyQ0EX9JiL41IZd6yRr42RlxNHovp4V4gXZNE2Rfk=
+github.com/TRON-US/go-btfs-cmds v0.2.8 h1:buls89J9vV7bXKeGUFBY+1vsXfLtuDzSU9c2XpQcWYg=
+github.com/TRON-US/go-btfs-cmds v0.2.8/go.mod h1:GLPyQ0EX9JiL41IZd6yRr42RlxNHovp4V4gXZNE2Rfk=
 github.com/TRON-US/go-btfs-config v0.6.0/go.mod h1:82nKCMRhsgY0I8DCasIUpSr6ZP9iHLsZJSMUxytMpEw=
 github.com/TRON-US/go-btfs-config v0.7.0 h1:v1O6ggE71k3a6KuwfUgbqFFPMJkZymvyORXDquQTKl8=
 github.com/TRON-US/go-btfs-config v0.7.0/go.mod h1:9y6osJENDCjulSNJjSSt1J8OK+ADRatBdYPXRDewbko=
@@ -121,6 +121,8 @@ github.com/TRON-US/go-path v0.2.0 h1:aGz3nG1Apt6wqJ7JlZyxxCvWQ0A2M+0qKYxJFx/Sj+g
 github.com/TRON-US/go-path v0.2.0/go.mod h1:VpDkSBKQ9EFQOUgi54Tq/O/tGi8n1RfYNks13M3DEs8=
 github.com/TRON-US/go-unixfs v0.6.0 h1:TlMM8SZBpbopckE4ZNvsjDfcIXbTEJ27nTcMS9u32Io=
 github.com/TRON-US/go-unixfs v0.6.0/go.mod h1:U3+FopU5+8rwrr05MJOwDB1E9vAwKGsb/GII0LkXZ8k=
+github.com/TRON-US/go-unixfs v0.6.1 h1:7KFhJdt+XsapVSmxEq+mfUFOEPS8SyoaWJkkrr59N4A=
+github.com/TRON-US/go-unixfs v0.6.1/go.mod h1:U3+FopU5+8rwrr05MJOwDB1E9vAwKGsb/GII0LkXZ8k=
 github.com/TRON-US/interface-go-btfs-core v0.7.0 h1:IV72YgoLbd86df6lXdUum4wO+msB6+NC0504vtD69gs=
 github.com/TRON-US/interface-go-btfs-core v0.7.0/go.mod h1:cpdcK3UWZGA78cte11zoUn8kpoilKKVMIPXKk8e75Z8=
 github.com/VictoriaMetrics/fastcache v1.5.7/go.mod h1:ptDBkNMQI4RtmVo8VS/XwRY6RoTu1dAWCbrk+6WsEM8=
@@ -312,8 +314,8 @@ github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
-github.com/gabriel-vasile/mimetype v1.1.1 h1:qbN9MPuRf3bstHu9zkI9jDWNfH//9+9kHxr9oRBBBOA=
-github.com/gabriel-vasile/mimetype v1.1.1/go.mod h1:6CDPel/o/3/s4+bp6kIbsWATq8pmgOisOPG40CJa6To=
+github.com/gabriel-vasile/mimetype v1.1.2 h1:gaPnPcNor5aZSVCJVSGipcpbgMWiAAj9z182ocSGbHU=
+github.com/gabriel-vasile/mimetype v1.1.2/go.mod h1:6CDPel/o/3/s4+bp6kIbsWATq8pmgOisOPG40CJa6To=
 github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff/go.mod h1:x7DCsMOv1taUwEWCzT4cmDeAkigA5/QCwUodaVOe8Ww=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

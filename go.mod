@@ -6,14 +6,14 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
-	github.com/TRON-US/go-btfs-cmds v0.2.7
+	github.com/TRON-US/go-btfs-cmds v0.2.8
 	github.com/TRON-US/go-btfs-config v0.7.0
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
 	github.com/TRON-US/go-btns v0.1.1
 	github.com/TRON-US/go-eccrypto v0.0.1
 	github.com/TRON-US/go-mfs v0.3.1
-	github.com/TRON-US/go-unixfs v0.6.0
+	github.com/TRON-US/go-unixfs v0.6.1
 	github.com/TRON-US/interface-go-btfs-core v0.7.0
 	github.com/Workiva/go-datastructures v1.0.52
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
@@ -25,7 +25,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/gabriel-vasile/mimetype v1.1.1
+	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.4.3
