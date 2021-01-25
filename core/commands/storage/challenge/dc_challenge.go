@@ -108,6 +108,11 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 		return nil, err
 	}
 
+	if len(questions) != int(challengeResp.PackageQuestionsCount) {
+		fmt.Printf("question amount is not correct, expected {%d} got {%d}\n", challengeResp.PackageQuestionsCount, len(questions))
+		return nil, fmt.Errorf("question amount is not correct, expected {%d} got {%d}", challengeResp.PackageQuestionsCount, len(questions))
+	}
+
 	requestChan := make(chan struct{}, challengeWorkerCount)
 	resultChan := make(chan *guardpb.ShardChallengeResult, len(questions))
 	for _, question := range questions {
