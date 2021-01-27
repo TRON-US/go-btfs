@@ -64,7 +64,8 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_PAT }}
       -
-        name: Build and push
+        name: Build and push if not a PR
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -75,8 +76,20 @@ jobs:
             ghcr.io/${{ steps.extract_repo.outputs.repo }}:${{ steps.extract_image_tag.outputs.tag }}
 
       -
+        name: Only Build on PRs
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: false
+          tags: |
+            ghcr.io/${{ steps.extract_repo.outputs.repo }}:${{ steps.extract_image_tag.outputs.tag }}
+
+      -
         name: Build and push if master branch       
-        if: ${{ steps.extract_image_tag.outputs.tag }} == 'master'
+        if: github.event_name != 'pull_request' && ${{ steps.extract_image_tag.outputs.tag }} == 'master'
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -88,7 +101,7 @@ jobs:
 
       -  
         name: Build and push if release branch
-        if: ${{ steps.extract_image_tag.outputs.tag }} == 'release'
+        if: github.event_name != 'pull_request' && ${{ steps.extract_image_tag.outputs.tag }} == 'release'
         uses: docker/build-push-action@v2
         with:
           context: .
