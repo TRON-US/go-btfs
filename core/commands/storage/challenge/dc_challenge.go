@@ -1,6 +1,7 @@
 package challenge
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
 	"go.uber.org/zap"
@@ -18,6 +19,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
+	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 
 	"github.com/cenkalti/backoff/v4"
 	logging "github.com/ipfs/go-log"
@@ -38,7 +40,6 @@ const (
 )
 
 var (
-	wg               = sync.WaitGroup{}
 	log              = logging.Logger("dc_challenge")
 	isReadyChallenge = true
 	challengeHostBo  = func() *backoff.ExponentialBackOff {
@@ -112,11 +113,16 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 		return nil, fmt.Errorf("question amount is not correct, expected {%d} got {%d}", challengeResp.PackageQuestionsCount, len(questions))
 	}
 
-	requestChan := make(chan struct{}, challengeWorkerCount)
+	requestChan := make(chan *Question, len(questions))
 	resultChan := make(chan *guardpb.ShardChallengeResult, len(questions))
 	for _, question := range questions {
-		requestChan <- struct{}{}
-		go doChallenge(req, res, env, question, requestChan, resultChan)
+		requestChan <- question
+	}
+
+	var wg sync.WaitGroup
+	for count := 0; count < challengeWorkerCount; count++ {
+		wg.Add(1)
+		go doChallenge(req, res, env, requestChan, resultChan, &wg)
 	}
 	wg.Wait()
 
@@ -155,44 +161,67 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 	return result, nil
 }
 
-func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *Question, requestChan <-chan struct{}, resultChan chan<- *guardpb.ShardChallengeResult) {
+func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, requestChan <-chan *Question, resultChan chan<- *guardpb.ShardChallengeResult, wg *sync.WaitGroup) {
 	defer wg.Done()
-	wg.Add(1)
-	errChan := make(chan error)
-	challengeResult := &guardpb.ShardChallengeResult{
-		HostPid:   question.HostPid,
-		FileHash:  question.FileHash,
-		ShardHash: question.ShardHash,
-		Nonce:     question.Nonce,
-	}
-	go func() {
+	for question := range requestChan {
+		challengeResult := &guardpb.ShardChallengeResult{
+			HostPid:   question.HostPid,
+			FileHash:  question.FileHash,
+			ShardHash: question.ShardHash,
+			Nonce:     question.Nonce,
+		}
 		err := backoff.Retry(func() error {
-			chunkIndex := strconv.Itoa(int(question.ChunkIndex))
-			storageChallengeRes, err := ReqChallengeStorage(req, res, env, question.HostPid, question.FileHash, question.ShardHash, chunkIndex, question.Nonce)
+			storageChallengeRes, err := respChallengeResult(req, res, env, question)
 			if err != nil {
 				return err
 			}
-			challengeResult.IsTimeout = false
 			challengeResult.Result = storageChallengeRes.Answer
 			return nil
 		}, challengeHostBo)
-		errChan <- err
-	}()
-	select {
-	case err := <-errChan:
 		if err != nil {
-			fmt.Println("failed to challenge shard", zap.String("shard hash", question.ShardHash), zap.String("host pid", question.HostPid), zap.Error(err))
+			challengeResult.IsTimeout = true
 		}
 		resultChan <- challengeResult
-		<-requestChan
-		return
-	case <-time.After(hostChallengeTimeout):
-		challengeResult.IsTimeout = true
-		resultChan <- challengeResult
-		<-requestChan
-		fmt.Println("challenge shard timeout", zap.String("shard hash", question.ShardHash), zap.String("host pid", question.HostPid))
-		return
 	}
+}
+
+func respChallengeResult(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *Question) (*StorageChallengeRes, error) {
+	n, err := cmdenv.GetNode(env)
+	if err != nil {
+		return nil, err
+	}
+	var scr *StorageChallengeRes
+	chunkIndex := strconv.Itoa(int(question.ChunkIndex))
+	if question.HostPid == n.Identity.Pretty() {
+		scr, err = respChallengeStorage(req, res, env, question.FileHash, question.ShardHash, chunkIndex, question.Nonce)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return nil, err
+		}
+		pi, err := remote.FindPeer(req.Context, n, question.HostPid)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/challenge/response",
+			"",
+			question.FileHash,
+			question.ShardHash,
+			chunkIndex,
+			question.Nonce,
+		)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(resp, &scr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return scr, nil
 }
 
 func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ShardChallengeResult) []*guardpb.ShardChallengeResult {
@@ -215,8 +244,14 @@ func requestQuestions(questionUrl string) ([]*Question, error) {
 	if err != nil {
 		return nil, err
 	}
+	zr, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer zr.Close()
 	defer resp.Body.Close()
-	rawData, err := ioutil.ReadAll(resp.Body)
+
+	rawData, err := ioutil.ReadAll(zr)
 	if err != nil {
 		return nil, err
 	}

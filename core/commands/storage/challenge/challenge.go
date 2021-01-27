@@ -41,12 +41,49 @@ still store a piece of file (usually a shard) as agreed in storage contract.`,
 	}, StorageChallengeResponseCmd.Arguments...), // append pass-through arguments
 	RunTimeout: 20 * time.Second,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		scr, err := ReqChallengeStorage(req, res, env, req.Arguments[0], req.Arguments[2], req.Arguments[3], req.Arguments[4], req.Arguments[5]) //(*StorageChallengeRes, error) {
+		cfg, err := cmdenv.GetConfig(env)
 		if err != nil {
 			return err
 		}
-		return cmds.EmitOnce(res, &scr)
+		if !cfg.Experimental.StorageClientEnabled {
+			return fmt.Errorf("storage client api not enabled")
+		}
+		res.RecordEvent("GetConfig")
 
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+
+		res.RecordEvent("GetNode")
+
+		api, err := cmdenv.GetApi(env, req)
+		if err != nil {
+			return err
+		}
+		res.RecordEvent("GetApi")
+		// Check if peer is reachable
+		pi, err := remote.FindPeer(req.Context, n, req.Arguments[0])
+		if err != nil {
+			return err
+		}
+		res.RecordEvent("FindPeer")
+		// Pass arguments through to host response endpoint
+		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/challenge/response",
+			req.Arguments[1:]...)
+		if err != nil {
+			return err
+		}
+
+		res.RecordEvent("P2PCall")
+		var scr StorageChallengeRes
+		err = json.Unmarshal(resp, &scr)
+		if err != nil {
+			return err
+		}
+		res.RecordEvent("Unmarshall")
+		scr.TimeEvaluate = append(scr.TimeEvaluate, res.ShowEventReport())
+		return cmds.EmitOnce(res, &scr)
 	},
 	Type: StorageChallengeRes{},
 }
@@ -79,55 +116,6 @@ the challenge request back to the caller.`,
 		return cmds.EmitOnce(res, &scr)
 	},
 	Type: StorageChallengeRes{},
-}
-
-func ReqChallengeStorage(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, peerId string, fileHash string, shardHash string, chunkIndex string, nonce string) (*StorageChallengeRes, error) {
-	cfg, err := cmdenv.GetConfig(env)
-	if err != nil {
-		return nil, err
-	}
-	if !cfg.Experimental.StorageClientEnabled {
-		return nil, fmt.Errorf("storage client api not enabled")
-	}
-	res.RecordEvent("GetConfig")
-	n, err := cmdenv.GetNode(env)
-	if err != nil {
-		return nil, err
-	}
-	res.RecordEvent("GetNode")
-	api, err := cmdenv.GetApi(env, req)
-	if err != nil {
-		return nil, err
-	}
-	res.RecordEvent("GetApi")
-	// Check if peer is reachable
-	pi, err := remote.FindPeer(req.Context, n, peerId)
-	if err != nil {
-		return nil, err
-	}
-	res.RecordEvent("FindPeer")
-
-	var scr *StorageChallengeRes
-	if peerId == n.Identity.Pretty() {
-		scr, err = respChallengeStorage(req, res, env, fileHash, shardHash, chunkIndex, nonce)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		resp, err := remote.P2PCallStrings(req.Context, n, api, pi.ID, "/storage/challenge/response",
-			req.Arguments[1:]...)
-		if err != nil {
-			return nil, err
-		}
-		res.RecordEvent("P2PCall")
-		err = json.Unmarshal(resp, &scr)
-		if err != nil {
-			return nil, err
-		}
-		res.RecordEvent("Unmarshall")
-	}
-	scr.TimeEvaluate = append(scr.TimeEvaluate, res.ShowEventReport())
-	return scr, nil
 }
 
 func respChallengeStorage(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, fileHashStr string, shardHashStr string, chunkIndexStr string, nonce string) (*StorageChallengeRes, error) {
