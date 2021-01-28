@@ -25,15 +25,6 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
-type Question struct {
-	FileHash     string
-	ShardHash    string
-	HostPid      string
-	ChunkIndex   int32
-	Nonce        string
-	ExpectAnswer string
-}
-
 const (
 	challengeWorkerCount = 10
 	hostChallengeTimeout = 10 * time.Minute
@@ -113,7 +104,7 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 		return nil, fmt.Errorf("question amount is not correct, expected {%d} got {%d}", challengeResp.PackageQuestionsCount, len(questions))
 	}
 
-	requestChan := make(chan *Question, len(questions))
+	requestChan := make(chan *guardpb.DeQuestion, len(questions))
 	resultChan := make(chan *guardpb.ShardChallengeResult, len(questions))
 	for _, question := range questions {
 		requestChan <- question
@@ -161,7 +152,7 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 	return result, nil
 }
 
-func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, requestChan <-chan *Question, resultChan chan<- *guardpb.ShardChallengeResult, wg *sync.WaitGroup) {
+func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, requestChan <-chan *guardpb.DeQuestion, resultChan chan<- *guardpb.ShardChallengeResult, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for question := range requestChan {
 		challengeResult := &guardpb.ShardChallengeResult{
@@ -185,7 +176,7 @@ func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environme
 	}
 }
 
-func respChallengeResult(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *Question) (*StorageChallengeRes, error) {
+func respChallengeResult(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *guardpb.DeQuestion) (*StorageChallengeRes, error) {
 	n, err := cmdenv.GetNode(env)
 	if err != nil {
 		return nil, err
@@ -239,7 +230,7 @@ func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ShardChal
 	return challengeResults
 }
 
-func requestQuestions(questionUrl string) ([]*Question, error) {
+func requestQuestions(questionUrl string) ([]*guardpb.DeQuestion, error) {
 	resp, err := http.Get(questionUrl)
 	if err != nil {
 		return nil, err
@@ -259,7 +250,7 @@ func requestQuestions(questionUrl string) ([]*Question, error) {
 		return nil, fmt.Errorf("receive wrong status code %d response: %s", resp.StatusCode, string(rawData))
 	}
 
-	var questions []*Question
+	var questions []*guardpb.DeQuestion
 	if err := json.Unmarshal(rawData, &questions); err != nil {
 		return nil, err
 	}
