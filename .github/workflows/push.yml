@@ -3,7 +3,7 @@ name: git-push
 on:
   push:
     branches: 
-      - 'master-test'
+      - 'master'
       - 'release'
 
 jobs:
@@ -44,7 +44,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
       -
         name: Build and push if master branch       
-        if: ${{ steps.extract_image_tag.outputs.tag }} == 'master-test'
+        if: ${{ steps.extract_image_tag.outputs.tag }} == 'master'
         uses: docker/build-push-action@v2
         with:
           context: .
