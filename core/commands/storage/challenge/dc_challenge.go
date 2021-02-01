@@ -15,6 +15,7 @@ import (
 	guardpb "github.com/tron-us/go-btfs-common/protos/guard"
 	"github.com/tron-us/go-btfs-common/utils/grpc"
 	"github.com/tron-us/go-common/v2/json"
+	"github.com/tron-us/protobuf/proto"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
@@ -44,11 +45,13 @@ var (
 )
 
 func RequestChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, cfg *config.Config) error {
+	fmt.Println("get into RequestChallenge")
 	if !isReadyChallenge {
 		return nil
 	}
 	isReadyChallenge = false
 	result, err := retrieveQuestionAndChallenge(req, res, env, cfg)
+	fmt.Println("result.Code", result.Code)
 	if result != nil || err != nil {
 		isReadyChallenge = true
 	}
@@ -56,6 +59,7 @@ func RequestChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Envi
 }
 
 func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, cfg *config.Config) (*guardpb.Result, error) {
+	fmt.Println("get into retrieveQuestionAndChallenge")
 	n, err := cmdenv.GetNode(env)
 	peerId := n.Identity.Pretty()
 
@@ -82,6 +86,7 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 			fmt.Printf("unable to request challenge job for peer id {%s}: %v\n", peerId, err)
 			return err
 		}
+		fmt.Println("challengeResp", challengeResp.PackageQuestionsCount, challengeResp.PackageUrl, challengeResp.NodePid)
 		return nil
 	})
 	if err != nil {
@@ -99,6 +104,8 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 		fmt.Printf("request questions error for url: {%s}\n", challengeResp.PackageUrl)
 		return nil, err
 	}
+	fmt.Println("questions length", len(questions))
+	fmt.Println("question 0 information", len(questions), questions[0].FileHash, questions[0].FileHash, questions[0].ShardHash, questions[0].Nonce, questions[0].ChunkIndex)
 	if len(questions) != int(challengeResp.PackageQuestionsCount) {
 		fmt.Printf("question amount is not correct, expected {%d} got {%d}\n", challengeResp.PackageQuestionsCount, len(questions))
 		return nil, fmt.Errorf("question amount is not correct, expected {%d} got {%d}", challengeResp.PackageQuestionsCount, len(questions))
@@ -118,6 +125,7 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 	wg.Wait()
 
 	challengeResults := checkChallengeResults(len(questions), resultChan)
+	fmt.Println("challengeResults length", len(challengeResults))
 	challengeJobResult := &guardpb.ChallengeJobResult{
 		NodePid:    peerId,
 		JobId:      challengeResp.JobId,
@@ -139,6 +147,7 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 			fmt.Printf("unable to submit challenge job result for peer id {%s}: %v\n", peerId, err)
 			return err
 		}
+		fmt.Println("client.SubmitChallengeJobResult return", result.Code, result.Message)
 		return nil
 	})
 	if err != nil {
@@ -149,10 +158,12 @@ func retrieveQuestionAndChallenge(req *cmds.Request, res cmds.ResponseEmitter, e
 		fmt.Printf("submit challenge job response error for peer id {%s}, response code {%d}\n", peerId, result.Code)
 		return nil, fmt.Errorf("submit challenge job response error for peer id {%s}, response code {%d}", peerId, result.Code)
 	}
+	fmt.Println("challenge jobs done")
 	return result, nil
 }
 
 func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, requestChan <-chan *guardpb.DeQuestion, resultChan chan<- *guardpb.ShardChallengeResult, wg *sync.WaitGroup) {
+	fmt.Println("get into doChallenge")
 	defer wg.Done()
 	for question := range requestChan {
 		challengeResult := &guardpb.ShardChallengeResult{
@@ -164,9 +175,12 @@ func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environme
 		err := backoff.Retry(func() error {
 			storageChallengeRes, err := respChallengeResult(req, res, env, question)
 			if err != nil {
+				//debug here
+				fmt.Println("respChallengeResult failed err", err)
 				return err
 			}
 			challengeResult.Result = storageChallengeRes.Answer
+			fmt.Println("challengeResult.Result", challengeResult.Result)
 			return nil
 		}, challengeHostBo)
 		if err != nil {
@@ -174,9 +188,11 @@ func doChallenge(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environme
 		}
 		resultChan <- challengeResult
 	}
+	fmt.Println("single go routine returned")
 }
 
 func respChallengeResult(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, question *guardpb.DeQuestion) (*StorageChallengeRes, error) {
+	fmt.Println("get into respChallengeResult")
 	n, err := cmdenv.GetNode(env)
 	if err != nil {
 		return nil, err
@@ -216,6 +232,7 @@ func respChallengeResult(req *cmds.Request, res cmds.ResponseEmitter, env cmds.E
 }
 
 func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ShardChallengeResult) []*guardpb.ShardChallengeResult {
+	fmt.Println("get into checkChallengeResults")
 	challengeResults := make([]*guardpb.ShardChallengeResult, 0)
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
@@ -231,6 +248,7 @@ func checkChallengeResults(questionNum int, resultChan <-chan *guardpb.ShardChal
 }
 
 func requestQuestions(questionUrl string) ([]*guardpb.DeQuestion, error) {
+	fmt.Println("get into requestQuestions")
 	resp, err := http.Get(questionUrl)
 	if err != nil {
 		return nil, err
@@ -250,9 +268,11 @@ func requestQuestions(questionUrl string) ([]*guardpb.DeQuestion, error) {
 		return nil, fmt.Errorf("receive wrong status code %d response: %s", resp.StatusCode, string(rawData))
 	}
 
-	var questions []*guardpb.DeQuestion
-	if err := json.Unmarshal(rawData, &questions); err != nil {
+	dcQuestions := new(guardpb.DeCentralQuestions)
+	if err := proto.Unmarshal(rawData, dcQuestions); err != nil {
+		fmt.Println("decentralized questions unmarshal error", err)
 		return nil, err
 	}
-	return questions, nil
+
+	return dcQuestions.Qs, nil
 }
