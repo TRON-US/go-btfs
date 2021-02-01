@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -24,6 +23,8 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	logging "github.com/ipfs/go-log"
+
+	"go.uber.org/zap"
 )
 
 const (
