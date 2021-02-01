@@ -17,6 +17,7 @@ option java_multiple_files = true;
 option java_outer_classname = "WalletProto";
 option java_package = "io.btfs.wallet";
 
+import "github.com/tron-us/go-btfs-common/protos/ledger/ledger.proto";
 import "github.com/tron-us/protobuf/gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -48,4 +49,12 @@ message TransactionV1 {
     OFF_CHAIN = 2;
   }
   Type type = 7;
+}
+
+message ChannelState {
+  ledger.ChannelState state = 1;
+  google.protobuf.Timestamp time_create = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdtime) = true
+  ];
 }
