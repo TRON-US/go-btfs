@@ -18,6 +18,9 @@ import (
 	"github.com/TRON-US/go-btfs/thirdparty/unit"
 
 	files "github.com/TRON-US/go-btfs-files"
+	"github.com/TRON-US/interface-go-btfs-core/options"
+	"github.com/TRON-US/interface-go-btfs-core/path"
+
 	logging "github.com/ipfs/go-log"
 	random "github.com/jbenet/go-random"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -94,6 +97,19 @@ func RandomBytes(n int64) []byte {
 }
 
 func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
+	buf, err := addCat("", files.NewBytesFile(data), conf)
+	if err != nil {
+		return err
+	}
+
+	if !bytes.Equal(buf.Bytes(), data) {
+		return errors.New("catted data does not match added data")
+	}
+	return nil
+}
+
+func addCat(sub string, node files.Node, conf testutil.LatencyConfig, opts ...options.UnixfsAddOption) (bytes.Buffer, error) {
+	var bufout bytes.Buffer
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -110,7 +126,7 @@ func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
 		Host:   mock.MockHostOption(mn),
 	})
 	if err != nil {
-		return err
+		return bufout, err
 	}
 	defer adder.Close()
 
@@ -119,56 +135,50 @@ func DirectAddCat(data []byte, conf testutil.LatencyConfig) error {
 		Host:   mock.MockHostOption(mn),
 	})
 	if err != nil {
-		return err
+		return bufout, err
 	}
 	defer catter.Close()
 
 	adderApi, err := coreapi.NewCoreAPI(adder)
 	if err != nil {
-		return err
+		return bufout, err
 	}
 
 	catterApi, err := coreapi.NewCoreAPI(catter)
 	if err != nil {
-		return err
+		return bufout, err
 	}
 
 	err = mn.LinkAll()
 	if err != nil {
-		return err
+		return bufout, err
 	}
 
 	bs1 := []peer.AddrInfo{adder.Peerstore.PeerInfo(adder.Identity)}
 	bs2 := []peer.AddrInfo{catter.Peerstore.PeerInfo(catter.Identity)}
 
 	if err := catter.Bootstrap(bootstrap.BootstrapConfigWithPeers(bs1)); err != nil {
-		return err
+		return bufout, err
 	}
 	if err := adder.Bootstrap(bootstrap.BootstrapConfigWithPeers(bs2)); err != nil {
-		return err
+		return bufout, err
 	}
 
-	added, err := adderApi.Unixfs().Add(ctx, files.NewBytesFile(data))
+	added, err := adderApi.Unixfs().Add(ctx, node, opts...)
 	if err != nil {
-		return err
+		return bufout, err
 	}
 
-	readerCatted, err := catterApi.Unixfs().Get(ctx, added)
+	readerCatted, err := catterApi.Unixfs().Get(ctx, path.Join(added, sub))
 	if err != nil {
-		return err
+		return bufout, err
 	}
 
-	// verify
-	var bufout bytes.Buffer
 	_, err = io.Copy(&bufout, readerCatted.(io.Reader))
 	if err != nil {
-		return err
+		return bufout, err
 	}
-	if !bytes.Equal(bufout.Bytes(), data) {
-		return errors.New("catted data does not match added data")
-	}
-
-	return nil
+	return bufout, nil
 }
 
 func SkipUnlessEpic(t *testing.T) {
