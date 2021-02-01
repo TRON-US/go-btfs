@@ -109,58 +109,65 @@ the challenge request back to the caller.`,
 	},
 	RunTimeout: 1 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		scr, err := respChallengeStorage(req, res, env, req.Arguments[1], req.Arguments[2], req.Arguments[3], req.Arguments[4])
 		if err != nil {
 			return err
 		}
-		if !cfg.Experimental.StorageHostEnabled {
-			return fmt.Errorf("storage host api not enabled")
-		}
-		res.RecordEvent("HGetConfig")
-
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-		res.RecordEvent("HGetNode")
-		api, err := cmdenv.GetApi(env, req)
-		if err != nil {
-			return err
-		}
-		res.RecordEvent("HGetApi")
-		fileHash, err := cidlib.Parse(req.Arguments[1])
-		if err != nil {
-			return err
-		}
-		res.RecordEvent("HParseFileCid")
-
-		sh := req.Arguments[2]
-		shardHash, err := cidlib.Parse(sh)
-		if err != nil {
-			return err
-		}
-		res.RecordEvent("HParseShardCid")
-		chunkIndex, err := strconv.Atoi(req.Arguments[3])
-		if err != nil {
-			return err
-		}
-		nonce := req.Arguments[4]
-		// Get (cached) challenge response object and solve challenge
-		sc, err := NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", false, 0)
-		if err != nil {
-			return err
-		}
-		res.RecordEvent("HNewResponse")
-
-		err = sc.SolveChallenge(chunkIndex, nonce)
-		if err != nil {
-			return err
-		}
-		res.RecordEvent("HSolveChallenge")
-		return cmds.EmitOnce(res, &StorageChallengeRes{
-			Answer:       sc.Hash,
-			TimeEvaluate: []string{res.ShowEventReport()},
-		})
+		return cmds.EmitOnce(res, &scr)
 	},
 	Type: StorageChallengeRes{},
+}
+
+func respChallengeStorage(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment, fileHashStr string, shardHashStr string, chunkIndexStr string, nonce string) (*StorageChallengeRes, error) {
+	cfg, err := cmdenv.GetConfig(env)
+	if err != nil {
+		return nil, err
+	}
+	if !cfg.Experimental.StorageHostEnabled {
+		return nil, fmt.Errorf("storage host api not enabled")
+	}
+	res.RecordEvent("HGetConfig")
+
+	n, err := cmdenv.GetNode(env)
+	if err != nil {
+		return nil, err
+	}
+	res.RecordEvent("HGetNode")
+	api, err := cmdenv.GetApi(env, req)
+	if err != nil {
+		return nil, err
+	}
+	res.RecordEvent("HGetApi")
+	fileHash, err := cidlib.Parse(fileHashStr)
+	if err != nil {
+		return nil, err
+	}
+	res.RecordEvent("HParseFileCid")
+	shardHash, err := cidlib.Parse(shardHashStr)
+	if err != nil {
+		return nil, err
+	}
+	res.RecordEvent("HParseShardCid")
+	chunkIndex, err := strconv.Atoi(chunkIndexStr)
+	if err != nil {
+		return nil, err
+	}
+	// Get (cached) challenge response object and solve challenge
+	sc, err := NewStorageChallengeResponse(req.Context, n, api, fileHash, shardHash, "", false, 0)
+	if err != nil {
+		return nil, err
+	}
+	res.RecordEvent("HNewResponse")
+
+	err = sc.SolveChallenge(chunkIndex, nonce)
+	if err != nil {
+		return nil, err
+	}
+	res.RecordEvent("HSolveChallenge")
+
+	scr := &StorageChallengeRes{
+		Answer:       sc.Hash,
+		TimeEvaluate: []string{res.ShowEventReport()},
+	}
+	return scr, nil
 }
