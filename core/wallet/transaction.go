@@ -179,10 +179,10 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 			for i := 0; i < 10; i++ {
 				err = grpc.EscrowClient(escrowService).WithContext(ctx,
 					func(ctx context.Context, client escrowPb.EscrowServiceClient) error {
-						//_, err = client.CloseChannel(ctx, signSuccessChannelState)
-						//if err != nil {
-						//	return err
-						//}
+						_, err = client.CloseChannel(ctx, signSuccessChannelState)
+						if err != nil {
+							return err
+						}
 						return nil
 					})
 				if err == nil {

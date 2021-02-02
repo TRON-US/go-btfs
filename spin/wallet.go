@@ -31,7 +31,7 @@ func (wt *walletWrap) UpdateStatus() {
 			sc, ec, err := wallet.UpdatePendingTransactions(wt.Ctx, wt.N.Repo.Datastore(), wt.Cfg, wt.N.Identity.String())
 			log.Debugf("update pending tx, success: %v, error: %v, err: %v", sc, ec, err)
 			if err := wallet.CloseLedgerChannel(wt.Ctx, wt.N.Repo.Datastore(), wt.Cfg); err != nil {
-				log.Debug(err)
+				log.Debugf("close ledger channel failed:%v", err)
 			}
 			select {
 			case <-wt.Ctx.Done():
