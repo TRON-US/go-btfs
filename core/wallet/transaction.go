@@ -147,6 +147,10 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 		if err != nil {
 			continue
 		}
+		err = save(n.Repo.Datastore(), confirmDepositResponse.SuccessChannelState.Channel)
+		if err != nil {
+			log.Debug(err)
+		}
 		txId := strconv.FormatInt(prepareResponse.GetId(), 10)
 		if confirmDepositResponse.GetResponse().GetCode() == exPb.Response_TRANSACTION_PENDING {
 			log.Debug(fmt.Sprintf("[Id:%d]TronTransaction is PENDING.", prepareResponse.GetId()))
@@ -529,6 +533,51 @@ func UpdatePendingTransactions(ctx context.Context, d ds.Datastore, cfg *config.
 		return 0, 0, err
 	}
 	return scv1 + scv0, ecv1 + ecv0, nil
+}
+
+func CloseLedgerChannel(ctx context.Context, d ds.Datastore, conf *config.Config) error {
+	if err := Init(ctx, conf); err != nil {
+		return err
+	}
+	states, err := list(d)
+	if err != nil {
+		return err
+	}
+	if len(states) > 0 {
+		err = grpc.EscrowClient(escrowService).WithContext(ctx, func(ctx context.Context, c escrowPb.EscrowServiceClient) error {
+			now := time.Now()
+			errors := make([]error, 0)
+			for _, e := range states {
+				if now.Sub(e.TimeCreate) < 5*time.Minute {
+					continue
+				}
+				sig, err := Sign(e.State, hostWallet.privateKey)
+				if err != nil {
+					errors = append(errors, err)
+					continue
+				}
+				_, err = c.CloseChannel(ctx, &ledgerPb.SignedChannelState{
+					Channel:     e.State,
+					ToSignature: sig,
+				})
+				if err != nil {
+					errors = append(errors, err)
+					continue
+				}
+				if err := rm(d, e.State.Id.Id); err != nil {
+					errors = append(errors, err)
+				}
+			}
+			if len(errors) > 0 {
+				return errors[len(errors)-1]
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func updateV0Txs(ctx context.Context, d ds.Datastore, cfg *config.Config, peerId string) (int, int, error) {

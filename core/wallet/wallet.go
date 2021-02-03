@@ -254,7 +254,7 @@ func BalanceHelper(ctx context.Context, configuration *config.Config, offsign bo
 				return err
 			}
 			balance = res.Result.Balance
-			log.Debug("balanceof account is ", balance)
+			log.Debug("balance of account is ", balance)
 			return nil
 		})
 	if err != nil {
