@@ -22,8 +22,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+const (
+	Domain = "wallet"
+)
+
 func init() {
-	http.AddDomainWhiteList("wallet")
+	http.AddDomainWhiteList(Domain)
 	for _, c := range []*cmds.Command{
 		walletInitCmd,
 		walletDepositCmd,
@@ -36,7 +40,7 @@ func init() {
 		walletDiscoveryCmd,
 		walletGenerateKeyCmd,
 	} {
-		c.Extra = c.Extra.SetValue(http.DomainKey, "wallet")
+		c.Extra = c.Extra.SetValue(http.DomainKey, Domain)
 	}
 }
 
