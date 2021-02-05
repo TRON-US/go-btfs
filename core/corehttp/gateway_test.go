@@ -445,6 +445,7 @@ func TestIPNSHostnameBacklinks(t *testing.T) {
 	s := string(body)
 	t.Logf("body: %s\n", string(body))
 
+	//FIXME
 	//if !matchPathOrBreadcrumbs(s, "/btns/example.net/foo? #&lt;&#39;/bar/") {
 	//	t.Fatalf("expected a path in directory listing")
 	//}
