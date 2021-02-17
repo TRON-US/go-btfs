@@ -3,6 +3,8 @@ package republisher_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/cenkalti/backoff/v4"
 	"testing"
 	"time"
 
@@ -70,10 +72,11 @@ func TestRepublish(t *testing.T) {
 	// Retry in case the record expires before we can fetch it. This can
 	// happen when running the test on a slow machine.
 	var expiration time.Time
-	timeout := time.Second
-	for {
-		expiration = time.Now().Add(time.Second)
-		err := rp.PublishWithEOL(ctx, publisher.PrivateKey, p, expiration)
+	timeout := 1 * time.Second
+	var err error
+	for i := 0; i < 10; i++ {
+		expiration = time.Now().Add(timeout)
+		err = rp.PublishWithEOL(ctx, publisher.PrivateKey, p, expiration)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -87,9 +90,12 @@ func TestRepublish(t *testing.T) {
 			timeout *= 2
 			continue
 		}
+		// waiting for the records to invalid
+		time.Sleep(timeout)
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Now wait a second, the records will be invalid and we should fail to resolve
 	time.Sleep(timeout)
 	if err := verifyResolutionFails(nodes, name); err != nil {
@@ -109,8 +115,17 @@ func TestRepublish(t *testing.T) {
 	// now wait a couple seconds for it to fire
 	time.Sleep(time.Second * 2)
 
-	// we should be able to resolve them now
-	if err := verifyResolution(nodes, name, p); err != nil {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 1 * time.Second
+	bo.MaxElapsedTime = 60 * time.Second
+	bo.Multiplier = 1.5
+	bo.MaxInterval = 5 * time.Second
+
+	// we should be able to resolve them now, if not, wait and retry
+	if err := backoff.Retry(func() error {
+		fmt.Println("retry...")
+		return verifyResolution(nodes, name, p)
+	}, bo); err != nil {
 		t.Fatal(err)
 	}
 }
