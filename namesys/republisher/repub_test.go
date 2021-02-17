@@ -3,27 +3,24 @@ package republisher_test
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/cenkalti/backoff/v4"
 	"testing"
 	"time"
-
-	"github.com/gogo/protobuf/proto"
 
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	mock "github.com/TRON-US/go-btfs/core/mock"
-	namesys "github.com/TRON-US/go-btfs/namesys"
+	"github.com/TRON-US/go-btfs/namesys"
+	. "github.com/TRON-US/go-btfs/namesys/republisher"
+
 	"github.com/TRON-US/go-btns"
 	pb "github.com/TRON-US/go-btns/pb"
 
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
-	path "github.com/ipfs/go-path"
-	goprocess "github.com/jbenet/goprocess"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/ipfs/go-path"
+	"github.com/jbenet/goprocess"
+	"github.com/libp2p/go-libp2p-core/peer"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
-
-	. "github.com/TRON-US/go-btfs/namesys/republisher"
 )
 
 func TestRepublish(t *testing.T) {
@@ -115,17 +112,8 @@ func TestRepublish(t *testing.T) {
 	// now wait a couple seconds for it to fire
 	time.Sleep(time.Second * 2)
 
-	bo := backoff.NewExponentialBackOff()
-	bo.InitialInterval = 1 * time.Second
-	bo.MaxElapsedTime = 60 * time.Second
-	bo.Multiplier = 1.5
-	bo.MaxInterval = 5 * time.Second
-
-	// we should be able to resolve them now, if not, wait and retry
-	if err := backoff.Retry(func() error {
-		fmt.Println("retry...")
-		return verifyResolution(nodes, name, p)
-	}, bo); err != nil {
+	// we should be able to resolve them now
+	if err := verifyResolution(nodes, name, p); err != nil {
 		t.Fatal(err)
 	}
 }
