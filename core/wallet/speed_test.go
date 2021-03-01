@@ -1,14 +1,15 @@
 package wallet
 
 import (
-	"github.com/mitchellh/go-homedir"
-	"github.com/tron-us/go-btfs-common/crypto"
 	"net/http"
 	"net/http/httptest"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/tron-us/go-btfs-common/crypto"
+
+	"github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,16 +36,23 @@ func TestReadPort(t *testing.T) {
 func TestGetPlainKey(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("c14f99e28b64abfb743a88002939f776b7f9ebab9aeac5cb7340daf7be81c2a1"))
+		switch r.URL.EscapedPath() {
+		case "/api/private_key":
+			w.Write([]byte("c14f99e28b64abfb743a88002939f776b7f9ebab9aeac5cb7340daf7be81c2a1"))
+		case "/api/token":
+			w.Write([]byte("token1"))
+		}
 		if r.Method != "GET" {
 			t.Errorf("Expected 'GET' request, got '%s'", r.Method)
 		}
-		if r.URL.EscapedPath() != "/api/private_key" {
-			t.Errorf("Expected request to '/api/private_key', got '%s'", r.URL.EscapedPath())
+		if r.URL.EscapedPath() != "/api/private_key" && r.URL.EscapedPath() != "/api/token" {
+			t.Errorf("Expected request to '/api/private_key' or '/api/token', got '%s'", r.URL.EscapedPath())
 		}
 	}))
 	defer ts.Close()
-	key, err := getHexKey(ts.URL + "/api/private_key")
+	token, err := get(ts.URL + "/api/token")
+	assert.Equal(t, "token1", token)
+	key, err := get(ts.URL + "/api/private_key")
 	if err != nil {
 		t.Fatal(err)
 	}
