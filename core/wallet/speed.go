@@ -1,10 +1,12 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,8 +16,10 @@ import (
 )
 
 const (
-	portFileName  = "port"
-	keyUrlPattern = "http://127.0.0.1:%d/api/private_key?pw=%s"
+	portFileName = "port"
+	api          = "http://127.0.0.1:%d/api"
+	keyUrl       = api + "/private_key?pw=%s&t=%s"
+	tokenUrl     = api + "/token"
 )
 
 var (
@@ -24,6 +28,7 @@ var (
 
 // return speed key in base64
 func DiscoverySpeedKey(password string) (string, error) {
+	password = url.QueryEscape(password)
 	if err := validateOs(); err != nil {
 		return "", err
 	}
@@ -35,10 +40,16 @@ func DiscoverySpeedKey(password string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf(keyUrlPattern, port, password)
-	key, err := getHexKey(url)
+	token, err := get(fmt.Sprintf(tokenUrl, port))
 	if err != nil {
 		return "", err
+	}
+	key, err := get(fmt.Sprintf(keyUrl, port, password, token))
+	if err != nil {
+		return "", err
+	}
+	if key == "" {
+		return "", errors.New("invalid private key")
 	}
 	base64, err := crypto.Hex64ToBase64(key)
 	if err != nil {
@@ -55,7 +66,7 @@ func readPort(r io.Reader) (int64, error) {
 	return strconv.ParseInt(strings.TrimSpace(string(bytes)), 10, 32)
 }
 
-func getHexKey(url string) (string, error) {
+func get(url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
