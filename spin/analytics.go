@@ -314,9 +314,10 @@ func (dc *dcWrap) getDiscoveryNodes() ([]*nodepb.DiscoveryNode, error) {
 		n := &nodepb.DiscoveryNode{}
 		n.ToNodeId = p.ID().Pretty()
 		if latency, err := p.Latency(); err != nil {
-			n.ErrCode = nodepb.DiscoveryErrorCode_OTHER_REASON
+			n.ErrCode = nodepb.DiscoveryErrorCode_UNCONNECTED
 		} else {
 			n.NodeConnectLatency = int32(latency.Milliseconds())
+			n.ErrCode = nodepb.DiscoveryErrorCode_SUCCESS
 		}
 		ns = append(ns, n)
 	}
