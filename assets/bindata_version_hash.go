@@ -2,5 +2,5 @@
 package assets
 
 const (
-	BindataVersionHash = "6fb238417e6ebe1f9c85d91f828f756599a769fe"
+	BindataVersionHash = "3d1722b2e4395785e309a3e7da3a7e79fd8fb923"
 )
