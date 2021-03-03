@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,6 +20,9 @@ const (
 )
 
 func save(ds datastore.Datastore, state *ledgerpb.ChannelState) error {
+	if state == nil || state.Id == nil {
+		return errors.New("state or state.Id is nil")
+	}
 	return sessions.Save(ds, k(state.Id.Id), &walletpb.ChannelState{State: state, TimeCreate: time.Now()})
 }
 

@@ -147,6 +147,9 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 		if err != nil {
 			continue
 		}
+		if confirmDepositResponse == nil || confirmDepositResponse.SuccessChannelState == nil {
+			continue
+		}
 		err = save(n.Repo.Datastore(), confirmDepositResponse.SuccessChannelState.Channel)
 		if err != nil {
 			log.Debug(err)
