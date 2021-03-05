@@ -19,7 +19,7 @@ import (
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 
 	ds "github.com/ipfs/go-datastore"
-	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/tron-us/protobuf/proto"
 )
 

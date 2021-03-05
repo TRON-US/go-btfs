@@ -225,7 +225,13 @@ func makeExecutor(req *cmds.Request, env interface{}) (cmds.Executor, error) {
 	daemonRequested := apiAddr != nil && req.Command != daemonCmd
 
 	// Run this on the client if required.
-	if req.Command.NoRemote {
+	var accessible bool
+	if req.Command == daemonCmd {
+		accessible = !req.Command.NoRemote
+	} else {
+		accessible = cmdhttp.RemoteAccessible(req.Command, "127.0.0.1")
+	}
+	if !accessible {
 		if daemonRequested {
 			// User requested that the command be run on the daemon but we can't.
 			// NOTE: We drop this check for the `ipfs daemon` command.

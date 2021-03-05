@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/gc"
 	"github.com/TRON-US/go-btfs/repo"
@@ -222,6 +223,44 @@ func (gc *GC) maybeGC(ctx context.Context, offset uint64) error {
 			return err
 		}
 		log.Infof("Repo GC done. See `btfs repo stat` to see how much space got freed.\n")
+	}
+	return nil
+}
+
+type GcResult struct {
+	Key   cid.Cid
+	Error string `json:",omitempty"`
+}
+
+func RepoGc(req *cmds.Request, re cmds.ResponseEmitter, n *core.IpfsNode, streamErrors bool) error {
+	gcOutChan := GarbageCollectAsync(n, req.Context)
+	if streamErrors {
+		errs := false
+		for res := range gcOutChan {
+			if res.Error != nil {
+				if err := re.Emit(&GcResult{Error: res.Error.Error()}); err != nil {
+					return err
+				}
+				errs = true
+			} else {
+				if err := re.Emit(&GcResult{Key: res.KeyRemoved}); err != nil {
+					return err
+				}
+			}
+		}
+		if errs {
+			return errors.New("encountered errors during gc run")
+		}
+	} else {
+		err := CollectResult(req.Context, gcOutChan, func(k cid.Cid) {
+			// Nothing to do with this error, really. This
+			// most likely means that the client is gone but
+			// we still need to let the GC finish.
+			_ = re.Emit(&GcResult{Key: k})
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

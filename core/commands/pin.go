@@ -244,35 +244,8 @@ collected if needed. (By default, recursively. Use -r=false for direct pins.)
 			return err
 		}
 
-		enc, err := cmdenv.GetCidEncoder(req)
-		if err != nil {
-			return err
-		}
-
-		pins := make([]string, 0, len(req.Arguments))
-		for _, b := range req.Arguments {
-			rp, err := api.ResolvePath(req.Context, path.New(b))
-			if err != nil {
-				return err
-			}
-
-			id := enc.Encode(rp.Cid())
-			pins = append(pins, id)
-			if err := api.Pin().Rm(req.Context, rp,
-				options.Pin.RmRecursive(recursive), options.Pin.RmForce(force)); err != nil {
-				return err
-			}
-		}
-
-		if err := cmds.EmitOnce(res, &PinOutput{pins}); err != nil {
-			return err
-		}
-
-		if cfg.Experimental.RemoveOnUnpin {
-			RepoCmd.Subcommands["gc"].Run(req, res, env)
-		}
-
-		return nil
+		err = cmdenv.RmPin(req, res, n, api, cfg, req.Arguments, recursive, force)
+		return err
 	},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *PinOutput) error {

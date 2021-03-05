@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/TRON-US/go-btfs/core"
@@ -35,6 +36,7 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 	dag "github.com/ipfs/go-merkledag"
 	dagtest "github.com/ipfs/go-merkledag/test"
+	"github.com/ipfs/go-path/resolver"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/common/log"
 )
@@ -300,6 +302,13 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 
 	nd, err := ses.ResolveNode(ctx, p)
 	if err != nil {
+		if e, ok := err.(resolver.ErrNoLink); ok {
+			file, err := api.getReedSolomonFile(ctx, settings, p)
+			if err != nil {
+				return nil, e
+			}
+			return file, nil
+		}
 		return nil, err
 	}
 
@@ -380,6 +389,73 @@ func (api *UnixfsAPI) Get(ctx context.Context, p path.Path, opts ...options.Unix
 	}
 
 	return node, err
+}
+
+func (api *UnixfsAPI) getReedSolomonFile(ctx context.Context, settings *options.UnixfsGetSettings,
+	p path.Path) (n files.Node, e error) {
+	defer func() {
+		if err := recover(); err != nil {
+			n, e = nil, fmt.Errorf("panic:%v", err)
+		}
+	}()
+	root, paths, err := splitPath(p)
+	if err != nil {
+		return nil, err
+	}
+	ses := api.core().getSession(ctx)
+	var ds ipld.DAGService
+	// If needing repair, the dag has to be writable
+	if settings.Repairs != nil {
+		ds = api.dag
+	} else {
+		ds = ses.dag
+	}
+	nd, err := ses.ResolveNode(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	node, err := unixfile.NewUnixfsFile(ctx, ds, nd,
+		unixfile.UnixfsFileOptions{Meta: settings.Metadata, RepairShards: settings.Repairs})
+	dir := node.(*unixfile.RsDirectory)
+	dit := dir.Entries()
+	if !dit.Next() {
+		return nil, errors.New("not found")
+	}
+	for i := 0; i < len(paths); i++ {
+		if i == len(paths)-1 {
+			for dit.Name() != paths[i] {
+				if !dit.Next() {
+					return nil, errors.New("not found")
+				}
+			}
+			return dit.Node(), nil
+		}
+		for dit.Name() != paths[i] {
+			if !dit.Next() {
+				return nil, errors.New("not found")
+			}
+		}
+		_t := dit.Node().(*unixfile.RsDirectory)
+		dit = _t.Entries()
+		if !dit.Next() {
+			return nil, errors.New("not found")
+		}
+	}
+	return dit.Node(), nil
+}
+
+func splitPath(p path.Path) (root path.Path, paths []string, err error) {
+	split := strings.Split(p.String(), "/")
+	// /btfs/Qm/a/b => "","btfs","Qm
+	if len(split) <= 3 || split[1] != "btfs" || split[3] == "" {
+		err = errors.New("invalid path")
+		return
+	}
+	root = path.New("/btfs/" + split[2])
+	for i := 3; i < len(split); i++ {
+		paths = append(paths, split[i])
+	}
+	return
 }
 
 // compatible with base64, 32bits-hex and 36bits-hex

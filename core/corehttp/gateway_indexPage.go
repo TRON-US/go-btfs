@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TRON-US/go-btfs/assets"
+
 	ipfspath "github.com/ipfs/go-path"
 )
 
@@ -59,6 +60,9 @@ func breadcrumbs(urlPath string) []breadcrumb {
 }
 
 func shortHash(hash string) string {
+	if len(hash) < 4 {
+		return hash
+	}
 	return (hash[0:4] + "\u2026" + hash[len(hash)-4:])
 }
 
