@@ -1,7 +1,8 @@
 //go:generate git submodule update --init ./dir-index-html
 //go:generate go run github.com/go-bindata/go-bindata/v3/go-bindata -mode=0644 -modtime=1403768328 -pkg=assets init-doc dir-index-html/dir-index.html dir-index-html/knownIcons.txt
 //go:generate gofmt -w bindata.go
-//go:generate sh -c "sed -i \"s/.*BindataVersionHash.*/BindataVersionHash=\\\"$(git hash-object bindata.go)\\\"/\" bindata_version_hash.go"
+//go:generate bash -c "if [ $(uname) == \"Darwin\" ] ; then sed -i '' \"s/.*BindataVersionHash.*/BindataVersionHash=\\\"$(git hash-object bindata.go)\\\"/\" bindata_version_hash.go ; fi"
+//go:generate bash -c "if [ $(uname) != \"Darwin\" ] ; then sed -i \"s/.*BindataVersionHash.*/BindataVersionHash=\\\"$(git hash-object bindata.go)\\\"/\" bindata_version_hash.go ; fi"
 //go:generate gofmt -w bindata_version_hash.go
 package assets
 

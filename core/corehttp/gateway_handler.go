@@ -208,7 +208,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	if r.Header.Get("Service-Worker") == "script" {
 		// Disallow Service Worker registration on namespace roots
 		// https://github.com/ipfs/go-ipfs/issues/4025
-		matched, _ := regexp.MatchString(`^/ip[fn]s/[^/]+$`, r.URL.Path)
+		matched, _ := regexp.MatchString(`^/bt[fn]s/[^/]+$`, r.URL.Path)
 		if matched {
 			err := fmt.Errorf("registration is not allowed for this scope")
 			webError(w, "navigator.serviceWorker", err, http.StatusBadRequest)
@@ -225,28 +225,13 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// Resolve path to the final DAG node for reed solomon directory differrently
 	// from normal files / directories.
 	var (
+		resolvedPath              ipath.Resolved
 		rootPath                  string
 		escapedRootPath           string
 		resolvedRootPath          ipath.Resolved
 		dr                        files.Node
 		isReedSolomonSubdirOrFile bool // Is ReedSolomon non-root subdirectory or file?
 	)
-
-	// Resolve path to the final DAG node for the ETag
-	resolvedPath, err := i.api.ResolvePath(r.Context(), parsedPath)
-	switch err {
-	case nil:
-	case coreiface.ErrOffline:
-		webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusServiceUnavailable)
-		return
-	default:
-		if i.servePretty404IfPresent(w, r, parsedPath) {
-			return
-		}
-
-		webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusNotFound)
-		return
-	}
 
 	top, err := i.isTopLevelEntryPath(w, r, parsedPath.String(), escapedURLPath)
 	if err != nil {
@@ -308,6 +293,21 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 
 	// Normal file/directory case: perform resolve
 	if !isReedSolomonSubdirOrFile {
+		// Resolve path to the final DAG node for the ETag
+		resolvedPath, err = i.api.ResolvePath(r.Context(), parsedPath)
+		switch err {
+		case nil:
+		case coreiface.ErrOffline:
+			webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusServiceUnavailable)
+			return
+		default:
+			if i.servePretty404IfPresent(w, r, parsedPath) {
+				return
+			}
+
+			webError(w, "btfs resolve -r "+escapedURLPath, err, http.StatusNotFound)
+			return
+		}
 		resolvedPath, dr, err = i.resolveAndGetFilesNode(r.Context(), w, r, parsedPath, escapedURLPath)
 		if err != nil {
 			// helper already handled webError
@@ -329,28 +329,28 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		if !i.setupEntityTag(w, r, resolvedPath, urlPath) {
 			return
 		}
+
+		var responseEtag string
+
+		// we need to figure out whether this is a directory before doing most of the heavy lifting below
+		_, ok := dr.(files.Directory)
+
+		if ok && assets.BindataVersionHash != "" {
+			responseEtag = `"DirIndex-` + assets.BindataVersionHash + `_CID-` + resolvedPath.Cid().String() + `"`
+		} else {
+			responseEtag = `"` + resolvedPath.Cid().String() + `"`
+		}
+
+		// Check etag sent back to us
+		if r.Header.Get("If-None-Match") == responseEtag || r.Header.Get("If-None-Match") == `W/`+responseEtag {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+
+		i.addUserHeaders(w) // ok, _now_ write user's headers.
+		w.Header().Set("X-IPFS-Path", urlPath)
+		w.Header().Set("Etag", responseEtag)
 	}
-
-	var responseEtag string
-
-	// we need to figure out whether this is a directory before doing most of the heavy lifting below
-	_, ok := dr.(files.Directory)
-
-	if ok && assets.BindataVersionHash != "" {
-		responseEtag = `"DirIndex-` + assets.BindataVersionHash + `_CID-` + resolvedPath.Cid().String() + `"`
-	} else {
-		responseEtag = `"` + resolvedPath.Cid().String() + `"`
-	}
-
-	// Check etag sent back to us
-	if r.Header.Get("If-None-Match") == responseEtag || r.Header.Get("If-None-Match") == `W/`+responseEtag {
-		w.WriteHeader(http.StatusNotModified)
-		return
-	}
-
-	i.addUserHeaders(w) // ok, _now_ write user's headers.
-	w.Header().Set("X-IPFS-Path", urlPath)
-	w.Header().Set("Etag", responseEtag)
 
 	// set these headers _after_ the error, for we may just not have it
 	// and don't want the client to cache a 500 response...
@@ -440,9 +440,11 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 
 		hash := ""
-		if r, err := i.api.ResolvePath(r.Context(), ipath.Join(resolvedPath, dirit.Name())); err == nil {
-			// Path may not be resolved. Continue anyways.
-			hash = r.Cid().String()
+		if resolvedPath != nil {
+			if r, err := i.api.ResolvePath(r.Context(), ipath.Join(resolvedPath, dirit.Name())); err == nil {
+				// Path may not be resolved. Continue anyways.
+				hash = r.Cid().String()
+			}
 		}
 
 		// See comment above where originalUrlPath is declared.
@@ -507,7 +509,10 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		size = humanize.Bytes(uint64(s))
 	}
 
-	hash := resolvedPath.Cid().String()
+	hash := ""
+	if resolvedPath != nil {
+		hash = resolvedPath.Cid().String()
+	}
 
 	// Storage for gateway URL to be used when linking to other rootIDs. This
 	// will be blank unless subdomain resolution is being used for this request.

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	period = 5 * time.Minute
+	period = 15 * time.Minute
 )
 
 type walletWrap struct {
@@ -30,7 +30,12 @@ func (wt *walletWrap) UpdateStatus() {
 		for {
 			sc, ec, err := wallet.UpdatePendingTransactions(wt.Ctx, wt.N.Repo.Datastore(), wt.Cfg, wt.N.Identity.String())
 			log.Debugf("update pending tx, success: %v, error: %v, err: %v", sc, ec, err)
+			if err := wallet.CloseLedgerChannel(wt.Ctx, wt.N.Repo.Datastore(), wt.Cfg); err != nil {
+				log.Debugf("close ledger channel failed:%v", err)
+			}
 			select {
+			case <-wt.Ctx.Done():
+				return
 			case <-tick.C:
 				continue
 			case <-ex:

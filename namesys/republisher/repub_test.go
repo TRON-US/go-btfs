@@ -6,22 +6,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-
 	"github.com/TRON-US/go-btfs/core"
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	mock "github.com/TRON-US/go-btfs/core/mock"
-	namesys "github.com/TRON-US/go-btfs/namesys"
+	"github.com/TRON-US/go-btfs/namesys"
+	. "github.com/TRON-US/go-btfs/namesys/republisher"
+
 	"github.com/TRON-US/go-btns"
 	pb "github.com/TRON-US/go-btns/pb"
 
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
-	path "github.com/ipfs/go-path"
-	goprocess "github.com/jbenet/goprocess"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/ipfs/go-path"
+	"github.com/jbenet/goprocess"
+	"github.com/libp2p/go-libp2p-core/peer"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
-
-	. "github.com/TRON-US/go-btfs/namesys/republisher"
 )
 
 func TestRepublish(t *testing.T) {
@@ -70,10 +69,11 @@ func TestRepublish(t *testing.T) {
 	// Retry in case the record expires before we can fetch it. This can
 	// happen when running the test on a slow machine.
 	var expiration time.Time
-	timeout := time.Second
-	for {
-		expiration = time.Now().Add(time.Second)
-		err := rp.PublishWithEOL(ctx, publisher.PrivateKey, p, expiration)
+	timeout := 1 * time.Second
+	var err error
+	for i := 0; i < 10; i++ {
+		expiration = time.Now().Add(timeout)
+		err = rp.PublishWithEOL(ctx, publisher.PrivateKey, p, expiration)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -87,9 +87,12 @@ func TestRepublish(t *testing.T) {
 			timeout *= 2
 			continue
 		}
+		// waiting for the records to invalid
+		time.Sleep(timeout)
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Now wait a second, the records will be invalid and we should fail to resolve
 	time.Sleep(timeout)
 	if err := verifyResolutionFails(nodes, name); err != nil {
