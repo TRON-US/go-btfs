@@ -68,6 +68,14 @@ the contracts to the caller.`,
 					Contracts: make([]*contract, 0),
 				})
 			}
+			shard, err := sessions.GetRenterShard(ctxParams, rss.SsId, h, i)
+			if err != nil {
+				continue
+			}
+			_, err = shard.Status()
+			if err != nil {
+				continue
+			}
 			contracts = append(contracts, c)
 		}
 		return res.Emit(&getContractBatchRes{
