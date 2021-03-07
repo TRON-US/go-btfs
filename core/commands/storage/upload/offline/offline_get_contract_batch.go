@@ -64,9 +64,15 @@ the contracts to the caller.`,
 			if bytes, ok := cm.Get(shardId); ok {
 				c.ContractData, err = helper.BytesToString(bytes.([]byte), helper.Base64)
 			} else {
-				return res.Emit(&getContractBatchRes{
-					Contracts: make([]*contract, 0),
-				})
+				continue
+			}
+			shard, err := sessions.GetRenterShard(ctxParams, rss.SsId, h, i)
+			if err != nil {
+				continue
+			}
+			_, err = shard.Status()
+			if err != nil {
+				continue
 			}
 			contracts = append(contracts, c)
 		}

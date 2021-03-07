@@ -51,15 +51,11 @@ This command reads all the unsigned contracts from the upload session
 		if err != nil {
 			return err
 		}
-		if len(signedContracts) != len(rss.ShardHashes) {
-			return fmt.Errorf("number of received signed data items %d does not match number of shards %d",
-				len(signedContracts), len(rss.ShardHashes))
-		}
 		var cm cmap.ConcurrentMap
 		if cm = uh.EscrowChanMaps; req.Arguments[4] == contractsTypeGuard {
 			cm = uh.GuardChanMaps
 		}
-		for i := 0; i < len(rss.ShardHashes); i++ {
+		for i := 0; i < len(signedContracts); i++ {
 			shardId := signedContracts[i].Key
 			ch, found := cm.Get(shardId)
 			if !found {
