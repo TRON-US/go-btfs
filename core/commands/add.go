@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	files "github.com/TRON-US/go-btfs-files"
 	coreiface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/TRON-US/interface-go-btfs-core/options"
+
 	mh "github.com/multiformats/go-multihash"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
@@ -49,6 +51,7 @@ const (
 	pubkeyName                 = "public-key"
 	peerIdName                 = "peer-id"
 	pinDurationCountOptionName = "pin-duration-count"
+	AddedFileHashKey           = "added-file-hash-key"
 )
 
 const adderOutChanSize = 8
@@ -298,6 +301,7 @@ only-hash, and progress/status related flags) will change the final hash.
 				}); err != nil {
 					return err
 				}
+				req.Context = context.WithValue(req.Context, AddedFileHashKey, h)
 			}
 
 			if err := <-errCh; err != nil {

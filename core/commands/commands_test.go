@@ -70,6 +70,7 @@ func TestROCommands(t *testing.T) {
 func TestCommands(t *testing.T) {
 	list := []string{
 		"/add",
+		"/addAndUpload",
 		"/bitswap",
 		"/bitswap/ledger",
 		"/bitswap/reprovide",

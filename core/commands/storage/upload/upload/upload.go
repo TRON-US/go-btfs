@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -33,7 +34,9 @@ const (
 	defaultStorageLength = 30
 
 	uploadPriceOptionName   = "price"
-	storageLengthOptionName = "storage-length"
+	StorageLengthOptionName = "storage-length"
+
+	UploadedSessionId = "uploaded-session-id"
 )
 
 var (
@@ -93,7 +96,7 @@ Use status command to check for completion:
 		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
 		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
 		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
-		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
+		cmds.IntOption(StorageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(customizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
 		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
 	},
@@ -174,6 +177,7 @@ Use status command to check for completion:
 		seRes := &Res{
 			ID: ssId,
 		}
+		req.Context = context.WithValue(req.Context, UploadedSessionId, ssId)
 		return res.Emit(seRes)
 	},
 	Type: Res{},
