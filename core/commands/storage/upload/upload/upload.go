@@ -23,17 +23,17 @@ import (
 )
 
 const (
-	replicationFactorOptionName      = "replication-factor"
-	hostSelectModeOptionName         = "host-select-mode"
-	hostSelectionOptionName          = "host-selection"
-	testOnlyOptionName               = "host-search-local"
-	customizedPayoutOptionName       = "customize-payout"
-	customizedPayoutPeriodOptionName = "customize-payout-period"
+	ReplicationFactorOptionName      = "replication-factor"
+	HostSelectModeOptionName         = "host-select-mode"
+	HostSelectionOptionName          = "host-selection"
+	TestOnlyOptionName               = "host-search-local"
+	CustomizedPayoutOptionName       = "customize-payout"
+	CustomizedPayoutPeriodOptionName = "customize-payout-period"
 
-	defaultRepFactor     = 3
+	DefaultRepFactor     = 3
 	defaultStorageLength = 30
 
-	uploadPriceOptionName   = "price"
+	UploadPriceOptionName   = "price"
 	StorageLengthOptionName = "storage-length"
 
 	UploadedSessionId = "uploaded-session-id"
@@ -91,14 +91,14 @@ Use status command to check for completion:
 		cmds.StringArg("upload-signature", false, false, "Session signature when upload upload."),
 	},
 	Options: []cmds.Option{
-		cmds.Int64Option(uploadPriceOptionName, "p", "Max price per GiB per day of storage in µBTT (=0.000001BTT)."),
-		cmds.IntOption(replicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(defaultRepFactor),
-		cmds.StringOption(hostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
-		cmds.StringOption(hostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
-		cmds.BoolOption(testOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
+		cmds.Int64Option(UploadPriceOptionName, "p", "Max price per GiB per day of storage in µBTT (=0.000001BTT)."),
+		cmds.IntOption(ReplicationFactorOptionName, "r", "Replication factor for the file with erasure coding built-in.").WithDefault(DefaultRepFactor),
+		cmds.StringOption(HostSelectModeOptionName, "m", "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
+		cmds.StringOption(HostSelectionOptionName, "s", "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
+		cmds.BoolOption(TestOnlyOptionName, "t", "Enable host search under all domains 0.0.0.0 (useful for local test)."),
 		cmds.IntOption(StorageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
-		cmds.BoolOption(customizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
-		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
+		cmds.BoolOption(CustomizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
+		cmds.IntOption(CustomizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -139,10 +139,10 @@ Use status command to check for completion:
 			return err
 		}
 		hp := helper.GetHostsProvider(ctxParams, make([]string, 0))
-		if mode, ok := req.Options[hostSelectModeOptionName].(string); ok {
+		if mode, ok := req.Options[HostSelectModeOptionName].(string); ok {
 			var hostIDs []string
 			if mode == "custom" {
-				if hosts, ok := req.Options[hostSelectionOptionName].(string); ok {
+				if hosts, ok := req.Options[HostSelectionOptionName].(string); ok {
 					hostIDs = strings.Split(hosts, ",")
 				}
 				if len(hostIDs) != len(shardHashes) {

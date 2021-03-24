@@ -47,6 +47,16 @@ var AddAndUploadCmd = &cmds.Command{
 		cmds.StringOption(pubkeyName, "The public key to encrypt the file."),
 		cmds.StringOption(peerIdName, "The peer id to encrypt the file."),
 		cmds.IntOption(pinDurationCountOptionName, "d", "Duration for which the object is pinned in days.").WithDefault(0),
+
+		//upload options
+		cmds.Int64Option(upload.UploadPriceOptionName, "Max price per GiB per day of storage in µBTT (=0.000001BTT)."),
+		cmds.IntOption(upload.ReplicationFactorOptionName, "Replication factor for the file with erasure coding built-in.").WithDefault(upload.DefaultRepFactor),
+		cmds.StringOption(upload.HostSelectModeOptionName, "Based on this mode to select hosts and upload automatically. Default: mode set in config option Experimental.HostsSyncMode."),
+		cmds.StringOption(upload.HostSelectionOptionName, "Use only these selected hosts in order on 'custom' mode. Use ',' as delimiter."),
+		cmds.BoolOption(upload.TestOnlyOptionName, "Enable host search under all domains 0.0.0.0 (useful for local test)."),
+		cmds.IntOption(upload.StorageLengthOptionName, "File storage period on hosts in days.").WithDefault(storageLength),
+		cmds.BoolOption(upload.CustomizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
+		cmds.IntOption(upload.CustomizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
 	},
 	Run: func(request *cmds.Request, emitter cmds.ResponseEmitter, environment cmds.Environment) error {
 		addReq := &*request
@@ -61,11 +71,6 @@ var AddAndUploadCmd = &cmds.Command{
 
 		uploadReq := &*request
 		uploadReq.Arguments = []string{hash.(string)}
-		uploadReq.Options = cmds.OptMap{}
-		for _, opt := range upload.StorageUploadCmd.Options {
-			uploadReq.Options[opt.Name()] = opt.Default()
-		}
-		uploadReq.Options[upload.StorageLengthOptionName] = storageLength
 		if err := upload.StorageUploadCmd.Run(uploadReq, &nullEmitter{}, environment); err != nil {
 			return err
 		}
