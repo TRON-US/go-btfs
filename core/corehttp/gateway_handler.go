@@ -68,11 +68,11 @@ func (sw *statusResponseWriter) WriteHeader(code int) {
 	// This enables us to return payload along with HTTP 301
 	// for subdomain redirect in web browsers while also returning body for cli
 	// tools which do not follow redirects by default (curl, wget).
-	redirect := sw.ResponseWriter.Header().Get("Location")
-	if redirect != "" && code == http.StatusOK {
-		code = http.StatusMovedPermanently
-	}
-	sw.ResponseWriter.WriteHeader(code)
+	//redirect := sw.ResponseWriter.Header().Get("Location")
+	//if redirect != "" && code == http.StatusOK {
+	//	code = http.StatusMovedPermanently
+	//}
+	//sw.ResponseWriter.WriteHeader(code)
 }
 
 func newGatewayHandler(c GatewayConfig, api coreiface.CoreAPI, dirs cache.Cache) *gatewayHandler {
@@ -416,10 +416,11 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// and https://github.com/ipfs/go-ipfs/issues/7164
 	// Note: this needs to occur before listingTemplate.Execute otherwise we get
 	// superfluous response.WriteHeader call from prometheus/client_golang
-	if w.Header().Get("Location") != "" {
-		w.WriteHeader(http.StatusMovedPermanently)
-		return
-	}
+	//FIXME: workaround 301
+	//if w.Header().Get("Location") != "" {
+	//	w.WriteHeader(http.StatusMovedPermanently)
+	//	return
+	//}
 
 	// A HTML directory index will be presented, be sure to set the correct
 	// type instead of relying on autodetection (which may fail).
