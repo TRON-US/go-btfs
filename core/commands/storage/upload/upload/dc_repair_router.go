@@ -48,7 +48,7 @@ const (
 )
 
 var (
-	requestFileHash string
+	isRepairReady   = true
 	logger          = logging.Logger("repair")
 )
 
@@ -160,10 +160,10 @@ returns the repairer's signed contract to the invoker.`,
 		ctxParams, err := uh.ExtractContextParams(req, env)
 		repairId := ctxParams.N.Identity.Pretty()
 		fileHash := req.Arguments[0]
-		if requestFileHash == fileHash {
+		if !isRepairReady {
 			return fmt.Errorf("file {%s} has been repairing on the host {%s}", fileHash, repairId)
 		}
-		requestFileHash = fileHash
+		isRepairReady = false
 		lostShardHashes := strings.Split(req.Arguments[1], ",")
 		fileSize, err := strconv.ParseInt(req.Arguments[2], 10, 64)
 		if err != nil {
@@ -229,7 +229,7 @@ returns the repairer's signed contract to the invoker.`,
 			RepairRewardAmount:   repairRewardAmount,
 			DownloadRewardAmount: downloadRewardAmount,
 		})
-
+		isRepairReady = true
 		if err != nil {
 			logger.Errorf("repair job failed for peer id [%s]: [%v]", repairId, err)
 			return err
