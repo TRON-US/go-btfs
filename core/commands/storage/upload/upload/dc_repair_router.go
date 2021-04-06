@@ -48,8 +48,8 @@ const (
 )
 
 var (
-	isRepairReady   = true
-	logger          = logging.Logger("repair")
+	isRepairReady = true
+	logger        = logging.Logger("repair")
 )
 
 var StorageDcRepairRouterCmd = &cmds.Command{
