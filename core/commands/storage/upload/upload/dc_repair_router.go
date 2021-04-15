@@ -263,7 +263,7 @@ func doRepair(ctxParams *uh.ContextParams, res cmds.ResponseEmitter, params *Rep
 			paid := <-paidIn
 			if !paid {
 				logger.Debugf("contract is not paid", zap.String("contractId", repairContract.RepairContractId))
-				return fmt.Errorf("contract is not paid: %s", repairContract.RepairContractId)
+				//return fmt.Errorf("contract is not paid: %s", repairContract.RepairContractId)
 			}
 			lostShards := strings.Join(repairContract.LostShardHash, ",")
 			err = cmdenv.DownloadAndRebuildFile(ctxParams.Req, res, ctxParams.Api, repairContract.FileHash, lostShards)
