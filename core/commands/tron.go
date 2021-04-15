@@ -124,7 +124,7 @@ var statusCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		status, err := wallet.GetStatus(req.Context, cfg.Services.SolidityDomain, req.Arguments[0])
+		status, err := wallet.GetStatus(req.Context, cfg.Services.TrongridDomain, req.Arguments[0])
 		if err != nil {
 			return err
 		}
