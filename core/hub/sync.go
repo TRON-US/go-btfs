@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -28,6 +29,9 @@ const (
 // if valid, and if local is true and mode is empty, return prefix for storing such
 // information into local datastore.
 func CheckValidMode(mode string, local bool) (hubpb.HostsReq_Mode, string, error) {
+	if json.Valid([]byte(mode)) {
+		return -1, "mixture", nil
+	}
 	if mode == HubModeAll && local {
 		return -1, "", nil
 	}
