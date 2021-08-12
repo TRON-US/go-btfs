@@ -134,7 +134,8 @@ func ConfirmDepositProcess(ctx context.Context, n *core.IpfsNode, prepareRespons
 	log.Debug(fmt.Sprintf("[Id:%d] ConfirmDepositProcess begin.", prepareResponse.GetId()))
 
 	// Continuous call ConfirmDeposit until it responses a FAILED or SUCCESS.
-	for time.Now().UnixNano()/1e6 < (prepareResponse.GetTronTransaction().GetRawData().GetExpiration() + 480*1000) {
+	now := time.Now().UnixNano()/1e6
+	for time.Now().UnixNano()/1e6 < (now + 7 * 86400 * 1000) {
 		time.Sleep(5 * time.Second)
 
 		// ConfirmDeposit after 1min, because watcher need wait for 1min to confirm tron transaction.
