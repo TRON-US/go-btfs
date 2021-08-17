@@ -7,7 +7,7 @@ require (
 	github.com/TRON-US/go-btfs-api v0.3.0
 	github.com/TRON-US/go-btfs-chunker v0.3.0
 	github.com/TRON-US/go-btfs-cmds v0.2.13
-	github.com/TRON-US/go-btfs-config v0.11.0
+	github.com/TRON-US/go-btfs-config v0.11.1
 	github.com/TRON-US/go-btfs-files v0.2.0
 	github.com/TRON-US/go-btfs-pinner v0.1.1
 	github.com/TRON-US/go-btns v0.1.1
@@ -72,7 +72,7 @@ require (
 	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-circuit v0.3.1
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.6.1
+	github.com/libp2p/go-libp2p-core v0.9.0
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-discovery v0.5.0
 	github.com/libp2p/go-libp2p-http v0.1.5
