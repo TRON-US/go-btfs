@@ -35,14 +35,14 @@ var subdomainGatewaySpec = config.GatewaySpec{
 	UseSubdomains: true,
 }
 
-var defaultKnownGateways = map[string]config.GatewaySpec{
-	"localhost":               subdomainGatewaySpec,
-	"gateway.btfs.io":         pathGatewaySpec,
-	"gateway-dev.btfs.io":     pathGatewaySpec,
-	"gateway-staging.btfs.io": pathGatewaySpec,
-	"soter.btfs.io":           subdomainGatewaySpec,
-	"soter-dev.btfs.io":       subdomainGatewaySpec,
-	"soter-staging.btfs.io":   subdomainGatewaySpec,
+var defaultKnownGateways = map[string]*config.GatewaySpec{
+	"localhost":               &subdomainGatewaySpec,
+	"gateway.btfs.io":         &pathGatewaySpec,
+	"gateway-dev.btfs.io":     &pathGatewaySpec,
+	"gateway-staging.btfs.io": &pathGatewaySpec,
+	"soter.btfs.io":           &subdomainGatewaySpec,
+	"soter-dev.btfs.io":       &subdomainGatewaySpec,
+	"soter-staging.btfs.io":   &subdomainGatewaySpec,
 }
 
 // Label's max length in DNS (https://tools.ietf.org/html/rfc1034#page-7)
@@ -244,7 +244,7 @@ func prepareKnownGateways(publicGateways map[string]*config.GatewaySpec) gateway
 
 	// First, implicit defaults such as subdomain gateway on localhost
 	for hostname, gw := range defaultKnownGateways {
-		hosts.exact[hostname] = &gw
+		hosts.exact[hostname] = gw
 	}
 
 	// Then apply values from Gateway.PublicGateways, if present in the config
