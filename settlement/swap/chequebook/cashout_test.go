@@ -9,10 +9,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	chequestoremock "github.com/TRON-US/go-btfs/settlement/swap/chequestore/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
-	chequestoremock "github.com/ethersphere/bee/pkg/settlement/swap/chequestore/mock"
 	storemock "github.com/ethersphere/bee/pkg/statestore/mock"
 	"github.com/ethersphere/bee/pkg/transaction"
 	"github.com/ethersphere/bee/pkg/transaction/backendmock"

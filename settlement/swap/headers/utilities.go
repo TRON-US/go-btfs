@@ -13,7 +13,6 @@ import (
 
 const (
 	exchangeRateFieldName = "exchange"
-	deductionFieldName    = "deduction"
 )
 
 var (
@@ -21,31 +20,23 @@ var (
 	ErrFieldLength = errors.New("field length error")
 	// ErrNoExchangeHeader denotes p2p.Header lacking specified field
 	ErrNoExchangeHeader = errors.New("no exchange header")
-	// ErrNoDeductionHeader denotes p2p.Header lacking specified field
-	ErrNoDeductionHeader = errors.New("no deduction header")
 )
 
-func MakeSettlementHeaders(exchangeRate, deduction *big.Int) p2p.Headers {
+func MakeSettlementHeaders(exchangeRate *big.Int) p2p.Headers {
 
 	return p2p.Headers{
 		exchangeRateFieldName: exchangeRate.Bytes(),
-		deductionFieldName:    deduction.Bytes(),
 	}
 }
 
-func ParseSettlementResponseHeaders(receivedHeaders p2p.Headers) (exchange, deduction *big.Int, err error) {
+func ParseSettlementResponseHeaders(receivedHeaders p2p.Headers) (exchange *big.Int, err error) {
 
 	exchangeRate, err := ParseExchangeHeader(receivedHeaders)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	deduction, err = ParseDeductionHeader(receivedHeaders)
-	if err != nil {
-		return exchangeRate, nil, err
-	}
-
-	return exchangeRate, deduction, nil
+	return exchangeRate, nil
 }
 
 func ParseExchangeHeader(receivedHeaders p2p.Headers) (*big.Int, error) {
@@ -55,13 +46,4 @@ func ParseExchangeHeader(receivedHeaders p2p.Headers) (*big.Int, error) {
 
 	exchange := new(big.Int).SetBytes(receivedHeaders[exchangeRateFieldName])
 	return exchange, nil
-}
-
-func ParseDeductionHeader(receivedHeaders p2p.Headers) (*big.Int, error) {
-	if receivedHeaders[deductionFieldName] == nil {
-		return nil, ErrNoDeductionHeader
-	}
-
-	deduced := new(big.Int).SetBytes(receivedHeaders[deductionFieldName])
-	return deduced, nil
 }

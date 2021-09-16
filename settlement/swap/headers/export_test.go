@@ -6,5 +6,5 @@ package swap
 
 const (
 	ExchangeRateFieldName = exchangeRateFieldName
-	DeductionFieldName    = deductionFieldName
+	//DeductionFieldName    = deductionFieldName
 )

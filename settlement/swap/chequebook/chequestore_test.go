@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	storemock "github.com/ethersphere/bee/pkg/statestore/mock"
 	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"
 )
@@ -26,7 +26,6 @@ func TestReceiveCheque(t *testing.T) {
 	sig := make([]byte, 65)
 	chainID := int64(1)
 	exchangeRate := big.NewInt(10)
-	deduction := big.NewInt(1)
 
 	cheque := &chequebook.SignedCheque{
 		Cheque: chequebook.Cheque{
@@ -73,7 +72,7 @@ func TestReceiveCheque(t *testing.T) {
 			return issuer, nil
 		})
 
-	received, err := chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate, deduction)
+	received, err := chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +104,7 @@ func TestReceiveCheque(t *testing.T) {
 	}
 
 	verifiedWithFactory = false
-	received, err = chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate, deduction)
+	received, err = chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +146,7 @@ func TestReceiveChequeInvalidBeneficiary(t *testing.T) {
 		nil,
 	)
 
-	_, err := chequestore.ReceiveCheque(context.Background(), cheque, cumulativePayout, big.NewInt(0))
+	_, err := chequestore.ReceiveCheque(context.Background(), cheque, cumulativePayout)
 	if err == nil {
 		t.Fatal("accepted cheque with wrong beneficiary")
 	}
@@ -193,7 +192,7 @@ func TestReceiveChequeInvalidAmount(t *testing.T) {
 			Chequebook:       chequebookAddress,
 		},
 		Signature: sig,
-	}, cumulativePayout, big.NewInt(0))
+	}, cumulativePayout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +204,7 @@ func TestReceiveChequeInvalidAmount(t *testing.T) {
 			Chequebook:       chequebookAddress,
 		},
 		Signature: sig,
-	}, cumulativePayout, big.NewInt(0))
+	}, cumulativePayout)
 	if err == nil {
 		t.Fatal("accepted lower amount cheque")
 	}
@@ -249,7 +248,7 @@ func TestReceiveChequeInvalidChequebook(t *testing.T) {
 			Chequebook:       chequebookAddress,
 		},
 		Signature: sig,
-	}, cumulativePayout, big.NewInt(0))
+	}, cumulativePayout)
 	if !errors.Is(err, chequebook.ErrNotDeployedByFactory) {
 		t.Fatalf("wrong error. wanted %v, got %v", chequebook.ErrNotDeployedByFactory, err)
 	}
@@ -289,7 +288,7 @@ func TestReceiveChequeInvalidSignature(t *testing.T) {
 			Chequebook:       chequebookAddress,
 		},
 		Signature: sig,
-	}, cumulativePayout, big.NewInt(0))
+	}, cumulativePayout)
 	if !errors.Is(err, chequebook.ErrChequeInvalid) {
 		t.Fatalf("wrong error. wanted %v, got %v", chequebook.ErrChequeInvalid, err)
 	}
@@ -331,7 +330,7 @@ func TestReceiveChequeInsufficientBalance(t *testing.T) {
 			Chequebook:       chequebookAddress,
 		},
 		Signature: sig,
-	}, cumulativePayout, big.NewInt(0))
+	}, cumulativePayout)
 	if !errors.Is(err, chequebook.ErrBouncingCheque) {
 		t.Fatalf("wrong error. wanted %v, got %v", chequebook.ErrBouncingCheque, err)
 	}
@@ -373,7 +372,7 @@ func TestReceiveChequeSufficientBalancePaidOut(t *testing.T) {
 			Chequebook:       chequebookAddress,
 		},
 		Signature: sig,
-	}, cumulativePayout, big.NewInt(0))
+	}, cumulativePayout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +387,6 @@ func TestReceiveChequeNotEnoughValue(t *testing.T) {
 	sig := make([]byte, 65)
 	chainID := int64(1)
 	exchangeRate := big.NewInt(101)
-	deduction := big.NewInt(0)
 
 	cheque := &chequebook.SignedCheque{
 		Cheque: chequebook.Cheque{
@@ -430,13 +428,13 @@ func TestReceiveChequeNotEnoughValue(t *testing.T) {
 			return issuer, nil
 		})
 
-	_, err := chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate, deduction)
+	_, err := chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate)
 	if !errors.Is(err, chequebook.ErrChequeValueTooLow) {
 		t.Fatalf("got wrong error. wanted %v, got %v", chequebook.ErrChequeValueTooLow, err)
 	}
 }
 
-func TestReceiveChequeNotEnoughValueAfterDeduction(t *testing.T) {
+func TestReceiveChequeNotEnoughValue2(t *testing.T) {
 	store := storemock.NewStateStore()
 	beneficiary := common.HexToAddress("0xffff")
 	issuer := common.HexToAddress("0xbeee")
@@ -450,7 +448,6 @@ func TestReceiveChequeNotEnoughValueAfterDeduction(t *testing.T) {
 	// in this test cheque amount is just not enough to cover that therefore we expect
 
 	exchangeRate := big.NewInt(100)
-	deduction := big.NewInt(1)
 
 	cheque := &chequebook.SignedCheque{
 		Cheque: chequebook.Cheque{
@@ -492,7 +489,7 @@ func TestReceiveChequeNotEnoughValueAfterDeduction(t *testing.T) {
 			return issuer, nil
 		})
 
-	_, err := chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate, deduction)
+	_, err := chequestore.ReceiveCheque(context.Background(), cheque, exchangeRate)
 	if !errors.Is(err, chequebook.ErrChequeValueTooLow) {
 		t.Fatalf("got wrong error. wanted %v, got %v", chequebook.ErrChequeValueTooLow, err)
 	}

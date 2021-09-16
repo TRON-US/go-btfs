@@ -33,7 +33,7 @@ type service struct {
 
 type Service interface {
 	io.Closer
-	// CurrentRates returns the current value of exchange rate and deduction
+	// CurrentRates returns the current value of exchange rate
 	// according to the latest information from oracle
 	CurrentRates() (exchangeRate *big.Int, err error)
 	// GetPrice retrieves latest available information from oracle

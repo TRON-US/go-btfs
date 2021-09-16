@@ -13,7 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/ethersphere/bee/pkg/transaction"
 	"github.com/ethersphere/bee/pkg/transaction/backendmock"
 	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"

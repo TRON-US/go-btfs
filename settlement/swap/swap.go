@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
 	"github.com/ethersphere/bee/pkg/settlement"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
-	"github.com/ethersphere/bee/pkg/settlement/swap/swapprotocol"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/ethersphere/bee/pkg/storage"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
@@ -75,7 +75,7 @@ func New(proto swapprotocol.Interface, logger logging.Logger, store storage.Stat
 }
 
 // ReceiveCheque is called by the swap protocol if a cheque is received.
-func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate, deduction *big.Int) (err error) {
+func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate *big.Int) (err error) {
 	// check this is the same chequebook for this peer as previously
 	expectedChequebook, known, err := s.addressbook.Chequebook(peer)
 	if err != nil {
@@ -85,20 +85,13 @@ func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque 
 		return ErrWrongChequebook
 	}
 
-	receivedAmount, err := s.chequeStore.ReceiveCheque(ctx, cheque, exchangeRate, deduction)
+	receivedAmount, err := s.chequeStore.ReceiveCheque(ctx, cheque, exchangeRate)
 	if err != nil {
 		s.metrics.ChequesRejected.Inc()
 		return fmt.Errorf("rejecting cheque: %w", err)
 	}
 
-	if deduction.Cmp(big.NewInt(0)) > 0 {
-		err = s.addressbook.AddDeductionFor(peer)
-		if err != nil {
-			return err
-		}
-	}
-
-	decreasedAmount := new(big.Int).Sub(receivedAmount, deduction)
+	decreasedAmount := receivedAmount
 	amount := new(big.Int).Div(decreasedAmount, exchangeRate)
 
 	if !known {
@@ -347,16 +340,4 @@ func (s *Service) CashoutStatus(ctx context.Context, peer swarm.Address) (*chequ
 		return nil, chequebook.ErrNoCheque
 	}
 	return s.cashout.CashoutStatus(ctx, chequebookAddress)
-}
-
-func (s *Service) GetDeductionForPeer(peer swarm.Address) (bool, error) {
-	return s.addressbook.GetDeductionFor(peer)
-}
-
-func (s *Service) GetDeductionByPeer(peer swarm.Address) (bool, error) {
-	return s.addressbook.GetDeductionBy(peer)
-}
-
-func (s *Service) AddDeductionByPeer(peer swarm.Address) error {
-	return s.addressbook.AddDeductionBy(peer)
 }

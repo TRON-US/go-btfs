@@ -9,7 +9,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 )
 
 type chequeSignerMock struct {

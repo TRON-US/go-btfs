@@ -10,9 +10,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/settlement/swap/priceoracle"
 	"github.com/ethersphere/bee/pkg/transaction"
 	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"
 	"github.com/ethersphere/go-price-oracle-abi/priceoracleabi"
@@ -46,16 +46,12 @@ func TestExchangeGetPrice(t *testing.T) {
 		1,
 	)
 
-	price, deduce, err := ex.GetPrice(context.Background())
+	price, err := ex.GetPrice(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if expectedPrice.Cmp(price) != 0 {
 		t.Fatalf("got wrong price. wanted %d, got %d", expectedPrice, price)
-	}
-
-	if expectedDeduce.Cmp(deduce) != 0 {
-		t.Fatalf("got wrong deduce. wanted %d, got %d", expectedDeduce, deduce)
 	}
 }

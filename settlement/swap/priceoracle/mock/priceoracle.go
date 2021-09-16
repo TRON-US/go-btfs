@@ -13,25 +13,23 @@ import (
 
 type Service struct {
 	rate   *big.Int
-	deduct *big.Int
 }
 
-func New(rate, deduct *big.Int) Service {
+func New(rate *big.Int) Service {
 	return Service{
 		rate:   rate,
-		deduct: deduct,
 	}
 }
 
 func (s Service) Start() {
 }
 
-func (s Service) GetPrice(ctx context.Context) (*big.Int, *big.Int, error) {
-	return s.rate, s.deduct, nil
+func (s Service) GetPrice(ctx context.Context) (*big.Int, error) {
+	return s.rate, nil
 }
 
-func (s Service) CurrentRates() (exchangeRate, deduction *big.Int, err error) {
-	return s.rate, s.deduct, nil
+func (s Service) CurrentRates() (exchangeRate *big.Int, err error) {
+	return s.rate, nil
 }
 
 func (s Service) Close() error {
@@ -42,7 +40,6 @@ func DiscoverPriceOracleAddress(chainID int64) (priceOracleAddress common.Addres
 	return common.Address{}, false
 }
 
-func (s Service) SetValues(rate, deduct *big.Int) {
+func (s Service) SetValues(rate *big.Int) {
 	s.rate = rate
-	s.deduct = deduct
 }

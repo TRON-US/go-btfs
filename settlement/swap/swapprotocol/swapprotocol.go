@@ -12,13 +12,13 @@ import (
 	"math/big"
 	"time"
 
+	swap "github.com/TRON-US/go-btfs/settlement/swap/headers"
+	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/protobuf"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
-	swap "github.com/ethersphere/bee/pkg/settlement/swap/headers"
-	"github.com/ethersphere/bee/pkg/settlement/swap/priceoracle"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/ethersphere/bee/pkg/settlement/swap/swapprotocol/pb"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
@@ -31,8 +31,6 @@ const (
 
 var (
 	ErrNegotiateRate      = errors.New("exchange rates mismatch")
-	ErrNegotiateDeduction = errors.New("deduction values mismatch")
-	ErrHaveDeduction      = errors.New("received deduction not zero")
 )
 
 type SendChequeFunc chequebook.SendChequeFunc
@@ -50,12 +48,9 @@ type Interface interface {
 // Swap is the interface the settlement layer should implement to receive cheques.
 type Swap interface {
 	// ReceiveCheque is called by the swap protocol if a cheque is received.
-	ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate, deduction *big.Int) error
+	ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
 	// Handshake is called by the swap protocol when a handshake is received.
 	Handshake(peer swarm.Address, beneficiary common.Address) error
-	GetDeductionForPeer(peer swarm.Address) (bool, error)
-	GetDeductionByPeer(peer swarm.Address) (bool, error)
-	AddDeductionByPeer(peer swarm.Address) error
 }
 
 // Service is the main implementation of the swap protocol.
@@ -120,12 +115,9 @@ func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 	}
 
 	responseHeaders := stream.ResponseHeaders()
-	exchangeRate, deduction, err := swap.ParseSettlementResponseHeaders(responseHeaders)
+	exchangeRate, err := swap.ParseSettlementResponseHeaders(responseHeaders)
 	if err != nil {
-		if !errors.Is(err, swap.ErrNoDeductionHeader) {
-			return err
-		}
-		deduction = big.NewInt(0)
+		return err
 	}
 
 	var signedCheque *chequebook.SignedCheque
@@ -135,26 +127,17 @@ func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 	}
 
 	// signature validation
-	return s.swap.ReceiveCheque(ctx, p.Address, signedCheque, exchangeRate, deduction)
+	return s.swap.ReceiveCheque(ctx, p.Address, signedCheque, exchangeRate)
 }
 
 func (s *Service) headler(receivedHeaders p2p.Headers, peerAddress swarm.Address) (returnHeaders p2p.Headers) {
 
-	exchangeRate, deduction, err := s.priceOracle.CurrentRates()
+	exchangeRate, err := s.priceOracle.CurrentRates()
 	if err != nil {
 		return p2p.Headers{}
 	}
 
-	checkPeer, err := s.swap.GetDeductionForPeer(peerAddress)
-	if err != nil {
-		return p2p.Headers{}
-	}
-
-	if checkPeer {
-		deduction = big.NewInt(0)
-	}
-
-	returnHeaders = swap.MakeSettlementHeaders(exchangeRate, deduction)
+	returnHeaders = swap.MakeSettlementHeaders(exchangeRate)
 	return
 }
 
@@ -177,29 +160,15 @@ func (s *Service) EmitCheque(ctx context.Context, peer swarm.Address, beneficiar
 
 	// reading exchangeRated headers
 	returnedHeaders := stream.Headers()
-	exchangeRate, deduction, err := swap.ParseSettlementResponseHeaders(returnedHeaders)
-	if err != nil {
-		if !errors.Is(err, swap.ErrNoDeductionHeader) {
-			return nil, err
-		}
-		deduction = big.NewInt(0)
-	}
-
-	// comparing received headers to known truth
-
-	// get whether peer have deducted in the past
-	checkPeer, err := s.swap.GetDeductionByPeer(peer)
+	exchangeRate, err := swap.ParseSettlementResponseHeaders(returnedHeaders)
 	if err != nil {
 		return nil, err
 	}
 
-	// if peer is not entitled for deduction but sent non zero deduction value, return with error
-	if checkPeer && deduction.Cmp(big.NewInt(0)) != 0 {
-		return nil, ErrHaveDeduction
-	}
+	// comparing received headers to known truth
 
-	// get current global exchangeRate rate and deduction
-	checkExchangeRate, checkDeduction, err := s.priceOracle.CurrentRates()
+	// get current global exchangeRate rate
+	checkExchangeRate, err := s.priceOracle.CurrentRates()
 	if err != nil {
 		return nil, err
 	}
@@ -209,13 +178,8 @@ func (s *Service) EmitCheque(ctx context.Context, peer swarm.Address, beneficiar
 		return nil, ErrNegotiateRate
 	}
 
-	// deduction values should match or be zero
-	if deduction.Cmp(checkDeduction) != 0 && deduction.Cmp(big.NewInt(0)) != 0 {
-		return nil, ErrNegotiateDeduction
-	}
-
 	paymentAmount := new(big.Int).Mul(amount, exchangeRate)
-	sentAmount := new(big.Int).Add(paymentAmount, deduction)
+	sentAmount := paymentAmount
 
 	// issue cheque call with provided callback for sending cheque to finish transaction
 
@@ -237,13 +201,6 @@ func (s *Service) EmitCheque(ctx context.Context, peer swarm.Address, beneficiar
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if deduction.Cmp(big.NewInt(0)) != 0 {
-		err = s.swap.AddDeductionByPeer(peer)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return balance, nil

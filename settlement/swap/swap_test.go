@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TRON-US/go-btfs/settlement/swap"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	mockchequebook "github.com/TRON-US/go-btfs/settlement/swap/chequebook/mock"
+	mockchequestore "github.com/TRON-US/go-btfs/settlement/swap/chequestore/mock"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/crypto"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/settlement/swap"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
-	mockchequebook "github.com/ethersphere/bee/pkg/settlement/swap/chequebook/mock"
-	mockchequestore "github.com/ethersphere/bee/pkg/settlement/swap/chequestore/mock"
-	"github.com/ethersphere/bee/pkg/settlement/swap/swapprotocol"
 	mockstore "github.com/ethersphere/bee/pkg/statestore/mock"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
@@ -98,10 +98,6 @@ type addressbookMock struct {
 	chequebookPeer  func(chequebook common.Address) (peer swarm.Address, known bool, err error)
 	putBeneficiary  func(peer swarm.Address, beneficiary common.Address) error
 	putChequebook   func(peer swarm.Address, chequebook common.Address) error
-	addDeductionFor func(peer swarm.Address) error
-	addDeductionBy  func(peer swarm.Address) error
-	getDeductionFor func(peer swarm.Address) (bool, error)
-	getDeductionBy  func(peer swarm.Address) (bool, error)
 }
 
 func (m *addressbookMock) MigratePeer(oldPeer, newPeer swarm.Address) error {
@@ -125,18 +121,6 @@ func (m *addressbookMock) PutBeneficiary(peer swarm.Address, beneficiary common.
 func (m *addressbookMock) PutChequebook(peer swarm.Address, chequebook common.Address) error {
 	return m.putChequebook(peer, chequebook)
 }
-func (m *addressbookMock) AddDeductionFor(peer swarm.Address) error {
-	return m.addDeductionFor(peer)
-}
-func (m *addressbookMock) AddDeductionBy(peer swarm.Address) error {
-	return m.addDeductionBy(peer)
-}
-func (m *addressbookMock) GetDeductionFor(peer swarm.Address) (bool, error) {
-	return m.getDeductionFor(peer)
-}
-func (m *addressbookMock) GetDeductionBy(peer swarm.Address) (bool, error) {
-	return m.getDeductionBy(peer)
-}
 
 type cashoutMock struct {
 	cashCheque    func(ctx context.Context, chequebook common.Address, recipient common.Address) (common.Hash, error)
@@ -156,7 +140,6 @@ func TestReceiveCheque(t *testing.T) {
 	chequebookService := mockchequebook.NewChequebook()
 	amount := big.NewInt(50)
 	exchangeRate := big.NewInt(10)
-	deduction := big.NewInt(10)
 	chequebookAddress := common.HexToAddress("0xcd")
 
 	peer := swarm.MustParseHexAddress("abcd")
@@ -170,21 +153,16 @@ func TestReceiveCheque(t *testing.T) {
 	}
 
 	chequeStore := mockchequestore.NewChequeStore(
-		mockchequestore.WithReceiveChequeFunc(func(ctx context.Context, c *chequebook.SignedCheque, e *big.Int, d *big.Int) (*big.Int, error) {
+		mockchequestore.WithReceiveChequeFunc(func(ctx context.Context, c *chequebook.SignedCheque, e *big.Int) (*big.Int, error) {
 			if !cheque.Equal(c) {
 				t.Fatalf("passed wrong cheque to store. wanted %v, got %v", cheque, c)
 			}
 			if exchangeRate.Cmp(e) != 0 {
 				t.Fatalf("passed wrong exchange rate to store. wanted %v, got %v", exchangeRate, e)
 			}
-			if deduction.Cmp(e) != 0 {
-				t.Fatalf("passed wrong deduction to store. wanted %v, got %v", deduction, d)
-			}
 			return amount, nil
 		}),
 	)
-
-	peerDeductionFor := false
 
 	networkID := uint64(1)
 	addressbook := &addressbookMock{
@@ -200,13 +178,6 @@ func TestReceiveCheque(t *testing.T) {
 			}
 			if chequebook != chequebookAddress {
 				t.Fatal("storing wrong chequebook")
-			}
-			return nil
-		},
-		addDeductionFor: func(p swarm.Address) error {
-			peerDeductionFor = true
-			if !peer.Equal(p) {
-				t.Fatal("storing deduction for wrong peer")
 			}
 			return nil
 		},
@@ -226,7 +197,7 @@ func TestReceiveCheque(t *testing.T) {
 		observer,
 	)
 
-	err := swap.ReceiveCheque(context.Background(), peer, cheque, exchangeRate, deduction)
+	err := swap.ReceiveCheque(context.Background(), peer, cheque, exchangeRate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,10 +218,6 @@ func TestReceiveCheque(t *testing.T) {
 		t.Fatal("expected observer to be called")
 	}
 
-	if !peerDeductionFor {
-		t.Fatal("add deduction for peer not called")
-	}
-
 }
 
 func TestReceiveChequeReject(t *testing.T) {
@@ -259,7 +226,6 @@ func TestReceiveChequeReject(t *testing.T) {
 	chequebookService := mockchequebook.NewChequebook()
 	chequebookAddress := common.HexToAddress("0xcd")
 	exchangeRate := big.NewInt(10)
-	deduction := big.NewInt(10)
 
 	peer := swarm.MustParseHexAddress("abcd")
 	cheque := &chequebook.SignedCheque{
@@ -274,7 +240,7 @@ func TestReceiveChequeReject(t *testing.T) {
 	var errReject = errors.New("reject")
 
 	chequeStore := mockchequestore.NewChequeStore(
-		mockchequestore.WithReceiveChequeFunc(func(ctx context.Context, c *chequebook.SignedCheque, e *big.Int, d *big.Int) (*big.Int, error) {
+		mockchequestore.WithReceiveChequeFunc(func(ctx context.Context, c *chequebook.SignedCheque, e *big.Int) (*big.Int, error) {
 			return nil, errReject
 		}),
 	)
@@ -299,7 +265,7 @@ func TestReceiveChequeReject(t *testing.T) {
 		observer,
 	)
 
-	err := swap.ReceiveCheque(context.Background(), peer, cheque, exchangeRate, deduction)
+	err := swap.ReceiveCheque(context.Background(), peer, cheque, exchangeRate)
 	if err == nil {
 		t.Fatal("accepted invalid cheque")
 	}
@@ -321,7 +287,6 @@ func TestReceiveChequeWrongChequebook(t *testing.T) {
 	chequebookService := mockchequebook.NewChequebook()
 	chequebookAddress := common.HexToAddress("0xcd")
 	exchangeRate := big.NewInt(10)
-	deduction := big.NewInt(10)
 
 	peer := swarm.MustParseHexAddress("abcd")
 	cheque := &chequebook.SignedCheque{
@@ -354,7 +319,7 @@ func TestReceiveChequeWrongChequebook(t *testing.T) {
 		observer,
 	)
 
-	err := swapService.ReceiveCheque(context.Background(), peer, cheque, exchangeRate, deduction)
+	err := swapService.ReceiveCheque(context.Background(), peer, cheque, exchangeRate)
 	if err == nil {
 		t.Fatal("accepted invalid cheque")
 	}

@@ -36,14 +36,6 @@ type Addressbook interface {
 	PutBeneficiary(peer swarm.Address, beneficiary common.Address) error
 	// PutChequebook stores the chequebook for the given peer.
 	PutChequebook(peer swarm.Address, chequebook common.Address) error
-	// AddDeductionFor peer stores the flag indicating the peer have already issued a cheque that has been deducted
-	AddDeductionFor(peer swarm.Address) error
-	// AddDeductionFor peer stores the flag indicating the peer have already received a cheque that has been deducted
-	AddDeductionBy(peer swarm.Address) error
-	// GetDeductionFor returns whether a peer have already issued a cheque that has been deducted
-	GetDeductionFor(peer swarm.Address) (bool, error)
-	// GetDeductionBy returns whether a peer have already received a cheque that has been deducted
-	GetDeductionBy(peer swarm.Address) (bool, error)
 	// MigratePeer returns whether a peer have already received a cheque that has been deducted
 	MigratePeer(oldPeer, newPeer swarm.Address) error
 }
@@ -157,38 +149,6 @@ func (a *addressbook) PutChequebook(peer swarm.Address, chequebook common.Addres
 		return err
 	}
 	return a.store.Put(chequebookPeerKey(chequebook), peer)
-}
-
-func (a *addressbook) AddDeductionFor(peer swarm.Address) error {
-	return a.store.Put(peerDeductedForKey(peer), struct{}{})
-}
-
-func (a *addressbook) AddDeductionBy(peer swarm.Address) error {
-	return a.store.Put(peerDeductedByKey(peer), struct{}{})
-}
-
-func (a *addressbook) GetDeductionFor(peer swarm.Address) (bool, error) {
-	var nothing struct{}
-	err := a.store.Get(peerDeductedForKey(peer), &nothing)
-	if err != nil {
-		if err != storage.ErrNotFound {
-			return false, err
-		}
-		return false, nil
-	}
-	return true, nil
-}
-
-func (a *addressbook) GetDeductionBy(peer swarm.Address) (bool, error) {
-	var nothing struct{}
-	err := a.store.Get(peerDeductedByKey(peer), &nothing)
-	if err != nil {
-		if err != storage.ErrNotFound {
-			return false, err
-		}
-		return false, nil
-	}
-	return true, nil
 }
 
 // peerKey computes the key where to store the chequebook from a peer.

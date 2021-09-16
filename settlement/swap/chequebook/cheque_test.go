@@ -15,7 +15,7 @@ import (
 	"github.com/ethersphere/bee/pkg/crypto"
 	"github.com/ethersphere/bee/pkg/crypto/eip712"
 	signermock "github.com/ethersphere/bee/pkg/crypto/mock"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 )
 
 func TestSignCheque(t *testing.T) {

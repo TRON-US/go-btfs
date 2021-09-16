@@ -10,9 +10,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/ethersphere/bee/pkg/settlement/swap"
-	"github.com/ethersphere/bee/pkg/settlement/swap/chequebook"
-	"github.com/ethersphere/bee/pkg/settlement/swap/swapprotocol"
+	"github.com/TRON-US/go-btfs/settlement/swap"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 
@@ -26,10 +26,7 @@ type Service struct {
 	settlementsSentFunc func() (map[string]*big.Int, error)
 	settlementsRecvFunc func() (map[string]*big.Int, error)
 
-	deductionByPeers  map[string]struct{}
-	deductionForPeers map[string]struct{}
-
-	receiveChequeFunc   func(context.Context, swarm.Address, *chequebook.SignedCheque, *big.Int, *big.Int) error
+	receiveChequeFunc   func(context.Context, swarm.Address, *chequebook.SignedCheque, *big.Int) error
 	payFunc             func(context.Context, swarm.Address, *big.Int)
 	handshakeFunc       func(swarm.Address, common.Address) error
 	lastSentChequeFunc  func(swarm.Address) (*chequebook.SignedCheque, error)
@@ -68,7 +65,7 @@ func WithSettlementsRecvFunc(f func() (map[string]*big.Int, error)) Option {
 	})
 }
 
-func WithReceiveChequeFunc(f func(context.Context, swarm.Address, *chequebook.SignedCheque, *big.Int, *big.Int) error) Option {
+func WithReceiveChequeFunc(f func(context.Context, swarm.Address, *chequebook.SignedCheque, *big.Int) error) Option {
 	return optionFunc(func(s *Service) {
 		s.receiveChequeFunc = f
 	})
@@ -137,8 +134,6 @@ func NewSwap(opts ...Option) swapprotocol.Swap {
 	mock := new(Service)
 	mock.settlementsSent = make(map[string]*big.Int)
 	mock.settlementsRecv = make(map[string]*big.Int)
-	mock.deductionByPeers = make(map[string]struct{})
-	mock.deductionForPeers = make(map[string]struct{})
 
 	for _, o := range opts {
 		o.apply(mock)
@@ -247,35 +242,11 @@ func (s *Service) CashoutStatus(ctx context.Context, peer swarm.Address) (*chequ
 	return nil, nil
 }
 
-func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate, deduction *big.Int) (err error) {
-	defer func() {
-		if err == nil {
-			s.deductionForPeers[peer.String()] = struct{}{}
-		}
-	}()
+func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate *big.Int) (err error) {
 	if s.receiveChequeFunc != nil {
-		return s.receiveChequeFunc(ctx, peer, cheque, exchangeRate, deduction)
+		return s.receiveChequeFunc(ctx, peer, cheque, exchangeRate)
 	}
 
-	return nil
-}
-
-func (s *Service) GetDeductionForPeer(peer swarm.Address) (bool, error) {
-	if _, ok := s.deductionForPeers[peer.String()]; ok {
-		return true, nil
-	}
-	return false, nil
-}
-
-func (s *Service) GetDeductionByPeer(peer swarm.Address) (bool, error) {
-	if _, ok := s.deductionByPeers[peer.String()]; ok {
-		return true, nil
-	}
-	return false, nil
-}
-
-func (s *Service) AddDeductionByPeer(peer swarm.Address) error {
-	s.deductionByPeers[peer.String()] = struct{}{}
 	return nil
 }
 
