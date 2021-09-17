@@ -61,6 +61,7 @@ func NewAccounting(
 		accountingPeers:  make(map[string]*accountingPeer),
 		logger:           Logger,
 		store:            Store,
+		minimumPayment:   big.NewInt(0),
 		pricing:          Pricing,
 		timeNow:          time.Now,
 	}, nil
