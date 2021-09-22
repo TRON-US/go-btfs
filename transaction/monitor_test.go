@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TRON-US/go-btfs/transaction"
+	"github.com/TRON-US/go-btfs/transaction/backendsimulation"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/transaction"
-	"github.com/ethersphere/bee/pkg/transaction/backendsimulation"
 )
 
 func TestMonitorWatchTransaction(t *testing.T) {

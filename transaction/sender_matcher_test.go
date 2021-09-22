@@ -6,13 +6,13 @@ import (
 	"math/big"
 	"testing"
 
+	statestore "github.com/TRON-US/go-btfs/statestore/mock"
+	"github.com/TRON-US/go-btfs/transaction"
+	"github.com/TRON-US/go-btfs/transaction/backendmock"
+	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/crypto"
-	statestore "github.com/ethersphere/bee/pkg/statestore/mock"
 	"github.com/ethersphere/bee/pkg/swarm"
-	"github.com/ethersphere/bee/pkg/transaction"
-	"github.com/ethersphere/bee/pkg/transaction/backendmock"
 )
 
 func TestMatchesSender(t *testing.T) {
