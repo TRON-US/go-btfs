@@ -17,10 +17,10 @@ import (
 	mockchequebook "github.com/TRON-US/go-btfs/settlement/swap/chequebook/mock"
 	mockchequestore "github.com/TRON-US/go-btfs/settlement/swap/chequestore/mock"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
+	mockstore "github.com/TRON-US/go-btfs/statestore/mock"
+	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/crypto"
 	"github.com/ethersphere/bee/pkg/logging"
-	mockstore "github.com/ethersphere/bee/pkg/statestore/mock"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 

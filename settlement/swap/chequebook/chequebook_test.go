@@ -11,13 +11,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	erc20mock "github.com/TRON-US/go-btfs/settlement/swap/erc20/mock"
+	storemock "github.com/TRON-US/go-btfs/statestore/mock"
+	"github.com/TRON-US/go-btfs/transaction"
+	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
-	erc20mock "github.com/ethersphere/bee/pkg/settlement/swap/erc20/mock"
-	storemock "github.com/ethersphere/bee/pkg/statestore/mock"
-	"github.com/ethersphere/bee/pkg/transaction"
-	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"
 )
 
 func TestChequebookAddress(t *testing.T) {

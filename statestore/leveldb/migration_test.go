@@ -22,9 +22,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/storage"
 )
 
 func TestOneMigration(t *testing.T) {

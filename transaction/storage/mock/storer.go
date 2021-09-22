@@ -8,7 +8,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ethersphere/bee/pkg/storage"
+	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 

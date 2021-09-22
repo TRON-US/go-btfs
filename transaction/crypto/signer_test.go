@@ -11,11 +11,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/transaction/crypto"
+	"github.com/TRON-US/go-btfs/transaction/crypto/eip712"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/crypto"
-	"github.com/ethersphere/bee/pkg/crypto/eip712"
 )
 
 func TestDefaultSigner(t *testing.T) {

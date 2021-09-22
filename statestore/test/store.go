@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethersphere/bee/pkg/storage"
+	"github.com/TRON-US/go-btfs/transaction/storage"
 )
 
 const (

@@ -11,12 +11,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/transaction"
+	"github.com/TRON-US/go-btfs/transaction/backendmock"
+	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
-	"github.com/ethersphere/bee/pkg/transaction"
-	"github.com/ethersphere/bee/pkg/transaction/backendmock"
-	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"
 	"github.com/ethersphere/go-sw3-abi/sw3abi"
 )
 

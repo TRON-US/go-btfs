@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ethersphere/bee/pkg/storage"
-	"github.com/ethersphere/bee/pkg/storage/mock"
+	"github.com/TRON-US/go-btfs/transaction/storage"
+	"github.com/TRON-US/go-btfs/transaction/storage/mock"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 

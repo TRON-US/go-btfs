@@ -7,9 +7,9 @@ package mock_test
 import (
 	"testing"
 
-	"github.com/ethersphere/bee/pkg/statestore/mock"
-	"github.com/ethersphere/bee/pkg/statestore/test"
-	"github.com/ethersphere/bee/pkg/storage"
+	"github.com/TRON-US/go-btfs/statestore/mock"
+	"github.com/TRON-US/go-btfs/statestore/test"
+	"github.com/TRON-US/go-btfs/transaction/storage"
 )
 
 func TestMockStateStore(t *testing.T) {

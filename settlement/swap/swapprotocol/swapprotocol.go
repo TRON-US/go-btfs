@@ -12,14 +12,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	swap "github.com/TRON-US/go-btfs/settlement/swap/headers"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/protobuf"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
-	"github.com/ethersphere/bee/pkg/settlement/swap/swapprotocol/pb"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 

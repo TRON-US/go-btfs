@@ -12,8 +12,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/ethersphere/bee/pkg/crypto"
 )
 
 func TestECDHCorrect(t *testing.T) {

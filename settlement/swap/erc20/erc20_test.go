@@ -9,11 +9,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
+	"github.com/TRON-US/go-btfs/transaction"
+	backendmock "github.com/TRON-US/go-btfs/transaction/backendmock"
+	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/settlement/swap/erc20"
-	"github.com/ethersphere/bee/pkg/transaction"
-	backendmock "github.com/ethersphere/bee/pkg/transaction/backendmock"
-	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"
 	"github.com/ethersphere/go-sw3-abi/sw3abi"
 )
 

@@ -11,11 +11,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/crypto"
-	"github.com/ethersphere/bee/pkg/crypto/eip712"
-	signermock "github.com/ethersphere/bee/pkg/crypto/mock"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/transaction/crypto"
+	"github.com/TRON-US/go-btfs/transaction/crypto/eip712"
+	signermock "github.com/TRON-US/go-btfs/transaction/crypto/mock"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestSignCheque(t *testing.T) {

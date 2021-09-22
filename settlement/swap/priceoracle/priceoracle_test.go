@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
+	"github.com/TRON-US/go-btfs/transaction"
+	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/transaction"
-	transactionmock "github.com/ethersphere/bee/pkg/transaction/mock"
 	"github.com/ethersphere/go-price-oracle-abi/priceoracleabi"
 )
 

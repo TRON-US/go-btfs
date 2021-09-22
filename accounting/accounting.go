@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethersphere/bee/pkg/logging"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/pricing"
-	"github.com/ethersphere/bee/pkg/storage"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/accounting"
+	"github.com/TRON-US/go-btfs/statestore/mock"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/statestore/mock"
 
 	"github.com/ethersphere/bee/pkg/swarm"
 )

@@ -12,11 +12,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
+	"github.com/TRON-US/go-btfs/transaction"
+	"github.com/TRON-US/go-btfs/transaction/sctx"
+	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/sctx"
-	"github.com/ethersphere/bee/pkg/settlement/swap/erc20"
-	"github.com/ethersphere/bee/pkg/storage"
-	"github.com/ethersphere/bee/pkg/transaction"
 	"github.com/ethersphere/go-sw3-abi/sw3abi"
 )
 

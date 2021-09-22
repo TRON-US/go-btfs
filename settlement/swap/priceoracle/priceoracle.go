@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/logging"
-	"github.com/ethersphere/bee/pkg/transaction"
+	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/ethersphere/go-price-oracle-abi/priceoracleabi"
 )
 

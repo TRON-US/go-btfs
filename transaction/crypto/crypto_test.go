@@ -10,8 +10,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/crypto"
 )
 
 func TestGenerateSecp256k1Key(t *testing.T) {

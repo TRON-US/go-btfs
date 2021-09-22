@@ -9,9 +9,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethersphere/bee/pkg/statestore/leveldb"
-	"github.com/ethersphere/bee/pkg/statestore/test"
-	"github.com/ethersphere/bee/pkg/storage"
+	"github.com/TRON-US/go-btfs/statestore/leveldb"
+	"github.com/TRON-US/go-btfs/statestore/test"
+	"github.com/TRON-US/go-btfs/transaction/storage"
 )
 
 func TestPersistentStateStore(t *testing.T) {
