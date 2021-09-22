@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/ethersphere/bee/pkg/swarm"
+	//"github.com/ethersphere/bee/pkg/swarm"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -27,28 +27,28 @@ const (
 )
 
 // NewOverlayAddress constructs a Swarm Address from ECDSA public key.
-func NewOverlayAddress(p ecdsa.PublicKey, networkID uint64, blockHash []byte) (swarm.Address, error) {
+func NewOverlayAddress(p ecdsa.PublicKey, networkID uint64, blockHash []byte) (string, error) {
 
 	ethAddr, err := NewEthereumAddress(p)
 	if err != nil {
-		return swarm.ZeroAddress, err
+		return "", err
 	}
 
 	if len(blockHash) != 32 {
-		return swarm.ZeroAddress, ErrBadHashLength
+		return "", ErrBadHashLength
 	}
 
 	return NewOverlayFromEthereumAddress(ethAddr, networkID, blockHash), nil
 }
 
 // NewOverlayFromEthereumAddress constructs a Swarm Address for an Ethereum address.
-func NewOverlayFromEthereumAddress(ethAddr []byte, networkID uint64, blockHash []byte) swarm.Address {
+func NewOverlayFromEthereumAddress(ethAddr []byte, networkID uint64, blockHash []byte) string {
 	netIDBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(netIDBytes, networkID)
 	data := append(ethAddr, netIDBytes...)
 	data = append(data, blockHash...)
 	h := sha3.Sum256(data)
-	return swarm.NewAddress(h[:])
+	return string(h[:])
 }
 
 // GenerateSecp256k1Key generates an ECDSA private key using
