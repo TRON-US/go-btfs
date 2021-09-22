@@ -19,13 +19,13 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bren2010/proquint v0.0.0-20160323162903-38337c27106d
+	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
-	github.com/ethereum/go-ethereum v1.10.7
-	github.com/ethersphere/bee v1.1.0
+	github.com/ethereum/go-ethereum v1.10.3
 	github.com/ethersphere/go-price-oracle-abi v0.1.0
 	github.com/ethersphere/go-sw3-abi v0.4.0
 	github.com/fsnotify/fsnotify v1.4.9
@@ -117,6 +117,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/shirou/gopsutil/v3 v3.20.12
+	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954

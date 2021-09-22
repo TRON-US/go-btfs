@@ -19,8 +19,8 @@ import (
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	mockstore "github.com/TRON-US/go-btfs/statestore/mock"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
+	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/logging"
 	"github.com/ethersphere/bee/pkg/swarm"
 )
 

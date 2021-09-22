@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/backendmock"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func TestIsSynced(t *testing.T) {
