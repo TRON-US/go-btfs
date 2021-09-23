@@ -1,4 +1,4 @@
-package node
+package chain
 
 import (
 	"context"
@@ -16,12 +16,12 @@ import (
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
+	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethersphere/bee/pkg/config"
-	"github.com/ethersphere/bee/pkg/logging"
+	"github.com/TRON-US/go-btfs/chain/config"
 	"github.com/ethersphere/bee/pkg/p2p/libp2p"
 )
 
@@ -307,3 +307,4 @@ func GetTxNextBlock(ctx context.Context, logger logging.Logger, backend transact
 
 	return hashBytes, nil
 }
+
