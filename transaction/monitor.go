@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/logging"
 )
 
 var ErrTransactionCancelled = errors.New("transaction cancelled")

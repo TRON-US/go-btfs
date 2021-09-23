@@ -18,12 +18,12 @@ import (
 	"github.com/TRON-US/go-btfs/transaction/backendmock"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 	signermock "github.com/TRON-US/go-btfs/transaction/crypto/mock"
+	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/monitormock"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/logging"
 )
 
 func nonceKey(sender common.Address) string {

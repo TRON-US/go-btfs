@@ -21,7 +21,7 @@ import (
 	priceoraclemock "github.com/TRON-US/go-btfs/settlement/swap/priceoracle/mock"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
-	"github.com/ethersphere/bee/pkg/logging"
+	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/protobuf"
 	"github.com/ethersphere/bee/pkg/p2p/streamtest"

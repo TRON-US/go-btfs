@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethersphere/bee/pkg/swarm"
+	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 type Matcher struct {
@@ -26,8 +27,8 @@ const (
 	overlayPrefix = "verified_overlay_"
 )
 
-func peerOverlayKey(peer swarm.Address, txHash common.Hash) string {
-	return fmt.Sprintf("%s%s_%s", overlayPrefix, peer.ByteString(), txHash.String())
+func peerOverlayKey(peer string, txHash common.Hash) string {
+	return fmt.Sprintf("%s%s_%s", overlayPrefix, peer, txHash.String())  //peer
 }
 
 var (
@@ -54,7 +55,7 @@ func NewMatcher(backend Backend, signer types.Signer, storage storage.StateStore
 	}
 }
 
-func (m *Matcher) Matches(ctx context.Context, tx []byte, networkID uint64, senderOverlay swarm.Address) ([]byte, error) {
+func (m *Matcher) Matches(ctx context.Context, tx []byte, networkID uint64, senderOverlay string) ([]byte, error) {
 
 	incomingTx := common.BytesToHash(tx)
 
@@ -147,7 +148,7 @@ func (m *Matcher) Matches(ctx context.Context, tx []byte, networkID uint64, send
 
 	expectedRemoteBzzAddress := crypto.NewOverlayFromEthereumAddress(sender.Bytes(), networkID, nextBlockHash)
 
-	if !expectedRemoteBzzAddress.Equal(senderOverlay) {
+	if strings.Compare(expectedRemoteBzzAddress, senderOverlay) != 0 {
 		err2 := m.storage.Put(peerOverlayKey(senderOverlay, incomingTx), &overlayVerification{
 			TimeStamp: m.timeNow(),
 			Verified:  false,
