@@ -14,14 +14,14 @@ import (
 
 	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
-	"github.com/ethersphere/bee/pkg/p2p"
-	"github.com/ethersphere/bee/pkg/pricing"
-	"github.com/ethersphere/bee/pkg/swarm"
+	//"github.com/ethersphere/bee/pkg/p2p"
+	//"github.com/ethersphere/bee/pkg/pricing"
+	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 
 // PayFunc is the function used for async monetary settlement
-type PayFunc func(context.Context, swarm.Address, *big.Int)
+type PayFunc func(context.Context, string, *big.Int)
 
 // accountingPeer holds all in-memory accounting information for one peer.
 type accountingPeer struct {
@@ -44,9 +44,8 @@ type Accounting struct {
 
 	// lower bound for the value of issued cheques
 	minimumPayment *big.Int
-	pricing        pricing.Interface
 	wg             sync.WaitGroup
-	p2p            p2p.Service
+	//p2p            p2p.Service
 	timeNow        func() time.Time
 }
 
@@ -54,7 +53,6 @@ type Accounting struct {
 func NewAccounting(
 	Logger logging.Logger,
 	Store storage.StateStorer,
-	Pricing pricing.Interface,
 
 ) (*Accounting, error) {
 	return &Accounting{
@@ -62,7 +60,6 @@ func NewAccounting(
 		logger:           Logger,
 		store:            Store,
 		minimumPayment:   big.NewInt(0),
-		pricing:          Pricing,
 		timeNow:          time.Now,
 	}, nil
 }
@@ -78,7 +75,7 @@ func (a *Accounting) Close() error {
 }
 
 // Settle to a peer. The lock on the accountingPeer must be held when called.
-func (a *Accounting) Settle(toPeer swarm.Address, paymentAmount *big.Int) error {
+func (a *Accounting) Settle(toPeer string, paymentAmount *big.Int) error {
 	if paymentAmount.Cmp(a.minimumPayment) >= 0 {
 		a.wg.Add(1)
 		go a.payFunction(context.Background(), toPeer, paymentAmount)
@@ -89,23 +86,23 @@ func (a *Accounting) Settle(toPeer swarm.Address, paymentAmount *big.Int) error 
 
 // getAccountingPeer returns the accountingPeer for a given swarm address.
 // If not found in memory it will initialize it.
-func (a *Accounting) getAccountingPeer(peer swarm.Address) *accountingPeer {
+func (a *Accounting) getAccountingPeer(peer string) *accountingPeer {
 	a.accountingPeersMu.Lock()
 	defer a.accountingPeersMu.Unlock()
 
-	peerData, ok := a.accountingPeers[peer.String()]
+	peerData, ok := a.accountingPeers[peer]
 	if !ok {
 		peerData = &accountingPeer{
 			connected:        false,
 		}
-		a.accountingPeers[peer.String()] = peerData
+		a.accountingPeers[peer] = peerData
 	}
 
 	return peerData
 }
 
 // NotifyPaymentSent is triggered by async monetary settlement to update our balance and remove it's price from the shadow reserve
-func (a *Accounting) NotifyPaymentSent(peer swarm.Address, amount *big.Int, receivedError error) {
+func (a *Accounting) NotifyPaymentSent(peer string, amount *big.Int, receivedError error) {
 	defer a.wg.Done()
 	accountingPeer := a.getAccountingPeer(peer)
 
@@ -121,7 +118,7 @@ func (a *Accounting) NotifyPaymentSent(peer swarm.Address, amount *big.Int, rece
 
 
 // NotifyPayment is called by Settlement when we receive a payment.
-func (a *Accounting) NotifyPaymentReceived(peer swarm.Address, amount *big.Int) error {
+func (a *Accounting) NotifyPaymentReceived(peer string, amount *big.Int) error {
 	accountingPeer := a.getAccountingPeer(peer)
 
 	accountingPeer.lock.Lock()

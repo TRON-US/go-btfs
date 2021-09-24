@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	peerInfo "github.com/libp2p/go-libp2p-core/peer"
 	"math/big"
 
 	"io/ioutil"
@@ -25,7 +26,7 @@ import (
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/protobuf"
 	"github.com/ethersphere/bee/pkg/p2p/streamtest"
-	"github.com/ethersphere/bee/pkg/swarm"
+	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 func TestEmitCheques(t *testing.T) {
@@ -34,7 +35,7 @@ func TestEmitCheques(t *testing.T) {
 
 	logger := logging.New(ioutil.Discard, 0)
 	commonAddr := common.HexToAddress("0xab")
-	peerID := swarm.MustParseHexAddress("9ee7add7")
+	peerID := peerInfo.ID("9ee7add7").String()
 	swapReceiver := swapmock.NewSwap()
 	swapInitiator := swapmock.NewSwap()
 
@@ -149,7 +150,7 @@ func TestEmitCheques(t *testing.T) {
 func TestCantEmitChequeRateMismatch(t *testing.T) {
 	logger := logging.New(ioutil.Discard, 0)
 	commonAddr := common.HexToAddress("0xab")
-	peerID := swarm.MustParseHexAddress("9ee7add7")
+	peerID := peerInfo.ID("9ee7add7").String()
 	swapReceiver := swapmock.NewSwap()
 	swapInitiator := swapmock.NewSwap()
 
@@ -213,7 +214,7 @@ func TestCantEmitChequeMismatch(t *testing.T) {
 
 	logger := logging.New(ioutil.Discard, 0)
 	commonAddr := common.HexToAddress("0xab")
-	peerID := swarm.MustParseHexAddress("9ee7add7")
+	peerID := peerInfo.ID("9ee7add7").String()
 	swapReceiver := swapmock.NewSwap()
 	swapInitiator := swapmock.NewSwap()
 
@@ -276,7 +277,7 @@ func TestCantEmitChequeMismatch(t *testing.T) {
 func TestCantEmitChequeIneligible(t *testing.T) {
 	logger := logging.New(ioutil.Discard, 0)
 	commonAddr := common.HexToAddress("0xab")
-	peerID := swarm.MustParseHexAddress("9ee7add7")
+	peerID := peerInfo.ID("9ee7add7").String()
 	swapReceiver := swapmock.NewSwap()
 	swapInitiator := swapmock.NewSwap()
 

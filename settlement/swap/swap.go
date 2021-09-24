@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/TRON-US/go-btfs/settlement"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
@@ -16,7 +17,7 @@ import (
 	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/swarm"
+	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 var (
@@ -31,17 +32,17 @@ var (
 type Interface interface {
 	settlement.Interface
 	// LastSentCheque returns the last sent cheque for the peer
-	LastSentCheque(peer swarm.Address) (*chequebook.SignedCheque, error)
+	LastSentCheque(peer string) (*chequebook.SignedCheque, error)
 	// LastSentCheques returns the list of last sent cheques for all peers
 	LastSentCheques() (map[string]*chequebook.SignedCheque, error)
 	// LastReceivedCheque returns the last received cheque for the peer
-	LastReceivedCheque(peer swarm.Address) (*chequebook.SignedCheque, error)
+	LastReceivedCheque(peer string) (*chequebook.SignedCheque, error)
 	// LastReceivedCheques returns the list of last received cheques for all peers
 	LastReceivedCheques() (map[string]*chequebook.SignedCheque, error)
 	// CashCheque sends a cashing transaction for the last cheque of the peer
-	CashCheque(ctx context.Context, peer swarm.Address) (common.Hash, error)
+	CashCheque(ctx context.Context, peer string) (common.Hash, error)
 	// CashoutStatus gets the status of the latest cashout transaction for the peers chequebook
-	CashoutStatus(ctx context.Context, peer swarm.Address) (*chequebook.CashoutStatus, error)
+	CashoutStatus(ctx context.Context, peer string) (*chequebook.CashoutStatus, error)
 }
 
 // Service is the implementation of the swap settlement layer.
@@ -75,7 +76,7 @@ func New(proto swapprotocol.Interface, logger logging.Logger, store storage.Stat
 }
 
 // ReceiveCheque is called by the swap protocol if a cheque is received.
-func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate *big.Int) (err error) {
+func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) (err error) {
 	// check this is the same chequebook for this peer as previously
 	expectedChequebook, known, err := s.addressbook.Chequebook(peer)
 	if err != nil {
@@ -109,7 +110,7 @@ func (s *Service) ReceiveCheque(ctx context.Context, peer swarm.Address, cheque 
 }
 
 // Pay initiates a payment to the given peer
-func (s *Service) Pay(ctx context.Context, peer swarm.Address, amount *big.Int) {
+func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -144,7 +145,7 @@ func (s *Service) SetAccounting(accounting settlement.Accounting) {
 }
 
 // TotalSent returns the total amount sent to a peer
-func (s *Service) TotalSent(peer swarm.Address) (totalSent *big.Int, err error) {
+func (s *Service) TotalSent(peer string) (totalSent *big.Int, err error) {
 	beneficiary, known, err := s.addressbook.Beneficiary(peer)
 	if err != nil {
 		return nil, err
@@ -163,7 +164,7 @@ func (s *Service) TotalSent(peer swarm.Address) (totalSent *big.Int, err error) 
 }
 
 // TotalReceived returns the total amount received from a peer
-func (s *Service) TotalReceived(peer swarm.Address) (totalReceived *big.Int, err error) {
+func (s *Service) TotalReceived(peer string) (totalReceived *big.Int, err error) {
 	chequebookAddress, known, err := s.addressbook.Chequebook(peer)
 	if err != nil {
 		return nil, err
@@ -198,7 +199,7 @@ func (s *Service) SettlementsSent() (map[string]*big.Int, error) {
 		if !known {
 			continue
 		}
-		result[peer.String()] = cheque.CumulativePayout
+		result[peer] = cheque.CumulativePayout
 	}
 
 	return result, nil
@@ -220,18 +221,18 @@ func (s *Service) SettlementsReceived() (map[string]*big.Int, error) {
 		if !known {
 			continue
 		}
-		result[peer.String()] = cheque.CumulativePayout
+		result[peer] = cheque.CumulativePayout
 	}
 	return result, err
 }
 
 // Handshake is called by the swap protocol when a handshake is received.
-func (s *Service) Handshake(peer swarm.Address, beneficiary common.Address) error {
+func (s *Service) Handshake(peer string, beneficiary common.Address) error {
 	oldPeer, known, err := s.addressbook.BeneficiaryPeer(beneficiary)
 	if err != nil {
 		return err
 	}
-	if known && !peer.Equal(oldPeer) {
+	if known && strings.Compare(peer, oldPeer) != 0 {
 		s.logger.Debugf("migrating swap addresses from peer %s to %s", oldPeer, peer)
 		return s.addressbook.MigratePeer(oldPeer, peer)
 	}
@@ -249,7 +250,7 @@ func (s *Service) Handshake(peer swarm.Address, beneficiary common.Address) erro
 }
 
 // LastSentCheque returns the last sent cheque for the peer
-func (s *Service) LastSentCheque(peer swarm.Address) (*chequebook.SignedCheque, error) {
+func (s *Service) LastSentCheque(peer string) (*chequebook.SignedCheque, error) {
 
 	common, known, err := s.addressbook.Beneficiary(peer)
 
@@ -265,7 +266,7 @@ func (s *Service) LastSentCheque(peer swarm.Address) (*chequebook.SignedCheque, 
 }
 
 // LastReceivedCheque returns the last received cheque for the peer
-func (s *Service) LastReceivedCheque(peer swarm.Address) (*chequebook.SignedCheque, error) {
+func (s *Service) LastReceivedCheque(peer string) (*chequebook.SignedCheque, error) {
 
 	common, known, err := s.addressbook.Chequebook(peer)
 
@@ -292,7 +293,7 @@ func (s *Service) LastSentCheques() (map[string]*chequebook.SignedCheque, error)
 	for i, j := range lastcheques {
 		addr, known, err := s.addressbook.BeneficiaryPeer(i)
 		if err == nil && known {
-			resultmap[addr.String()] = j
+			resultmap[addr] = j
 		}
 	}
 
@@ -311,7 +312,7 @@ func (s *Service) LastReceivedCheques() (map[string]*chequebook.SignedCheque, er
 	for i, j := range lastcheques {
 		addr, known, err := s.addressbook.ChequebookPeer(i)
 		if err == nil && known {
-			resultmap[addr.String()] = j
+			resultmap[addr] = j
 		}
 	}
 
@@ -319,7 +320,7 @@ func (s *Service) LastReceivedCheques() (map[string]*chequebook.SignedCheque, er
 }
 
 // CashCheque sends a cashing transaction for the last cheque of the peer
-func (s *Service) CashCheque(ctx context.Context, peer swarm.Address) (common.Hash, error) {
+func (s *Service) CashCheque(ctx context.Context, peer string) (common.Hash, error) {
 	chequebookAddress, known, err := s.addressbook.Chequebook(peer)
 	if err != nil {
 		return common.Hash{}, err
@@ -331,7 +332,7 @@ func (s *Service) CashCheque(ctx context.Context, peer swarm.Address) (common.Ha
 }
 
 // CashoutStatus gets the status of the latest cashout transaction for the peers chequebook
-func (s *Service) CashoutStatus(ctx context.Context, peer swarm.Address) (*chequebook.CashoutStatus, error) {
+func (s *Service) CashoutStatus(ctx context.Context, peer string) (*chequebook.CashoutStatus, error) {
 	chequebookAddress, known, err := s.addressbook.Chequebook(peer)
 	if err != nil {
 		return nil, err

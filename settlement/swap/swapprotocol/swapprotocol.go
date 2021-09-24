@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/protobuf"
-	"github.com/ethersphere/bee/pkg/swarm"
+	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 const (
@@ -42,15 +42,15 @@ type IssueFunc func(ctx context.Context, beneficiary common.Address, amount *big
 // Interface is the main interface to send messages over swap protocol.
 type Interface interface {
 	// EmitCheque sends a signed cheque to a peer.
-	EmitCheque(ctx context.Context, peer swarm.Address, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error)
+	EmitCheque(ctx context.Context, peer string, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error)
 }
 
 // Swap is the interface the settlement layer should implement to receive cheques.
 type Swap interface {
 	// ReceiveCheque is called by the swap protocol if a cheque is received.
-	ReceiveCheque(ctx context.Context, peer swarm.Address, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
+	ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
 	// Handshake is called by the swap protocol when a handshake is received.
-	Handshake(peer swarm.Address, beneficiary common.Address) error
+	Handshake(peer string, beneficiary common.Address) error
 }
 
 // Service is the main implementation of the swap protocol.
@@ -130,7 +130,7 @@ func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 	return s.swap.ReceiveCheque(ctx, p.Address, signedCheque, exchangeRate)
 }
 
-func (s *Service) headler(receivedHeaders p2p.Headers, peerAddress swarm.Address) (returnHeaders p2p.Headers) {
+func (s *Service) headler(receivedHeaders p2p.Headers, peerAddress string) (returnHeaders p2p.Headers) {
 
 	exchangeRate, err := s.priceOracle.CurrentRates()
 	if err != nil {
@@ -142,7 +142,7 @@ func (s *Service) headler(receivedHeaders p2p.Headers, peerAddress swarm.Address
 }
 
 // InitiateCheque attempts to send a cheque to a peer.
-func (s *Service) EmitCheque(ctx context.Context, peer swarm.Address, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
+func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
