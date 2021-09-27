@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"math/big"
 	"time"
 
@@ -49,13 +52,10 @@ type Interface interface {
 type Swap interface {
 	// ReceiveCheque is called by the swap protocol if a cheque is received.
 	ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
-	// Handshake is called by the swap protocol when a handshake is received.
-	Handshake(peer string, beneficiary common.Address) error
 }
 
 // Service is the main implementation of the swap protocol.
 type Service struct {
-	streamer    p2p.Streamer
 	logger      logging.Logger
 	swap        Swap
 	priceOracle priceoracle.Service
@@ -63,9 +63,8 @@ type Service struct {
 }
 
 // New creates a new swap protocol Service.
-func New(streamer p2p.Streamer, logger logging.Logger, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
+func New(logger logging.Logger, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
 	return &Service{
-		streamer:    streamer,
 		logger:      logger,
 		beneficiary: beneficiary,
 		priceOracle: priceOracle,
@@ -77,57 +76,31 @@ func (s *Service) SetSwap(swap Swap) {
 	s.swap = swap
 }
 
-func (s *Service) Protocol() p2p.ProtocolSpec {
-	return p2p.ProtocolSpec{
-		Name:    protocolName,
-		Version: protocolVersion,
-		StreamSpecs: []p2p.StreamSpec{
-			{
-				Name:    streamName,
-				Handler: s.handler,
-				Headler: s.headler,
-			},
-		},
-		ConnectOut: s.init,
-		ConnectIn:  s.init,
-	}
-}
+//func (s *Service) Protocol() p2p.ProtocolSpec {
+//	return p2p.ProtocolSpec{
+//		Name:    protocolName,
+//		Version: protocolVersion,
+//		StreamSpecs: []p2p.StreamSpec{
+//			{
+//				Name:    streamName,
+//				Handler: s.handler,
+//				Headler: s.headler,
+//			},
+//		},
+//		ConnectOut: s.init,
+//		ConnectIn:  s.init,
+//	}
+//}
 
-// init is called on outgoing connections and triggers handshake exchange
-func (s *Service) init(ctx context.Context, p p2p.Peer) error {
-	beneficiary := common.BytesToAddress(p.EthereumAddress)
-	return s.swap.Handshake(p.Address, beneficiary)
-}
-
-func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
-	r := protobuf.NewReader(stream)
-	defer func() {
-		if err != nil {
-			_ = stream.Reset()
-		} else {
-			_ = stream.FullClose()
-		}
-	}()
-
-	var req pb.EmitCheque
-	if err := r.ReadMsgWithContext(ctx, &req); err != nil {
-		return fmt.Errorf("read request from peer %v: %w", p.Address, err)
-	}
-
-	responseHeaders := stream.ResponseHeaders()
-	exchangeRate, err := swap.ParseSettlementResponseHeaders(responseHeaders)
-	if err != nil {
-		return err
-	}
-
+func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque string, exchangeRate *big.Int) (err error) {
 	var signedCheque *chequebook.SignedCheque
-	err = json.Unmarshal(req.Cheque, &signedCheque)
+	err = json.Unmarshal([]byte(encodedCheque), &signedCheque)
 	if err != nil {
 		return err
 	}
 
 	// signature validation
-	return s.swap.ReceiveCheque(ctx, p.Address, signedCheque, exchangeRate)
+	return s.swap.ReceiveCheque(ctx, requestPid, signedCheque, exchangeRate)
 }
 
 func (s *Service) headler(receivedHeaders p2p.Headers, peerAddress string) (returnHeaders p2p.Headers) {
@@ -146,39 +119,13 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	stream, err := s.streamer.NewStream(ctx, peer, nil, protocolName, protocolVersion, streamName)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			_ = stream.Reset()
-		} else {
-			_ = stream.FullClose()
-		}
-	}()
-
-	// reading exchangeRated headers
-	returnedHeaders := stream.Headers()
-	exchangeRate, err := swap.ParseSettlementResponseHeaders(returnedHeaders)
-	if err != nil {
-		return nil, err
-	}
-
-	// comparing received headers to known truth
-
 	// get current global exchangeRate rate
 	checkExchangeRate, err := s.priceOracle.CurrentRates()
 	if err != nil {
 		return nil, err
 	}
 
-	// exchangeRate rates should match
-	if exchangeRate.Cmp(checkExchangeRate) != 0 {
-		return nil, ErrNegotiateRate
-	}
-
-	paymentAmount := new(big.Int).Mul(amount, exchangeRate)
+	paymentAmount := new(big.Int).Mul(amount, checkExchangeRate)
 	sentAmount := paymentAmount
 
 	// issue cheque call with provided callback for sending cheque to finish transaction
@@ -193,11 +140,43 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 		// sending cheque
 		s.logger.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
 
-		w := protobuf.NewWriter(stream)
-		return w.WriteMsgWithContext(ctx, &pb.EmitCheque{
-			Cheque: encodedCheque,
-		})
+		//w := protobuf.NewWriter(stream)
+		//return w.WriteMsgWithContext(ctx, &pb.EmitCheque{
+		//	Cheque: encodedCheque,
+		//})
 
+		{
+			hostPid, err := peer.IDB58Decode(peer)
+			if err != nil {
+				log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
+				return err
+			}
+
+			cb := make(chan error)
+
+			go func() {
+				ctx, _ := context.WithTimeout(rss.Ctx, 10*time.Second)
+				ctxParams, err := helper.ExtractContextParams(req, env)
+				_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/swap",
+					encodedCheque,
+				)
+				if err != nil {
+					cb <- err
+				}
+			}()
+
+			// host needs to send recv in 30 seconds, or the contract will be invalid.
+			tick := time.Tick(30 * time.Second)
+			select {
+			case err = <-cb:
+				return err
+			case <-tick:
+				return errors.New("call /storage/upload/swap timeout")
+			}
+
+			//return msg, do issue ok.
+
+		}
 	})
 	if err != nil {
 		return nil, err

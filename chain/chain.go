@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"math/big"
 	"strings"
 	"time"
@@ -29,6 +30,8 @@ const (
 	maxDelay          = 1 * time.Minute
 	cancellationDepth = 6
 )
+
+var SwapProtocol *swapprotocol.Service
 
 // InitChain will initialize the Ethereum backend at the given endpoint and
 // set up the Transaction Service to interact with it using the provided signer.
@@ -238,11 +241,12 @@ func InitSwap(
 
 	swapProtocol.SetSwap(swapService)
 
-	err := p2ps.AddProtocol(swapProtocol.Protocol())
-	if err != nil {
-		return nil, nil, err
-	}
+	//err := p2ps.AddProtocol(swapProtocol.Protocol())
+	//if err != nil {
+	//	return nil, nil, err
+	//}
 
+	SwapProtocol = swapProtocol
 	return swapService, priceOracle, nil
 }
 

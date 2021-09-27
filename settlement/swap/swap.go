@@ -75,6 +75,10 @@ func New(proto swapprotocol.Interface, logger logging.Logger, store storage.Stat
 	}
 }
 
+func (s *Service)GetProtocols()swapprotocol.Interface{
+	return s.proto
+}
+
 // ReceiveCheque is called by the swap protocol if a cheque is received.
 func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) (err error) {
 	// check this is the same chequebook for this peer as previously
