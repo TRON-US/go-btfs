@@ -17,18 +17,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
-<<<<<<< HEAD
-	"github.com/TRON-US/go-btfs/transaction/logging"
-=======
-	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/p2p"
-	"github.com/ethersphere/bee/pkg/p2p/protobuf"
-	logging "github.com/ipfs/go-log"
->>>>>>> 749cd782b480e8270347030314523455b0f5952a
-	//"github.com/ethersphere/bee/pkg/swarm"
 
+	//"github.com/ethersphere/bee/pkg/swarm"
 	"github.com/ethereum/go-ethereum/common"
+	logging "github.com/ipfs/go-log"
 	peerInfo "github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -64,26 +56,14 @@ type Swap interface {
 
 // Service is the main implementation of the swap protocol.
 type Service struct {
-<<<<<<< HEAD
-	logger      logging.Logger
-=======
-	streamer    p2p.Streamer
->>>>>>> 749cd782b480e8270347030314523455b0f5952a
 	swap        Swap
 	priceOracle priceoracle.Service
 	beneficiary common.Address
 }
 
 // New creates a new swap protocol Service.
-<<<<<<< HEAD
-func New(logger logging.Logger, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
+func New(beneficiary common.Address, priceOracle priceoracle.Service) *Service {
 	return &Service{
-		logger:      logger,
-=======
-func New(streamer p2p.Streamer, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
-	return &Service{
-		streamer:    streamer,
->>>>>>> 749cd782b480e8270347030314523455b0f5952a
 		beneficiary: beneficiary,
 		priceOracle: priceOracle,
 	}
@@ -93,22 +73,6 @@ func New(streamer p2p.Streamer, beneficiary common.Address, priceOracle priceora
 func (s *Service) SetSwap(swap Swap) {
 	s.swap = swap
 }
-
-//func (s *Service) Protocol() p2p.ProtocolSpec {
-//	return p2p.ProtocolSpec{
-//		Name:    protocolName,
-//		Version: protocolVersion,
-//		StreamSpecs: []p2p.StreamSpec{
-//			{
-//				Name:    streamName,
-//				Handler: s.handler,
-//				Headler: s.headler,
-//			},
-//		},
-//		ConnectOut: s.init,
-//		ConnectIn:  s.init,
-//	}
-//}
 
 func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque string, exchangeRate *big.Int) (err error) {
 	var signedCheque *chequebook.SignedCheque
@@ -150,12 +114,11 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 		}
 
 		// sending cheque
-<<<<<<< HEAD
-		s.logger.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
+		log.Infof("sending cheque message to peer %v (%v)", peer, cheque)
 		{
 			hostPid, err := peerInfo.IDB58Decode(peer)
 			if err != nil {
-				s.logger.Tracef("peer.IDB58Decode(peer:%s) error: %s", peer, err)
+				log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
 				return err
 			}
 
@@ -165,6 +128,10 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 				err = func() error {
 					ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
 					ctxParams, err := helper.ExtractContextParams(upload.Req, upload.Env)
+					if err != nil {
+						return err
+					}
+
 					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
 						encodedCheque,
 						exchangeRate,
@@ -175,7 +142,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 					return nil
 				}()
 				if err != nil {
-					s.logger.Tracef("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
+					log.Infof("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
 				}
 				wg.Done()
 			}()
@@ -183,15 +150,6 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 			wg.Wait()
 		}
 		return nil
-=======
-		log.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
-
-		w := protobuf.NewWriter(stream)
-		return w.WriteMsgWithContext(ctx, &pb.EmitCheque{
-			Cheque: encodedCheque,
-		})
-
->>>>>>> 749cd782b480e8270347030314523455b0f5952a
 	})
 	if err != nil {
 		return nil, err

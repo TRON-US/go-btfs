@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/chain"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	//"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
 	storemock "github.com/TRON-US/go-btfs/statestore/mock"
 	"github.com/TRON-US/go-btfs/transaction"
 	backendmock "github.com/TRON-US/go-btfs/transaction/backendmock"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -485,10 +486,10 @@ func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor,
 		chainID            int64
 		transactionService transaction.Service
 		transactionMonitor transaction.Monitor
-		chequebookFactory  chequebook.Factory
-		chequebookService  chequebook.Service
-		chequeStore        chequebook.ChequeStore
-		cashoutService     chequebook.CashoutService
+		//chequebookFactory  chequebook.Factory
+		//chequebookService  chequebook.Service
+		//chequeStore        chequebook.ChequeStore
+		//cashoutService     chequebook.CashoutService
 		pollingInterval    = time.Duration(20) * time.Second
 	)
 
@@ -589,7 +590,7 @@ func TestRealBalance(t *testing.T) {
 
 //目前还未调通，这个测试例便以失败，跑单测时，可以先注释掉
 func TestBanalcefromChain(t *testing.T) {
-	swapBackend, overlayEthAddress, chainID, transactionMonitor, transactionService, err := initchain()
+	swapBackend, overlayEthAddress, _, _, transactionService, err := initchain()
 
 	if err != nil {
 		t.Fatal(err)
