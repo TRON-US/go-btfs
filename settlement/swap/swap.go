@@ -246,7 +246,7 @@ func (s *Service) Handshake(peer string, beneficiary common.Address) error {
 		return err
 	}
 	if !known {
-		log.Tracef("initial swap handshake peer: %v beneficiary: %x", peer, beneficiary)
+		log.Infof("initial swap handshake peer: %v beneficiary: %x", peer, beneficiary)
 		return s.addressbook.PutBeneficiary(peer, beneficiary)
 	}
 

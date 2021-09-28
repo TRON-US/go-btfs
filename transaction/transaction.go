@@ -24,7 +24,7 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
-var log = logging.Logger("transaction:transactionService")
+var logTran = logging.Logger("transaction:transactionService")
 
 const (
 	noncePrefix              = "transaction_nonce_"
@@ -153,7 +153,7 @@ func (t *transactionService) Send(ctx context.Context, request *TxRequest) (txHa
 		return common.Hash{}, err
 	}
 
-	log.Tracef("sending transaction %x with nonce %d", signedTx.Hash(), nonce)
+	logTran.Infof("sending transaction %x with nonce %d", signedTx.Hash(), nonce)
 
 	err = t.backend.SendTransaction(ctx, signedTx)
 	if err != nil {
@@ -198,18 +198,18 @@ func (t *transactionService) waitForPendingTx(txHash common.Hash) {
 		_, err := t.WaitForReceipt(t.ctx, txHash)
 		if err != nil {
 			if !errors.Is(err, ErrTransactionCancelled) {
-				log.Errorf("error while waiting for pending transaction %x: %v", txHash, err)
+				logTran.Errorf("error while waiting for pending transaction %x: %v", txHash, err)
 				return
 			} else {
-				log.Warningf("pending transaction %x cancelled", txHash)
+				logTran.Warningf("pending transaction %x cancelled", txHash)
 			}
 		} else {
-			log.Tracef("pending transaction %x confirmed", txHash)
+			logTran.Infof("pending transaction %x confirmed", txHash)
 		}
 
 		err = t.store.Delete(pendingTransactionKey(txHash))
 		if err != nil {
-			log.Errorf("error while unregistering transaction as pending %x: %v", txHash, err)
+			logTran.Errorf("error while unregistering transaction as pending %x: %v", txHash, err)
 		}
 	}()
 }

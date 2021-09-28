@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest/adal"
 	"math/big"
 	"strings"
 	"time"
@@ -18,13 +17,11 @@ import (
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
-
-	//"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethersphere/bee/pkg/p2p/libp2p"
 	logging "github.com/ipfs/go-log"
 )
 
@@ -35,9 +32,8 @@ const (
 	cancellationDepth = 6
 )
 
-<<<<<<< HEAD
 var SwapProtocol *swapprotocol.Service
-=======
+
 type ChainInfo struct {
 	backend            transaction.Backend
 	overlayAddress     common.Address
@@ -46,7 +42,6 @@ type ChainInfo struct {
 	transactionMonitor transaction.Monitor
 	transactionService transaction.Service
 }
->>>>>>> 749cd782b480e8270347030314523455b0f5952a
 
 // InitChain will initialize the Ethereum backend at the given endpoint and
 // set up the Transaction Service to interact with it using the provided signer.
@@ -56,7 +51,7 @@ func InitChain(
 	endpoint string,
 	signer crypto.Signer,
 	pollingInterval time.Duration,
-) (ChainInfo, error) {
+) (*ethclient.Client, common.Address, int64, transaction.Monitor, transaction.Service, error) {
 	backend, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("dial eth client: %w", err)
@@ -80,16 +75,7 @@ func InitChain(
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("new transaction service: %w", err)
 	}
 
-	c := &ChainInfo{
-		backend:            backend,
-		overlayEthAddress:  overlayAddress,
-		signer:             signer,
-		chainID:            chainID,
-		transactionMonitor: transactionMonitor,
-		transactionService: transactionService,
-	}
-
-	return c, nil
+	return backend, overlayEthAddress, chainID.Int64(), transactionMonitor, transactionService,  nil
 }
 
 // InitChequebookFactory will initialize the chequebook factory with the given
@@ -217,7 +203,6 @@ func initChequeStoreCashout(
 
 // InitSwap will initialize and register the swap service.
 func InitSwap(
-	p2ps *libp2p.Service,
 	stateStore storage.StateStorer,
 	networkID uint64,
 	overlayEthAddress common.Address,
@@ -241,9 +226,9 @@ func InitSwap(
 		currentPriceOracleAddress = common.HexToAddress(priceOracleAddress)
 	}
 
-	priceOracle := priceoracle.New(logger, currentPriceOracleAddress, transactionService, 300)
+	priceOracle := priceoracle.New(currentPriceOracleAddress, transactionService, 300)
 	priceOracle.Start()
-	swapProtocol := swapprotocol.New(p2ps, logger, overlayEthAddress, priceOracle)
+	swapProtocol := swapprotocol.New(overlayEthAddress, priceOracle)
 	swapAddressBook := swap.NewAddressbook(stateStore)
 
 	swapService := swap.New(
@@ -258,13 +243,8 @@ func InitSwap(
 	)
 
 	swapProtocol.SetSwap(swapService)
-
-	//err := p2ps.AddProtocol(swapProtocol.Protocol())
-	//if err != nil {
-	//	return nil, nil, err
-	//}
-
 	SwapProtocol = swapProtocol
+
 	return swapService, priceOracle, nil
 }
 

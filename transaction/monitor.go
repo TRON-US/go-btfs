@@ -18,7 +18,7 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
-var log = logging.Logger("transaction:monitor")
+var logTranMonitor = logging.Logger("transaction:monitor")
 var ErrTransactionCancelled = errors.New("transaction cancelled")
 var ErrMonitorClosed = errors.New("monitor closed")
 
@@ -98,7 +98,7 @@ func (tm *transactionMonitor) WatchTransaction(txHash common.Hash, nonce uint64)
 	default:
 	}
 
-	log.Tracef("starting to watch transaction %x with nonce %d", txHash, nonce)
+	logTranMonitor.Infof("starting to watch transaction %x with nonce %d", txHash, nonce)
 
 	return receiptC, errC, nil
 }
@@ -141,7 +141,7 @@ func (tm *transactionMonitor) watchPending() {
 		// switch to new head subscriptions once websockets are the norm
 		block, err := tm.backend.BlockNumber(tm.ctx)
 		if err != nil {
-			log.Errorf("could not get block number: %v", err)
+			logTranMonitor.Errorf("could not get block number: %v", err)
 			continue
 		} else if block <= lastBlock && !added {
 			// if the block number is not higher than before there is nothing todo
@@ -151,7 +151,7 @@ func (tm *transactionMonitor) watchPending() {
 		}
 
 		if err := tm.checkPending(block); err != nil {
-			log.Tracef("error while checking pending transactions: %v", err)
+			logTranMonitor.Infof("error while checking pending transactions: %v", err)
 			continue
 		}
 		lastBlock = block

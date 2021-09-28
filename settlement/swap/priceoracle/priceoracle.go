@@ -70,7 +70,7 @@ func (s *service) Start() {
 			if err != nil {
 				log.Errorf("could not get price: %v", err)
 			} else {
-				log.Tracef("updated exchange rate to %d", exchangeRate)
+				log.Infof("updated exchange rate to %d", exchangeRate)
 				s.exchangeRate = exchangeRate
 			}
 
