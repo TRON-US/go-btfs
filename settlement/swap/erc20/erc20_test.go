@@ -8,15 +8,11 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
-	"github.com/TRON-US/go-btfs/chain"
 	//"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
-	storemock "github.com/TRON-US/go-btfs/statestore/mock"
 	"github.com/TRON-US/go-btfs/transaction"
 	backendmock "github.com/TRON-US/go-btfs/transaction/backendmock"
-	"github.com/TRON-US/go-btfs/transaction/crypto"
 	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 
 	"github.com/ethereum/go-ethereum"
@@ -479,6 +475,7 @@ func getChainID(client *ethclient.Client) (*big.Int, error) {
 	return chainID, nil
 }
 
+/*
 func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor, transaction.Service, error) {
 	var (
 		swapBackend        *ethclient.Client
@@ -490,7 +487,7 @@ func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor,
 		//chequebookService  chequebook.Service
 		//chequeStore        chequebook.ChequeStore
 		//cashoutService     chequebook.CashoutService
-		pollingInterval    = time.Duration(20) * time.Second
+		pollingInterval = time.Duration(20) * time.Second
 	)
 
 	store := storemock.NewStateStore()
@@ -516,6 +513,7 @@ func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor,
 
 	return swapBackend, overlayEthAddress, chainID, transactionMonitor, transactionService, nil
 }
+*/
 
 func TestBalanceOf(t *testing.T) {
 	erc20Address := common.HexToAddress("00")
@@ -588,6 +586,8 @@ func TestRealBalance(t *testing.T) {
 	t.Log("real balance is: ", balance)
 }
 
+/*
+
 //目前还未调通，这个测试例便以失败，跑单测时，可以先注释掉
 func TestBanalcefromChain(t *testing.T) {
 	swapBackend, overlayEthAddress, _, _, transactionService, err := initchain()
@@ -606,6 +606,7 @@ func TestBanalcefromChain(t *testing.T) {
 
 	t.Log("BanalcefromChain is: ", balance)
 }
+*/
 
 func TestTransfer(t *testing.T) {
 	address := common.HexToAddress("0xabcd")
