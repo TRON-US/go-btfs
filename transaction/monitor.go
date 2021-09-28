@@ -12,12 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	logging "github.com/ipfs/go-log"
 )
 
+var log = logging.Logger("transaction:monitor")
 var ErrTransactionCancelled = errors.New("transaction cancelled")
 var ErrMonitorClosed = errors.New("monitor closed")
 
@@ -36,7 +37,6 @@ type transactionMonitor struct {
 	cancelFunc context.CancelFunc // function to cancel the above context
 	wg         sync.WaitGroup
 
-	logger  logging.Logger
 	backend Backend
 	sender  common.Address // sender of transactions which this instance can monitor
 
@@ -55,13 +55,12 @@ type transactionWatch struct {
 	nonce  uint64      // nonce of the transaction to watch
 }
 
-func NewMonitor(logger logging.Logger, backend Backend, sender common.Address, pollingInterval time.Duration, cancellationDepth uint64) Monitor {
+func NewMonitor(backend Backend, sender common.Address, pollingInterval time.Duration, cancellationDepth uint64) Monitor {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	t := &transactionMonitor{
 		ctx:        ctx,
 		cancelFunc: cancelFunc,
-		logger:     logger,
 		backend:    backend,
 		sender:     sender,
 
@@ -99,7 +98,7 @@ func (tm *transactionMonitor) WatchTransaction(txHash common.Hash, nonce uint64)
 	default:
 	}
 
-	tm.logger.Tracef("starting to watch transaction %x with nonce %d", txHash, nonce)
+	log.Tracef("starting to watch transaction %x with nonce %d", txHash, nonce)
 
 	return receiptC, errC, nil
 }
@@ -142,7 +141,7 @@ func (tm *transactionMonitor) watchPending() {
 		// switch to new head subscriptions once websockets are the norm
 		block, err := tm.backend.BlockNumber(tm.ctx)
 		if err != nil {
-			tm.logger.Errorf("could not get block number: %v", err)
+			log.Errorf("could not get block number: %v", err)
 			continue
 		} else if block <= lastBlock && !added {
 			// if the block number is not higher than before there is nothing todo
@@ -152,7 +151,7 @@ func (tm *transactionMonitor) watchPending() {
 		}
 
 		if err := tm.checkPending(block); err != nil {
-			tm.logger.Tracef("error while checking pending transactions: %v", err)
+			log.Tracef("error while checking pending transactions: %v", err)
 			continue
 		}
 		lastBlock = block

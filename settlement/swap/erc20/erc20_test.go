@@ -6,7 +6,6 @@ package erc20_test
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
@@ -18,7 +17,6 @@ import (
 	"github.com/TRON-US/go-btfs/transaction"
 	backendmock "github.com/TRON-US/go-btfs/transaction/backendmock"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -494,7 +492,6 @@ func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor,
 		pollingInterval    = time.Duration(20) * time.Second
 	)
 
-	logger := logging.New(ioutil.Discard, 0)
 	store := storemock.NewStateStore()
 
 	//get privateKey
@@ -507,7 +504,6 @@ func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor,
 
 	swapBackend, overlayEthAddress, chainID, transactionMonitor, transactionService, err = chain.InitChain(
 		context.Background(),
-		logger,
 		store,
 		endPoint,
 		signer,

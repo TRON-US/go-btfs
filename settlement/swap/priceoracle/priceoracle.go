@@ -11,19 +11,20 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/TRON-US/go-btfs/transaction/logging"
-	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/ethersphere/go-price-oracle-abi/priceoracleabi"
+	logging "github.com/ipfs/go-log"
 )
+
+var log = logging.Logger("priceoracle")
 
 var (
 	errDecodeABI = errors.New("could not decode abi data")
 )
 
 type service struct {
-	logger             logging.Logger
 	priceOracleAddress common.Address
 	transactionService transaction.Service
 	exchangeRate       *big.Int
@@ -45,9 +46,8 @@ var (
 	priceOracleABI = transaction.ParseABIUnchecked(priceoracleabi.PriceOracleABIv0_1_0)
 )
 
-func New(logger logging.Logger, priceOracleAddress common.Address, transactionService transaction.Service, timeDivisor int64) Service {
+func New(priceOracleAddress common.Address, transactionService transaction.Service, timeDivisor int64) Service {
 	return &service{
-		logger:             logger,
 		priceOracleAddress: priceOracleAddress,
 		transactionService: transactionService,
 		exchangeRate:       big.NewInt(0),
@@ -68,9 +68,9 @@ func (s *service) Start() {
 		for {
 			exchangeRate, err := s.GetPrice(ctx)
 			if err != nil {
-				s.logger.Errorf("could not get price: %v", err)
+				log.Errorf("could not get price: %v", err)
 			} else {
-				s.logger.Tracef("updated exchange rate to %d", exchangeRate)
+				log.Tracef("updated exchange rate to %d", exchangeRate)
 				s.exchangeRate = exchangeRate
 			}
 

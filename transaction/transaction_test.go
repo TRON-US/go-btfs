@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"testing"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/TRON-US/go-btfs/transaction/backendmock"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 	signermock "github.com/TRON-US/go-btfs/transaction/crypto/mock"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/monitormock"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/ethereum/go-ethereum"
@@ -71,7 +69,6 @@ func signerMockForTransaction(signedTx *types.Transaction, sender common.Address
 }
 
 func TestTransactionSend(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	sender := common.HexToAddress("0xddff")
 	recipient := common.HexToAddress("0xabcd")
 	txData := common.Hex2Bytes("0xabcdee")
@@ -94,7 +91,7 @@ func TestTransactionSend(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != signedTx {
@@ -201,7 +198,7 @@ func TestTransactionSend(t *testing.T) {
 		}
 		store := storemock.NewStateStore()
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != signedTx {
@@ -268,7 +265,7 @@ func TestTransactionSend(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != signedTx {
@@ -328,7 +325,7 @@ func TestTransactionSend(t *testing.T) {
 			Value: value,
 		}
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != signedTx {
@@ -374,7 +371,6 @@ func TestTransactionSend(t *testing.T) {
 }
 
 func TestTransactionWaitForReceipt(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	txHash := common.HexToHash("0xabcdee")
 	chainID := big.NewInt(5)
 	nonce := uint64(10)
@@ -389,7 +385,7 @@ func TestTransactionWaitForReceipt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	transactionService, err := transaction.NewService(logger,
+	transactionService, err := transaction.NewService(
 		backendmock.New(
 			backendmock.WithTransactionReceiptFunc(func(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 				return &types.Receipt{
@@ -432,7 +428,6 @@ func TestTransactionWaitForReceipt(t *testing.T) {
 }
 
 func TestTransactionResend(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	recipient := common.HexToAddress("0xbbbddd")
 	chainID := big.NewInt(5)
 	nonce := uint64(10)
@@ -458,7 +453,7 @@ func TestTransactionResend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	transactionService, err := transaction.NewService(logger,
+	transactionService, err := transaction.NewService(
 		backendmock.New(
 			backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 				if tx != signedTx {
@@ -484,7 +479,6 @@ func TestTransactionResend(t *testing.T) {
 }
 
 func TestTransactionCancel(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	recipient := common.HexToAddress("0xbbbddd")
 	chainID := big.NewInt(5)
 	nonce := uint64(10)
@@ -519,7 +513,7 @@ func TestTransactionCancel(t *testing.T) {
 			[]byte{},
 		)
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != cancelTx {
@@ -560,7 +554,7 @@ func TestTransactionCancel(t *testing.T) {
 			[]byte{},
 		)
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != cancelTx {
@@ -602,7 +596,7 @@ func TestTransactionCancel(t *testing.T) {
 			[]byte{},
 		)
 
-		transactionService, err := transaction.NewService(logger,
+		transactionService, err := transaction.NewService(
 			backendmock.New(
 				backendmock.WithSendTransactionFunc(func(ctx context.Context, tx *types.Transaction) error {
 					if tx != cancelTx {

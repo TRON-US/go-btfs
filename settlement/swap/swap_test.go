@@ -7,7 +7,6 @@ package swap_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
@@ -20,11 +19,9 @@ import (
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	mockstore "github.com/TRON-US/go-btfs/statestore/mock"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum/common"
 
 	peerInfo "github.com/libp2p/go-libp2p-core/peer"
-
 	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
@@ -139,7 +136,6 @@ func (m *cashoutMock) CashoutStatus(ctx context.Context, chequebookAddress commo
 }
 
 func TestReceiveCheque(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 	chequebookService := mockchequebook.NewChequebook()
 	amount := big.NewInt(50)
@@ -193,7 +189,6 @@ func TestReceiveCheque(t *testing.T) {
 
 	swap := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		chequebookService,
 		chequeStore,
@@ -228,7 +223,6 @@ func TestReceiveCheque(t *testing.T) {
 }
 
 func TestReceiveChequeReject(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 	chequebookService := mockchequebook.NewChequebook()
 	chequebookAddress := common.HexToAddress("0xcd")
@@ -262,7 +256,6 @@ func TestReceiveChequeReject(t *testing.T) {
 
 	swap := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		chequebookService,
 		chequeStore,
@@ -289,7 +282,6 @@ func TestReceiveChequeReject(t *testing.T) {
 }
 
 func TestReceiveChequeWrongChequebook(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 	chequebookService := mockchequebook.NewChequebook()
 	chequebookAddress := common.HexToAddress("0xcd")
@@ -316,7 +308,6 @@ func TestReceiveChequeWrongChequebook(t *testing.T) {
 	observer := newTestObserver()
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		chequebookService,
 		chequeStore,
@@ -343,7 +334,6 @@ func TestReceiveChequeWrongChequebook(t *testing.T) {
 }
 
 func TestPay(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	amount := big.NewInt(50)
@@ -381,7 +371,6 @@ func TestPay(t *testing.T) {
 				return amount, nil
 			},
 		},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
@@ -399,7 +388,6 @@ func TestPay(t *testing.T) {
 }
 
 func TestPayIssueError(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	amount := big.NewInt(50)
@@ -424,7 +412,6 @@ func TestPayIssueError(t *testing.T) {
 				return nil, errReject
 			},
 		},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
@@ -456,7 +443,6 @@ func TestPayIssueError(t *testing.T) {
 }
 
 func TestPayUnknownBeneficiary(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	amount := big.NewInt(50)
@@ -476,7 +462,6 @@ func TestPayUnknownBeneficiary(t *testing.T) {
 
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
@@ -504,7 +489,6 @@ func TestPayUnknownBeneficiary(t *testing.T) {
 }
 
 func TestHandshake(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	beneficiary := common.HexToAddress("0xcd")
@@ -516,7 +500,6 @@ func TestHandshake(t *testing.T) {
 	var putCalled bool
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
@@ -551,7 +534,6 @@ func TestHandshake(t *testing.T) {
 }
 
 func TestHandshakeNewPeer(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	beneficiary := common.HexToAddress("0xcd")
@@ -562,7 +544,6 @@ func TestHandshakeNewPeer(t *testing.T) {
 	var putCalled bool
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
@@ -597,7 +578,6 @@ func TestHandshakeNewPeer(t *testing.T) {
 }
 
 func TestMigratePeer(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	beneficiary := common.HexToAddress("0xcd")
@@ -607,7 +587,6 @@ func TestMigratePeer(t *testing.T) {
 
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
@@ -631,7 +610,6 @@ func TestMigratePeer(t *testing.T) {
 }
 
 func TestCashout(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	theirChequebookAddress := common.HexToAddress("ffff")
@@ -652,7 +630,6 @@ func TestCashout(t *testing.T) {
 
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		mockchequebook.NewChequebook(
 			mockchequebook.WithChequebookAddressFunc(func() common.Address {
@@ -687,7 +664,6 @@ func TestCashout(t *testing.T) {
 }
 
 func TestCashoutStatus(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	store := mockstore.NewStateStore()
 
 	theirChequebookAddress := common.HexToAddress("ffff")
@@ -707,7 +683,6 @@ func TestCashoutStatus(t *testing.T) {
 
 	swapService := swap.New(
 		&swapProtocolMock{},
-		logger,
 		store,
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),

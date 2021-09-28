@@ -6,19 +6,16 @@ package transaction_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"testing"
 	"time"
 
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/backendsimulation"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func TestMonitorWatchTransaction(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
 	txHash := common.HexToHash("0xabcd")
 	nonce := uint64(10)
 	sender := common.HexToAddress("0xffee")
@@ -29,7 +26,6 @@ func TestMonitorWatchTransaction(t *testing.T) {
 
 	t.Run("single transaction confirmed", func(t *testing.T) {
 		monitor := transaction.NewMonitor(
-			logger,
 			backendsimulation.New(
 				backendsimulation.WithBlocks(
 					backendsimulation.Block{
@@ -78,7 +74,6 @@ func TestMonitorWatchTransaction(t *testing.T) {
 
 	t.Run("single transaction cancelled", func(t *testing.T) {
 		monitor := transaction.NewMonitor(
-			logger,
 			backendsimulation.New(
 				backendsimulation.WithBlocks(
 					backendsimulation.Block{
@@ -136,7 +131,6 @@ func TestMonitorWatchTransaction(t *testing.T) {
 		txHash3 := common.HexToHash("cccc")
 
 		monitor := transaction.NewMonitor(
-			logger,
 			backendsimulation.New(
 				backendsimulation.WithBlocks(
 					backendsimulation.Block{
@@ -255,7 +249,6 @@ func TestMonitorWatchTransaction(t *testing.T) {
 
 	t.Run("shutdown while waiting", func(t *testing.T) {
 		monitor := transaction.NewMonitor(
-			logger,
 			backendsimulation.New(
 				backendsimulation.WithBlocks(
 					backendsimulation.Block{

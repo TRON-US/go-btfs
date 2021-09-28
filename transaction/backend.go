@@ -12,13 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	logging "github.com/ipfs/go-log"
 )
+
+var log = logging.Logger("transaction")
 
 // Backend is the minimum of blockchain backend functions we need.
 type Backend interface {
@@ -55,7 +57,7 @@ func IsSynced(ctx context.Context, backend Backend, maxDelay time.Duration) (boo
 // WaitSynced will wait until we are synced with the given blockchain backend,
 // with the given maxDelay duration as the maximum time we can be behind the
 // last block.
-func WaitSynced(ctx context.Context, logger logging.Logger, backend Backend, maxDelay time.Duration) error {
+func WaitSynced(ctx context.Context, backend Backend, maxDelay time.Duration) error {
 	for {
 		synced, blockTime, err := IsSynced(ctx, backend, maxDelay)
 		if err != nil {
@@ -66,7 +68,7 @@ func WaitSynced(ctx context.Context, logger logging.Logger, backend Backend, max
 			return nil
 		}
 
-		logger.Infof("still waiting for Ethereum to sync. Block time is %s.", blockTime)
+		log.Infof("still waiting for Ethereum to sync. Block time is %s.", blockTime)
 
 		select {
 		case <-ctx.Done():

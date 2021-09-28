@@ -6,13 +6,11 @@ package priceoracle_test
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
 	"testing"
 
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
 	"github.com/TRON-US/go-btfs/transaction"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	transactionmock "github.com/TRON-US/go-btfs/transaction/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/go-price-oracle-abi/priceoracleabi"
@@ -33,7 +31,6 @@ func TestExchangeGetPrice(t *testing.T) {
 	expectedDeduce.FillBytes(result[32:64])
 
 	ex := priceoracle.New(
-		logging.New(ioutil.Discard, 0),
 		priceOracleAddress,
 		transactionmock.New(
 			transactionmock.WithABICall(

@@ -17,12 +17,22 @@ import (
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
+<<<<<<< HEAD
 	"github.com/TRON-US/go-btfs/transaction/logging"
+=======
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethersphere/bee/pkg/p2p"
+	"github.com/ethersphere/bee/pkg/p2p/protobuf"
+	logging "github.com/ipfs/go-log"
+>>>>>>> 749cd782b480e8270347030314523455b0f5952a
 	//"github.com/ethersphere/bee/pkg/swarm"
 
 	"github.com/ethereum/go-ethereum/common"
 	peerInfo "github.com/libp2p/go-libp2p-core/peer"
 )
+
+var log = logging.Logger("swapprotocol")
 
 const (
 	protocolName    = "swap"
@@ -31,7 +41,7 @@ const (
 )
 
 var (
-	ErrNegotiateRate      = errors.New("exchange rates mismatch")
+	ErrNegotiateRate = errors.New("exchange rates mismatch")
 )
 
 type SendChequeFunc chequebook.SendChequeFunc
@@ -54,16 +64,26 @@ type Swap interface {
 
 // Service is the main implementation of the swap protocol.
 type Service struct {
+<<<<<<< HEAD
 	logger      logging.Logger
+=======
+	streamer    p2p.Streamer
+>>>>>>> 749cd782b480e8270347030314523455b0f5952a
 	swap        Swap
 	priceOracle priceoracle.Service
 	beneficiary common.Address
 }
 
 // New creates a new swap protocol Service.
+<<<<<<< HEAD
 func New(logger logging.Logger, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
 	return &Service{
 		logger:      logger,
+=======
+func New(streamer p2p.Streamer, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
+	return &Service{
+		streamer:    streamer,
+>>>>>>> 749cd782b480e8270347030314523455b0f5952a
 		beneficiary: beneficiary,
 		priceOracle: priceOracle,
 	}
@@ -130,6 +150,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 		}
 
 		// sending cheque
+<<<<<<< HEAD
 		s.logger.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
 		{
 			hostPid, err := peerInfo.IDB58Decode(peer)
@@ -162,6 +183,15 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 			wg.Wait()
 		}
 		return nil
+=======
+		log.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
+
+		w := protobuf.NewWriter(stream)
+		return w.WriteMsgWithContext(ctx, &pb.EmitCheque{
+			Cheque: encodedCheque,
+		})
+
+>>>>>>> 749cd782b480e8270347030314523455b0f5952a
 	})
 	if err != nil {
 		return nil, err

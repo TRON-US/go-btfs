@@ -13,10 +13,12 @@ import (
 
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
 	"github.com/TRON-US/go-btfs/transaction"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
+	logging "github.com/ipfs/go-log"
 )
+
+var log = logging.Logger("chequebook:init")
 
 const (
 	chequebookKey           = "swap_chequebook"
@@ -28,7 +30,6 @@ const (
 
 func checkBalance(
 	ctx context.Context,
-	logger logging.Logger,
 	swapInitialDeposit *big.Int,
 	swapBackend transaction.Backend,
 	chainId int64,
@@ -66,14 +67,14 @@ func checkBalance(
 			}
 
 			if insufficientETH && insufficientERC20 {
-				logger.Warningf("cannot continue until there is sufficient ETH (for Gas) and at least %d BZZ available on %x", neededERC20, overlayEthAddress)
+				log.Warningf("cannot continue until there is sufficient ETH (for Gas) and at least %d BZZ available on %x", neededERC20, overlayEthAddress)
 			} else if insufficientETH {
-				logger.Warningf("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
+				log.Warningf("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
 			} else {
-				logger.Warningf("cannot continue until there is at least %d BZZ available on %x", neededERC20, overlayEthAddress)
+				log.Warningf("cannot continue until there is at least %d BZZ available on %x", neededERC20, overlayEthAddress)
 			}
 			if chainId == 5 {
-				logger.Warningf("learn how to fund your node by visiting our docs at https://docs.ethswarm.org/docs/installation/fund-your-node")
+				log.Warningf("learn how to fund your node by visiting our docs at https://docs.ethswarm.org/docs/installation/fund-your-node")
 			}
 			select {
 			case <-time.After(balanceCheckBackoffDuration):
@@ -96,7 +97,6 @@ func Init(
 	ctx context.Context,
 	chequebookFactory Factory,
 	stateStore storage.StateStorer,
-	logger logging.Logger,
 	swapInitialDeposit *big.Int,
 	transactionService transaction.Service,
 	swapBackend transaction.Backend,
@@ -130,7 +130,7 @@ func Init(
 			return nil, err
 		}
 		if err == storage.ErrNotFound {
-			logger.Info("no chequebook found, deploying new one.")
+			log.Info("no chequebook found, deploying new one.")
 			err = checkBalance(ctx, logger, swapInitialDeposit, swapBackend, chainId, overlayEthAddress, erc20Service)
 			if err != nil {
 				return nil, err
@@ -148,14 +148,14 @@ func Init(
 				return nil, err
 			}
 
-			logger.Infof("deploying new chequebook in transaction %x", txHash)
+			log.Infof("deploying new chequebook in transaction %x", txHash)
 
 			err = stateStore.Put(ChequebookDeploymentKey, txHash)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			logger.Infof("waiting for chequebook deployment in transaction %x", txHash)
+			log.Infof("waiting for chequebook deployment in transaction %x", txHash)
 		}
 
 		chequebookAddress, err = chequebookFactory.WaitDeployed(ctx, txHash)
@@ -163,7 +163,7 @@ func Init(
 			return nil, err
 		}
 
-		logger.Infof("deployed chequebook at address %x", chequebookAddress)
+		log.Infof("deployed chequebook at address %x", chequebookAddress)
 
 		// save the address for later use
 		err = stateStore.Put(chequebookKey, chequebookAddress)
@@ -177,19 +177,19 @@ func Init(
 		}
 
 		if swapInitialDeposit.Cmp(big.NewInt(0)) != 0 {
-			logger.Infof("depositing %d token into new chequebook", swapInitialDeposit)
+			log.Infof("depositing %d token into new chequebook", swapInitialDeposit)
 			depositHash, err := chequebookService.Deposit(ctx, swapInitialDeposit)
 			if err != nil {
 				return nil, err
 			}
 
-			logger.Infof("sent deposit transaction %x", depositHash)
+			log.Infof("sent deposit transaction %x", depositHash)
 			err = chequebookService.WaitForDeposit(ctx, depositHash)
 			if err != nil {
 				return nil, err
 			}
 
-			logger.Info("successfully deposited to chequebook")
+			log.Info("successfully deposited to chequebook")
 		}
 	} else {
 		chequebookService, err = New(transactionService, chequebookAddress, overlayEthAddress, stateStore, chequeSigner, erc20Service)
@@ -197,7 +197,7 @@ func Init(
 			return nil, err
 		}
 
-		logger.Infof("using existing chequebook %x", chequebookAddress)
+		log.Infof("using existing chequebook %x", chequebookAddress)
 	}
 
 	// regardless of how the chequebook service was initialised make sure that the chequebook is valid
