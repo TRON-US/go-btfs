@@ -16,12 +16,14 @@ import (
 	swap "github.com/TRON-US/go-btfs/settlement/swap/headers"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/bee/pkg/p2p"
 	"github.com/ethersphere/bee/pkg/p2p/protobuf"
+	logging "github.com/ipfs/go-log"
 	//"github.com/ethersphere/bee/pkg/swarm"
 )
+
+var log = logging.Logger("swapprotocol")
 
 const (
 	protocolName    = "swap"
@@ -30,7 +32,7 @@ const (
 )
 
 var (
-	ErrNegotiateRate      = errors.New("exchange rates mismatch")
+	ErrNegotiateRate = errors.New("exchange rates mismatch")
 )
 
 type SendChequeFunc chequebook.SendChequeFunc
@@ -56,17 +58,15 @@ type Swap interface {
 // Service is the main implementation of the swap protocol.
 type Service struct {
 	streamer    p2p.Streamer
-	logger      logging.Logger
 	swap        Swap
 	priceOracle priceoracle.Service
 	beneficiary common.Address
 }
 
 // New creates a new swap protocol Service.
-func New(streamer p2p.Streamer, logger logging.Logger, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
+func New(streamer p2p.Streamer, beneficiary common.Address, priceOracle priceoracle.Service) *Service {
 	return &Service{
 		streamer:    streamer,
-		logger:      logger,
 		beneficiary: beneficiary,
 		priceOracle: priceOracle,
 	}
@@ -191,7 +191,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 		}
 
 		// sending cheque
-		s.logger.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
+		log.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
 
 		w := protobuf.NewWriter(stream)
 		return w.WriteMsgWithContext(ctx, &pb.EmitCheque{

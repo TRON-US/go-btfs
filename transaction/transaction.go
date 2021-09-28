@@ -14,14 +14,17 @@ import (
 	"time"
 
 	"github.com/TRON-US/go-btfs/transaction/crypto"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/net/context"
+
+	logging "github.com/ipfs/go-log"
 )
+
+var log = logging.Logger("transaction:transactionService")
 
 const (
 	noncePrefix              = "transaction_nonce_"
@@ -91,7 +94,6 @@ type transactionService struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	logger  logging.Logger
 	backend Backend
 	signer  crypto.Signer
 	sender  common.Address
@@ -101,7 +103,7 @@ type transactionService struct {
 }
 
 // NewService creates a new transaction service.
-func NewService(logger logging.Logger, backend Backend, signer crypto.Signer, store storage.StateStorer, chainID *big.Int, monitor Monitor) (Service, error) {
+func NewService(backend Backend, signer crypto.Signer, store storage.StateStorer, chainID *big.Int, monitor Monitor) (Service, error) {
 	senderAddress, err := signer.EthereumAddress()
 	if err != nil {
 		return nil, err
@@ -112,7 +114,6 @@ func NewService(logger logging.Logger, backend Backend, signer crypto.Signer, st
 	t := &transactionService{
 		ctx:     ctx,
 		cancel:  cancel,
-		logger:  logger,
 		backend: backend,
 		signer:  signer,
 		sender:  senderAddress,
@@ -152,7 +153,7 @@ func (t *transactionService) Send(ctx context.Context, request *TxRequest) (txHa
 		return common.Hash{}, err
 	}
 
-	t.logger.Tracef("sending transaction %x with nonce %d", signedTx.Hash(), nonce)
+	log.Tracef("sending transaction %x with nonce %d", signedTx.Hash(), nonce)
 
 	err = t.backend.SendTransaction(ctx, signedTx)
 	if err != nil {
@@ -197,18 +198,18 @@ func (t *transactionService) waitForPendingTx(txHash common.Hash) {
 		_, err := t.WaitForReceipt(t.ctx, txHash)
 		if err != nil {
 			if !errors.Is(err, ErrTransactionCancelled) {
-				t.logger.Errorf("error while waiting for pending transaction %x: %v", txHash, err)
+				log.Errorf("error while waiting for pending transaction %x: %v", txHash, err)
 				return
 			} else {
-				t.logger.Warningf("pending transaction %x cancelled", txHash)
+				log.Warningf("pending transaction %x cancelled", txHash)
 			}
 		} else {
-			t.logger.Tracef("pending transaction %x confirmed", txHash)
+			log.Tracef("pending transaction %x confirmed", txHash)
 		}
 
 		err = t.store.Delete(pendingTransactionKey(txHash))
 		if err != nil {
-			t.logger.Errorf("error while unregistering transaction as pending %x: %v", txHash, err)
+			log.Errorf("error while unregistering transaction as pending %x: %v", txHash, err)
 		}
 	}()
 }

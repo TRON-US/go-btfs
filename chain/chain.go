@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/chain/config"
 	"github.com/TRON-US/go-btfs/settlement"
 	"github.com/TRON-US/go-btfs/settlement/swap"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
@@ -16,30 +17,41 @@ import (
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
-	"github.com/TRON-US/go-btfs/transaction/logging"
+
+	//"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/TRON-US/go-btfs/chain/config"
 	"github.com/ethersphere/bee/pkg/p2p/libp2p"
+	logging "github.com/ipfs/go-log"
 )
+
+var log = logging.Logger("chain")
 
 const (
 	maxDelay          = 1 * time.Minute
 	cancellationDepth = 6
 )
 
+type ChainInfo struct {
+	backend            transaction.Backend
+	overlayAddress     common.Address
+	signer             crypto.Signer
+	chainID            int64
+	transactionMonitor transaction.Monitor
+	transactionService transaction.Service
+}
+
 // InitChain will initialize the Ethereum backend at the given endpoint and
 // set up the Transaction Service to interact with it using the provided signer.
 func InitChain(
 	ctx context.Context,
-	logger logging.Logger,
 	stateStore storage.StateStorer,
 	endpoint string,
 	signer crypto.Signer,
 	pollingInterval time.Duration,
-) (*ethclient.Client, common.Address, int64, transaction.Monitor, transaction.Service, error) {
+) (ChainInfo, error) {
 	backend, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("dial eth client: %w", err)
@@ -47,7 +59,7 @@ func InitChain(
 
 	chainID, err := backend.ChainID(ctx)
 	if err != nil {
-		logger.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --swap-endpoint.", endpoint)
+		log.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --swap-endpoint.", endpoint)
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("get chain id: %w", err)
 	}
 
@@ -56,20 +68,28 @@ func InitChain(
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("eth address: %w", err)
 	}
 
-	transactionMonitor := transaction.NewMonitor(logger, backend, overlayEthAddress, pollingInterval, cancellationDepth)
+	transactionMonitor := transaction.NewMonitor(backend, overlayEthAddress, pollingInterval, cancellationDepth)
 
-	transactionService, err := transaction.NewService(logger, backend, signer, stateStore, chainID, transactionMonitor)
+	transactionService, err := transaction.NewService(backend, signer, stateStore, chainID, transactionMonitor)
 	if err != nil {
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("new transaction service: %w", err)
 	}
 
-	return backend, overlayEthAddress, chainID.Int64(), transactionMonitor, transactionService, nil
+	c := &ChainInfo{
+		backend:            backend,
+		overlayEthAddress:  overlayAddress,
+		signer:             signer,
+		chainID:            chainID,
+		transactionMonitor: transactionMonitor,
+		transactionService: transactionService,
+	}
+
+	return c, nil
 }
 
 // InitChequebookFactory will initialize the chequebook factory with the given
 // chain backend.
 func InitChequebookFactory(
-	logger logging.Logger,
 	backend *ethclient.Client,
 	chainID int64,
 	transactionService transaction.Service,
@@ -87,12 +107,12 @@ func InitChequebookFactory(
 			return nil, fmt.Errorf("no known factory address for this network (chain id: %d)", chainID)
 		}
 		currentFactory = foundFactory
-		logger.Infof("using default factory address for chain id %d: %x", chainID, currentFactory)
+		log.Infof("using default factory address for chain id %d: %x", chainID, currentFactory)
 	} else if !common.IsHexAddress(factoryAddress) {
 		return nil, errors.New("malformed factory address")
 	} else {
 		currentFactory = common.HexToAddress(factoryAddress)
-		logger.Infof("using custom factory address: %x", currentFactory)
+		log.Infof("using custom factory address: %x", currentFactory)
 	}
 
 	if len(legacyFactoryAddresses) == 0 {
@@ -120,7 +140,6 @@ func InitChequebookFactory(
 // chequebook factory and chain backend.
 func InitChequebookService(
 	ctx context.Context,
-	logger logging.Logger,
 	stateStore storage.StateStorer,
 	signer crypto.Signer,
 	chainID int64,
@@ -150,7 +169,6 @@ func InitChequebookService(
 		ctx,
 		chequebookFactory,
 		stateStore,
-		logger,
 		deposit,
 		transactionService,
 		backend,
@@ -195,7 +213,6 @@ func initChequeStoreCashout(
 // InitSwap will initialize and register the swap service.
 func InitSwap(
 	p2ps *libp2p.Service,
-	logger logging.Logger,
 	stateStore storage.StateStorer,
 	networkID uint64,
 	overlayEthAddress common.Address,
@@ -226,7 +243,6 @@ func InitSwap(
 
 	swapService := swap.New(
 		swapProtocol,
-		logger,
 		stateStore,
 		chequebookService,
 		chequeStore,
@@ -246,7 +262,7 @@ func InitSwap(
 	return swapService, priceOracle, nil
 }
 
-func GetTxHash(stateStore storage.StateStorer, logger logging.Logger, trxString string) ([]byte, error) {
+func GetTxHash(stateStore storage.StateStorer, trxString string) ([]byte, error) {
 
 	if trxString != "" {
 		txHashTrimmed := strings.TrimPrefix(trxString, "0x")
@@ -257,7 +273,7 @@ func GetTxHash(stateStore storage.StateStorer, logger logging.Logger, trxString 
 		if err != nil {
 			return nil, err
 		}
-		logger.Infof("using the provided transaction hash %x", txHash)
+		log.Infof("using the provided transaction hash %x", txHash)
 		return txHash, nil
 	}
 
@@ -270,11 +286,11 @@ func GetTxHash(stateStore storage.StateStorer, logger logging.Logger, trxString 
 		return nil, err
 	}
 
-	logger.Infof("using the chequebook transaction hash %x", txHash)
+	log.Infof("using the chequebook transaction hash %x", txHash)
 	return txHash.Bytes(), nil
 }
 
-func GetTxNextBlock(ctx context.Context, logger logging.Logger, backend transaction.Backend, monitor transaction.Monitor, duration time.Duration, trx []byte, blockHash string) ([]byte, error) {
+func GetTxNextBlock(ctx context.Context, backend transaction.Backend, monitor transaction.Monitor, duration time.Duration, trx []byte, blockHash string) ([]byte, error) {
 
 	if blockHash != "" {
 		blockHashTrimmed := strings.TrimPrefix(blockHash, "0x")
@@ -285,7 +301,7 @@ func GetTxNextBlock(ctx context.Context, logger logging.Logger, backend transact
 		if err != nil {
 			return nil, err
 		}
-		logger.Infof("using the provided block hash %x", blockHash)
+		log.Infof("using the provided block hash %x", blockHash)
 		return blockHash, nil
 	}
 
@@ -303,8 +319,7 @@ func GetTxNextBlock(ctx context.Context, logger logging.Logger, backend transact
 	hash := block.Hash()
 	hashBytes := hash.Bytes()
 
-	logger.Infof("using the next block hash from the blockchain %x", hashBytes)
+	log.Infof("using the next block hash from the blockchain %x", hashBytes)
 
 	return hashBytes, nil
 }
-

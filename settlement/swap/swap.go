@@ -14,11 +14,13 @@ import (
 	"github.com/TRON-US/go-btfs/settlement"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
+	logging "github.com/ipfs/go-log"
 	//"github.com/ethersphere/bee/pkg/swarm"
 )
+
+var log = logging.Logger("swap")
 
 var (
 	// ErrWrongChequebook is the error if a peer uses a different chequebook from before.
@@ -48,7 +50,6 @@ type Interface interface {
 // Service is the implementation of the swap settlement layer.
 type Service struct {
 	proto       swapprotocol.Interface
-	logger      logging.Logger
 	store       storage.StateStorer
 	accounting  settlement.Accounting
 	metrics     metrics
@@ -60,10 +61,9 @@ type Service struct {
 }
 
 // New creates a new swap Service.
-func New(proto swapprotocol.Interface, logger logging.Logger, store storage.StateStorer, chequebook chequebook.Service, chequeStore chequebook.ChequeStore, addressbook Addressbook, networkID uint64, cashout chequebook.CashoutService, accounting settlement.Accounting) *Service {
+func New(proto swapprotocol.Interface, store storage.StateStorer, chequebook chequebook.Service, chequeStore chequebook.ChequeStore, addressbook Addressbook, networkID uint64, cashout chequebook.CashoutService, accounting settlement.Accounting) *Service {
 	return &Service{
 		proto:       proto,
-		logger:      logger,
 		store:       store,
 		metrics:     newMetrics(),
 		chequebook:  chequebook,
@@ -233,7 +233,7 @@ func (s *Service) Handshake(peer string, beneficiary common.Address) error {
 		return err
 	}
 	if known && strings.Compare(peer, oldPeer) != 0 {
-		s.logger.Debugf("migrating swap addresses from peer %s to %s", oldPeer, peer)
+		log.Debugf("migrating swap addresses from peer %s to %s", oldPeer, peer)
 		return s.addressbook.MigratePeer(oldPeer, peer)
 	}
 
@@ -242,7 +242,7 @@ func (s *Service) Handshake(peer string, beneficiary common.Address) error {
 		return err
 	}
 	if !known {
-		s.logger.Tracef("initial swap handshake peer: %v beneficiary: %x", peer, beneficiary)
+		log.Tracef("initial swap handshake peer: %v beneficiary: %x", peer, beneficiary)
 		return s.addressbook.PutBeneficiary(peer, beneficiary)
 	}
 
