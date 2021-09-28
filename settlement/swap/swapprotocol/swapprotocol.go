@@ -8,22 +8,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
-	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"math/big"
+	"sync"
 	"time"
 
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
+	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
-	swap "github.com/TRON-US/go-btfs/settlement/swap/headers"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
-	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
 	"github.com/TRON-US/go-btfs/transaction/logging"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/bee/pkg/p2p"
-	"github.com/ethersphere/bee/pkg/p2p/protobuf"
 	//"github.com/ethersphere/bee/pkg/swarm"
+
+	"github.com/ethereum/go-ethereum/common"
+	peerInfo "github.com/libp2p/go-libp2p-core/peer"
 )
 
 const (
@@ -103,17 +101,6 @@ func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque 
 	return s.swap.ReceiveCheque(ctx, requestPid, signedCheque, exchangeRate)
 }
 
-func (s *Service) headler(receivedHeaders p2p.Headers, peerAddress string) (returnHeaders p2p.Headers) {
-
-	exchangeRate, err := s.priceOracle.CurrentRates()
-	if err != nil {
-		return p2p.Headers{}
-	}
-
-	returnHeaders = swap.MakeSettlementHeaders(exchangeRate)
-	return
-}
-
 // InitiateCheque attempts to send a cheque to a peer.
 func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -137,46 +124,44 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 			return err
 		}
 
+		exchangeRate, err := s.priceOracle.CurrentRates()
+		if err != nil {
+			return err
+		}
+
 		// sending cheque
 		s.logger.Tracef("sending cheque message to peer %v (%v)", peer, cheque)
-
-		//w := protobuf.NewWriter(stream)
-		//return w.WriteMsgWithContext(ctx, &pb.EmitCheque{
-		//	Cheque: encodedCheque,
-		//})
-
 		{
-			hostPid, err := peer.IDB58Decode(peer)
+			hostPid, err := peerInfo.IDB58Decode(peer)
 			if err != nil {
-				log.Errorf("shard %s decodes host_pid error: %s", h, err.Error())
+				s.logger.Tracef("peer.IDB58Decode(peer:%s) error: %s", peer, err)
 				return err
 			}
 
-			cb := make(chan error)
-
+			var wg sync.WaitGroup
+			wg.Add(1)
 			go func() {
-				ctx, _ := context.WithTimeout(rss.Ctx, 10*time.Second)
-				ctxParams, err := helper.ExtractContextParams(req, env)
-				_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/swap",
-					encodedCheque,
-				)
+				err = func() error {
+					ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+					ctxParams, err := helper.ExtractContextParams(upload.Req, upload.Env)
+					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
+						encodedCheque,
+						exchangeRate,
+						)
+					if err != nil {
+						return err
+					}
+					return nil
+				}()
 				if err != nil {
-					cb <- err
+					s.logger.Tracef("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
 				}
+				wg.Done()
 			}()
 
-			// host needs to send recv in 30 seconds, or the contract will be invalid.
-			tick := time.Tick(30 * time.Second)
-			select {
-			case err = <-cb:
-				return err
-			case <-tick:
-				return errors.New("call /storage/upload/swap timeout")
-			}
-
-			//return msg, do issue ok.
-
+			wg.Wait()
 		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

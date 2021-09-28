@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -11,11 +12,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 )
 
-var StorageUploadSwapCmd = &cmds.Command{
+var StorageUploadChequeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "ecieve cheque, do with cheque, and return it.",
-		ShortDescription: `
-Recieve cheque, deal it and return it.`,
+		Tagline: "receive upload cheque, do with cheque, and return it.",
+		ShortDescription: `receive upload cheque, deal it and return it.`,
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("encoded-cheque", true, false, "encoded-cheque from peer-id."),
@@ -36,9 +36,14 @@ Recieve cheque, deal it and return it.`,
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
-		// decode the cheque
+		exchangeRate, ok := new(big.Int).SetString(req.Arguments[2], 10)
+		if !ok {
+			return fmt.Errorf("exchangeRate:%s cannot be parsed, err:%s", req.Arguments[2], err)
+		}
+
+		// decode and deal the cheque
 		encodedCheque := req.Arguments[0]
-		err = chain.SwapProtocol.Handler(context.Background(), requestPid.String(), encodedCheque, nil)
+		err = chain.SwapProtocol.Handler(context.Background(), requestPid.String(), encodedCheque, exchangeRate)
 		if err != nil {
 			return err
 		}
