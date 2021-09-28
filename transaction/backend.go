@@ -20,7 +20,7 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
-var log = logging.Logger("transaction")
+var logTranBackend = logging.Logger("transaction::backend")
 
 // Backend is the minimum of blockchain backend functions we need.
 type Backend interface {
@@ -68,7 +68,7 @@ func WaitSynced(ctx context.Context, backend Backend, maxDelay time.Duration) er
 			return nil
 		}
 
-		log.Infof("still waiting for Ethereum to sync. Block time is %s.", blockTime)
+		logTranBackend.Infof("still waiting for Ethereum to sync. Block time is %s.", blockTime)
 
 		select {
 		case <-ctx.Done():
