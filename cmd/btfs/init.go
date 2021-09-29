@@ -144,7 +144,7 @@ Reinitializing would overwrite your keys.
 func doInit(out io.Writer, repoRoot string, empty bool, nBitsForKeypair int, confProfiles string, conf *config.Config,
 	keyType string /*importKey string,*/, mnemonic string, rmOnUnpin bool) error {
 
-	importKey, mnemonic, err := util.GenerateKey(importKey, keyType, mnemonic)
+	importKey, mnemonic, err := util.GenerateKey(keyType, mnemonic)
 	if err != nil {
 		return err
 	}

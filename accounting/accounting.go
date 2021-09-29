@@ -12,13 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
-	//"github.com/ethersphere/bee/pkg/p2p"
-	//"github.com/ethersphere/bee/pkg/pricing"
-	//"github.com/ethersphere/bee/pkg/swarm"
+	logging "github.com/ipfs/go-log"
 )
 
+var log = logging.Logger("accounting")
 
 // PayFunc is the function used for async monetary settlement
 type PayFunc func(context.Context, string, *big.Int)
@@ -30,13 +28,11 @@ type accountingPeer struct {
 	connected                      bool
 }
 
-
 // Accounting is the main implementation of the accounting interface.
 type Accounting struct {
 	// Mutex for accessing the accountingPeers map.
 	accountingPeersMu sync.Mutex
 	accountingPeers   map[string]*accountingPeer
-	logger            logging.Logger
 	store             storage.StateStorer
 
 	// function used for monetary settlement
@@ -46,21 +42,19 @@ type Accounting struct {
 	minimumPayment *big.Int
 	wg             sync.WaitGroup
 	//p2p            p2p.Service
-	timeNow        func() time.Time
+	timeNow func() time.Time
 }
 
 // NewAccounting creates a new Accounting instance with the provided options.
 func NewAccounting(
-	Logger logging.Logger,
 	Store storage.StateStorer,
 
 ) (*Accounting, error) {
 	return &Accounting{
-		accountingPeers:  make(map[string]*accountingPeer),
-		logger:           Logger,
-		store:            Store,
-		minimumPayment:   big.NewInt(0),
-		timeNow:          time.Now,
+		accountingPeers: make(map[string]*accountingPeer),
+		store:           Store,
+		minimumPayment:  big.NewInt(0),
+		timeNow:         time.Now,
 	}, nil
 }
 
@@ -93,7 +87,7 @@ func (a *Accounting) getAccountingPeer(peer string) *accountingPeer {
 	peerData, ok := a.accountingPeers[peer]
 	if !ok {
 		peerData = &accountingPeer{
-			connected:        false,
+			connected: false,
 		}
 		a.accountingPeers[peer] = peerData
 	}
@@ -111,11 +105,10 @@ func (a *Accounting) NotifyPaymentSent(peer string, amount *big.Int, receivedErr
 
 	if receivedError != nil {
 		accountingPeer.lastSettlementFailureTimestamp = a.timeNow().Unix()
-		a.logger.Warningf("accounting: payment failure %v", receivedError)
+		log.Warnf("accounting: payment failure %v", receivedError)
 		return
 	}
 }
-
 
 // NotifyPayment is called by Settlement when we receive a payment.
 func (a *Accounting) NotifyPaymentReceived(peer string, amount *big.Int) error {
@@ -124,7 +117,7 @@ func (a *Accounting) NotifyPaymentReceived(peer string, amount *big.Int) error {
 	accountingPeer.lock.Lock()
 	defer accountingPeer.lock.Unlock()
 
-	a.logger.Tracef("accounting: crediting peer %v with amount %d due to payment.", peer, amount)
+	log.Infof("accounting: crediting peer %v with amount %d due to payment.", peer, amount)
 
 	return nil
 }

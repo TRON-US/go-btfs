@@ -11,8 +11,9 @@ package core
 
 import (
 	"context"
-	"github.com/TRON-US/go-btfs/peering"
 	"io"
+
+	"github.com/TRON-US/go-btfs/peering"
 
 	"github.com/TRON-US/go-btfs/core/bootstrap"
 	"github.com/TRON-US/go-btfs/core/node"
@@ -23,14 +24,14 @@ import (
 	"github.com/TRON-US/go-btfs/p2p"
 	"github.com/TRON-US/go-btfs/repo"
 
-	"github.com/TRON-US/go-btfs-pinner"
+	pin "github.com/TRON-US/go-btfs-pinner"
 	mfs "github.com/TRON-US/go-mfs"
 	bserv "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-filestore"
 	"github.com/ipfs/go-graphsync"
 	bstore "github.com/ipfs/go-ipfs-blockstore"
 	exchange "github.com/ipfs/go-ipfs-exchange-interface"
-	"github.com/ipfs/go-ipfs-provider"
+	provider "github.com/ipfs/go-ipfs-provider"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
 	resolver "github.com/ipfs/go-path/resolver"
@@ -80,6 +81,7 @@ type IpfsNode struct {
 	Discovery       discovery.Service         `optional:"true"`
 	FilesRoot       *mfs.Root
 	RecordValidator record.Validator
+	//Statestore      storage.StateStorer
 
 	// Online
 	PeerHost      p2phost.Host            `optional:"true"` // the network host (server+client)
