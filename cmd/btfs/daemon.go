@@ -15,8 +15,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	version "github.com/TRON-US/go-btfs"
+	"github.com/TRON-US/go-btfs/chain"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
@@ -32,6 +34,7 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 	"github.com/TRON-US/go-btfs/spin"
+	"github.com/TRON-US/go-btfs/transaction/crypto"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
@@ -351,6 +354,32 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	// Print self information for logging and debugging purposes
 	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
 	fmt.Printf("Peer identity: %s\n", cfg.Identity.PeerID)
+
+	fmt.Printf("private key identity: %s\n", cfg.Identity.PrivKey)
+	//new singer
+	pk := crypto.Secp256k1PrivateKeyFromString(cfg.Identity.PrivKey)
+	singer := crypto.NewDefaultSigner(pk)
+
+	//chain init --- dir hardcode
+	statestore := chain.InitStateStore("/Users/yangsai/go/work/testData")
+	//endpoint 先hardcode
+	chainInfo, err := chain.InitChain(cctx, statestore, "http://18.144.29.246:8110", singer, time.Duration(10))
+	if err != nil {
+		fmt.Printf("InitChain err: ", err)
+		return err
+	}
+
+	var factoryAddress = ""
+	var priceOracleAddress = ""
+	var initialDeposit = "100"
+	var deployGasPrice = "0"
+	var networkID = 10
+
+	settleinfo, err := chain.InitSettlement(cctx, statestore, chainInfo, factoryAddress, PriceOracleAddress, initialDeposit, deployGasPrice, networkID)
+	if err != nil {
+		fmt.Printf("InitSettlement err: ", err)
+		return err
+	}
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 

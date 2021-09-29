@@ -44,8 +44,7 @@ type Factory interface {
 type factory struct {
 	backend            transaction.Backend
 	transactionService transaction.Service
-	address            common.Address   // address of the factory to use for deployments
-	legacyAddresses    []common.Address // addresses of old factories which were allowed for deployment
+	address            common.Address // address of the factory to use for deployments
 }
 
 type simpleSwapDeployedEvent struct {
@@ -55,19 +54,12 @@ type simpleSwapDeployedEvent struct {
 // the bytecode of factories which can be used for deployment
 var currentDeployVersion []byte = common.FromHex(sw3abi.SimpleSwapFactoryDeployedBinv0_4_0)
 
-// the bytecode of factories from which we accept chequebooks
-var supportedVersions = [][]byte{
-	currentDeployVersion,
-	common.FromHex(sw3abi.SimpleSwapFactoryDeployedBinv0_3_1),
-}
-
 // NewFactory creates a new factory service for the provided factory contract.
-func NewFactory(backend transaction.Backend, transactionService transaction.Service, address common.Address, legacyAddresses []common.Address) Factory {
+func NewFactory(backend transaction.Backend, transactionService transaction.Service, address common.Address) Factory {
 	return &factory{
 		backend:            backend,
 		transactionService: transactionService,
 		address:            address,
-		legacyAddresses:    legacyAddresses,
 	}
 }
 
@@ -122,22 +114,6 @@ func (c *factory) VerifyBytecode(ctx context.Context) (err error) {
 		return ErrInvalidFactory
 	}
 
-LOOP:
-	for _, factoryAddress := range c.legacyAddresses {
-		code, err := c.backend.CodeAt(ctx, factoryAddress, nil)
-		if err != nil {
-			return err
-		}
-
-		for _, referenceCode := range supportedVersions {
-			if bytes.Equal(code, referenceCode) {
-				continue LOOP
-			}
-		}
-
-		return fmt.Errorf("failed to find matching bytecode for factory %x: %w", factoryAddress, ErrInvalidFactory)
-	}
-
 	return nil
 }
 
@@ -182,16 +158,6 @@ func (c *factory) VerifyChequebook(ctx context.Context, chequebook common.Addres
 	}
 	if deployed {
 		return nil
-	}
-
-	for _, factoryAddress := range c.legacyAddresses {
-		deployed, err := c.verifyChequebookAgainstFactory(ctx, factoryAddress, chequebook)
-		if err != nil {
-			return err
-		}
-		if deployed {
-			return nil
-		}
 	}
 
 	return ErrNotDeployedByFactory

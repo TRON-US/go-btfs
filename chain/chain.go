@@ -43,6 +43,15 @@ type ChainInfo struct {
 	transactionService transaction.Service
 }
 
+type SettleInfo struct {
+	factory           chequebook.Factory
+	chequebookService chequebook.Service
+	chequeStore       chequebook.ChequeStore
+	cashoutService    chequebook.CashoutService
+	swapService       *swap.Service
+	oracleService     priceoracle.Service
+}
+
 // InitChain will initialize the Ethereum backend at the given endpoint and
 // set up the Transaction Service to interact with it using the provided signer.
 func InitChain(
@@ -51,7 +60,7 @@ func InitChain(
 	endpoint string,
 	signer crypto.Signer,
 	pollingInterval time.Duration,
-) (*ethclient.Client, common.Address, int64, transaction.Monitor, transaction.Service, error) {
+) (*ChainInfo, error) {
 	backend, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("dial eth client: %w", err)
@@ -75,24 +84,113 @@ func InitChain(
 		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("new transaction service: %w", err)
 	}
 
-	return backend, overlayEthAddress, chainID.Int64(), transactionMonitor, transactionService,  nil
+	return &ChainInfo{
+		backend:            backend,
+		overlayEthAddress:  overlayAddress,
+		chainID.Int64():    chainID,
+		transactionMonitor: transactionMonitor,
+		transactionService: transactionService,
+	}, nil
+}
+
+func InitSettlement(
+	ctx context.Context,
+	stateStore storage.StateStorer,
+	chaininfo *ChainInfo,
+	factoryAddress string,
+	priceOracleAddress string,
+	initialDeposit string,
+	deployGasPrice string,
+	networkID uint64,
+) (*SettleInfo, error) {
+	//InitChequebookFactory
+	factory, err := InitChequebookFactory(chaininfo.backend, chaininfo.chainID, chaininfo.transactionService, factoryAddress)
+
+	if err != nil {
+		fmt.Printf("init chequebook factory error")
+		return nil, errors.New("init chequebook factory error")
+	}
+
+	//InitChequebookService
+	chequebookService, err := InitChequebookService(
+		ctx,
+		stateStore,
+		chaininfo.signer,
+		chaininfo.chainID,
+		chaininfo.backend,
+		chaininfo.overlayAddress,
+		chaininfo.transactionService,
+		factory,
+		initialDeposit,
+		deployGasPrice
+	)
+
+	if err != nil {
+		fmt.Printf("init chequebook service error")
+		return nil, errors.New("init chequebook service error")
+	}
+
+	//initChequeStoreCashout
+	chequeStore, cashoutService := initChequeStoreCashout(
+		stateStore, 
+		chaininfo.backend, 
+		factory, 
+		chaininfo.chainID, 
+		chaininfo.overlayAddress, 
+		chaininfo.transactionService
+	)
+
+	//new accounting
+	accounting, err := accounting.NewAccounting(stateStore)
+
+	if err != nil {
+		fmt.Printf("new accounting error")
+		return nil, errors.New("new accounting service error")
+	}
+
+	//InitSwap
+	swapService, priceOracleService, err := initSwap(
+		stateStore, 
+		networkID, 
+		chaininfo.overlayAddress, 
+		chequebookService, 
+		chequeStore, 
+		cashoutService, 
+		accounting, 
+		priceOracleAddress,
+		chaininfo.chainID,
+		chaininfo.transactionService
+	)
+
+	if err != nil {
+		fmt.Printf("init swap service error")
+		return nil, errors.New("init swap service error")
+	}
+
+	return &SettleInfo{
+		factory: factory,
+		chequebookService: chequebookService,
+		chequeStore: chequeStore,
+		cashoutService: cashoutService,
+		swapService: swapService,
+		oracleService: priceOracleService,
+	}, nil
 }
 
 // InitChequebookFactory will initialize the chequebook factory with the given
 // chain backend.
-func InitChequebookFactory(
-	backend *ethclient.Client,
+func initChequebookFactory(
+	backend transaction.Backend,
 	chainID int64,
 	transactionService transaction.Service,
 	factoryAddress string,
-	legacyFactoryAddresses []string,
 ) (chequebook.Factory, error) {
 	var currentFactory common.Address
 	var legacyFactories []common.Address
 
 	chainCfg, found := config.GetChainConfig(chainID)
 
-	foundFactory, foundLegacyFactories := chainCfg.CurrentFactory, chainCfg.LegacyFactories
+	foundFactory := chainCfg.CurrentFactory
 	if factoryAddress == "" {
 		if !found {
 			return nil, fmt.Errorf("no known factory address for this network (chain id: %d)", chainID)
@@ -106,35 +204,21 @@ func InitChequebookFactory(
 		log.Infof("using custom factory address: %x", currentFactory)
 	}
 
-	if len(legacyFactoryAddresses) == 0 {
-		if found {
-			legacyFactories = foundLegacyFactories
-		}
-	} else {
-		for _, legacyAddress := range legacyFactoryAddresses {
-			if !common.IsHexAddress(legacyAddress) {
-				return nil, errors.New("malformed factory address")
-			}
-			legacyFactories = append(legacyFactories, common.HexToAddress(legacyAddress))
-		}
-	}
-
 	return chequebook.NewFactory(
 		backend,
 		transactionService,
 		currentFactory,
-		legacyFactories,
 	), nil
 }
 
 // InitChequebookService will initialize the chequebook service with the given
 // chequebook factory and chain backend.
-func InitChequebookService(
+func initChequebookService(
 	ctx context.Context,
 	stateStore storage.StateStorer,
 	signer crypto.Signer,
 	chainID int64,
-	backend *ethclient.Client,
+	backend transaction.Backend,
 	overlayEthAddress common.Address,
 	transactionService transaction.Service,
 	chequebookFactory chequebook.Factory,
@@ -202,7 +286,7 @@ func initChequeStoreCashout(
 }
 
 // InitSwap will initialize and register the swap service.
-func InitSwap(
+func initSwap(
 	stateStore storage.StateStorer,
 	networkID uint64,
 	overlayEthAddress common.Address,
