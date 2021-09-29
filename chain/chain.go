@@ -25,29 +25,37 @@ import (
 	logging "github.com/ipfs/go-log"
 )
 
-var log = logging.Logger("chain")
+var (
+	var log = logging.Logger("chain")
+	erc20ABI     = transaction.ParseABIUnchecked(sw3abi.ERC20ABIv0_3_1)
+	errDecodeABI = errors.New("could not decode abi data")
+	ChainObject = ChainInfo{}
+	SettleObject = SettleInfo{}
+)
+
 
 const (
-	maxDelay          = 1 * time.Minute
-	cancellationDepth = 6
+	MaxDelay          = 1 * time.Minute
+	CancellationDepth = 6
 )
 
 type ChainInfo struct {
-	backend            transaction.Backend
-	overlayAddress     common.Address
-	signer             crypto.Signer
-	chainID            int64
-	transactionMonitor transaction.Monitor
-	transactionService transaction.Service
+	Chainconfig        config.ChainConfig
+	Backend            transaction.Backend
+	OverlayAddress     common.Address
+	Signer             crypto.Signer
+	ChainID            int64
+	TransactionMonitor transaction.Monitor
+	TransactionService transaction.Service
 }
 
 type SettleInfo struct {
-	factory           chequebook.Factory
-	chequebookService chequebook.Service
-	chequeStore       chequebook.ChequeStore
-	cashoutService    chequebook.CashoutService
-	swapService       *swap.Service
-	oracleService     priceoracle.Service
+	Factory           chequebook.Factory
+	ChequebookService chequebook.Service
+	ChequeStore       chequebook.ChequeStore
+	CashoutService    chequebook.CashoutService
+	SwapService       *swap.Service
+	OracleService     priceoracle.Service
 }
 
 // InitChain will initialize the Ethereum backend at the given endpoint and
@@ -70,6 +78,8 @@ func InitChain(
 		return nil, fmt.Errorf("get chain id: %w", err)
 	}
 
+	chainconfig, _ := config.GetChainConfig(chainID)
+
 	overlayEthAddress, err := signer.EthereumAddress()
 	if err != nil {
 		return nil, fmt.Errorf("eth address: %w", err)
@@ -83,11 +93,12 @@ func InitChain(
 	}
 
 	return &ChainInfo{
-		backend:            backend,
-		overlayAddress:  overlayEthAddress,
-		chainID: chainID.Int64(),
-		transactionMonitor: transactionMonitor,
-		transactionService: transactionService,
+		Chainconfig: chainconfig,
+		Backend:            backend,
+		OverlayAddress:  overlayEthAddress,
+		ChainID: chainID.Int64(),
+		TransactionMonitor: transactionMonitor,
+		TransactionService: transactionService,
 	}, nil
 }
 
@@ -95,14 +106,12 @@ func InitSettlement(
 	ctx context.Context,
 	stateStore storage.StateStorer,
 	chaininfo *ChainInfo,
-	factoryAddress string,
-	priceOracleAddress string,
 	initialDeposit string,
 	deployGasPrice string,
 	networkID uint64,
 ) (*SettleInfo, error) {
 	//InitChequebookFactory
-	factory, err := InitChequebookFactory(chaininfo.backend, chaininfo.chainID, chaininfo.transactionService, factoryAddress)
+	factory, err := InitChequebookFactory(chaininfo.backend, chaininfo.chainID, chaininfo.transactionService, chaininfo.chainconfig.CurrentFactory)
 
 	if err != nil {
 		fmt.Printf("init chequebook factory error")
@@ -155,7 +164,7 @@ func InitSettlement(
 		chequeStore, 
 		cashoutService, 
 		accounting, 
-		priceOracleAddress,
+		chaininfo.chainconfig.PriceOracleAddress,
 		chaininfo.chainID,
 		chaininfo.transactionService
 	)
@@ -166,12 +175,12 @@ func InitSettlement(
 	}
 
 	return &SettleInfo{
-		factory: factory,
-		chequebookService: chequebookService,
-		chequeStore: chequeStore,
-		cashoutService: cashoutService,
-		swapService: swapService,
-		oracleService: priceOracleService,
+		Factory: factory,
+		ChequebookService: chequebookService,
+		ChequeStore: chequeStore,
+		CashoutService: cashoutService,
+		SwapService: swapService,
+		OracleService: priceOracleService,
 	}, nil
 }
 

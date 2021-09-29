@@ -34,6 +34,7 @@ import (
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
 	"github.com/TRON-US/go-btfs/spin"
+	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -365,21 +366,36 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	//endpoint 先hardcode
 	chainInfo, err := chain.InitChain(cctx, statestore, "http://18.144.29.246:8110", singer, time.Duration(10))
 	if err != nil {
-		fmt.Printf("InitChain err: ", err)
+		fmt.Printf("init chain err: ", err)
 		return err
 	}
 
-	var factoryAddress = ""
-	var priceOracleAddress = ""
+	// Sync the with the given Ethereum backend:
+	isSynced, _, err := transaction.IsSynced(cctx, chainInfo.Backend, chain.MaxDelay)
+	if err != nil {
+		return fmt.Errorf("is synced: %w", err)
+	}
+	if !isSynced {
+		log.Infof("waiting to sync with the Ethereum backend")
+
+		err := transaction.WaitSynced(p2pCtx, logger, swapBackend, maxDelay)
+		if err != nil {
+			return fmt.Errorf("waiting backend sync: %w", err)
+		}
+	}
+
 	var initialDeposit = "100"
 	var deployGasPrice = "0"
 	var networkID = 10
 
-	settleinfo, err := chain.InitSettlement(cctx, statestore, chainInfo, factoryAddress, PriceOracleAddress, initialDeposit, deployGasPrice, networkID)
+	settleinfo, err := chain.InitSettlement(cctx, statestore, chainInfo, initialDeposit, deployGasPrice, networkID)
 	if err != nil {
-		fmt.Printf("InitSettlement err: ", err)
+		fmt.Printf("init settlement err: ", err)
 		return err
 	}
+
+	chain.ChainObject = chainInfo
+	chain.SettleObject = settleinfo
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 
