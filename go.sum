@@ -1168,6 +1168,7 @@ github.com/libp2p/go-nat v0.0.5/go.mod h1:B7NxsVNPZmRLvMOwiEO1scOSyjA56zxYAGv1yQ
 github.com/libp2p/go-netroute v0.1.2/go.mod h1:jZLDV+1PE8y5XxBySEBgbuVAXbhtuHSdmLPL2n9MKbk=
 github.com/libp2p/go-netroute v0.1.3 h1:1ngWRx61us/EpaKkdqkMjKk/ufr/JlIFYQAxV2XX8Ig=
 github.com/libp2p/go-netroute v0.1.3/go.mod h1:jZLDV+1PE8y5XxBySEBgbuVAXbhtuHSdmLPL2n9MKbk=
+github.com/libp2p/go-netroute v0.1.5 h1:Qj8GE/6Cxmw9aQUYTA9BrS+TELTqU7kKKspWBR4ieVw=
 github.com/libp2p/go-netroute v0.1.5/go.mod h1:V1SR3AaECRkEQCoFFzYwVYWvYIEtlxx89+O3qcpCl4A=
 github.com/libp2p/go-netroute v0.1.6 h1:ruPJStbYyXVYGQ81uzEDzuvbYRLKRrLvTYd33yomC38=
 github.com/libp2p/go-netroute v0.1.6/go.mod h1:AqhkMh0VuWmfgtxKPp3Oc1LdU5QSWS7wl0QLhSZqXxQ=
@@ -1182,6 +1183,7 @@ github.com/libp2p/go-reuseport-transport v0.0.4 h1:OZGz0RB620QDGpv300n1zaOcKGGAo
 github.com/libp2p/go-reuseport-transport v0.0.4/go.mod h1:trPa7r/7TJK/d+0hdBLOCGvpQQVOU74OXbNCIMkufGw=
 github.com/libp2p/go-sockaddr v0.0.2 h1:tCuXfpA9rq7llM/v834RKc/Xvovy/AqM9kHvTV/jY/Q=
 github.com/libp2p/go-sockaddr v0.0.2/go.mod h1:syPvOmNs24S3dFVGJA1/mrqdeijPxLV2Le3BRLKd68k=
+github.com/libp2p/go-sockaddr v0.1.0 h1:Y4s3/jNoryVRKEBrkJ576F17CPOaMIzUeCsg7dlTDj0=
 github.com/libp2p/go-sockaddr v0.1.0/go.mod h1:syPvOmNs24S3dFVGJA1/mrqdeijPxLV2Le3BRLKd68k=
 github.com/libp2p/go-sockaddr v0.1.1 h1:yD80l2ZOdGksnOyHrhxDdTDFrf7Oy+v3FMVArIRgZxQ=
 github.com/libp2p/go-sockaddr v0.1.1/go.mod h1:syPvOmNs24S3dFVGJA1/mrqdeijPxLV2Le3BRLKd68k=

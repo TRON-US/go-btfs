@@ -74,7 +74,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0
 	github.com/jbenet/goprocess v0.1.4
 	github.com/klauspost/reedsolomon v1.9.9
-	github.com/libp2p/go-libp2p v0.14.3
+	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-circuit v0.4.0
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
 	github.com/libp2p/go-libp2p-core v0.9.0
@@ -164,4 +164,16 @@ replace github.com/ipld/go-car => github.com/TRON-US/go-car v0.3.0
 
 replace github.com/ipld/go-ipld-prime-proto => github.com/TRON-US/go-ipld-prime-proto v0.1.0
 
+replace github.com/libp2p/go-libp2p-yamux => github.com/libp2p/go-libp2p-yamux v0.2.8
+
+replace github.com/libp2p/go-libp2p-swarm => github.com/libp2p/go-libp2p-swarm v0.2.8
+
+replace github.com/libp2p/go-libp2p-mplex => github.com/libp2p/go-libp2p-mplex v0.2.4
+
+replace github.com/libp2p/go-libp2p => github.com/libp2p/go-libp2p v0.11.0
+
+replace github.com/libp2p/go-libp2p-circuit => github.com/libp2p/go-libp2p-circuit v0.3.1
+
+replace github.com/libp2p/go-libp2p-quic-transport => github.com/libp2p/go-libp2p-quic-transport v0.8.0
 go 1.14
+

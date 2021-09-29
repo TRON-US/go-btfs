@@ -7,7 +7,6 @@ package settlement
 import (
 	"errors"
 	"math/big"
-
 	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
@@ -28,10 +27,6 @@ type Interface interface {
 }
 
 type Accounting interface {
-	PeerDebt(peer string) (*big.Int, error)
 	NotifyPaymentReceived(peer string, amount *big.Int) error
 	NotifyPaymentSent(peer string, amount *big.Int, receivedError error)
-	NotifyRefreshmentReceived(peer string, amount *big.Int) error
-	Connect(peer string)
-	Disconnect(peer string)
 }

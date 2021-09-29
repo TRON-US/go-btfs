@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	_ "expvar"
 	"fmt"
@@ -362,23 +363,27 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	singer := crypto.NewDefaultSigner(pk)
 
 	//chain init --- dir hardcode
-	statestore := chain.InitStateStore("/Users/yangsai/go/work/testData")
-	//endpoint 先hardcode
-	chainInfo, err := chain.InitChain(cctx, statestore, "http://18.144.29.246:8110", singer, time.Duration(10))
+	statestore, err := chain.InitStateStore("/Users/yangsai/go/work/testData")
 	if err != nil {
-		fmt.Printf("init chain err: ", err)
+		fmt.Println("init statestore err: ", err)
+		return err
+	}
+	//endpoint 先hardcode
+	chainInfo, err := chain.InitChain(context.Background(), statestore, "http://18.144.29.246:8110", singer, time.Duration(10))
+	if err != nil {
+		fmt.Println("init chain err: ", err)
 		return err
 	}
 
 	// Sync the with the given Ethereum backend:
-	isSynced, _, err := transaction.IsSynced(cctx, chainInfo.Backend, chain.MaxDelay)
+	isSynced, _, err := transaction.IsSynced(context.Background(), chainInfo.Backend, chain.MaxDelay)
 	if err != nil {
 		return fmt.Errorf("is synced: %w", err)
 	}
 	if !isSynced {
 		log.Infof("waiting to sync with the Ethereum backend")
 
-		err := transaction.WaitSynced(p2pCtx, logger, swapBackend, maxDelay)
+		err := transaction.WaitSynced(context.Background(), chainInfo.Backend, chain.MaxDelay)
 		if err != nil {
 			return fmt.Errorf("waiting backend sync: %w", err)
 		}
@@ -386,16 +391,14 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	var initialDeposit = "100"
 	var deployGasPrice = "0"
-	var networkID = 10
+	var networkID = uint64(10)
 
-	settleinfo, err := chain.InitSettlement(cctx, statestore, chainInfo, initialDeposit, deployGasPrice, networkID)
+	/*settleinfo*/
+	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, networkID)
 	if err != nil {
-		fmt.Printf("init settlement err: ", err)
+		fmt.Println("init settlement err: ", err)
 		return err
 	}
-
-	chain.ChainObject = chainInfo
-	chain.SettleObject = settleinfo
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
 

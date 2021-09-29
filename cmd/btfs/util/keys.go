@@ -15,30 +15,12 @@ const (
 	mnemonicLength         = 12
 )
 
-func GenerateKey( /*importKey string, */ keyType string, seedPhrase string) (string, string, error) {
+func GenerateKey(importKey string, keyType string, seedPhrase string) (string, string, error) {
 	mnemonicLen := len(strings.Split(seedPhrase, ","))
 	mnemonic := strings.ReplaceAll(seedPhrase, ",", " ")
-	/*
-		if importKey != "" && keyType != "" && strings.ToLower(keyType) != "secp256k1" {
-			return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
-		} else if seedPhrase != "" {
-			if mnemonicLen != mnemonicLength {
-				return "", "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
-			}
-			if err := !bip39.IsMnemonicValid(mnemonic); err {
-				return "", "", fmt.Errorf("Entered seed phrase is not valid")
-			}
-			fmt.Println("Generating TRON key with BIP39 seed phrase...")
-			return GeneratePrivKeyUsingBIP39(mnemonic)
-		} else if (keyType == "" && importKey == "") || keyType == "BIP39" {
-			fmt.Println("Generating TRON key with BIP39 seed phrase...")
-			return GeneratePrivKeyUsingBIP39("")
-		} else {
-			return importKey, mnemonic, nil
-		}
-	*/
-
-	if seedPhrase != "" {
+	if importKey != "" && keyType != "" && strings.ToLower(keyType) != "secp256k1" {
+		return "", "", fmt.Errorf("cannot specify key type and import TRON private key at the same time")
+	} else if seedPhrase != "" {
 		if mnemonicLen != mnemonicLength {
 			return "", "", fmt.Errorf("The seed phrase required to generate TRON private key needs to contain 12 words. Provided mnemonic has %v words.", mnemonicLen)
 		}
@@ -47,10 +29,12 @@ func GenerateKey( /*importKey string, */ keyType string, seedPhrase string) (str
 		}
 		fmt.Println("Generating TRON key with BIP39 seed phrase...")
 		return GeneratePrivKeyUsingBIP39(mnemonic)
+	} else if (keyType == "" && importKey == "") || keyType == "BIP39" {
+		fmt.Println("Generating TRON key with BIP39 seed phrase...")
+		return GeneratePrivKeyUsingBIP39("")
+	} else {
+		return importKey, mnemonic, nil
 	}
-
-	fmt.Println("Generating TRON key with BIP39 seed phrase...")
-	return GeneratePrivKeyUsingBIP39("")
 
 }
 

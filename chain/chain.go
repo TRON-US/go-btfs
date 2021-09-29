@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/accounting"
 	"github.com/TRON-US/go-btfs/chain/config"
 	"github.com/TRON-US/go-btfs/settlement"
 	"github.com/TRON-US/go-btfs/settlement/swap"
@@ -26,13 +27,10 @@ import (
 )
 
 var (
-	var log = logging.Logger("chain")
-	erc20ABI     = transaction.ParseABIUnchecked(sw3abi.ERC20ABIv0_3_1)
-	errDecodeABI = errors.New("could not decode abi data")
-	ChainObject = ChainInfo{}
-	SettleObject = SettleInfo{}
+	log          = logging.Logger("chain")
+	ChainObject  ChainInfo
+	SettleObject SettleInfo
 )
-
 
 const (
 	MaxDelay          = 1 * time.Minute
@@ -78,28 +76,30 @@ func InitChain(
 		return nil, fmt.Errorf("get chain id: %w", err)
 	}
 
-	chainconfig, _ := config.GetChainConfig(chainID)
+	chainconfig, _ := config.GetChainConfig(chainID.Int64())
 
 	overlayEthAddress, err := signer.EthereumAddress()
 	if err != nil {
 		return nil, fmt.Errorf("eth address: %w", err)
 	}
 
-	transactionMonitor := transaction.NewMonitor(backend, overlayEthAddress, pollingInterval, cancellationDepth)
+	transactionMonitor := transaction.NewMonitor(backend, overlayEthAddress, pollingInterval, CancellationDepth)
 
 	transactionService, err := transaction.NewService(backend, signer, stateStore, chainID, transactionMonitor)
 	if err != nil {
 		return nil, fmt.Errorf("new transaction service: %w", err)
 	}
 
-	return &ChainInfo{
-		Chainconfig: chainconfig,
+	ChainObject = ChainInfo{
+		Chainconfig:        *chainconfig,
 		Backend:            backend,
-		OverlayAddress:  overlayEthAddress,
-		ChainID: chainID.Int64(),
+		OverlayAddress:     overlayEthAddress,
+		ChainID:            chainID.Int64(),
 		TransactionMonitor: transactionMonitor,
 		TransactionService: transactionService,
-	}, nil
+	}
+
+	return &ChainObject, nil
 }
 
 func InitSettlement(
@@ -111,7 +111,7 @@ func InitSettlement(
 	networkID uint64,
 ) (*SettleInfo, error) {
 	//InitChequebookFactory
-	factory, err := InitChequebookFactory(chaininfo.backend, chaininfo.chainID, chaininfo.transactionService, chaininfo.chainconfig.CurrentFactory)
+	factory, err := initChequebookFactory(chaininfo.Backend, chaininfo.ChainID, chaininfo.TransactionService, chaininfo.Chainconfig.CurrentFactory.String())
 
 	if err != nil {
 		fmt.Printf("init chequebook factory error")
@@ -119,17 +119,17 @@ func InitSettlement(
 	}
 
 	//InitChequebookService
-	chequebookService, err := InitChequebookService(
+	chequebookService, err := initChequebookService(
 		ctx,
 		stateStore,
-		chaininfo.signer,
-		chaininfo.chainID,
-		chaininfo.backend,
-		chaininfo.overlayAddress,
-		chaininfo.transactionService,
+		chaininfo.Signer,
+		chaininfo.ChainID,
+		chaininfo.Backend,
+		chaininfo.OverlayAddress,
+		chaininfo.TransactionService,
 		factory,
 		initialDeposit,
-		deployGasPrice
+		deployGasPrice,
 	)
 
 	if err != nil {
@@ -139,12 +139,12 @@ func InitSettlement(
 
 	//initChequeStoreCashout
 	chequeStore, cashoutService := initChequeStoreCashout(
-		stateStore, 
-		chaininfo.backend, 
-		factory, 
-		chaininfo.chainID, 
-		chaininfo.overlayAddress, 
-		chaininfo.transactionService
+		stateStore,
+		chaininfo.Backend,
+		factory,
+		chaininfo.ChainID,
+		chaininfo.OverlayAddress,
+		chaininfo.TransactionService,
 	)
 
 	//new accounting
@@ -157,16 +157,16 @@ func InitSettlement(
 
 	//InitSwap
 	swapService, priceOracleService, err := initSwap(
-		stateStore, 
-		networkID, 
-		chaininfo.overlayAddress, 
-		chequebookService, 
-		chequeStore, 
-		cashoutService, 
-		accounting, 
-		chaininfo.chainconfig.PriceOracleAddress,
-		chaininfo.chainID,
-		chaininfo.transactionService
+		stateStore,
+		networkID,
+		chaininfo.OverlayAddress,
+		chequebookService,
+		chequeStore,
+		cashoutService,
+		accounting,
+		chaininfo.Chainconfig.PriceOracleAddress.String(),
+		chaininfo.ChainID,
+		chaininfo.TransactionService,
 	)
 
 	if err != nil {
@@ -174,14 +174,16 @@ func InitSettlement(
 		return nil, errors.New("init swap service error")
 	}
 
-	return &SettleInfo{
-		Factory: factory,
+	SettleObject = SettleInfo{
+		Factory:           factory,
 		ChequebookService: chequebookService,
-		ChequeStore: chequeStore,
-		CashoutService: cashoutService,
-		SwapService: swapService,
-		OracleService: priceOracleService,
-	}, nil
+		ChequeStore:       chequeStore,
+		CashoutService:    cashoutService,
+		SwapService:       swapService,
+		OracleService:     priceOracleService,
+	}
+
+	return &SettleObject, nil
 }
 
 // InitChequebookFactory will initialize the chequebook factory with the given
@@ -193,7 +195,6 @@ func initChequebookFactory(
 	factoryAddress string,
 ) (chequebook.Factory, error) {
 	var currentFactory common.Address
-	var legacyFactories []common.Address
 
 	chainCfg, found := config.GetChainConfig(chainID)
 
