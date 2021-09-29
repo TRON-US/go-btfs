@@ -19,10 +19,8 @@ package leveldb
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -51,10 +49,9 @@ func TestOneMigration(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	logger := logging.New(ioutil.Discard, 0)
 
 	// start the fresh statestore with the sanctuary schema name
-	db, err := NewStateStore(dir, logger)
+	db, err := NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +64,7 @@ func TestOneMigration(t *testing.T) {
 	dbSchemaCurrent = dbSchemaNext
 
 	// start the existing statestore and expect the migration to run
-	db, err = NewStateStore(dir, logger)
+	db, err = NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,10 +131,9 @@ func TestManyMigrations(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	logger := logging.New(ioutil.Discard, 0)
 
 	// start the fresh statestore with the sanctuary schema name
-	db, err := NewStateStore(dir, logger)
+	db, err := NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +146,7 @@ func TestManyMigrations(t *testing.T) {
 	dbSchemaCurrent = "salvation"
 
 	// start the existing statestore and expect the migration to run
-	db, err = NewStateStore(dir, logger)
+	db, err = NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,10 +205,9 @@ func TestMigrationErrorFrom(t *testing.T) {
 		}},
 	}
 	dir := t.TempDir()
-	logger := logging.New(ioutil.Discard, 0)
 
 	// start the fresh statestore with the sanctuary schema name
-	db, err := NewStateStore(dir, logger)
+	db, err := NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +220,7 @@ func TestMigrationErrorFrom(t *testing.T) {
 	dbSchemaCurrent = "foo"
 
 	// start the existing statestore and expect the migration to run
-	_, err = NewStateStore(dir, logger)
+	_, err = NewStateStore(dir)
 	if !errors.Is(err, errMissingCurrentSchema) {
 		t.Fatalf("expected errCannotFindSchema but got %v", err)
 	}
@@ -260,10 +255,9 @@ func TestMigrationErrorTo(t *testing.T) {
 		}},
 	}
 	dir := t.TempDir()
-	logger := logging.New(ioutil.Discard, 0)
 
 	// start the fresh statestore with the sanctuary schema name
-	db, err := NewStateStore(dir, logger)
+	db, err := NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +270,7 @@ func TestMigrationErrorTo(t *testing.T) {
 	dbSchemaCurrent = "foo"
 
 	// start the existing statestore and expect the migration to run
-	_, err = NewStateStore(dir, logger)
+	_, err = NewStateStore(dir)
 	if !errors.Is(err, errMissingTargetSchema) {
 		t.Fatalf("expected errMissingTargetSchema but got %v", err)
 	}
@@ -288,10 +282,9 @@ func TestMigrationErrorTo(t *testing.T) {
 
 func TestMigrationSwap(t *testing.T) {
 	dir := t.TempDir()
-	logger := logging.New(ioutil.Discard, 0)
 
 	// start the fresh statestore with the sanctuary schema name
-	db, err := NewStateStore(dir, logger)
+	db, err := NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

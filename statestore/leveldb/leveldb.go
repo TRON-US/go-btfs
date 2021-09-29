@@ -10,26 +10,26 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/TRON-US/go-btfs/transaction/logging"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 	ldberr "github.com/syndtr/goleveldb/leveldb/errors"
 
+	logging "github.com/ipfs/go-log"
 	ldb "github.com/syndtr/goleveldb/leveldb"
 	ldbs "github.com/syndtr/goleveldb/leveldb/storage"
-
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
+
+var log = logging.Logger("leveldb")
 
 var _ storage.StateStorer = (*store)(nil)
 
 // store uses LevelDB to store values.
 type store struct {
 	db     *leveldb.DB
-	logger logging.Logger
 }
 
-func NewInMemoryStateStore(l logging.Logger) (storage.StateStorer, error) {
+func NewInMemoryStateStore() (storage.StateStorer, error) {
 	ldb, err := ldb.Open(ldbs.NewMemStorage(), nil)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,6 @@ func NewInMemoryStateStore(l logging.Logger) (storage.StateStorer, error) {
 
 	s := &store{
 		db:     ldb,
-		logger: l,
 	}
 
 	if err := migrate(s); err != nil {
@@ -48,24 +47,23 @@ func NewInMemoryStateStore(l logging.Logger) (storage.StateStorer, error) {
 }
 
 // NewStateStore creates a new persistent state storage.
-func NewStateStore(path string, l logging.Logger) (storage.StateStorer, error) {
+func NewStateStore(path string) (storage.StateStorer, error) {
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
 		if !ldberr.IsCorrupted(err) {
 			return nil, err
 		}
 
-		l.Warningf("statestore open failed: %v. attempting recovery", err)
+		log.Warningf("statestore open failed: %v. attempting recovery", err)
 		db, err = leveldb.RecoverFile(path, nil)
 		if err != nil {
 			return nil, fmt.Errorf("statestore recovery: %w", err)
 		}
-		l.Warning("statestore recovery ok! you are kindly request to inform us about the steps that preceded the last Bee shutdown.")
+		log.Warning("statestore recovery ok! you are kindly request to inform us about the steps that preceded the last Bee shutdown.")
 	}
 
 	s := &store{
 		db:     db,
-		logger: l,
 	}
 
 	if err := migrate(s); err != nil {

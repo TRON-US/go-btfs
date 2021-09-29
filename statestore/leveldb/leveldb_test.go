@@ -26,7 +26,7 @@ func TestPersistentStateStore(t *testing.T) {
 			}
 		})
 
-		store, err := leveldb.NewStateStore(dir, nil)
+		store, err := leveldb.NewStateStore(dir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,7 +40,7 @@ func TestPersistentStateStore(t *testing.T) {
 	})
 
 	test.RunPersist(t, func(t *testing.T, dir string) storage.StateStorer {
-		store, err := leveldb.NewStateStore(dir, nil)
+		store, err := leveldb.NewStateStore(dir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,7 +60,7 @@ func TestGetSchemaName(t *testing.T) {
 		}
 	})
 
-	store, err := leveldb.NewStateStore(dir, nil)
+	store, err := leveldb.NewStateStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

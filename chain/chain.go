@@ -61,31 +61,31 @@ func InitChain(
 ) (*ChainInfo, error) {
 	backend, err := ethclient.Dial(endpoint)
 	if err != nil {
-		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("dial eth client: %w", err)
+		return nil, fmt.Errorf("dial eth client: %w", err)
 	}
 
 	chainID, err := backend.ChainID(ctx)
 	if err != nil {
 		log.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --swap-endpoint.", endpoint)
-		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("get chain id: %w", err)
+		return nil, fmt.Errorf("get chain id: %w", err)
 	}
 
 	overlayEthAddress, err := signer.EthereumAddress()
 	if err != nil {
-		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("eth address: %w", err)
+		return nil, fmt.Errorf("eth address: %w", err)
 	}
 
 	transactionMonitor := transaction.NewMonitor(backend, overlayEthAddress, pollingInterval, cancellationDepth)
 
 	transactionService, err := transaction.NewService(backend, signer, stateStore, chainID, transactionMonitor)
 	if err != nil {
-		return nil, common.Address{}, 0, nil, nil, fmt.Errorf("new transaction service: %w", err)
+		return nil, fmt.Errorf("new transaction service: %w", err)
 	}
 
 	return &ChainInfo{
 		backend:            backend,
-		overlayEthAddress:  overlayAddress,
-		chainID.Int64():    chainID,
+		overlayAddress:  overlayEthAddress,
+		chainID: chainID.Int64(),
 		transactionMonitor: transactionMonitor,
 		transactionService: transactionService,
 	}, nil

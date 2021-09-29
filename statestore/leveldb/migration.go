@@ -90,7 +90,7 @@ func migrateGrace(s *store) error {
 			len(k) > 32 &&
 			!strings.Contains(stk, "swap") &&
 			!strings.Contains(stk, "peer") {
-			s.logger.Debugf("found key designated to deletion %s", k)
+			log.Debugf("found key designated to deletion %s", k)
 			collectedKeys = append(collectedKeys, stk)
 		}
 
@@ -102,12 +102,12 @@ func migrateGrace(s *store) error {
 	for _, v := range collectedKeys {
 		err := s.Delete(v)
 		if err != nil {
-			s.logger.Debugf("error deleting key %s", v)
+			log.Debugf("error deleting key %s", v)
 			continue
 		}
-		s.logger.Debugf("deleted key %s", v)
+		log.Debugf("deleted key %s", v)
 	}
-	s.logger.Debugf("deleted keys: %d", len(collectedKeys))
+	log.Debugf("deleted keys: %d", len(collectedKeys))
 
 	return nil
 }
@@ -162,7 +162,7 @@ func (s *store) migrate(schemaName string) error {
 		return nil
 	}
 
-	s.logger.Debugf("statestore: need to run %d data migrations to schema %s", len(migrations), schemaName)
+	log.Debugf("statestore: need to run %d data migrations to schema %s", len(migrations), schemaName)
 	for i := 0; i < len(migrations); i++ {
 		err := migrations[i].fn(s)
 		if err != nil {
@@ -176,7 +176,7 @@ func (s *store) migrate(schemaName string) error {
 		if err != nil {
 			return err
 		}
-		s.logger.Debugf("statestore: successfully ran migration: id %d current schema: %s", i, schemaName)
+		log.Debugf("statestore: successfully ran migration: id %d current schema: %s", i, schemaName)
 	}
 	return nil
 }
@@ -197,7 +197,7 @@ func getMigrations(currentSchema, targetSchema string, allSchemeMigrations []mig
 				return nil, errors.New("found schema name for the second time when looking for migrations")
 			}
 			foundCurrent = true
-			store.logger.Debugf("statestore migration: found current schema %s, migrate to %s, total migrations %d", currentSchema, dbSchemaCurrent, len(allSchemeMigrations)-i)
+			log.Debugf("statestore migration: found current schema %s, migrate to %s, total migrations %d", currentSchema, dbSchemaCurrent, len(allSchemeMigrations)-i)
 			continue // current schema migration should not be executed (already has been when schema was migrated to)
 		case targetSchema:
 			foundTarget = true
@@ -234,8 +234,8 @@ func deleteKeys(s *store, keys []string) error {
 		if err != nil {
 			return fmt.Errorf("error deleting key %s: %w", v, err)
 		}
-		s.logger.Debugf("deleted key %s", v)
+		log.Debugf("deleted key %s", v)
 	}
-	s.logger.Debugf("deleted keys: %d", len(keys))
+	log.Debugf("deleted keys: %d", len(keys))
 	return nil
 }
