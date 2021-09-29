@@ -8,12 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	cmds "github.com/TRON-US/go-btfs-cmds"
 	"math/big"
 	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
@@ -25,6 +25,13 @@ import (
 )
 
 var log = logging.Logger("swapprotocol")
+var SwapProtocol *Service
+
+var (
+	Req *cmds.Request
+	Env cmds.Environment
+)
+
 
 const (
 	protocolName    = "swap"
@@ -127,7 +134,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 			go func() {
 				err = func() error {
 					ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
-					ctxParams, err := helper.ExtractContextParams(upload.Req, upload.Env)
+					ctxParams, err := helper.ExtractContextParams(Req, Env)
 					if err != nil {
 						return err
 					}

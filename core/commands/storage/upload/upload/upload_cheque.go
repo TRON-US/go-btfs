@@ -7,9 +7,9 @@ import (
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/chain"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 )
 
 var StorageUploadChequeCmd = &cmds.Command{
@@ -43,7 +43,7 @@ var StorageUploadChequeCmd = &cmds.Command{
 
 		// decode and deal the cheque
 		encodedCheque := req.Arguments[0]
-		err = chain.SwapProtocol.Handler(context.Background(), requestPid.String(), encodedCheque, exchangeRate)
+		err = swapprotocol.SwapProtocol.Handler(context.Background(), requestPid.String(), encodedCheque, exchangeRate)
 		if err != nil {
 			return err
 		}

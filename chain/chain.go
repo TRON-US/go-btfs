@@ -32,8 +32,6 @@ const (
 	cancellationDepth = 6
 )
 
-var SwapProtocol *swapprotocol.Service
-
 type ChainInfo struct {
 	backend            transaction.Backend
 	overlayAddress     common.Address
@@ -243,7 +241,7 @@ func InitSwap(
 	)
 
 	swapProtocol.SetSwap(swapService)
-	SwapProtocol = swapProtocol
+	swapprotocol.SwapProtocol = swapProtocol
 
 	return swapService, priceOracle, nil
 }
