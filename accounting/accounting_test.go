@@ -7,7 +7,6 @@ package accounting_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/TRON-US/go-btfs/accounting"
 	"github.com/TRON-US/go-btfs/statestore/mock"
-	"github.com/TRON-US/go-btfs/transaction/logging"
 
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	//"github.com/ethersphere/bee/pkg/swarm"
@@ -29,12 +27,10 @@ type paymentCall struct {
 
 //TestAccountingCallSettlementTooSoon
 func TestAccountingCallSettlementTooSoon(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
-
 	store := mock.NewStateStore()
 	defer store.Close()
 
-	acc, err := accounting.NewAccounting(logger, store)
+	acc, err := accounting.NewAccounting(store)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,12 +63,10 @@ func TestAccountingCallSettlementTooSoon(t *testing.T) {
 
 // NotifyPaymentReceived
 func TestAccountingNotifyPaymentReceived(t *testing.T) {
-	logger := logging.New(ioutil.Discard, 0)
-
 	store := mock.NewStateStore()
 	defer store.Close()
 
-	acc, err := accounting.NewAccounting(logger, store)
+	acc, err := accounting.NewAccounting(store)
 	if err != nil {
 		t.Fatal(err)
 	}

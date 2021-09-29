@@ -39,7 +39,7 @@ func TestFactoryERC20Address(t *testing.T) {
 			),
 		),
 		factoryAddress,
-		nil,
+		//nil,
 	)
 
 	addr, err := factory.ERC20Address(context.Background())
@@ -81,7 +81,7 @@ func TestFactoryVerifySelf(t *testing.T) {
 			}),
 			transactionmock.New(),
 			factoryAddress,
-			[]common.Address{legacyFactory1, legacyFactory2},
+			//[]common.Address{legacyFactory1, legacyFactory2},
 		)
 
 		err := factory.VerifyBytecode(context.Background())
@@ -97,7 +97,7 @@ func TestFactoryVerifySelf(t *testing.T) {
 			}),
 			transactionmock.New(),
 			factoryAddress,
-			nil,
+			//nil,
 		)
 
 		err := factory.VerifyBytecode(context.Background())
@@ -118,7 +118,7 @@ func TestFactoryVerifySelf(t *testing.T) {
 			}),
 			transactionmock.New(),
 			factoryAddress,
-			[]common.Address{legacyFactory1, legacyFactory2},
+			//[]common.Address{legacyFactory1, legacyFactory2},
 		)
 
 		err := factory.VerifyBytecode(context.Background())
@@ -150,7 +150,7 @@ func TestFactoryVerifyChequebook(t *testing.T) {
 				),
 			),
 			factoryAddress,
-			[]common.Address{legacyFactory1, legacyFactory2},
+			//[]common.Address{legacyFactory1, legacyFactory2},
 		)
 		err := factory.VerifyChequebook(context.Background(), chequebookAddress)
 		if err != nil {
@@ -186,7 +186,7 @@ func TestFactoryVerifyChequebook(t *testing.T) {
 					),
 				)),
 			factoryAddress,
-			[]common.Address{legacyFactory1, legacyFactory2},
+			//[]common.Address{legacyFactory1, legacyFactory2},
 		)
 
 		err := factory.VerifyChequebook(context.Background(), chequebookAddress)
@@ -223,7 +223,7 @@ func TestFactoryVerifyChequebook(t *testing.T) {
 					),
 				)),
 			factoryAddress,
-			[]common.Address{legacyFactory1, legacyFactory2},
+			//[]common.Address{legacyFactory1, legacyFactory2},
 		)
 
 		err := factory.VerifyChequebook(context.Background(), chequebookAddress)
@@ -272,7 +272,7 @@ func TestFactoryDeploy(t *testing.T) {
 			},
 			)),
 		factoryAddress,
-		nil,
+		//nil,
 	)
 
 	txHash, err := factory.Deploy(context.Background(), issuerAddress, defaultTimeout, nonce)
@@ -310,7 +310,7 @@ func TestFactoryDeployReverted(t *testing.T) {
 			}),
 		),
 		factoryAddress,
-		nil,
+		//nil,
 	)
 
 	_, err := factory.WaitDeployed(context.Background(), deployTransactionHash)
