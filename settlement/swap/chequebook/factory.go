@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"math/big"
 
+	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/go-sw3-abi/sw3abi"
 	"golang.org/x/net/context"
 )
 
@@ -23,7 +23,7 @@ var (
 	ErrNotDeployedByFactory = errors.New("chequebook not deployed by factory")
 	errDecodeABI            = errors.New("could not decode abi data")
 
-	factoryABI                  = transaction.ParseABIUnchecked(sw3abi.SimpleSwapFactoryABIv0_4_0)
+	factoryABI                  = transaction.ParseABIUnchecked(conabi.SimpleSwapFactoryABI)
 	simpleSwapDeployedEventType = factoryABI.Events["SimpleSwapDeployed"]
 )
 
@@ -52,7 +52,7 @@ type simpleSwapDeployedEvent struct {
 }
 
 // the bytecode of factories which can be used for deployment
-var currentDeployVersion []byte = common.FromHex(sw3abi.SimpleSwapFactoryDeployedBinv0_4_0)
+var currentDeployVersion []byte = common.FromHex(conabi.FactoryDeployedBin)
 
 // NewFactory creates a new factory service for the provided factory contract.
 func NewFactory(backend transaction.Backend, transactionService transaction.Service, address common.Address) Factory {

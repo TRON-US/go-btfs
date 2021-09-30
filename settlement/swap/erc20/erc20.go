@@ -9,15 +9,15 @@ import (
 	"errors"
 	"math/big"
 
+	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/go-sw3-abi/sw3abi"
 )
 
 var (
-	erc20ABI     = transaction.ParseABIUnchecked(sw3abi.ERC20ABIv0_3_1)
+	erc20ABI     = transaction.ParseABIUnchecked(conabi.Erc20ABI)
 	errDecodeABI = errors.New("could not decode abi data")
 )
 

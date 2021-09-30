@@ -67,14 +67,14 @@ func checkBalance(
 			}
 
 			if insufficientETH && insufficientERC20 {
-				log.Warningf("cannot continue until there is sufficient ETH (for Gas) and at least %d BZZ available on %x", neededERC20, overlayEthAddress)
+				log.Warnf("cannot continue until there is sufficient ETH (for Gas) and at least %d BZZ available on %x", neededERC20, overlayEthAddress)
 			} else if insufficientETH {
-				log.Warningf("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
+				log.Warnf("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
 			} else {
-				log.Warningf("cannot continue until there is at least %d BZZ available on %x", neededERC20, overlayEthAddress)
+				log.Warnf("cannot continue until there is at least %d BZZ available on %x", neededERC20, overlayEthAddress)
 			}
 			if chainId == 5 {
-				log.Warningf("learn how to fund your node by visiting our docs at https://docs.ethswarm.org/docs/installation/fund-your-node")
+				log.Warnf("learn how to fund your node by visiting our docs at https://docs.ethswarm.org/docs/installation/fund-your-node")
 			}
 			select {
 			case <-time.After(balanceCheckBackoffDuration):
@@ -115,6 +115,9 @@ func Init(
 		return nil, err
 	}
 
+	fmt.Println("erc20Address is: ", erc20Address)
+	fmt.Println("overlayEthAddress is: ", overlayEthAddress)
+
 	erc20Service := erc20.New(swapBackend, transactionService, erc20Address)
 
 	var chequebookAddress common.Address
@@ -129,8 +132,9 @@ func Init(
 		if err != nil && err != storage.ErrNotFound {
 			return nil, err
 		}
+
 		if err == storage.ErrNotFound {
-			log.Info("no chequebook found, deploying new one.")
+			log.Infof("no chequebook found, deploying new one.")
 			err = checkBalance(ctx, swapInitialDeposit, swapBackend, chainId, overlayEthAddress, erc20Service)
 			if err != nil {
 				return nil, err

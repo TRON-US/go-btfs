@@ -11,10 +11,10 @@ import (
 	"math/big"
 	"time"
 
+	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/go-price-oracle-abi/priceoracleabi"
 	logging "github.com/ipfs/go-log"
 )
 
@@ -43,7 +43,7 @@ type Service interface {
 }
 
 var (
-	priceOracleABI = transaction.ParseABIUnchecked(priceoracleabi.PriceOracleABIv0_1_0)
+	priceOracleABI = transaction.ParseABIUnchecked(conabi.OracleAbi)
 )
 
 func New(priceOracleAddress common.Address, transactionService transaction.Service, timeDivisor int64) Service {
@@ -111,7 +111,7 @@ func (s *service) GetPrice(ctx context.Context) (*big.Int, error) {
 		return nil, err
 	}
 
-	if len(results) != 2 {
+	if len(results) != 1 {
 		return nil, errDecodeABI
 	}
 

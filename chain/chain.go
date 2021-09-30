@@ -114,7 +114,6 @@ func InitSettlement(
 	factory, err := initChequebookFactory(chaininfo.Backend, chaininfo.ChainID, chaininfo.TransactionService, chaininfo.Chainconfig.CurrentFactory.String())
 
 	if err != nil {
-		fmt.Printf("init chequebook factory error")
 		return nil, errors.New("init chequebook factory error")
 	}
 
@@ -133,7 +132,6 @@ func InitSettlement(
 	)
 
 	if err != nil {
-		fmt.Printf("init chequebook service error")
 		return nil, errors.New("init chequebook service error")
 	}
 
@@ -151,7 +149,6 @@ func InitSettlement(
 	accounting, err := accounting.NewAccounting(stateStore)
 
 	if err != nil {
-		fmt.Printf("new accounting error")
 		return nil, errors.New("new accounting service error")
 	}
 
@@ -170,7 +167,6 @@ func InitSettlement(
 	)
 
 	if err != nil {
-		fmt.Printf("init swap service error")
 		return nil, errors.New("init swap service error")
 	}
 

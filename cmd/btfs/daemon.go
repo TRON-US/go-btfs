@@ -358,16 +358,20 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	fmt.Printf("Peer identity: %s\n", cfg.Identity.PeerID)
 
 	fmt.Printf("private key identity: %s\n", cfg.Identity.PrivKey)
+
 	//new singer
 	pk := crypto.Secp256k1PrivateKeyFromString(cfg.Identity.PrivKey)
 	singer := crypto.NewDefaultSigner(pk)
 
+	fmt.Printf("init statestore\n")
 	//chain init --- dir hardcode
 	statestore, err := chain.InitStateStore("/Users/yangsai/go/work/testData")
 	if err != nil {
 		fmt.Println("init statestore err: ", err)
 		return err
 	}
+
+	fmt.Printf("init chain\n")
 	//endpoint 先hardcode
 	chainInfo, err := chain.InitChain(context.Background(), statestore, "http://18.144.29.246:8110", singer, time.Duration(10))
 	if err != nil {
@@ -375,11 +379,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		return err
 	}
 
+	fmt.Println("sync chain")
 	// Sync the with the given Ethereum backend:
 	isSynced, _, err := transaction.IsSynced(context.Background(), chainInfo.Backend, chain.MaxDelay)
 	if err != nil {
 		return fmt.Errorf("is synced: %w", err)
 	}
+
 	if !isSynced {
 		log.Infof("waiting to sync with the Ethereum backend")
 
@@ -391,8 +397,9 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	var initialDeposit = "100"
 	var deployGasPrice = "0"
-	var networkID = uint64(10)
+	var networkID = uint64(5)
 
+	fmt.Println("init settle")
 	/*settleinfo*/
 	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, networkID)
 	if err != nil {
