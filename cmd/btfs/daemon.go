@@ -364,8 +364,8 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	singer := crypto.NewDefaultSigner(pk)
 
 	fmt.Printf("init statestore\n")
-	//chain init --- dir hardcode
-	statestore, err := chain.InitStateStore("/Users/yangsai/go/work/testData")
+	//chain init
+	statestore, err := chain.InitStateStore(cctx.ConfigRoot)
 	if err != nil {
 		fmt.Println("init statestore err: ", err)
 		return err
