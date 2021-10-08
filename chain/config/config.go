@@ -24,12 +24,26 @@ var (
 
 	bttcFactoryAddress = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 	bttcOracleAddress  = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
+
+	// initailDeposit
+	ethInitialDeposit  = "100000000000000"
+	tronInitialDeposit = "100"
+	bttcInitialDeposit = "100"
+	testInitialDeposit = "100"
+
+	// deploy gas
+	ethDeploymentGas  = "10"
+	tronDeploymentGas = "10"
+	bttcDeploymentGas = "10"
+	testDeploymentGas = "10"
 )
 
 type ChainConfig struct {
 	StartBlock         uint64
 	CurrentFactory     common.Address
 	PriceOracleAddress common.Address
+	InitailDeposit     string
+	DeploymentGas      string
 }
 
 func GetChainConfig(chainID int64) (*ChainConfig, bool) {
@@ -39,21 +53,29 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.StartBlock = ethStartBlock
 		cfg.CurrentFactory = ethFactoryAddress
 		cfg.PriceOracleAddress = ethOracleAddress
+		cfg.DeploymentGas = ethDeploymentGas
+		cfg.InitailDeposit = ethInitialDeposit
 		return &cfg, true
 	case tronChainID:
 		cfg.StartBlock = tronStartBlock
 		cfg.CurrentFactory = tronFactoryAddress
 		cfg.PriceOracleAddress = tronOracleAddress
+		cfg.DeploymentGas = tronDeploymentGas
+		cfg.InitailDeposit = tronInitialDeposit
 		return &cfg, true
 	case btccChainID:
 		cfg.StartBlock = bttcStartBlock
 		cfg.CurrentFactory = bttcFactoryAddress
 		cfg.PriceOracleAddress = bttcOracleAddress
+		cfg.DeploymentGas = bttcDeploymentGas
+		cfg.InitailDeposit = bttcInitialDeposit
 		return &cfg, true
 	case testChainID:
 		cfg.StartBlock = ethStartBlock
 		cfg.CurrentFactory = ethFactoryAddress
 		cfg.PriceOracleAddress = ethOracleAddress
+		cfg.DeploymentGas = testDeploymentGas
+		cfg.InitailDeposit = testInitialDeposit
 		return &cfg, true
 
 	default:

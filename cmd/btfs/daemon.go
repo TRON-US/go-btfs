@@ -82,6 +82,8 @@ const (
 	enableDataCollection      = "dc"
 	enableStartupTest         = "enable-startup-test"
 	swarmPortKwd              = "swarm-port"
+	initialDeposit            = "initial-deposit"
+	deploymentGasPrice        = "deployment-gasPrice"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -206,6 +208,8 @@ Headers.
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
 		cmds.StringOption(swarmPortKwd, "Override existing announced swarm address with external port in the format of [WAN:LAN]."),
+		cmds.StringOption(initialDeposit, "Initial deposit if deploying a new chequebook."),
+		cmds.StringOption(deploymentGasPrice, "gas price in unit to use for deployment and funding."),
 
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
@@ -395,13 +399,19 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}
 
-	var initialDeposit = "100"
-	var deployGasPrice = "0"
-	var networkID = uint64(5)
+	initialDeposit, found := req.Options[initialDeposit].(string)
+	if !found {
+		initialDeposit = chainInfo.Chainconfig.InitailDeposit
+	}
+
+	deployGasPrice, found := req.Options[deploymentGasPrice].(string)
+	if !found {
+		deployGasPrice = chainInfo.Chainconfig.DeploymentGas
+	}
 
 	fmt.Println("init settle")
 	/*settleinfo*/
-	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, networkID)
+	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, uint64(chainInfo.ChainID))
 	if err != nil {
 		fmt.Println("init settlement err: ", err)
 		return err

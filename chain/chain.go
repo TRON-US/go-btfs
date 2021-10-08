@@ -108,7 +108,7 @@ func InitSettlement(
 	chaininfo *ChainInfo,
 	initialDeposit string,
 	deployGasPrice string,
-	networkID uint64,
+	chainID uint64,
 ) (*SettleInfo, error) {
 	//InitChequebookFactory
 	factory, err := initChequebookFactory(chaininfo.Backend, chaininfo.ChainID, chaininfo.TransactionService, chaininfo.Chainconfig.CurrentFactory.String())
@@ -155,7 +155,7 @@ func InitSettlement(
 	//InitSwap
 	swapService, priceOracleService, err := initSwap(
 		stateStore,
-		networkID,
+		chainID,
 		chaininfo.OverlayAddress,
 		chequebookService,
 		chequeStore,
