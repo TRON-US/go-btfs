@@ -61,22 +61,21 @@ type SettleInfo struct {
 func InitChain(
 	ctx context.Context,
 	stateStore storage.StateStorer,
-	endpoint string,
 	signer crypto.Signer,
 	pollingInterval time.Duration,
+	chainID int64,
 ) (*ChainInfo, error) {
-	backend, err := ethclient.Dial(endpoint)
+
+	chainconfig, _ := config.GetChainConfig(chainID)
+	backend, err := ethclient.Dial(chainconfig.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("dial eth client: %w", err)
 	}
 
-	chainID, err := backend.ChainID(ctx)
 	if err != nil {
-		log.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --swap-endpoint.", endpoint)
+		log.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --swap-endpoint.", chainconfig.Endpoint)
 		return nil, fmt.Errorf("get chain id: %w", err)
 	}
-
-	chainconfig, _ := config.GetChainConfig(chainID.Int64())
 
 	overlayEthAddress, err := signer.EthereumAddress()
 	if err != nil {
@@ -85,7 +84,7 @@ func InitChain(
 
 	transactionMonitor := transaction.NewMonitor(backend, overlayEthAddress, pollingInterval, CancellationDepth)
 
-	transactionService, err := transaction.NewService(backend, signer, stateStore, chainID, transactionMonitor)
+	transactionService, err := transaction.NewService(backend, signer, stateStore, big.NewInt(chainID), transactionMonitor)
 	if err != nil {
 		return nil, fmt.Errorf("new transaction service: %w", err)
 	}
@@ -94,7 +93,7 @@ func InitChain(
 		Chainconfig:        *chainconfig,
 		Backend:            backend,
 		OverlayAddress:     overlayEthAddress,
-		ChainID:            chainID.Int64(),
+		ChainID:            chainID,
 		TransactionMonitor: transactionMonitor,
 		TransactionService: transactionService,
 	}
@@ -108,7 +107,7 @@ func InitSettlement(
 	chaininfo *ChainInfo,
 	initialDeposit string,
 	deployGasPrice string,
-	chainID uint64,
+	chainID int64,
 ) (*SettleInfo, error) {
 	//InitChequebookFactory
 	factory, err := initChequebookFactory(chaininfo.Backend, chaininfo.ChainID, chaininfo.TransactionService, chaininfo.Chainconfig.CurrentFactory.String())
@@ -140,7 +139,7 @@ func InitSettlement(
 		stateStore,
 		chaininfo.Backend,
 		factory,
-		chaininfo.ChainID,
+		chainID,
 		chaininfo.OverlayAddress,
 		chaininfo.TransactionService,
 	)
@@ -155,7 +154,6 @@ func InitSettlement(
 	//InitSwap
 	swapService, priceOracleService, err := initSwap(
 		stateStore,
-		chainID,
 		chaininfo.OverlayAddress,
 		chequebookService,
 		chequeStore,
@@ -292,7 +290,6 @@ func initChequeStoreCashout(
 // InitSwap will initialize and register the swap service.
 func initSwap(
 	stateStore storage.StateStorer,
-	networkID uint64,
 	overlayEthAddress common.Address,
 	chequebookService chequebook.Service,
 	chequeStore chequebook.ChequeStore,
@@ -325,7 +322,7 @@ func initSwap(
 		chequebookService,
 		chequeStore,
 		swapAddressBook,
-		networkID,
+		chainID,
 		cashoutService,
 		accounting,
 	)

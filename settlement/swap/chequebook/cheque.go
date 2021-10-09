@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/TRON-US/go-btfs/transaction/crypto/eip712"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 // Cheque represents a cheque for a SimpleSwap chequebook

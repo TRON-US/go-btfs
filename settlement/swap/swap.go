@@ -57,11 +57,11 @@ type Service struct {
 	chequeStore chequebook.ChequeStore
 	cashout     chequebook.CashoutService
 	addressbook Addressbook
-	networkID   uint64
+	chainID     int64
 }
 
 // New creates a new swap Service.
-func New(proto swapprotocol.Interface, store storage.StateStorer, chequebook chequebook.Service, chequeStore chequebook.ChequeStore, addressbook Addressbook, networkID uint64, cashout chequebook.CashoutService, accounting settlement.Accounting) *Service {
+func New(proto swapprotocol.Interface, store storage.StateStorer, chequebook chequebook.Service, chequeStore chequebook.ChequeStore, addressbook Addressbook, chainID int64, cashout chequebook.CashoutService, accounting settlement.Accounting) *Service {
 	return &Service{
 		proto:       proto,
 		store:       store,
@@ -69,13 +69,13 @@ func New(proto swapprotocol.Interface, store storage.StateStorer, chequebook che
 		chequebook:  chequebook,
 		chequeStore: chequeStore,
 		addressbook: addressbook,
-		networkID:   networkID,
+		chainID:     chainID,
 		cashout:     cashout,
 		accounting:  accounting,
 	}
 }
 
-func (s *Service)GetProtocols()swapprotocol.Interface{
+func (s *Service) GetProtocols() swapprotocol.Interface {
 	return s.proto
 }
 
