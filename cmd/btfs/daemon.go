@@ -20,6 +20,7 @@ import (
 
 	version "github.com/TRON-US/go-btfs"
 	"github.com/TRON-US/go-btfs/chain"
+	cc "github.com/TRON-US/go-btfs/chain/config"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
 	oldcmds "github.com/TRON-US/go-btfs/commands"
 	"github.com/TRON-US/go-btfs/core"
@@ -82,6 +83,9 @@ const (
 	enableDataCollection      = "dc"
 	enableStartupTest         = "enable-startup-test"
 	swarmPortKwd              = "swarm-port"
+	initialDeposit            = "initial-deposit"
+	deploymentGasPrice        = "deployment-gasPrice"
+	chainID                   = "chain-id"
 	// apiAddrKwd    = "address-api"
 	// swarmAddrKwd  = "address-swarm"
 )
@@ -206,7 +210,9 @@ Headers.
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
 		cmds.StringOption(swarmPortKwd, "Override existing announced swarm address with external port in the format of [WAN:LAN]."),
-
+		cmds.StringOption(initialDeposit, "Initial deposit if deploying a new chequebook."),
+		cmds.StringOption(deploymentGasPrice, "gas price in unit to use for deployment and funding."),
+		cmds.StringOption(chainID, "The ID of blockchain to deploy."),
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
 		// cmds.StringOption(apiAddrKwd, "Address for the daemon rpc API (overrides config)"),
 		// cmds.StringOption(swarmAddrKwd, "Address for the swarm socket (overrides config)"),
@@ -372,8 +378,19 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 
 	fmt.Printf("init chain\n")
+
+	chainid := cc.DefaultChain
+
+	chainidstr, found := req.Options[chainID].(string)
+	if found {
+		chainid, err = strconv.ParseInt(chainidstr, 10, 64)
+		if err != nil {
+			return err
+		}
+	}
+
 	//endpoint 先hardcode
-	chainInfo, err := chain.InitChain(context.Background(), statestore, "http://18.144.29.246:8110", singer, time.Duration(10))
+	chainInfo, err := chain.InitChain(context.Background(), statestore, singer, time.Duration(10), chainid)
 	if err != nil {
 		fmt.Println("init chain err: ", err)
 		return err
@@ -395,13 +412,19 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}
 
-	var initialDeposit = "100"
-	var deployGasPrice = "0"
-	var networkID = uint64(5)
+	initialDeposit, found := req.Options[initialDeposit].(string)
+	if !found {
+		initialDeposit = chainInfo.Chainconfig.InitailDeposit
+	}
+
+	deployGasPrice, found := req.Options[deploymentGasPrice].(string)
+	if !found {
+		deployGasPrice = chainInfo.Chainconfig.DeploymentGas
+	}
 
 	fmt.Println("init settle")
 	/*settleinfo*/
-	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, networkID)
+	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, chainInfo.ChainID)
 	if err != nil {
 		fmt.Println("init settlement err: ", err)
 		return err
