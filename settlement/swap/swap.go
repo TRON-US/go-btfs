@@ -121,6 +121,7 @@ func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
 			s.accounting.NotifyPaymentSent(peer, amount, err)
 		}
 	}()
+
 	beneficiary, known, err := s.addressbook.Beneficiary(peer)
 	if err != nil {
 		return
@@ -345,4 +346,8 @@ func (s *Service) CashoutStatus(ctx context.Context, peer string) (*chequebook.C
 		return nil, chequebook.ErrNoCheque
 	}
 	return s.cashout.CashoutStatus(ctx, chequebookAddress)
+}
+
+func (s *Service) GetChainid() int64 {
+	return s.chainID
 }

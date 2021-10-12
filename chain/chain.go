@@ -333,21 +333,7 @@ func initSwap(
 	return swapService, priceOracle, nil
 }
 
-func GetTxHash(stateStore storage.StateStorer, trxString string) ([]byte, error) {
-
-	if trxString != "" {
-		txHashTrimmed := strings.TrimPrefix(trxString, "0x")
-		if len(txHashTrimmed) != 64 {
-			return nil, errors.New("invalid length")
-		}
-		txHash, err := hex.DecodeString(txHashTrimmed)
-		if err != nil {
-			return nil, err
-		}
-		log.Infof("using the provided transaction hash %x", txHash)
-		return txHash, nil
-	}
-
+func GetTxHash(stateStore storage.StateStorer) ([]byte, error) {
 	var txHash common.Hash
 	key := chequebook.ChequebookDeploymentKey
 	if err := stateStore.Get(key, &txHash); err != nil {

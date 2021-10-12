@@ -8,15 +8,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"math/big"
 	"sync"
 	"time"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
 
 	//"github.com/ethersphere/bee/pkg/swarm"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +33,6 @@ var (
 	Req *cmds.Request
 	Env cmds.Environment
 )
-
 
 const (
 	protocolName    = "swap"
@@ -59,6 +60,7 @@ type Interface interface {
 type Swap interface {
 	// ReceiveCheque is called by the swap protocol if a cheque is received.
 	ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
+	GetChainid() int64
 }
 
 // Service is the main implementation of the swap protocol.
@@ -74,6 +76,10 @@ func New(beneficiary common.Address, priceOracle priceoracle.Service) *Service {
 		beneficiary: beneficiary,
 		priceOracle: priceOracle,
 	}
+}
+
+func (s *Service) getChainID() int64 {
+	return s.swap.GetChainid()
 }
 
 // SetSwap sets the swap to notify.
@@ -93,7 +99,7 @@ func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque 
 }
 
 // InitiateCheque attempts to send a cheque to a peer.
-func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
+func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiarydel common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -106,9 +112,52 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 	paymentAmount := new(big.Int).Mul(amount, checkExchangeRate)
 	sentAmount := paymentAmount
 
+	//get beneficiary
+	beneficiary := &pb.Handshake{}
+	log.Infof("get beneficiary from peer %v (%v)", peer)
+	{
+		hostPid, err := peerInfo.IDB58Decode(peer)
+		if err != nil {
+			log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
+			return nil, err
+		}
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			err = func() error {
+				ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+				ctxParams, err := helper.ExtractContextParams(Req, Env)
+				if err != nil {
+					return err
+				}
+				//get beneficiary
+				output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/p2p/handshake",
+					s.getChainID(),
+					hostPid,
+				)
+
+				if err != nil {
+					return err
+				}
+
+				err = json.Unmarshal(output, beneficiary)
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
+				log.Infof("remote.P2PCall hostPid:%s, /p2p/handshake, error: %s", peer, err)
+			}
+			wg.Done()
+		}()
+
+		wg.Wait()
+	}
+
 	// issue cheque call with provided callback for sending cheque to finish transaction
 
-	balance, err = issue(ctx, beneficiary, sentAmount, func(cheque *chequebook.SignedCheque) error {
+	balance, err = issue(ctx, common.BytesToAddress(beneficiary.Beneficiary), sentAmount, func(cheque *chequebook.SignedCheque) error {
 		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
 		encodedCheque, err := json.Marshal(cheque)
 		if err != nil {
@@ -128,7 +177,6 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 				log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
 				return err
 			}
-
 			var wg sync.WaitGroup
 			wg.Add(1)
 			go func() {
@@ -138,11 +186,27 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiary commo
 					if err != nil {
 						return err
 					}
+					//get beneficiary
+					output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/p2p/handshake",
+						s.getChainID(),
+						hostPid,
+					)
 
+					if err != nil {
+						return err
+					}
+
+					beneficiary := &pb.Handshake{}
+					err = json.Unmarshal(output, beneficiary)
+					if err != nil {
+						return err
+					}
+
+					//send cheque
 					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
 						encodedCheque,
 						exchangeRate,
-						)
+					)
 					if err != nil {
 						return err
 					}

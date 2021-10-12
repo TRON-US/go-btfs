@@ -11,8 +11,8 @@ import (
 
 	logging "github.com/ipfs/go-log"
 	"github.com/jbenet/goprocess"
-	"github.com/jbenet/goprocess/context"
-	"github.com/jbenet/goprocess/periodic"
+	goprocessctx "github.com/jbenet/goprocess/context"
+	periodicproc "github.com/jbenet/goprocess/periodic"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
