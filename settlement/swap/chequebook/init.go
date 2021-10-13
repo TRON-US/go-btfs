@@ -67,20 +67,20 @@ func checkBalance(
 			}
 
 			if insufficientETH && insufficientERC20 {
-				log.Warnf("cannot continue until there is sufficient ETH (for Gas) and at least %d BZZ available on %x", neededERC20, overlayEthAddress)
+				log.Info("cannot continue until there is sufficient ETH (for Gas) and at least %d BTT available on %x", neededERC20, overlayEthAddress)
 			} else if insufficientETH {
-				log.Warnf("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
+				log.Info("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
 			} else {
-				log.Warnf("cannot continue until there is at least %d BZZ available on %x", neededERC20, overlayEthAddress)
+				log.Info("cannot continue until there is at least %d BTT available on %x", neededERC20, overlayEthAddress)
 			}
 			if chainId == 5 {
-				log.Warnf("learn how to fund your node by visiting our docs at https://docs.ethswarm.org/docs/installation/fund-your-node")
+				log.Info("learn how to fund your node by visiting our docs at")
 			}
 			select {
 			case <-time.After(balanceCheckBackoffDuration):
 			case <-timeoutCtx.Done():
 				if insufficientERC20 {
-					return fmt.Errorf("insufficient BZZ for initial deposit")
+					return fmt.Errorf("insufficient BTT for initial deposit")
 				} else {
 					return fmt.Errorf("insufficient ETH for initial deposit")
 				}
@@ -202,6 +202,7 @@ func Init(
 		}
 
 		log.Infof("using existing chequebook %x", chequebookAddress)
+		fmt.Println("using existing chequebook ", chequebookAddress)
 	}
 
 	// regardless of how the chequebook service was initialised make sure that the chequebook is valid

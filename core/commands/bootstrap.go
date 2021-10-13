@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"sort"
 
+	"github.com/TRON-US/go-btfs/chain"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	repo "github.com/TRON-US/go-btfs/repo"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
@@ -272,6 +274,8 @@ var bootstrapListCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+
+		chain.SettleObject.SwapService.Settle(peers[0].ID.String(), big.NewInt(10))
 
 		return cmds.EmitOnce(res, &BootstrapOutput{config.BootstrapPeerStrings(peers)})
 	},

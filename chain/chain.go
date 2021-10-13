@@ -131,7 +131,7 @@ func InitSettlement(
 	)
 
 	if err != nil {
-		return nil, errors.New("init chequebook service error")
+		return nil, fmt.Errorf("init chequebook service: %w", err)
 	}
 
 	//initChequeStoreCashout
@@ -167,6 +167,8 @@ func InitSettlement(
 	if err != nil {
 		return nil, errors.New("init swap service error")
 	}
+
+	accounting.SetPayFunc(swapService.Pay)
 
 	SettleObject = SettleInfo{
 		Factory:           factory,
