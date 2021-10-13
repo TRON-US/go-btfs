@@ -583,9 +583,11 @@ var P2phandshakeCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Println("enter P2phandshakeCmd")
 
 		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
+			fmt.Println("err1 is ", ok)
 			return fmt.Errorf("fail to get peer ID from request")
 		}
 
@@ -594,13 +596,15 @@ var P2phandshakeCmd = &cmds.Command{
 			return fmt.Errorf("chainid:%s cannot be parsed", req.Arguments[1])
 		}
 
+		fmt.Println("enter P2phandshakeCmd: chain_id is ", chain_id)
+
 		peer_id := req.Arguments[1]
 
 		if peer_id != requestPid.String() {
 			return fmt.Errorf("the wrong peer ID: want[%s], get[%s]", requestPid.String(), peer_id)
 		}
 
-		fmt.Printf("receive msg from peer %s, the chain-id is %d \n", peer_id, chain_id)
+		fmt.Printf("receive msg from peer %s, the chain-id is %d OverlayAddress is %x \n", peer_id, chain_id, chain.ChainObject.OverlayAddress)
 
 		output := &pb.Handshake{}
 
