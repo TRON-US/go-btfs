@@ -122,49 +122,66 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiarydel co
 
 	//get beneficiary
 	beneficiary := &pb.Handshake{}
-	log.Infof("get beneficiary from peer %v (%v)", peer)
-	{
-		hostPid, err := peerInfo.IDB58Decode(peer)
-		if err != nil {
-			log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
-			return nil, err
-		}
-		var wg sync.WaitGroup
-		wg.Add(1)
+	/*
+		responseChannel := make(chan string, 1)
+
+		var wgResponse sync.WaitGroup
+		wgResponse.Add(1)
+		// 启动读取结果的控制器
 		go func() {
-			err = func() error {
-				ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
-				ctxParams, err := helper.ExtractContextParams(Req, Env)
-				if err != nil {
-					return err
-				}
-				//get beneficiary
-				output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/p2p/handshake",
-					s.getChainID(),
-					hostPid,
-				)
-
-				if err != nil {
-					fmt.Println("err1 is ", err)
-					return err
-				}
-
-				err = json.Unmarshal(output, beneficiary)
-				if err != nil {
-					fmt.Println("err2 is ", err)
-					return err
-				}
-				fmt.Println("beneficiary is ", beneficiary.Beneficiary)
-				return nil
-			}()
-			if err != nil {
-				log.Infof("remote.P2PCall hostPid:%s, /p2p/handshake, error: %s", peer, err)
+			for response := range responseChannel {
+				// 处理结果
+				fmt.Println("enter EmitCheque---get channel ")
+				beneficiary.Beneficiary = []byte(response)
 			}
-			wg.Done()
+			// 当 responseChannel被关闭时且channel中所有的值都已经被处理完毕后, 将执行到这一行
+			wgResponse.Done()
 		}()
+	*/
 
-		wg.Wait()
+	log.Infof("get beneficiary from peer %v (%v)", peer)
+	hostPid, err := peerInfo.IDB58Decode(peer)
+	if err != nil {
+		log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
+		return nil, err
 	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		err = func() error {
+			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+			ctxParams, err := helper.ExtractContextParams(Req, Env)
+			if err != nil {
+				return err
+			}
+			//get beneficiary
+			output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/p2p/handshake",
+				s.getChainID(),
+				hostPid,
+			)
+
+			if err != nil {
+				fmt.Println("err1 is ", err)
+				return err
+			}
+
+			err = json.Unmarshal(output, beneficiary)
+			if err != nil {
+				fmt.Println("err2 is ", err)
+				return err
+			}
+			fmt.Println("beneficiary is ", beneficiary.Beneficiary)
+
+			return nil
+		}()
+		if err != nil {
+			log.Infof("remote.P2PCall hostPid:%s, /p2p/handshake, error: %s", peer, err)
+		}
+
+		wg.Done()
+	}()
+
+	wg.Wait()
 
 	fmt.Println("beneficiary2 is ", beneficiary.Beneficiary)
 	/*
@@ -227,7 +244,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiarydel co
 			return nil, err
 		}
 	*/
-	fmt.Println("balance is ", balance)
 
+	fmt.Println("balance is ", balance)
 	return balance, nil
 }
