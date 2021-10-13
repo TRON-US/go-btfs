@@ -122,16 +122,17 @@ func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
 		}
 	}()
 
-	beneficiary, known, err := s.addressbook.Beneficiary(peer)
-	if err != nil {
-		return
-	}
-	if !known {
-		err = ErrUnknownBeneficary
-		return
-	}
-
-	balance, err := s.proto.EmitCheque(ctx, peer, beneficiary, amount, s.chequebook.Issue)
+	/*
+		beneficiary, known, err := s.addressbook.Beneficiary(peer)
+		if err != nil {
+			return
+		}
+		if !known {
+			err = ErrUnknownBeneficary
+			return
+		}
+	*/
+	balance, err := s.proto.EmitCheque(ctx, peer, amount, s.chequebook.Issue)
 
 	if err != nil {
 		return
@@ -350,4 +351,8 @@ func (s *Service) CashoutStatus(ctx context.Context, peer string) (*chequebook.C
 
 func (s *Service) GetChainid() int64 {
 	return s.chainID
+}
+
+func (s *Service) Settle(toPeer string, paymentAmount *big.Int) error {
+	return s.accounting.Settle(toPeer, paymentAmount)
 }
