@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -87,6 +86,6 @@ func NewNode(ctx context.Context, cfg *BuildCfg) (*IpfsNode, error) {
 	if !cfg.Online {
 		return n, nil
 	}
-	fmt.Println("bootstrap.DefaultBootstrapConfig is ", bootstrap.DefaultBootstrapConfig)
+
 	return n, n.Bootstrap(bootstrap.DefaultBootstrapConfig)
 }

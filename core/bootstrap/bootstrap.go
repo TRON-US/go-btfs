@@ -72,9 +72,6 @@ func BootstrapConfigWithPeers(pis []peer.AddrInfo) BootstrapConfig {
 // connections to well-known bootstrap peers. It also kicks off subsystem
 // bootstrapping (i.e. routing).
 func Bootstrap(id peer.ID, host host.Host, rt routing.Routing, cfg BootstrapConfig) (io.Closer, error) {
-
-	fmt.Println("Bootstrap: peer.ID is ", id)
-	fmt.Println("Bootstrap: host is ", host)
 	// make a signal to wait for one bootstrap round to complete.
 	doneWithRound := make(chan struct{})
 
@@ -119,8 +116,6 @@ func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) er
 	defer cancel()
 	id := host.ID()
 
-	fmt.Println("bootstrapRound: host.ID() is ", id)
-
 	// get bootstrap peers from config. retrieving them here makes
 	// sure we remain observant of changes to client configuration.
 	peers := cfg.BootstrapPeers()
@@ -136,7 +131,6 @@ func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) er
 	// filter out bootstrap nodes we are already connected to
 	var notConnected []peer.AddrInfo
 	for _, p := range peers {
-		fmt.Println("bootstrapRound: peer is ", p)
 		if host.Network().Connectedness(p.ID) != network.Connected {
 			notConnected = append(notConnected, p)
 		}
@@ -173,16 +167,14 @@ func bootstrapConnect(ctx context.Context, ph host.Host, peers []peer.AddrInfo) 
 		go func(p peer.AddrInfo) {
 			defer wg.Done()
 			log.Debugf("%s bootstrapping to %s", ph.ID(), p.ID)
-
 			ph.Peerstore().AddAddrs(p.ID, p.Addrs, peerstore.PermanentAddrTTL)
-			fmt.Println("bootstrapConnect: peer is ", p)
+
 			if err := ph.Connect(ctx, p); err != nil {
 				log.Debugf("failed to bootstrap with %v: %s", p.ID, err)
 				errs <- err
 				return
 			}
 			log.Infof("bootstrapped with %v", p.ID)
-			fmt.Println("bootstrapped with peer is ", p.ID)
 		}(p)
 	}
 	wg.Wait()

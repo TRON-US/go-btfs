@@ -122,8 +122,6 @@ func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
 		}
 	}()
 
-	fmt.Println("Pay: enter --- peer is ", peer)
-	fmt.Println("Pay: enter --- amount is ", amount.Int64())
 	/*
 		beneficiary, known, err := s.addressbook.Beneficiary(peer)
 		if err != nil {
@@ -134,8 +132,7 @@ func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
 			return
 		}
 	*/
-	beneficiary := common.HexToAddress("12345678902342345676789767654345678234567777")
-	balance, err := s.proto.EmitCheque(ctx, peer, beneficiary, amount, s.chequebook.Issue)
+	balance, err := s.proto.EmitCheque(ctx, peer, amount, s.chequebook.Issue)
 
 	if err != nil {
 		return

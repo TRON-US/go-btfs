@@ -94,6 +94,7 @@ func InitChain(
 		Backend:            backend,
 		OverlayAddress:     overlayEthAddress,
 		ChainID:            chainID,
+		Signer:             signer,
 		TransactionMonitor: transactionMonitor,
 		TransactionService: transactionService,
 	}

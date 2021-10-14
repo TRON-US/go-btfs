@@ -8,7 +8,6 @@ package accounting
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -99,15 +98,11 @@ func (a *Accounting) getAccountingPeer(peer string) *accountingPeer {
 // NotifyPaymentSent is triggered by async monetary settlement to update our balance and remove it's price from the shadow reserve
 func (a *Accounting) NotifyPaymentSent(peer string, amount *big.Int, receivedError error) {
 	defer a.wg.Done()
-	fmt.Println("NotifyPaymentSent: enter --- peer is ", peer)
-	fmt.Println("NotifyPaymentSent: enter --- amount is ", amount.Int64())
-	fmt.Println("NotifyPaymentSent: enter --- err is ", receivedError)
 	accountingPeer := a.getAccountingPeer(peer)
 
 	accountingPeer.lock.Lock()
 	defer accountingPeer.lock.Unlock()
 
-	fmt.Println("NotifyPaymentSent: enter --- accountingPeer is ", accountingPeer)
 	if receivedError != nil {
 		accountingPeer.lastSettlementFailureTimestamp = a.timeNow().Unix()
 		log.Warnf("accounting: payment failure %v", receivedError)

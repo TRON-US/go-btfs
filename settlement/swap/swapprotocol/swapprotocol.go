@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -42,7 +41,8 @@ const (
 )
 
 var (
-	ErrNegotiateRate = errors.New("exchange rates mismatch")
+	ErrNegotiateRate  = errors.New("exchange rates mismatch")
+	ErrGetBeneficiary = errors.New("get beneficiary err")
 )
 
 type SendChequeFunc chequebook.SendChequeFunc
@@ -54,7 +54,7 @@ type IssueFunc func(ctx context.Context, beneficiary common.Address, amount *big
 // Interface is the main interface to send messages over swap protocol.
 type Interface interface {
 	// EmitCheque sends a signed cheque to a peer.
-	EmitCheque(ctx context.Context, peer string, beneficiary common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error)
+	EmitCheque(ctx context.Context, peer string, amount *big.Int, issue IssueFunc) (balance *big.Int, err error)
 }
 
 // Swap is the interface the settlement layer should implement to receive cheques.
@@ -100,11 +100,9 @@ func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque 
 }
 
 // InitiateCheque attempts to send a cheque to a peer.
-func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiarydel common.Address, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
+func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-
-	fmt.Println("enter EmitCheque---peer is ", peer)
 
 	// get current global exchangeRate rate
 	checkExchangeRate, err := s.priceOracle.CurrentRates()
@@ -112,139 +110,118 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, beneficiarydel co
 		return nil, err
 	}
 
-	fmt.Println("enter EmitCheque---checkExchangeRate is ", checkExchangeRate)
-
 	paymentAmount := new(big.Int).Mul(amount, checkExchangeRate)
 	sentAmount := paymentAmount
 
-	fmt.Println("enter EmitCheque---paymentAmount is ", paymentAmount)
-	fmt.Println("enter EmitCheque---sentAmount is ", sentAmount)
-
-	//get beneficiary
-	beneficiary := &pb.Handshake{}
-	/*
-		responseChannel := make(chan string, 1)
-
-		var wgResponse sync.WaitGroup
-		wgResponse.Add(1)
-		// 启动读取结果的控制器
-		go func() {
-			for response := range responseChannel {
-				// 处理结果
-				fmt.Println("enter EmitCheque---get channel ")
-				beneficiary.Beneficiary = []byte(response)
-			}
-			// 当 responseChannel被关闭时且channel中所有的值都已经被处理完毕后, 将执行到这一行
-			wgResponse.Done()
-		}()
-	*/
-
-	log.Infof("get beneficiary from peer %v (%v)", peer)
-	hostPid, err := peerInfo.IDB58Decode(peer)
+	peerhostPid, err := peerInfo.IDB58Decode(peer)
 	if err != nil {
 		log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
 		return nil, err
 	}
+
+	// call P2PCall to get beneficiary address
+	beneficiary := &pb.Handshake{}
+	log.Infof("get beneficiary from peer %v (%v)", peerhostPid)
 	var wg sync.WaitGroup
+	times := 0
 	wg.Add(1)
 	go func() {
+	FETCH_BENEFICIARY:
 		err = func() error {
+			if times >= 5 {
+				log.Warnf("get beneficiary from peer %v (%v) error", peerhostPid)
+				return ErrGetBeneficiary
+			}
 			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
 			ctxParams, err := helper.ExtractContextParams(Req, Env)
 			if err != nil {
 				return err
 			}
+
 			//get beneficiary
-			output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/p2p/handshake",
+			output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, peerhostPid, "/p2p/handshake",
 				s.getChainID(),
-				hostPid,
+				ctxParams.N.Identity,
 			)
 
 			if err != nil {
-				fmt.Println("err1 is ", err)
 				return err
 			}
 
 			err = json.Unmarshal(output, beneficiary)
 			if err != nil {
-				fmt.Println("err2 is ", err)
 				return err
 			}
-			fmt.Println("beneficiary is ", beneficiary.Beneficiary)
 
 			return nil
 		}()
 		if err != nil {
-			log.Infof("remote.P2PCall hostPid:%s, /p2p/handshake, error: %s", peer, err)
+			if err != ErrGetBeneficiary {
+				times += 1
+				goto FETCH_BENEFICIARY
+			} else {
+				log.Infof("remote.P2PCall hostPid:%s, /p2p/handshake, error: %s", peer, err)
+			}
 		}
-
 		wg.Done()
 	}()
 
 	wg.Wait()
-
-	fmt.Println("beneficiary2 is ", beneficiary.Beneficiary)
-	/*
-		// issue cheque call with provided callback for sending cheque to finish transaction
-
-		balance, err = issue(ctx, common.BytesToAddress(beneficiary.Beneficiary), sentAmount, func(cheque *chequebook.SignedCheque) error {
-			// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
-			encodedCheque, err := json.Marshal(cheque)
-			if err != nil {
-				return err
-			}
-
-			exchangeRate, err := s.priceOracle.CurrentRates()
-			if err != nil {
-				return err
-			}
-
-			fmt.Println("sending cheque message to peer ", peer)
-
-			// sending cheque
-			log.Infof("sending cheque message to peer %v (%v)", peer, cheque)
-			{
-				hostPid, err := peerInfo.IDB58Decode(peer)
-				if err != nil {
-					log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
-					return err
-				}
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go func() {
-					err = func() error {
-						ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
-						ctxParams, err := helper.ExtractContextParams(Req, Env)
-						if err != nil {
-							return err
-						}
-
-						//send cheque
-						_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
-							encodedCheque,
-							exchangeRate,
-						)
-						if err != nil {
-							return err
-						}
-						return nil
-					}()
-					if err != nil {
-						fmt.Println("sending cheque message to peer err ", err)
-						log.Infof("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
-					}
-					wg.Done()
-				}()
-
-				wg.Wait()
-			}
-			return nil
-		})
+	// issue cheque call with provided callback for sending cheque to finish transaction
+	balance, err = issue(ctx, common.BytesToAddress(beneficiary.Beneficiary), sentAmount, func(cheque *chequebook.SignedCheque) error {
+		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
+		encodedCheque, err := json.Marshal(cheque)
 		if err != nil {
-			return nil, err
+			return err
 		}
-	*/
 
-	fmt.Println("balance is ", balance)
+		exchangeRate, err := s.priceOracle.CurrentRates()
+		if err != nil {
+			return err
+		}
+
+		// sending cheque
+		log.Infof("sending cheque message to peer %v (%v)", peer, cheque)
+		{
+			hostPid, err := peerInfo.IDB58Decode(peer)
+			if err != nil {
+				log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
+				return err
+			}
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				err = func() error {
+					ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+					ctxParams, err := helper.ExtractContextParams(Req, Env)
+					if err != nil {
+						return err
+					}
+
+					//send cheque
+					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
+						encodedCheque,
+						exchangeRate,
+					)
+					if err != nil {
+						return err
+					}
+					return nil
+				}()
+				if err != nil {
+					log.Infof("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
+				}
+				wg.Done()
+			}()
+
+			wg.Wait()
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return balance, nil
 }

@@ -115,9 +115,6 @@ func Init(
 		return nil, err
 	}
 
-	fmt.Println("erc20Address is: ", erc20Address)
-	fmt.Println("overlayEthAddress is: ", overlayEthAddress)
-
 	erc20Service := erc20.New(swapBackend, transactionService, erc20Address)
 
 	var chequebookAddress common.Address
@@ -202,7 +199,6 @@ func Init(
 		}
 
 		log.Infof("using existing chequebook %x", chequebookAddress)
-		fmt.Println("using existing chequebook ", chequebookAddress)
 	}
 
 	// regardless of how the chequebook service was initialised make sure that the chequebook is valid
