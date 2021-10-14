@@ -44,7 +44,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if l := len(a.Bytes()); l != 32 {
+	if l := len([]byte(a)); l != 32 {
 		t.Errorf("got address length %v, want %v", l, 32)
 	}
 

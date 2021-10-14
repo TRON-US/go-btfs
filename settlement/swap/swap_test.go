@@ -164,7 +164,7 @@ func TestReceiveCheque(t *testing.T) {
 		}),
 	)
 
-	networkID := uint64(1)
+	networkID := int64(1)
 	addressbook := &addressbookMock{
 		chequebook: func(p string) (common.Address, bool, error) {
 			//if !peer.Equal(p) {
@@ -245,7 +245,7 @@ func TestReceiveChequeReject(t *testing.T) {
 			return nil, errReject
 		}),
 	)
-	networkID := uint64(1)
+	networkID := int64(1)
 	addressbook := &addressbookMock{
 		chequebook: func(p string) (common.Address, bool, error) {
 			return chequebookAddress, true, nil
@@ -298,7 +298,7 @@ func TestReceiveChequeWrongChequebook(t *testing.T) {
 	}
 
 	chequeStore := mockchequestore.NewChequeStore()
-	networkID := uint64(1)
+	networkID := int64(1)
 	addressbook := &addressbookMock{
 		chequebook: func(p string) (common.Address, bool, error) {
 			return common.HexToAddress("0xcfff"), true, nil
@@ -340,7 +340,7 @@ func TestPay(t *testing.T) {
 	beneficiary := common.HexToAddress("0xcd")
 	peer := peerInfo.ID("abcd").String()
 
-	networkID := uint64(1)
+	networkID := int64(1)
 	addressbook := &addressbookMock{
 		beneficiary: func(p string) (common.Address, bool, error) {
 			//if !peer.Equal(p) {
@@ -395,7 +395,7 @@ func TestPayIssueError(t *testing.T) {
 
 	peer := peerInfo.ID("abcd").String()
 	errReject := errors.New("reject")
-	networkID := uint64(1)
+	networkID := int64(1)
 	addressbook := &addressbookMock{
 		beneficiary: func(p string) (common.Address, bool, error) {
 			//if !peer.Equal(p) {
@@ -447,7 +447,7 @@ func TestPayUnknownBeneficiary(t *testing.T) {
 
 	amount := big.NewInt(50)
 	peer := peerInfo.ID("abcd").String()
-	networkID := uint64(1)
+	networkID := int64(1)
 	addressbook := &addressbookMock{
 		beneficiary: func(p string) (common.Address, bool, error) {
 			//if !peer.Equal(p) {
@@ -492,10 +492,10 @@ func TestHandshake(t *testing.T) {
 	store := mockstore.NewStateStore()
 
 	beneficiary := common.HexToAddress("0xcd")
-	networkID := uint64(1)
+	networkID := int64(1)
 	txHash := common.HexToHash("0x1")
 
-	peer := crypto.NewOverlayFromEthereumAddress(beneficiary[:], networkID, txHash.Bytes())
+	peer := crypto.NewOverlayFromEthereumAddress(beneficiary[:], uint64(networkID), txHash.Bytes())
 
 	var putCalled bool
 	swapService := swap.New(
@@ -538,8 +538,8 @@ func TestHandshakeNewPeer(t *testing.T) {
 
 	beneficiary := common.HexToAddress("0xcd")
 	trx := common.HexToHash("0x1")
-	networkID := uint64(1)
-	peer := crypto.NewOverlayFromEthereumAddress(beneficiary[:], networkID, trx.Bytes())
+	networkID := int64(1)
+	peer := crypto.NewOverlayFromEthereumAddress(beneficiary[:], uint64(networkID), trx.Bytes())
 
 	var putCalled bool
 	swapService := swap.New(
@@ -582,8 +582,8 @@ func TestMigratePeer(t *testing.T) {
 
 	beneficiary := common.HexToAddress("0xcd")
 	trx := common.HexToHash("0x1")
-	networkID := uint64(1)
-	peer := crypto.NewOverlayFromEthereumAddress(beneficiary[:], networkID, trx.Bytes())
+	networkID := int64(1)
+	peer := crypto.NewOverlayFromEthereumAddress(beneficiary[:], uint64(networkID), trx.Bytes())
 
 	swapService := swap.New(
 		&swapProtocolMock{},
@@ -638,7 +638,7 @@ func TestCashout(t *testing.T) {
 		),
 		mockchequestore.NewChequeStore(),
 		addressbook,
-		uint64(1),
+		int64(1),
 		&cashoutMock{
 			cashCheque: func(ctx context.Context, c common.Address, r common.Address) (common.Hash, error) {
 				if c != theirChequebookAddress {
@@ -687,7 +687,7 @@ func TestCashoutStatus(t *testing.T) {
 		mockchequebook.NewChequebook(),
 		mockchequestore.NewChequeStore(),
 		addressbook,
-		uint64(1),
+		int64(1),
 		&cashoutMock{
 			cashoutStatus: func(ctx context.Context, c common.Address) (*chequebook.CashoutStatus, error) {
 				if c != theirChequebookAddress {
@@ -714,7 +714,7 @@ func TestStateStoreKeys(t *testing.T) {
 	//swarmAddress := swarm.MustParseHexAddress("deff")
 	swarmAddress := peerInfo.ID("deff").String()
 
-	expected := "swap_chequebook_peer_deff"
+	expected := "swap_chequebook_peer_3ZqpcV"
 	if swap.PeerKey(swarmAddress) != expected {
 		t.Fatalf("wrong peer key. wanted %s, got %s", expected, swap.PeerKey(swarmAddress))
 	}
@@ -724,7 +724,7 @@ func TestStateStoreKeys(t *testing.T) {
 		t.Fatalf("wrong peer key. wanted %s, got %s", expected, swap.ChequebookPeerKey(address))
 	}
 
-	expected = "swap_peer_beneficiary_deff"
+	expected = "swap_peer_beneficiary_3ZqpcV"
 	if swap.PeerBeneficiaryKey(swarmAddress) != expected {
 		t.Fatalf("wrong peer beneficiary key. wanted %s, got %s", expected, swap.PeerBeneficiaryKey(swarmAddress))
 	}
@@ -734,12 +734,12 @@ func TestStateStoreKeys(t *testing.T) {
 		t.Fatalf("wrong beneficiary peer key. wanted %s, got %s", expected, swap.BeneficiaryPeerKey(address))
 	}
 
-	expected = "swap_deducted_by_peer_deff"
+	expected = "swap_deducted_by_peer_3ZqpcV"
 	if swap.PeerDeductedByKey(swarmAddress) != expected {
 		t.Fatalf("wrong peer deducted by key. wanted %s, got %s", expected, swap.PeerDeductedByKey(swarmAddress))
 	}
 
-	expected = "swap_deducted_for_peer_deff"
+	expected = "swap_deducted_for_peer_3ZqpcV"
 	if swap.PeerDeductedForKey(swarmAddress) != expected {
 		t.Fatalf("wrong peer deducted for key. wanted %s, got %s", expected, swap.PeerDeductedForKey(swarmAddress))
 	}
