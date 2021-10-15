@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
@@ -20,7 +21,11 @@ import (
 
 const (
 	// prefix for the persistence key
-	lastReceivedChequePrefix = "swap_chequebook_last_received_cheque_"
+	lastReceivedChequePrefix         = "swap_chequebook_last_received_cheque_"
+	receivedChequeHistoryPrefix      = "swap_chequebook_history_received_cheque_"
+	receivedChequeHistoryIndexPrefix = "swap_chequebook_history_received_cheque_index_"
+	//180 days
+	expireTime = 3600 * 24 * 180
 )
 
 var (
@@ -81,6 +86,14 @@ func NewChequeStore(
 // lastReceivedChequeKey computes the key where to store the last cheque received from a chequebook.
 func lastReceivedChequeKey(chequebook common.Address) string {
 	return fmt.Sprintf("%s_%x", lastReceivedChequePrefix, chequebook)
+}
+
+func historyReceivedChequeKey(index uint64) string {
+	return fmt.Sprintf("%s_%x", receivedChequeHistoryIndexPrefix, index)
+}
+
+func historyReceivedChequeIndexKey(chequebook common.Address) string {
+	return fmt.Sprintf("%s_%x", receivedChequeHistoryIndexPrefix, chequebook)
 }
 
 // LastCheque returns the last cheque we received from a specific chequebook.
@@ -177,7 +190,104 @@ func (s *chequeStore) ReceiveCheque(ctx context.Context, cheque *SignedCheque, e
 		return nil, err
 	}
 
+	// store the history cheque
+	err = s.storeChequeRecord(cheque.Chequebook, amount)
+	if err != nil {
+		return nil, err
+	}
+
 	return amount, nil
+}
+
+//store cheque record
+//Beneficiary common.Address
+func (s *chequeStore) storeChequeRecord(chequebook common.Address, amount *big.Int) error {
+	var indexRange IndexRange
+	err := s.store.Get(historyReceivedChequeIndexKey(chequebook), &indexRange)
+	if err != nil {
+		if err != storage.ErrNotFound {
+			return err
+		}
+		//not found
+		indexRange.MinIndex = 0
+		indexRange.MaxIndex = 0
+		/*
+			err = s.store.Put(historyReceivedChequeIndexKey(chequebook), indexRange)
+			if err != nil {
+				fmt.Println("put historyReceivedChequeIndexKey err ", err)
+				return err
+			}
+		*/
+	}
+
+	//stroe cheque record with the key: historyReceivedChequeKey(index)
+	chequeRecord := ChequeRecord{
+		chequebook,
+		s.beneficiary,
+		amount,
+		time.Now().Unix(),
+	}
+
+	err = s.store.Put(historyReceivedChequeKey(indexRange.MaxIndex), chequeRecord)
+	if err != nil {
+		fmt.Println("put historyReceivedChequeKey err ", err)
+		return err
+	}
+
+	//update Max : add one record
+	indexRange.MaxIndex += 1
+
+	//delete records if these record are old (half year)
+	minIndex, _ := s.deleteRecordsExpired(indexRange)
+
+	//uopdate Min: add delete count
+	indexRange.MinIndex = minIndex
+
+	//update index
+	err = s.store.Put(historyReceivedChequeIndexKey(chequebook), indexRange)
+	if err != nil {
+		fmt.Println("put historyReceivedChequeIndexKey err ", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *chequeStore) deleteRecordsExpired(indexRange IndexRange) (uint64, error) {
+	//get the expire time
+	expire := time.Now().Unix() - expireTime
+	var chequeRecord ChequeRecord
+	var endIndex uint64
+
+	//find the last index expired to delete
+	for index := indexRange.MinIndex; index < indexRange.MaxIndex; index++ {
+		err := s.store.Get(historyReceivedChequeKey(index), &chequeRecord)
+		if err != nil {
+			return indexRange.MinIndex, err
+		}
+
+		if chequeRecord.ReceiveTime >= expire {
+			endIndex = index
+			break
+		}
+	}
+
+	//delete [min endIndex) records
+	if endIndex <= indexRange.MinIndex {
+		return indexRange.MinIndex, nil
+	}
+
+	//delete expired records
+	for index := indexRange.MinIndex; index < endIndex; index++ {
+		err := s.store.Delete(historyReceivedChequeKey(index))
+		if err != nil {
+			return indexRange.MinIndex, err
+		}
+		//min++
+		indexRange.MinIndex += 1
+	}
+
+	return indexRange.MinIndex, nil
 }
 
 // RecoverCheque recovers the issuer ethereum address from a signed cheque

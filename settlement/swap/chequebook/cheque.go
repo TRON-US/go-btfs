@@ -22,6 +22,19 @@ type Cheque struct {
 	CumulativePayout *big.Int
 }
 
+type ChequeRecord struct {
+	Chequebook  common.Address
+	Beneficiary common.Address
+	Amount      *big.Int
+	ReceiveTime int64 //time.now().Unix()
+}
+
+// the valid range is [MinIndex, MaxIndex)
+type IndexRange struct {
+	MinIndex uint64
+	MaxIndex uint64
+}
+
 // SignedCheque represents a cheque together with its signature
 type SignedCheque struct {
 	Cheque
