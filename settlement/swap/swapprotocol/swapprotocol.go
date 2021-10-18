@@ -62,6 +62,8 @@ type Swap interface {
 	// ReceiveCheque is called by the swap protocol if a cheque is received.
 	ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
 	GetChainid() int64
+	PutBeneficiary(peer string, beneficiary common.Address) (common.Address, error)
+	Beneficiary(peer string) (beneficiary common.Address, known bool, err error)
 }
 
 // Service is the main implementation of the swap protocol.
@@ -167,6 +169,13 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 	}()
 
 	wg.Wait()
+
+	//store beneficiary to db??
+	_, err = s.swap.PutBeneficiary(peer, common.BytesToAddress(beneficiary.Beneficiary))
+	if err != nil {
+		log.Warnf("put beneficiary (%s) error: %s", beneficiary.Beneficiary, err)
+		return nil, err
+	}
 	// issue cheque call with provided callback for sending cheque to finish transaction
 	balance, err = issue(ctx, common.BytesToAddress(beneficiary.Beneficiary), sentAmount, func(cheque *chequebook.SignedCheque) error {
 		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.

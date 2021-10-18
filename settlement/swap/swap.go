@@ -5,6 +5,7 @@
 package swap
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -355,4 +356,25 @@ func (s *Service) GetChainid() int64 {
 
 func (s *Service) Settle(toPeer string, paymentAmount *big.Int) error {
 	return s.accounting.Settle(toPeer, paymentAmount)
+}
+
+func (s *Service) PutBeneficiary(peer string, beneficiary common.Address) (common.Address, error) {
+	last_address, known, err := s.addressbook.Beneficiary(peer)
+	if err != nil {
+		return beneficiary, err
+	}
+	if !known {
+		return beneficiary, s.addressbook.PutBeneficiary(peer, beneficiary)
+	}
+
+	//compare last_address and beneficiary
+	if 0 != bytes.Compare(last_address.Bytes(), beneficiary.Bytes()) {
+		s.addressbook.MigratePeer(last_address.String(), beneficiary.String())
+	}
+
+	return beneficiary, nil
+}
+
+func (s *Service) Beneficiary(peer string) (beneficiary common.Address, known bool, err error) {
+	return s.addressbook.Beneficiary(peer)
 }

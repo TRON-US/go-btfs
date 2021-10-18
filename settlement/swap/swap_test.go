@@ -26,12 +26,12 @@ import (
 )
 
 type swapProtocolMock struct {
-	emitCheque func(context.Context, string, common.Address, *big.Int, swapprotocol.IssueFunc) (*big.Int, error)
+	emitCheque func(context.Context, string, *big.Int, swapprotocol.IssueFunc) (*big.Int, error)
 }
 
-func (m *swapProtocolMock) EmitCheque(ctx context.Context, peer string, beneficiary common.Address, value *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
+func (m *swapProtocolMock) EmitCheque(ctx context.Context, peer string, value *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
 	if m.emitCheque != nil {
-		return m.emitCheque(ctx, peer, beneficiary, value, issueFunc)
+		return m.emitCheque(ctx, peer, value, issueFunc)
 	}
 	return nil, errors.New("not implemented")
 }
@@ -72,6 +72,10 @@ func (t *testObserver) NotifyPaymentReceived(peer string, amount *big.Int) error
 }
 
 func (t *testObserver) NotifyRefreshmentReceived(peer string, amount *big.Int) error {
+	return nil
+}
+
+func (t *testObserver) Settle(peer string, amount *big.Int) error {
 	return nil
 }
 
@@ -356,14 +360,16 @@ func TestPay(t *testing.T) {
 	var emitCalled bool
 	swap := swap.New(
 		&swapProtocolMock{
-			emitCheque: func(ctx context.Context, p string, b common.Address, a *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
+			emitCheque: func(ctx context.Context, p string, a *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
 				//if !peer.Equal(p) {
 				if strings.Compare(peer, p) != 0 {
 					t.Fatal("sending to wrong peer")
 				}
-				if b != beneficiary {
-					t.Fatal("issuing for wrong beneficiary")
-				}
+				/*
+					if b != beneficiary {
+						t.Fatal("issuing for wrong beneficiary")
+					}
+				*/
 				if amount.Cmp(a) != 0 {
 					t.Fatal("issuing with wrong amount")
 				}
@@ -408,7 +414,7 @@ func TestPayIssueError(t *testing.T) {
 
 	swap := swap.New(
 		&swapProtocolMock{
-			emitCheque: func(c context.Context, a1 string, a2 common.Address, i *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
+			emitCheque: func(c context.Context, a1 string, i *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
 				return nil, errReject
 			},
 		},
