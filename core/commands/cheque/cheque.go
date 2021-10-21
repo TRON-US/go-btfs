@@ -57,7 +57,7 @@ var CashChequeCmd = &cmds.Command{
 	Type: CashChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *CashChequeRet) error {
-			_, err := fmt.Fprintf(w, "%s", out.TxHash)
+			_, err := fmt.Fprintf(w, "the hash of transaction: %s", out.TxHash)
 			return err
 		}),
 	},
@@ -95,7 +95,7 @@ var ListChequeCmd = &cmds.Command{
 	Type: ListChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ListChequeRet) error {
-			fmt.Fprintln(w, "cheque status")
+			fmt.Fprintln(w, "cheque status:")
 			fmt.Fprintf(w, "\tBeneficiary address: %s\n", out.Beneficiary)
 			fmt.Fprintf(w, "\tchequebook address: %s\n", out.Chequebook)
 			fmt.Fprintf(w, "\tcumulativePayout: %d\n", out.Payout.Uint64())
