@@ -148,9 +148,17 @@ var ChequeReceiveHistoryCmd = &cmds.Command{
 	Type: ChequeRecords{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeRecords) error {
-			fmt.Fprintln(w, "\tBeneficiary \t\t\t\t\t tchequebook \t\t\t\t\tamount\ttimestamp")
+			var tm time.Time
+			fmt.Fprintf(w, "\t%-46s\t%-46s\t%-10s\ttimestamp: \n", "beneficiary:", "chequebook:", "amount:")
 			for index := 0; index < out.Len; index++ {
-				fmt.Fprintf(w, "\t%s\t%s\t%d\t%d \n", out.Records[index].Beneficiary, out.Records[index].Chequebook, out.Records[index].Amount.Uint64(), out.Records[index].ReceiveTime)
+				tm = time.Unix(out.Records[index].ReceiveTime, 0)
+				year, mon, day := tm.Date()
+				h, m, s := tm.Clock()
+				fmt.Fprintf(w, "\t%-46s\t%-46s\t%-10d\t%d-%d-%d %02d:%02d:%02d \n",
+					out.Records[index].Beneficiary,
+					out.Records[index].Chequebook,
+					out.Records[index].Amount.Uint64(),
+					year, mon, day, h, m, s)
 			}
 
 			return nil
