@@ -8,6 +8,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
+	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 )
 
 type CashChequeRet struct {
@@ -20,6 +21,11 @@ type ListChequeRet struct {
 	Payout      *big.Int
 }
 
+type ChequeRecords struct {
+	Records []chequebook.ChequeRecord
+	Len     int
+}
+
 var ChequeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Interact with chequebook services on BTFS.",
@@ -27,9 +33,20 @@ var ChequeCmd = &cmds.Command{
 Chequebook services include issue cheque to peer, receive cheque and store operations.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"cash": CashChequeCmd,
-		"list": ListChequeCmd,
+		"cash":    CashChequeCmd,
+		"list":    ListChequeCmd,
+		"history": ChequeHistoryCmd,
 		//"info": ChequeInfo,
+	},
+}
+
+var ChequeHistoryCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Display the cheque records.",
+	},
+	Subcommands: map[string]*cmds.Command{
+		//"send":    ChequeSendHistoryCmd,
+		"receive": ChequeReceiveHistoryCmd,
 	},
 }
 
@@ -38,7 +55,7 @@ var CashChequeCmd = &cmds.Command{
 		Tagline: "Cash a cheque by peerID.",
 	},
 	Arguments: []cmds.Argument{
-		cmds.StringArg("peer-id", false, false, "Peer id tobe cashed."),
+		cmds.StringArg("peer-id", true, false, "Peer id tobe cashed."),
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -99,6 +116,42 @@ var ListChequeCmd = &cmds.Command{
 			fmt.Fprintf(w, "\tBeneficiary address: %s\n", out.Beneficiary)
 			fmt.Fprintf(w, "\tchequebook address: %s\n", out.Chequebook)
 			fmt.Fprintf(w, "\tcumulativePayout: %d\n", out.Payout.Uint64())
+
+			return nil
+		}),
+	},
+}
+
+var ChequeReceiveHistoryCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Display the received cheques from peer.",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("peer-id", true, false, "The peer id of cheques received."),
+	},
+
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+
+		var listRet ChequeRecords
+		peer_id := req.Arguments[0]
+
+		records, err := chain.SettleObject.SwapService.ReceivedChequeRecords(peer_id)
+		if err != nil {
+			return err
+		}
+
+		listRet.Records = records
+		listRet.Len = len(records)
+
+		return cmds.EmitOnce(res, &listRet)
+	},
+	Type: ChequeRecords{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeRecords) error {
+			fmt.Fprintln(w, "\tBeneficiary \t\t\t\t\t tchequebook \t\t\t\t\tamount\ttimestamp")
+			for index := 0; index < out.Len; index++ {
+				fmt.Fprintf(w, "\t%s\t%s\t%d\t%d \n", out.Records[index].Beneficiary, out.Records[index].Chequebook, out.Records[index].Amount.Uint64(), out.Records[index].ReceiveTime)
+			}
 
 			return nil
 		}),

@@ -46,6 +46,8 @@ type Interface interface {
 	CashCheque(ctx context.Context, peer string) (common.Hash, error)
 	// CashoutStatus gets the status of the latest cashout transaction for the peers chequebook
 	CashoutStatus(ctx context.Context, peer string) (*chequebook.CashoutStatus, error)
+	// ReceivedChequeRecords gets the records of the cheque for the peer's chequebook
+	ReceivedChequeRecords(peer string) ([]chequebook.ChequeRecord, error)
 }
 
 // Service is the implementation of the swap settlement layer.
@@ -87,6 +89,7 @@ func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *cheque
 	if err != nil {
 		return err
 	}
+
 	if known && expectedChequebook != cheque.Chequebook {
 		return ErrWrongChequebook
 	}
@@ -373,6 +376,20 @@ func (s *Service) PutBeneficiary(peer string, beneficiary common.Address) (commo
 	}
 
 	return beneficiary, nil
+}
+
+// LastReceivedCheque returns the last received cheque for the peer
+func (s *Service) ReceivedChequeRecords(peer string) ([]chequebook.ChequeRecord, error) {
+	common, known, err := s.addressbook.Chequebook(peer)
+	if err != nil {
+		return nil, err
+	}
+
+	if !known {
+		return nil, chequebook.ErrNoCheque
+	}
+
+	return s.chequeStore.ReceivedChequeRecords(common)
 }
 
 func (s *Service) Beneficiary(peer string) (beneficiary common.Address, known bool, err error) {
