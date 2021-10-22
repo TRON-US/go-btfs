@@ -371,7 +371,7 @@ func (s *Service) PutBeneficiary(peer string, beneficiary common.Address) (commo
 	}
 
 	//compare last_address and beneficiary
-	if 0 != bytes.Compare(last_address.Bytes(), beneficiary.Bytes()) {
+	if !bytes.Equal(last_address.Bytes(), beneficiary.Bytes()) {
 		s.addressbook.MigratePeer(last_address.String(), beneficiary.String())
 	}
 
