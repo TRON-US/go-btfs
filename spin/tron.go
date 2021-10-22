@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	bttTxSyncPeriod  = 60 * time.Minute
+	bttTxSyncPeriod  = 2 * 60 * time.Minute
 	bttTxSyncTimeout = 1 * time.Minute
 )
 
