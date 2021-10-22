@@ -190,7 +190,7 @@ func SyncHosts(ctxParams *helper.ContextParams) error {
 		log.Errorf("Failed to get configuration %s", err)
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	m := cfg.Experimental.HostsSyncMode
 	_, err = hosts.SyncHosts(ctx, ctxParams.N, m)
