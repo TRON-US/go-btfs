@@ -15,10 +15,16 @@ type CashChequeRet struct {
 	TxHash string
 }
 
-type ListChequeRet struct {
+type cheque struct {
+	PeerID      string
 	Beneficiary string
 	Chequebook  string
 	Payout      *big.Int
+}
+
+type ListChequeRet struct {
+	Cheques []cheque
+	Len     int
 }
 
 type ChequeRecords struct {
@@ -91,6 +97,7 @@ var ListChequeCmd = &cmds.Command{
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 
 		var listRet ListChequeRet
+		var record cheque
 		peer_id, ok := req.Options["peer-id"].(string)
 		if ok {
 			cheque, err := chain.SettleObject.SwapService.LastReceivedCheque(peer_id)
@@ -98,12 +105,29 @@ var ListChequeCmd = &cmds.Command{
 				return err
 			}
 
-			listRet.Beneficiary = cheque.Beneficiary.String()
-			listRet.Chequebook = cheque.Chequebook.String()
-			listRet.Payout = cheque.CumulativePayout
+			listRet.Len = 1
+
+			listRet.Cheques[0].Beneficiary = cheque.Beneficiary.String()
+			listRet.Cheques[0].Chequebook = cheque.Chequebook.String()
+			listRet.Cheques[0].Payout = cheque.CumulativePayout
+			listRet.Cheques[0].PeerID = peer_id
 
 		} else {
-			//TODO
+			cheques, err := chain.SettleObject.SwapService.LastReceivedCheques()
+			if err != nil {
+				return err
+			}
+
+			for k, v := range cheques {
+				record.PeerID = k
+				record.Beneficiary = v.Beneficiary.String()
+				record.Chequebook = v.Chequebook.String()
+				record.Payout = v.CumulativePayout
+
+				listRet.Cheques = append(listRet.Cheques, record)
+			}
+
+			listRet.Len = len(listRet.Cheques)
 
 		}
 
@@ -112,10 +136,16 @@ var ListChequeCmd = &cmds.Command{
 	Type: ListChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ListChequeRet) error {
-			fmt.Fprintln(w, "cheque status:")
-			fmt.Fprintf(w, "\tBeneficiary address: %s\n", out.Beneficiary)
-			fmt.Fprintf(w, "\tchequebook address: %s\n", out.Chequebook)
-			fmt.Fprintf(w, "\tcumulativePayout: %d\n", out.Payout.Uint64())
+			//fmt.Fprintln(w, "cheque status:")
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:")
+			for iter := 0; iter < out.Len; iter++ {
+				fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d \n",
+					out.Cheques[iter].PeerID,
+					out.Cheques[iter].Beneficiary,
+					out.Cheques[iter].Chequebook,
+					out.Cheques[iter].Payout.Uint64(),
+				)
+			}
 
 			return nil
 		}),
