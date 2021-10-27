@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	"time"
+
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
@@ -13,12 +17,10 @@ import (
 	"github.com/TRON-US/go-btfs/core/hub"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
+	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
+
 	"github.com/ethereum/go-ethereum/common"
 	peerInfo "github.com/libp2p/go-libp2p-core/peer"
-	hubpb "github.com/tron-us/go-btfs-common/protos/hub"
-	"io"
-	"math/big"
-	"time"
 )
 
 type TestOutput struct {
