@@ -201,6 +201,8 @@ func Init(
 		log.Infof("using existing chequebook %x", chequebookAddress)
 	}
 
+	fmt.Printf("self chequebook: %x \n", chequebookAddress)
+
 	// regardless of how the chequebook service was initialised make sure that the chequebook is valid
 	err = chequebookFactory.VerifyChequebook(ctx, chequebookService.Address())
 	if err != nil {
