@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 
+	"github.com/TRON-US/go-btfs/core/commands/cheque"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
 	name "github.com/TRON-US/go-btfs/core/commands/name"
@@ -162,6 +163,7 @@ var rootSubcommands = map[string]*cmds.Command{
 	"guard":     GuardCmd,
 	"wallet":    WalletCmd,
 	"tron":      TronCmd,
+	"cheque":    cheque.ChequeCmd,
 	//"update":    ExternalBinary(),
 }
 
