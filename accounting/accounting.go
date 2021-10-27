@@ -8,6 +8,7 @@ package accounting
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -103,6 +104,8 @@ func (a *Accounting) NotifyPaymentSent(peer string, amount *big.Int, receivedErr
 	accountingPeer.lock.Lock()
 	defer accountingPeer.lock.Unlock()
 
+	fmt.Println("NotifyPaymentSent...")
+
 	if receivedError != nil {
 		accountingPeer.lastSettlementFailureTimestamp = a.timeNow().Unix()
 		log.Warnf("accounting: payment failure %v", receivedError)
@@ -118,6 +121,7 @@ func (a *Accounting) NotifyPaymentReceived(peer string, amount *big.Int) error {
 	defer accountingPeer.lock.Unlock()
 
 	log.Infof("accounting: crediting peer %v with amount %d due to payment.", peer, amount)
+	fmt.Println("NotifyPaymentReceived...")
 
 	return nil
 }

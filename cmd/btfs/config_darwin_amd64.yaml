@@ -1,0 +1,6 @@
+version: 1.5.2
+md5: 43878453e42b8d47ca854d3ce97c12fe
+autoupdateFlg: true
+sleepTimeSeconds: 86400
+beginNumber: 0
+endNumber: 100

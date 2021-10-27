@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -81,7 +82,7 @@ func New(beneficiary common.Address, priceOracle priceoracle.Service) *Service {
 	}
 }
 
-func (s *Service) getChainID() int64 {
+func (s *Service) GetChainID() int64 {
 	return s.swap.GetChainid()
 }
 
@@ -91,6 +92,8 @@ func (s *Service) SetSwap(swap Swap) {
 }
 
 func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque string, exchangeRate *big.Int) (err error) {
+	fmt.Printf("Handler requestPid:%s exchangeRate:%+v \n", requestPid, exchangeRate)
+
 	var signedCheque *chequebook.SignedCheque
 	err = json.Unmarshal([]byte(encodedCheque), &signedCheque)
 	if err != nil {
@@ -142,7 +145,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 
 			//get beneficiary
 			output, err := remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, peerhostPid, "/p2p/handshake",
-				s.getChainID(),
+				s.GetChainID(),
 				ctxParams.N.Identity,
 			)
 
@@ -169,6 +172,8 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 	}()
 
 	wg.Wait()
+
+	fmt.Println("send cheque: /p2p/handshake ok, ", common.BytesToAddress(beneficiary.Beneficiary))
 
 	//store beneficiary to db??
 	_, err = s.swap.PutBeneficiary(peer, common.BytesToAddress(beneficiary.Beneficiary))
@@ -208,6 +213,8 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 						return err
 					}
 
+					fmt.Println("send cheque: when /storage/upload/cheque, hostPid = ", hostPid)
+
 					//send cheque
 					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
 						encodedCheque,
@@ -231,6 +238,8 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("send cheque: /storage/upload/cheque ok")
 
 	return balance, nil
 }

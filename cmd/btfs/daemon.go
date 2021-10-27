@@ -19,6 +19,9 @@ import (
 	"time"
 
 	version "github.com/TRON-US/go-btfs"
+	cmds "github.com/TRON-US/go-btfs-cmds"
+	config "github.com/TRON-US/go-btfs-config"
+	cserial "github.com/TRON-US/go-btfs-config/serialize"
 	"github.com/TRON-US/go-btfs/chain"
 	cc "github.com/TRON-US/go-btfs/chain/config"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
@@ -35,13 +38,10 @@ import (
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/spin"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
-
-	cmds "github.com/TRON-US/go-btfs-cmds"
-	config "github.com/TRON-US/go-btfs-config"
-	cserial "github.com/TRON-US/go-btfs-config/serialize"
 
 	multierror "github.com/hashicorp/go-multierror"
 	util "github.com/ipfs/go-ipfs-util"
@@ -235,6 +235,8 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
+	swapprotocol.Req = req
+	swapprotocol.Env = env
 
 	cctx := env.(*oldcmds.Context)
 	_, b := os.LookupEnv(path.BtfsPathKey)
@@ -390,7 +392,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	}
 
 	//endpoint 先hardcode
-	chainInfo, err := chain.InitChain(context.Background(), statestore, singer, time.Duration(10), chainid)
+	chainInfo, err := chain.InitChain(context.Background(), statestore, singer, time.Duration(1000000000), chainid)
 	if err != nil {
 		fmt.Println("init chain err: ", err)
 		return err
