@@ -1,4 +1,4 @@
-package cheque
+package chequebook
 
 import (
 	"time"
