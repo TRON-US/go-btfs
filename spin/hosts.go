@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	hostSyncPeriod         = 60 * time.Minute
-	hostStatsSyncPeriod    = 30 * time.Minute
-	hostSettingsSyncPeriod = 60 * time.Minute
+	hostSyncPeriod         = 2 * 60 * time.Minute
+	hostStatsSyncPeriod    = 2 * 60 * time.Minute
+	hostSettingsSyncPeriod = 2 * 60 * time.Minute
 	hostSyncTimeout        = 30 * time.Second
 	hostSortTimeout        = 5 * time.Minute
 )
