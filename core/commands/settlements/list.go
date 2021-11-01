@@ -79,5 +79,5 @@ var ListSettlementCmd = &cmds.Command{
 
 		return cmds.EmitOnce(res, &rsp)
 	},
-	Type: &settlementResponse{},
+	Type: &settlementsResponse{},
 }
