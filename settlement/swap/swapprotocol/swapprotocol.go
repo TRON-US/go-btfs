@@ -183,60 +183,59 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 		return nil, err
 	}
 	// issue cheque call with provided callback for sending cheque to finish transaction
-	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary),
-		common.BytesToAddress(handshakeInfo.Receiver), sentAmount, func(cheque *chequebook.SignedCheque) error {
-			// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
-			encodedCheque, err := json.Marshal(cheque)
+	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary), common.BytesToAddress(handshakeInfo.Receiver), sentAmount, func(cheque *chequebook.SignedCheque) error {
+		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
+		encodedCheque, err := json.Marshal(cheque)
+		if err != nil {
+			return err
+		}
+
+		exchangeRate, err := s.priceOracle.CurrentRates()
+		if err != nil {
+			return err
+		}
+
+		// sending cheque
+		log.Infof("sending cheque message to peer %v (%v)", peer, cheque)
+		{
+			hostPid, err := peerInfo.IDB58Decode(peer)
 			if err != nil {
+				log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
 				return err
 			}
 
-			exchangeRate, err := s.priceOracle.CurrentRates()
-			if err != nil {
-				return err
-			}
-
-			// sending cheque
-			log.Infof("sending cheque message to peer %v (%v)", peer, cheque)
-			{
-				hostPid, err := peerInfo.IDB58Decode(peer)
-				if err != nil {
-					log.Infof("peer.IDB58Decode(peer:%s) error: %s", peer, err)
-					return err
-				}
-
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go func() {
-					err = func() error {
-						ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
-						ctxParams, err := helper.ExtractContextParams(Req, Env)
-						if err != nil {
-							return err
-						}
-
-						fmt.Println("send cheque: when /storage/upload/cheque, hostPid = ", hostPid)
-
-						//send cheque
-						_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
-							encodedCheque,
-							exchangeRate,
-						)
-						if err != nil {
-							return err
-						}
-						return nil
-					}()
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				err = func() error {
+					ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+					ctxParams, err := helper.ExtractContextParams(Req, Env)
 					if err != nil {
-						log.Infof("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
+						return err
 					}
-					wg.Done()
-				}()
 
-				wg.Wait()
-			}
-			return nil
-		})
+					fmt.Println("send cheque: when /storage/upload/cheque, hostPid = ", hostPid)
+
+					//send cheque
+					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
+						encodedCheque,
+						exchangeRate,
+					)
+					if err != nil {
+						return err
+					}
+					return nil
+				}()
+				if err != nil {
+					log.Infof("remote.P2PCall hostPid:%s, /storage/upload/cheque, error: %s", peer, err)
+				}
+				wg.Done()
+			}()
+
+			wg.Wait()
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
