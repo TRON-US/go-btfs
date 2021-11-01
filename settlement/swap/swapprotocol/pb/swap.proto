@@ -14,4 +14,5 @@ message EmitCheque {
 
 message Handshake {
   bytes Beneficiary = 1;
+  bytes Receiver = 2;
 }
