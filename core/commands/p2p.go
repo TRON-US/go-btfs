@@ -606,6 +606,12 @@ var P2phandshakeCmd = &cmds.Command{
 
 		output.Beneficiary = chain.ChainObject.OverlayAddress.Bytes()
 		//return Beneficiary address
+		receiver, err := chain.SettleObject.ChequebookService.Receiver()
+		if err != nil {
+			return err
+		}
+		output.Receiver = receiver.Bytes()
+
 		return cmds.EmitOnce(res, output)
 	},
 	Type: pb.Handshake{},

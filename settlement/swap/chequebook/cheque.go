@@ -20,6 +20,7 @@ type Cheque struct {
 	Chequebook       common.Address
 	Beneficiary      common.Address
 	CumulativePayout *big.Int
+	Receiver         common.Address
 }
 
 type ChequeRecord struct {
