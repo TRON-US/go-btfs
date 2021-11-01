@@ -12,9 +12,6 @@ import (
 	"github.com/TRON-US/go-btfs/settlement"
 )
 
-type SettlementListCmdRet struct {
-}
-
 var PeerSettlementCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Get chequebook balance.",
