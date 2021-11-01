@@ -59,6 +59,8 @@ type Service interface {
 	LastCheque(beneficiary common.Address) (*SignedCheque, error)
 	// LastCheque returns the last cheques for all beneficiaries.
 	LastCheques() (map[common.Address]*SignedCheque, error)
+	// Receiver returns receiver address
+	Receiver() (common.Address, error)
 }
 
 type service struct {
@@ -337,4 +339,8 @@ func (s *service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Ha
 	}
 
 	return txHash, nil
+}
+
+func (s *service) Receiver() (addr common.Address, err error) {
+	return s.contract.Receiver(context.Background())
 }

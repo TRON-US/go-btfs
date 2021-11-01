@@ -9,8 +9,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Service is the mock chequebook service.
@@ -23,6 +23,7 @@ type Service struct {
 	chequebookDepositFunc          func(ctx context.Context, amount *big.Int) (hash common.Hash, err error)
 	lastChequeFunc                 func(common.Address) (*chequebook.SignedCheque, error)
 	lastChequesFunc                func() (map[common.Address]*chequebook.SignedCheque, error)
+	receiverFunc                   func() (common.Address, error)
 }
 
 // WithChequebook*Functions set the mock chequebook functions
@@ -138,6 +139,13 @@ func (s *Service) LastCheques() (map[common.Address]*chequebook.SignedCheque, er
 		return s.lastChequesFunc()
 	}
 	return nil, errors.New("Error")
+}
+
+func (s *Service) Receiver() (common.Address, error) {
+	if s.receiverFunc != nil {
+		return s.receiverFunc()
+	}
+	return common.Address{}, errors.New("Error")
 }
 
 func (s *Service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Hash, err error) {
