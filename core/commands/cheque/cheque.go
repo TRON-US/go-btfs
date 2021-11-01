@@ -9,7 +9,12 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"golang.org/x/net/context"
 )
+
+type StorePriceRet struct {
+	Price string `json:"price"`
+}
 
 type CashChequeRet struct {
 	TxHash string
@@ -42,8 +47,27 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 		"cash":    CashChequeCmd,
 		"list":    ListChequeCmd,
 		"history": ChequeHistoryCmd,
+		"price":   StorePriceCmd,
 		//"info": ChequeInfo,
 	},
+}
+
+var StorePriceCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get btfs store price.",
+	},
+	RunTimeout: 5 * time.Minute,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		price, err := chain.SettleObject.OracleService.GetPrice(context.Background())
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &StorePriceRet{
+			Price: price.String(),
+		})
+	},
+	Type: StorePriceRet{},
 }
 
 var ChequeHistoryCmd = &cmds.Command{
