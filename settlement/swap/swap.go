@@ -348,7 +348,7 @@ func (s *Service) CashCheque(ctx context.Context, peer string) (common.Hash, err
 	if !known {
 		return common.Hash{}, chequebook.ErrNoCheque
 	}
-	return s.cashout.CashCheque(ctx, chequebookAddress, s.chequebook.Address())
+	return s.cashout.CashCheque(ctx, chequebookAddress)
 }
 
 // CashoutStatus gets the status of the latest cashout transaction for the peers chequebook
