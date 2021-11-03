@@ -128,12 +128,12 @@ func (m *addressbookMock) PutChequebook(peer string, chequebook common.Address) 
 }
 
 type cashoutMock struct {
-	cashCheque    func(ctx context.Context, chequebook common.Address, recipient common.Address) (common.Hash, error)
+	cashCheque    func(ctx context.Context, chequebook common.Address) (common.Hash, error)
 	cashoutStatus func(ctx context.Context, chequebookAddress common.Address) (*chequebook.CashoutStatus, error)
 }
 
-func (m *cashoutMock) CashCheque(ctx context.Context, chequebook, recipient common.Address) (common.Hash, error) {
-	return m.cashCheque(ctx, chequebook, recipient)
+func (m *cashoutMock) CashCheque(ctx context.Context, chequebook common.Address) (common.Hash, error) {
+	return m.cashCheque(ctx, chequebook)
 }
 func (m *cashoutMock) CashoutStatus(ctx context.Context, chequebookAddress common.Address) (*chequebook.CashoutStatus, error) {
 	return m.cashoutStatus(ctx, chequebookAddress)

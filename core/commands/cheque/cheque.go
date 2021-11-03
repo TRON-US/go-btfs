@@ -9,7 +9,12 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"golang.org/x/net/context"
 )
+
+type StorePriceRet struct {
+	Price string `json:"price"`
+}
 
 type CashChequeRet struct {
 	TxHash string
@@ -39,8 +44,6 @@ var ChequeCmd = &cmds.Command{
 Chequebook services include issue cheque to peer, receive cheque and store operations.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"cash": CashChequeCmd,
-
 		"send": SendChequeCmd,
 		"sendlist": ListSendChequesCmd,
 
@@ -49,7 +52,28 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 
 		"receive-history-peer": ChequeReceiveHistoryPeerCmd,
 		"receive-history-list": ChequeReceiveHistoryListCmd,
+
+		"cash":    CashChequeCmd,
+		"price":   StorePriceCmd,
 	},
+}
+
+var StorePriceCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Get btfs store price.",
+	},
+	RunTimeout: 5 * time.Minute,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		price, err := chain.SettleObject.OracleService.GetPrice(context.Background())
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &StorePriceRet{
+			Price: price.String(),
+		})
+	},
+	Type: StorePriceRet{},
 }
 
 var CashChequeCmd = &cmds.Command{
