@@ -130,8 +130,8 @@ var testChequeCmd = &cmds.Command{
 			return errors.New("get hosts, it is none")
 		}
 
-		//toPeer := "16Uiu2HAm5TZ8547Xzbqoynt4cXGg6mjkCGoLBWnNxSXcoW7eTBdW"
-		toPeer := nodes[0].NodeId
+		toPeer := "16Uiu2HAm5TZ8547Xzbqoynt4cXGg6mjkCGoLBWnNxSXcoW7eTBdW"
+		//toPeer := nodes[0].NodeId
 		chain.SettleObject.SwapService.Settle(toPeer, big.NewInt(10))
 
 		return cmds.EmitOnce(res, &TestOutput{"send cheque ok"})
@@ -161,8 +161,8 @@ var testP2pShakeCmd = &cmds.Command{
 			return errors.New("get hosts, it is none")
 		}
 
-		//peer := "16Uiu2HAm5TZ8547Xzbqoynt4cXGg6mjkCGoLBWnNxSXcoW7eTBdW"
-		peer := nodes[0].NodeId
+		peer := "16Uiu2HAm5TZ8547Xzbqoynt4cXGg6mjkCGoLBWnNxSXcoW7eTBdW"
+		//peer := nodes[0].NodeId
 
 		peerhostPid, err := peerInfo.IDB58Decode(peer)
 		if err != nil {

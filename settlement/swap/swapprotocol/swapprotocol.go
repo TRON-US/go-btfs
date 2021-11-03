@@ -65,6 +65,7 @@ type Swap interface {
 	GetChainid() int64
 	PutBeneficiary(peer string, beneficiary common.Address) (common.Address, error)
 	Beneficiary(peer string) (beneficiary common.Address, known bool, err error)
+	PutChequebookWhenSendCheque(peer string, chequebook common.Address) error
 }
 
 // Service is the main implementation of the swap protocol.
@@ -157,6 +158,8 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 			if err != nil {
 				return err
 			}
+
+			s.swap.PutChequebookWhenSendCheque(peerhostPid.String(), common.BytesToAddress(beneficiary.Beneficiary))
 
 			return nil
 		}()

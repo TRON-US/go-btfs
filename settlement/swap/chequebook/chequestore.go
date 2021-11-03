@@ -55,6 +55,8 @@ type ChequeStore interface {
 	LastCheques() (map[common.Address]*SignedCheque, error)
 	// ReceivedChequeRecords returns the records we received from a specific chequebook.
 	ReceivedChequeRecords(chequebook common.Address) ([]ChequeRecord, error)
+	// ListReceivedChequeRecords returns the records we received from a specific chequebook.
+	ListReceivedChequeRecords() (map[common.Address][]ChequeRecord, error)
 }
 
 type chequeStore struct {
@@ -372,8 +374,8 @@ func (s *chequeStore) LastCheques() (map[common.Address]*SignedCheque, error) {
 	return result, nil
 }
 
-// LastCheques returns the last received cheques from every known chequebook.
-func (s *chequeStore) ChequeRecords() (map[common.Address][]ChequeRecord, error) {
+// ListReceivedChequeRecords returns the last received cheques from every known chequebook.
+func (s *chequeStore) ListReceivedChequeRecords() (map[common.Address][]ChequeRecord, error) {
 	result := make(map[common.Address][]ChequeRecord)
 	err := s.store.Iterate(receivedChequeHistoryPrefix, func(key, val []byte) (stop bool, err error) {
 		addr, err := keyChequebook(key, receivedChequeHistoryPrefix+"_")
@@ -383,9 +385,9 @@ func (s *chequeStore) ChequeRecords() (map[common.Address][]ChequeRecord, error)
 
 		if _, ok := result[addr]; !ok {
 			records, err := s.ReceivedChequeRecords(addr)
-			if err != nil && err != ErrNoCheque {
+			if err != nil && err != ErrNoCheque && err != ErrNoChequeRecords {
 				return false, err
-			} else if err == ErrNoCheque {
+			} else if err == ErrNoCheque || err == ErrNoChequeRecords {
 				return false, nil
 			}
 
