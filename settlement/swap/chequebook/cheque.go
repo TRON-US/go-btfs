@@ -20,6 +20,7 @@ type Cheque struct {
 	Chequebook       common.Address
 	Beneficiary      common.Address
 	CumulativePayout *big.Int
+	Receiver         common.Address
 }
 
 type ChequeRecord struct {
@@ -66,6 +67,10 @@ var ChequeTypes = eip712.Types{
 			Name: "cumulativePayout",
 			Type: "uint256",
 		},
+		{
+			Name: "receiver",
+			Type: "address",
+		},
 	},
 }
 
@@ -97,6 +102,7 @@ func eip712DataForCheque(cheque *Cheque, chainID int64) *eip712.TypedData {
 			"chequebook":       cheque.Chequebook.Hex(),
 			"beneficiary":      cheque.Beneficiary.Hex(),
 			"cumulativePayout": cheque.CumulativePayout.String(),
+			"receiver":         cheque.Receiver.Hex(),
 		},
 		PrimaryType: "Cheque",
 	}
@@ -108,7 +114,7 @@ func (s *chequeSigner) Sign(cheque *Cheque) ([]byte, error) {
 }
 
 func (cheque *Cheque) String() string {
-	return fmt.Sprintf("Contract: %x Beneficiary: %x CumulativePayout: %v", cheque.Chequebook, cheque.Beneficiary, cheque.CumulativePayout)
+	return fmt.Sprintf("Contract: %x Beneficiary: %x CumulativePayout: %v Receiver: %v", cheque.Chequebook, cheque.Beneficiary, cheque.CumulativePayout, cheque.Receiver)
 }
 
 func (cheque *Cheque) Equal(other *Cheque) bool {
@@ -116,6 +122,9 @@ func (cheque *Cheque) Equal(other *Cheque) bool {
 		return false
 	}
 	if cheque.CumulativePayout.Cmp(other.CumulativePayout) != 0 {
+		return false
+	}
+	if cheque.Receiver != other.Receiver {
 		return false
 	}
 	return cheque.Chequebook == other.Chequebook

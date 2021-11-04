@@ -54,11 +54,13 @@ type Service interface {
 	// Address returns the address of the used chequebook contract.
 	Address() common.Address
 	// Issue a new cheque for the beneficiary with an cumulativePayout amount higher than the last.
-	Issue(ctx context.Context, beneficiary common.Address, amount *big.Int, sendChequeFunc SendChequeFunc) (*big.Int, error)
+	Issue(ctx context.Context, beneficiary common.Address, receiver common.Address, amount *big.Int, sendChequeFunc SendChequeFunc) (*big.Int, error)
 	// LastCheque returns the last cheque we issued for the beneficiary.
 	LastCheque(beneficiary common.Address) (*SignedCheque, error)
 	// LastCheque returns the last cheques for all beneficiaries.
 	LastCheques() (map[common.Address]*SignedCheque, error)
+	// Receiver returns receiver address
+	Receiver() (common.Address, error)
 }
 
 type service struct {
@@ -183,7 +185,7 @@ func (s *service) unreserveTotalIssued(amount *big.Int) {
 // The cheque is considered sent and saved when sendChequeFunc succeeds.
 // The available balance which is available after sending the cheque is passed
 // to the caller for it to be communicated over metrics.
-func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount *big.Int, sendChequeFunc SendChequeFunc) (*big.Int, error) {
+func (s *service) Issue(ctx context.Context, beneficiary common.Address, receiver common.Address, amount *big.Int, sendChequeFunc SendChequeFunc) (*big.Int, error) {
 	availableBalance, err := s.reserveTotalIssued(ctx, amount)
 	if err != nil {
 		return nil, err
@@ -209,12 +211,14 @@ func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount 
 		Chequebook:       s.address,
 		CumulativePayout: cumulativePayout,
 		Beneficiary:      beneficiary,
+		Receiver:         receiver,
 	}
 
 	sig, err := s.chequeSigner.Sign(&Cheque{
 		Chequebook:       s.address,
 		CumulativePayout: cumulativePayout,
 		Beneficiary:      beneficiary,
+		Receiver:         receiver,
 	})
 	if err != nil {
 		return nil, err
@@ -337,4 +341,8 @@ func (s *service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Ha
 	}
 
 	return txHash, nil
+}
+
+func (s *service) Receiver() (addr common.Address, err error) {
+	return s.contract.Receiver(context.Background())
 }
