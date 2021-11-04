@@ -3,9 +3,11 @@ package cheque
 import (
 	"fmt"
 	"io"
+	"math/big"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
+	"golang.org/x/net/context"
 )
 
 var ListReceiveChequeCmd = &cmds.Command{
@@ -29,6 +31,14 @@ var ListReceiveChequeCmd = &cmds.Command{
 			record.Chequebook = v.Chequebook.String()
 			record.Payout = v.CumulativePayout
 
+			cashStatus, err := chain.SettleObject.CashoutService.CashoutStatus(context.Background(), v.Chequebook)
+			if err != nil {
+				return err
+			}
+			if cashStatus.UncashedAmount != nil {
+				record.CashedAmount = big.NewInt(0).Sub(v.CumulativePayout, cashStatus.UncashedAmount)
+			}
+
 			listRet.Cheques = append(listRet.Cheques, record)
 		}
 
@@ -38,13 +48,14 @@ var ListReceiveChequeCmd = &cmds.Command{
 	Type: ListChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ListChequeRet) error {
-			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:")
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:", "cashout_amount:")
 			for iter := 0; iter < out.Len; iter++ {
-				fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d \n",
+				fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d\t%d \n",
 					out.Cheques[iter].PeerID,
 					out.Cheques[iter].Beneficiary,
 					out.Cheques[iter].Chequebook,
 					out.Cheques[iter].Payout.Uint64(),
+					out.Cheques[iter].CashedAmount.Uint64(),
 				)
 			}
 

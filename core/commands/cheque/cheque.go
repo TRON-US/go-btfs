@@ -21,10 +21,11 @@ type CashChequeRet struct {
 }
 
 type cheque struct {
-	PeerID      string
-	Beneficiary string
-	Chequebook  string
-	Payout      *big.Int
+	PeerID       string
+	Beneficiary  string
+	Chequebook   string
+	Payout       *big.Int
+	CashedAmount *big.Int
 }
 
 type ListChequeRet struct {
