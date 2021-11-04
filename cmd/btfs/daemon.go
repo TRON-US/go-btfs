@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	_ "expvar"
 	"fmt"
@@ -367,8 +368,16 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	fmt.Printf("private key identity: %s\n", cfg.Identity.PrivKey)
 
+	// decode from string
+	pkbytesOri, err := base64.StdEncoding.DecodeString(cfg.Identity.PrivKey)
+	if err != nil {
+		return err
+	}
+
+	//pkStr := hex.EncodeToString(pkbytesOri[4:])
+
 	//new singer
-	pk := crypto.Secp256k1PrivateKeyFromString(cfg.Identity.PrivKey)
+	pk := crypto.Secp256k1PrivateKeyFromBytes(pkbytesOri[4:])
 	singer := crypto.NewDefaultSigner(pk)
 
 	fmt.Printf("init statestore\n")
