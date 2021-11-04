@@ -49,12 +49,14 @@ var (
 type ChequeStore interface {
 	// ReceiveCheque verifies and stores a cheque. It returns the total amount earned.
 	ReceiveCheque(ctx context.Context, cheque *SignedCheque, exchangeRate *big.Int) (*big.Int, error)
-	// LastCheque returns the last cheque we received from a specific chequebook.
-	LastCheque(chequebook common.Address) (*SignedCheque, error)
-	// LastCheques returns the last received cheques from every known chequebook.
-	LastCheques() (map[common.Address]*SignedCheque, error)
-	// ReceivedChequeRecords returns the records we received from a specific chequebook.
-	ReceivedChequeRecords(chequebook common.Address) ([]ChequeRecord, error)
+	// LastReceivedCheque returns the last cheque we received from a specific chequebook.
+	LastReceivedCheque(chequebook common.Address) (*SignedCheque, error)
+	// LastReceivedCheques returns the last received cheques from every known chequebook.
+	LastReceivedCheques() (map[common.Address]*SignedCheque, error)
+	// ReceivedChequeRecordsByPeer returns the records we received from a specific chequebook.
+	ReceivedChequeRecordsByPeer(chequebook common.Address) ([]ChequeRecord, error)
+	// ListReceivedChequeRecords returns the records we received from a specific chequebook.
+	ReceivedChequeRecordsAll() (map[common.Address][]ChequeRecord, error)
 }
 
 type chequeStore struct {
@@ -102,7 +104,7 @@ func historyReceivedChequeKey(chequebook common.Address, index uint64) string {
 }
 
 // LastCheque returns the last cheque we received from a specific chequebook.
-func (s *chequeStore) LastCheque(chequebook common.Address) (*SignedCheque, error) {
+func (s *chequeStore) LastReceivedCheque(chequebook common.Address) (*SignedCheque, error) {
 	var cheque *SignedCheque
 	err := s.store.Get(lastReceivedChequeKey(chequebook), &cheque)
 	if err != nil {
@@ -203,7 +205,7 @@ func (s *chequeStore) ReceiveCheque(ctx context.Context, cheque *SignedCheque, e
 }
 
 // ReceivedChequeRecords returns the records we received from a specific chequebook.
-func (s *chequeStore) ReceivedChequeRecords(chequebook common.Address) ([]ChequeRecord, error) {
+func (s *chequeStore) ReceivedChequeRecordsByPeer(chequebook common.Address) ([]ChequeRecord, error) {
 	var records []ChequeRecord
 	var record ChequeRecord
 	var indexrange IndexRange
@@ -346,7 +348,7 @@ func keyChequebook(key []byte, prefix string) (chequebook common.Address, err er
 }
 
 // LastCheques returns the last received cheques from every known chequebook.
-func (s *chequeStore) LastCheques() (map[common.Address]*SignedCheque, error) {
+func (s *chequeStore) LastReceivedCheques() (map[common.Address]*SignedCheque, error) {
 	result := make(map[common.Address]*SignedCheque)
 	err := s.store.Iterate(lastReceivedChequePrefix, func(key, val []byte) (stop bool, err error) {
 		addr, err := keyChequebook(key, lastReceivedChequePrefix+"_")
@@ -355,7 +357,7 @@ func (s *chequeStore) LastCheques() (map[common.Address]*SignedCheque, error) {
 		}
 
 		if _, ok := result[addr]; !ok {
-			lastCheque, err := s.LastCheque(addr)
+			lastCheque, err := s.LastReceivedCheque(addr)
 			if err != nil && err != ErrNoCheque {
 				return false, err
 			} else if err == ErrNoCheque {
@@ -372,8 +374,8 @@ func (s *chequeStore) LastCheques() (map[common.Address]*SignedCheque, error) {
 	return result, nil
 }
 
-// LastCheques returns the last received cheques from every known chequebook.
-func (s *chequeStore) ChequeRecords() (map[common.Address][]ChequeRecord, error) {
+// ListReceivedChequeRecords returns the last received cheques from every known chequebook.
+func (s *chequeStore) ReceivedChequeRecordsAll() (map[common.Address][]ChequeRecord, error) {
 	result := make(map[common.Address][]ChequeRecord)
 	err := s.store.Iterate(receivedChequeHistoryPrefix, func(key, val []byte) (stop bool, err error) {
 		addr, err := keyChequebook(key, receivedChequeHistoryPrefix+"_")
@@ -382,10 +384,10 @@ func (s *chequeStore) ChequeRecords() (map[common.Address][]ChequeRecord, error)
 		}
 
 		if _, ok := result[addr]; !ok {
-			records, err := s.ReceivedChequeRecords(addr)
-			if err != nil && err != ErrNoCheque {
+			records, err := s.ReceivedChequeRecordsByPeer(addr)
+			if err != nil && err != ErrNoCheque && err != ErrNoChequeRecords {
 				return false, err
-			} else if err == ErrNoCheque {
+			} else if err == ErrNoCheque || err == ErrNoChequeRecords {
 				return false, nil
 			}
 
