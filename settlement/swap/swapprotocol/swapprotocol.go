@@ -159,7 +159,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 				return err
 			}
 
-			s.swap.PutChequebookWhenSendCheque(peerhostPid.String(), common.BytesToAddress(beneficiary.Beneficiary))
+			s.swap.PutChequebookWhenSendCheque(peerhostPid.String(), common.BytesToAddress(handshakeInfo.Beneficiary))
 
 			return nil
 		}()
