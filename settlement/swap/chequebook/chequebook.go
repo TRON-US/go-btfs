@@ -16,6 +16,7 @@ import (
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/go-sw3-abi/sw3abi"
 )
@@ -61,6 +62,10 @@ type Service interface {
 	LastCheques() (map[common.Address]*SignedCheque, error)
 	// Receiver returns receiver address
 	Receiver() (common.Address, error)
+	// PreWithdraw
+	PreWithdraw(ctx context.Context) (hash common.Hash, err error)
+	// GetWithdrawTime returns the time can withdraw
+	GetWithdrawTime(ctx context.Context) (*big.Int, error)
 }
 
 type service struct {
@@ -345,4 +350,58 @@ func (s *service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Ha
 
 func (s *service) Receiver() (addr common.Address, err error) {
 	return s.contract.Receiver(context.Background())
+}
+
+func (s *service) PreWithdraw(ctx context.Context) (hash common.Hash, err error) {
+	callData, err := chequebookABI.Pack("preWithdraw")
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	request := &transaction.TxRequest{
+		To:          &s.address,
+		Data:        callData,
+		GasPrice:    sctx.GetGasPrice(ctx),
+		GasLimit:    95000,
+		Value:       big.NewInt(0),
+		Description: "pre withdraw",
+	}
+
+	txHash, err := s.transactionService.Send(ctx, request)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+func (s *service) GetWithdrawTime(ctx context.Context) (*big.Int, error) {
+	callData, err := chequebookABI.Pack("withdrawTime")
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := s.transactionService.Call(ctx, &transaction.TxRequest{
+		To:   &s.address,
+		Data: callData,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := chequebookABI.Unpack("withdrawTime", output)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(results) != 1 {
+		return nil, errDecodeABI
+	}
+
+	time, ok := abi.ConvertType(results[0], new(big.Int)).(*big.Int)
+	if !ok || time == nil {
+		return nil, errDecodeABI
+	}
+
+	return time, nil
 }

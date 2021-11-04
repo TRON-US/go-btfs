@@ -6,50 +6,61 @@ import (
 
 var (
 	// chain ID
-	ethChainID  = int64(5)
-	tronChainID = int64(100)
-	bttcChainID = int64(100)
-	testChainID = int64(1337)
+	ethChainID      = int64(5)
+	tronChainID     = int64(100)
+	bttcChainID     = int64(199)
+	bttcTestChainID = int64(1028)
+	testChainID     = int64(1337)
 	// start block
 	ethStartBlock = uint64(10000)
 
 	tronStartBlock = uint64(4933174)
-	bttcStartBlock = uint64(4933174)
+	bttcStartBlock = uint64(100)
 	// factory address
 	ethFactoryAddress = common.HexToAddress("0x5E6802d9e7C8CD43BB7C96524fDD50FE8460B92c")
 	ethOracleAddress  = common.HexToAddress("0xFB6a65aF1bb250EAf3f58C420912B0b6eA05Ea7a")
+	ethBatchAddress   = common.HexToAddress("0xFB6a65aF1bb250EAf3f58C420912B0b6eA05Ea7a")
 
 	tronFactoryAddress = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 	tronOracleAddress  = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
+	tronBatchAddress   = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 
-	bttcFactoryAddress = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
-	bttcOracleAddress  = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
+	bttcTestFactoryAddress = common.HexToAddress("0x107742EB846b86CEaAF7528D5C85cddcad3e409A")
+	bttcTestOracleAddress  = common.HexToAddress("0x70fD2b6b6fEd65c8BC0D9Fd0656502Ffd05B6B0E")
+	bttcTestBatchAddress   = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
+
+	bttcFactoryAddress = common.HexToAddress("0x107742EB846b86CEaAF7528D5C85cddcad3e409A")
+	bttcOracleAddress  = common.HexToAddress("0x70fD2b6b6fEd65c8BC0D9Fd0656502Ffd05B6B0E")
+	bttcBatchAddress   = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 
 	// initailDeposit
 	ethInitialDeposit  = "100000000000000"
 	tronInitialDeposit = "100"
-	bttcInitialDeposit = "100"
+	bttcInitialDeposit = "10000000000000000000"
 	testInitialDeposit = "100"
 
 	// deploy gas
-	ethDeploymentGas  = "10"
-	tronDeploymentGas = "10"
-	bttcDeploymentGas = "10"
-	testDeploymentGas = "10"
+	ethDeploymentGas      = "10"
+	tronDeploymentGas     = "10"
+	bttcDeploymentGas     = "300000000000000"
+	bttcTestDeploymentGas = "300000000000000"
+	testDeploymentGas     = "10"
 
 	//endpoint
-	ethEndpoint  = ""
-	tronEndpoint = ""
-	bttcEndpoint = ""
-	testEndpoint = "http://18.144.29.246:8110"
+	ethEndpoint      = ""
+	tronEndpoint     = ""
+	bttcEndpoint     = "https://rpc.bittorrentchain.io/"
+	bttcTestEndpoint = "https://test-rpc.bittorrentchain.io/"
+	testEndpoint     = "http://18.144.29.246:8110"
 
-	DefaultChain = ethChainID
+	DefaultChain = bttcTestChainID
 )
 
 type ChainConfig struct {
 	StartBlock         uint64
 	CurrentFactory     common.Address
 	PriceOracleAddress common.Address
+	BatchAddress       common.Address
 	InitailDeposit     string
 	DeploymentGas      string
 	Endpoint           string
@@ -65,6 +76,7 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.DeploymentGas = ethDeploymentGas
 		cfg.InitailDeposit = ethInitialDeposit
 		cfg.Endpoint = ethEndpoint
+		cfg.BatchAddress = ethBatchAddress
 		return &cfg, true
 	case tronChainID:
 		cfg.StartBlock = tronStartBlock
@@ -73,6 +85,7 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.DeploymentGas = tronDeploymentGas
 		cfg.InitailDeposit = tronInitialDeposit
 		cfg.Endpoint = tronEndpoint
+		cfg.BatchAddress = tronBatchAddress
 		return &cfg, true
 	case bttcChainID:
 		cfg.StartBlock = bttcStartBlock
@@ -81,6 +94,16 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.DeploymentGas = bttcDeploymentGas
 		cfg.InitailDeposit = bttcInitialDeposit
 		cfg.Endpoint = bttcEndpoint
+		cfg.BatchAddress = bttcBatchAddress
+		return &cfg, true
+	case bttcTestChainID:
+		cfg.StartBlock = bttcStartBlock
+		cfg.CurrentFactory = bttcTestFactoryAddress
+		cfg.PriceOracleAddress = bttcTestOracleAddress
+		cfg.DeploymentGas = bttcTestDeploymentGas
+		cfg.InitailDeposit = bttcInitialDeposit
+		cfg.Endpoint = bttcTestEndpoint
+		cfg.BatchAddress = bttcTestBatchAddress
 		return &cfg, true
 	case testChainID:
 		cfg.StartBlock = ethStartBlock
@@ -89,6 +112,7 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.DeploymentGas = testDeploymentGas
 		cfg.InitailDeposit = testInitialDeposit
 		cfg.Endpoint = testEndpoint
+		cfg.BatchAddress = ethBatchAddress
 		return &cfg, true
 
 	default:
