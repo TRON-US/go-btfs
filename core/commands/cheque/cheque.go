@@ -45,6 +45,7 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 	},
 	Subcommands: map[string]*cmds.Command{
 		"cash":        CashChequeCmd,
+		"cashstatus":  ChequeCashStatusCmd,
 		"list":        ListChequeCmd,
 		"history":     ChequeHistoryCmd,
 		"price":       StorePriceCmd,
