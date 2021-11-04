@@ -53,8 +53,12 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 		"receive-history-peer": ChequeReceiveHistoryPeerCmd,
 		"receive-history-list": ChequeReceiveHistoryListCmd,
 
-		"cash":    CashChequeCmd,
-		"price":   StorePriceCmd,
+		"cash":        CashChequeCmd,
+		"list":        ListChequeCmd,
+		"history":     ChequeHistoryCmd,
+		"price":       StorePriceCmd,
+		"prewithdraw": PreWithdrawCmd,
+		//"info": ChequeInfo,
 	},
 }
 
@@ -333,7 +337,6 @@ var ChequeReceiveHistoryPeerCmd = &cmds.Command{
 	},
 }
 
-
 var ChequeReceiveHistoryListCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Display the received cheques from peer.",
@@ -368,6 +371,29 @@ var ChequeReceiveHistoryListCmd = &cmds.Command{
 			}
 
 			return nil
+   }),
+},
+var PreWithdrawCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline: "Pre withdraw chequebook balance",
+	},
+
+	RunTimeout: 5 * time.Minute,
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		tx_hash, err := chain.SettleObject.ChequebookService.PreWithdraw(req.Context)
+		if err != nil {
+			return err
+		}
+
+		return cmds.EmitOnce(res, &CashChequeRet{
+			TxHash: tx_hash.String(),
+		})
+	},
+	Type: CashChequeRet{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *CashChequeRet) error {
+			_, err := fmt.Fprintf(w, "the hash of transaction: %s", out.TxHash)
+			return err
 		}),
 	},
 }

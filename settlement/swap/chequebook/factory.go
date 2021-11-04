@@ -65,7 +65,7 @@ func NewFactory(backend transaction.Backend, transactionService transaction.Serv
 
 // Deploy deploys a new chequebook and returns once the transaction has been submitted.
 func (c *factory) Deploy(ctx context.Context, issuer common.Address, defaultHardDepositTimeoutDuration *big.Int, nonce common.Hash) (common.Hash, error) {
-	callData, err := factoryABI.Pack("deploySimpleSwap", issuer, big.NewInt(0).Set(defaultHardDepositTimeoutDuration), nonce)
+	callData, err := factoryABI.Pack("deploySimpleSwap", issuer, nonce)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -165,7 +165,7 @@ func (c *factory) VerifyChequebook(ctx context.Context, chequebook common.Addres
 
 // ERC20Address returns the token for which this factory deploys chequebooks.
 func (c *factory) ERC20Address(ctx context.Context) (common.Address, error) {
-	callData, err := factoryABI.Pack("ERC20Address")
+	callData, err := factoryABI.Pack("TokenAddress")
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -178,7 +178,7 @@ func (c *factory) ERC20Address(ctx context.Context) (common.Address, error) {
 		return common.Address{}, err
 	}
 
-	results, err := factoryABI.Unpack("ERC20Address", output)
+	results, err := factoryABI.Unpack("TokenAddress", output)
 	if err != nil {
 		return common.Address{}, err
 	}
