@@ -94,14 +94,13 @@ var SendChequeCmd = &cmds.Command{
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		var record cheque
 		peer_id := req.Arguments[0]
-		fmt.Println("peer_id, ok of peer 1", peer_id)
+		fmt.Println("SendChequeCmd peer_id = ", peer_id)
 
 		if len(peer_id) > 0 {
 			chequeTmp, err := chain.SettleObject.SwapService.LastSendCheque(peer_id)
 			if err != nil {
 				return err
 			}
-			fmt.Println("chain.SettleObject.SwapService.LastSendCheque ", peer_id, chequeTmp)
 
 			record.Beneficiary = chequeTmp.Beneficiary.String()
 			record.Chequebook = chequeTmp.Chequebook.String()
@@ -132,15 +131,11 @@ var ListSendChequesCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "List cheque(s) send to peers.",
 	},
-	Options: []cmds.Option{
-		cmds.StringOption("peer-id", "", "The peer id of the cheque issued by."),
-	},
 
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 
 		var listRet ListChequeRet
 		cheques, err := chain.SettleObject.SwapService.LastSendCheques()
-		fmt.Println("outer LastSendCheques, addr = ", cheques)
 
 		if err != nil {
 			return err
@@ -163,7 +158,6 @@ var ListSendChequesCmd = &cmds.Command{
 	Type: ListChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ListChequeRet) error {
-			//fmt.Fprintln(w, "cheque status:")
 			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:")
 			for iter := 0; iter < out.Len; iter++ {
 				fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d \n",
@@ -192,14 +186,13 @@ var ReceiveChequeCmd = &cmds.Command{
 
 		var record cheque
 		peer_id := req.Arguments[0]
-		fmt.Println("peer_id, ok of peer 1", peer_id)
+		fmt.Println("ReceiveChequeCmd peer_id = ", peer_id)
 
 		if len(peer_id) > 0 {
 			chequeTmp, err := chain.SettleObject.SwapService.LastReceivedCheque(peer_id)
 			if err != nil {
 				return err
 			}
-			fmt.Println("chain.SettleObject.SwapService.LastReceivedCheque ", peer_id, chequeTmp)
 
 			record.Beneficiary = chequeTmp.Beneficiary.String()
 			record.Chequebook = chequeTmp.Chequebook.String()
@@ -283,9 +276,9 @@ var ChequeReceiveHistoryPeerCmd = &cmds.Command{
 
 		var listRet ChequeRecords
 		peer_id := req.Arguments[0]
-		fmt.Println("ChequeReceiveHistoryCmd ", peer_id)
+		fmt.Println("ChequeReceiveHistoryPeerCmd peer_id = ", peer_id)
 
-		records, err := chain.SettleObject.SwapService.ReceivedChequeRecords(peer_id)
+		records, err := chain.SettleObject.SwapService.ReceivedChequeRecordsByPeer(peer_id)
 		if err != nil {
 			return err
 		}
@@ -325,8 +318,7 @@ var ChequeReceiveHistoryListCmd = &cmds.Command{
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		var listRet ChequeRecords
 
-		records, err := chain.SettleObject.SwapService.ListReceivedChequeRecords()
-		fmt.Println("ChequeReceiveHistoryListCmd", records, err)
+		records, err := chain.SettleObject.SwapService.ReceivedChequeRecordsAll()
 		if err != nil {
 			return err
 		}
