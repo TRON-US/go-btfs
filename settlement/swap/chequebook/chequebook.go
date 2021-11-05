@@ -48,8 +48,10 @@ type Service interface {
 	Withdraw(ctx context.Context, amount *big.Int) (hash common.Hash, err error)
 	// WaitForDeposit waits for the deposit transaction to confirm and verifies the result.
 	WaitForDeposit(ctx context.Context, txHash common.Hash) error
-	// Balance returns the token balance of the chequebook.
-	Balance(ctx context.Context) (*big.Int, error)
+	// TotalBalance returns the token balance of the chequebook.
+	TotalBalance(ctx context.Context) (*big.Int, error)
+	// LiquidBalance returns the token balance of the chequebook sub stake amount.
+	LiquidBalance(ctx context.Context) (*big.Int, error)
 	// AvailableBalance returns the token balance of the chequebook which is not yet used for uncashed cheques.
 	AvailableBalance(ctx context.Context) (*big.Int, error)
 	// Address returns the address of the used chequebook contract.
@@ -118,8 +120,13 @@ func (s *service) Deposit(ctx context.Context, amount *big.Int) (hash common.Has
 }
 
 // Balance returns the token balance of the chequebook.
-func (s *service) Balance(ctx context.Context) (*big.Int, error) {
-	return s.contract.Balance(ctx)
+func (s *service) TotalBalance(ctx context.Context) (*big.Int, error) {
+	return s.contract.TotalBalance(ctx)
+}
+
+// LiquidBalance returns the token balance of the chequebook sub stake amount.
+func (s *service) LiquidBalance(ctx context.Context) (*big.Int, error) {
+	return s.contract.LiquidBalance(ctx)
 }
 
 // AvailableBalance returns the token balance of the chequebook which is not yet used for uncashed cheques.
@@ -129,7 +136,7 @@ func (s *service) AvailableBalance(ctx context.Context) (*big.Int, error) {
 		return nil, err
 	}
 
-	balance, err := s.Balance(ctx)
+	balance, err := s.LiquidBalance(ctx)
 	if err != nil {
 		return nil, err
 	}

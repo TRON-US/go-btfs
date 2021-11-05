@@ -176,7 +176,7 @@ func (s *chequeStore) ReceiveCheque(ctx context.Context, cheque *SignedCheque, e
 
 	// basic liquidity check
 	// could be omitted as it is not particularly useful
-	balance, err := contract.Balance(ctx)
+	balance, err := contract.LiquidBalance(ctx)
 	if err != nil {
 		return nil, err
 	}

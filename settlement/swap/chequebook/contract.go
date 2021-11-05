@@ -47,9 +47,9 @@ func (c *chequebookContract) Issuer(ctx context.Context) (common.Address, error)
 	return *abi.ConvertType(results[0], new(common.Address)).(*common.Address), nil
 }
 
-// Balance returns the token balance of the chequebook.
-func (c *chequebookContract) Balance(ctx context.Context) (*big.Int, error) {
-	callData, err := chequebookABI.Pack("balance")
+// TotalBalance returns the token balance of the chequebook.
+func (c *chequebookContract) TotalBalance(ctx context.Context) (*big.Int, error) {
+	callData, err := chequebookABI.Pack("totalbalance")
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,30 @@ func (c *chequebookContract) Balance(ctx context.Context) (*big.Int, error) {
 		return nil, err
 	}
 
-	results, err := chequebookABI.Unpack("balance", output)
+	results, err := chequebookABI.Unpack("totalbalance", output)
+	if err != nil {
+		return nil, err
+	}
+
+	return abi.ConvertType(results[0], new(big.Int)).(*big.Int), nil
+}
+
+// LiquidBalance returns the token balance of the chequebook sub stake amount
+func (c *chequebookContract) LiquidBalance(ctx context.Context) (*big.Int, error) {
+	callData, err := chequebookABI.Pack("liquidBalance")
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := c.transactionService.Call(ctx, &transaction.TxRequest{
+		To:   &c.address,
+		Data: callData,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := chequebookABI.Unpack("liquidBalance", output)
 	if err != nil {
 		return nil, err
 	}
