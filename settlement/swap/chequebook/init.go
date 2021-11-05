@@ -67,11 +67,14 @@ func checkBalance(
 			}
 
 			if insufficientETH && insufficientERC20 {
-				log.Info("cannot continue until there is sufficient ETH (for Gas) and at least %d BTT available on %x", neededERC20, overlayEthAddress)
+				log.Info("cannot continue until there is sufficient BTT (for Gas) and at least %d WBTT available on %x", neededERC20, overlayEthAddress)
+				fmt.Printf("cannot continue until there is sufficient BTT (for Gas) and at least %d WBTT available on %x \n", neededERC20, overlayEthAddress)
 			} else if insufficientETH {
-				log.Info("cannot continue until there is sufficient ETH (for Gas) available on %x", overlayEthAddress)
+				fmt.Printf("cannot continue until there is sufficient BTT (for Gas) available on %x \n", overlayEthAddress)
+				log.Info("cannot continue until there is sufficient BTT (for Gas) available on %x", overlayEthAddress)
 			} else {
-				log.Info("cannot continue until there is at least %d BTT available on %x", neededERC20, overlayEthAddress)
+				fmt.Printf("cannot continue until there is at least %d WBTT available on %x \n", neededERC20, overlayEthAddress)
+				log.Info("cannot continue until there is at least %d WBTT available on %x", neededERC20, overlayEthAddress)
 			}
 			if chainId == 5 {
 				log.Info("learn how to fund your node by visiting our docs at")
@@ -80,9 +83,9 @@ func checkBalance(
 			case <-time.After(balanceCheckBackoffDuration):
 			case <-timeoutCtx.Done():
 				if insufficientERC20 {
-					return fmt.Errorf("insufficient BTT for initial deposit")
+					return fmt.Errorf("insufficient WBTT for initial deposit")
 				} else {
-					return fmt.Errorf("insufficient ETH for initial deposit")
+					return fmt.Errorf("insufficient BTT for initial deposit")
 				}
 			}
 			continue
