@@ -9,8 +9,8 @@ import (
 )
 
 type ChainInfoRet struct {
-	ChainId  int64
-	NodeAddr string
+	ChainId  int64  `json:"chain_id"`
+	NodeAddr string `json:"node_addr"`
 }
 
 var ChequeChainInfoCmd = &cmds.Command{
