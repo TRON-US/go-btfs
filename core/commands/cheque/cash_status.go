@@ -12,7 +12,7 @@ const (
 	CashoutStatusSuccess  = "success"
 	CashoutStatusFail     = "fail"
 	CashoutStatusPending  = "pending"
-	CashoutStatusNotFound = "notfound"
+	CashoutStatusNotFound = "not_found"
 )
 
 type CashOutStatusRet struct {
