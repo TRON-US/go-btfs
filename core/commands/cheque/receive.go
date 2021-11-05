@@ -1,8 +1,10 @@
 package cheque
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"math/big"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
@@ -32,6 +34,14 @@ var ReceiveChequeCmd = &cmds.Command{
 			record.Chequebook = chequeTmp.Chequebook.String()
 			record.Payout = chequeTmp.CumulativePayout
 			record.PeerID = peer_id
+
+			cashStatus, err := chain.SettleObject.CashoutService.CashoutStatus(context.Background(), chequeTmp.Chequebook)
+			if err != nil {
+				return err
+			}
+			if cashStatus.UncashedAmount != nil {
+				record.CashedAmount = big.NewInt(0).Sub(chequeTmp.CumulativePayout, cashStatus.UncashedAmount)
+			}
 		}
 
 		return cmds.EmitOnce(res, &record)
@@ -40,16 +50,16 @@ var ReceiveChequeCmd = &cmds.Command{
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *cheque) error {
 			//fmt.Fprintln(w, "cheque status:")
-			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:")
-			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d \n",
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:", "cashout_amount:")
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d\t%d \n",
 				out.PeerID,
 				out.Beneficiary,
 				out.Chequebook,
 				out.Payout.Uint64(),
+				out.CashedAmount.Uint64(),
 			)
 
 			return nil
 		}),
 	},
 }
-

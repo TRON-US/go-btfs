@@ -21,10 +21,11 @@ type CashChequeRet struct {
 }
 
 type cheque struct {
-	PeerID      string
-	Beneficiary string
-	Chequebook  string
-	Payout      *big.Int
+	PeerID       string
+	Beneficiary  string
+	Chequebook   string
+	Payout       *big.Int
+	CashedAmount *big.Int
 }
 
 type ListChequeRet struct {
@@ -45,16 +46,18 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 	},
 	Subcommands: map[string]*cmds.Command{
 		"cash":        CashChequeCmd,
+		"cashstatus":  ChequeCashStatusCmd,
 		"price":       StorePriceCmd,
 		"prewithdraw": PreWithdrawCmd,
 		//"info":      ChequeInfo,
 
-		"send": SendChequeCmd,
-		"sendlist": ListSendChequesCmd,
-		"receive": ReceiveChequeCmd,
-		"receivelist": ListReceiveChequeCmd,
+		"send":                 SendChequeCmd,
+		"sendlist":             ListSendChequesCmd,
+		"receive":              ReceiveChequeCmd,
+		"receivelist":          ListReceiveChequeCmd,
 		"receive-history-peer": ChequeReceiveHistoryPeerCmd,
 		"receive-history-list": ChequeReceiveHistoryListCmd,
+		"chaininfo":            ChequeChainInfoCmd,
 	},
 }
 
@@ -74,6 +77,12 @@ var StorePriceCmd = &cmds.Command{
 		})
 	},
 	Type: StorePriceRet{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *StorePriceRet) error {
+			_, err := fmt.Fprintf(w, "the btfs store price: %s", out.Price)
+			return err
+		}),
+	},
 }
 
 var CashChequeCmd = &cmds.Command{
@@ -105,7 +114,6 @@ var CashChequeCmd = &cmds.Command{
 		}),
 	},
 }
-
 
 var PreWithdrawCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
