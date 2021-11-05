@@ -57,6 +57,7 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 		"receivelist":          ListReceiveChequeCmd,
 		"receive-history-peer": ChequeReceiveHistoryPeerCmd,
 		"receive-history-list": ChequeReceiveHistoryListCmd,
+		"chaininfo":            ChequeChainInfoCmd,
 	},
 }
 
