@@ -1,8 +1,10 @@
 package upload
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"strconv"
 	"strings"
 	"time"
@@ -136,6 +138,9 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
+		if !ctxParams.Cfg.Experimental.HostsSyncEnabled {
+			_ = SyncHosts(ctxParams)
+		}
 		hp := helper.GetHostsProvider(ctxParams, make([]string, 0))
 		if mode, ok := req.Options[hostSelectModeOptionName].(string); ok {
 			var hostIDs []string
@@ -178,6 +183,19 @@ Use status command to check for completion:
 		return res.Emit(seRes)
 	},
 	Type: Res{},
+}
+
+func SyncHosts(ctxParams *helper.ContextParams) error {
+	cfg, err := ctxParams.N.Repo.Config()
+	if err != nil {
+		log.Errorf("Failed to get configuration %s", err)
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	m := cfg.Experimental.HostsSyncMode
+	_, err = hosts.SyncHosts(ctx, ctxParams.N, m)
+	return err
 }
 
 type Res struct {
