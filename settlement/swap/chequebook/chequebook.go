@@ -12,13 +12,13 @@ import (
 	"strings"
 	"sync"
 
+	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethersphere/go-sw3-abi/sw3abi"
 )
 
 // SendChequeFunc is a function to send cheques.
@@ -35,7 +35,7 @@ var (
 	// ErrInsufficientFunds is the error when the chequebook has not enough free funds for a user action
 	ErrInsufficientFunds = errors.New("insufficient token balance")
 
-	chequebookABI          = transaction.ParseABIUnchecked(sw3abi.ERC20SimpleSwapABIv0_3_1)
+	chequebookABI          = transaction.ParseABIUnchecked(conabi.ERC20SimpleSwapABI)
 	chequeCashedEventType  = chequebookABI.Events["ChequeCashed"]
 	chequeBouncedEventType = chequebookABI.Events["ChequeBounced"]
 )
