@@ -16,7 +16,7 @@ const (
 )
 
 type CashOutStatusRet struct {
-	Status         string   `json:"status"` // pending,fail,success
+	Status         string   `json:"status"` // pending,fail,success,not_found
 	TotalPayout    *big.Int `json:"total_payout"`
 	UncashedAmount *big.Int `json:"uncashed_amount"` // amount not yet cashed out
 }

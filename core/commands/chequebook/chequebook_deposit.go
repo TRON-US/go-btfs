@@ -2,6 +2,7 @@ package chequebook
 
 import (
 	"fmt"
+	"io"
 	"math/big"
 	"time"
 
@@ -37,4 +38,10 @@ var ChequeBookDepositCmd = &cmds.Command{
 		})
 	},
 	Type: &ChequeBookDepositCmdRet{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeBookDepositCmdRet) error {
+			_, err := fmt.Fprintf(w, "the hash of transaction: %s", out.Hash)
+			return err
+		}),
+	},
 }

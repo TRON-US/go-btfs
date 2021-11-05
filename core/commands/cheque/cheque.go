@@ -77,6 +77,12 @@ var StorePriceCmd = &cmds.Command{
 		})
 	},
 	Type: StorePriceRet{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *StorePriceRet) error {
+			_, err := fmt.Fprintf(w, "the btfs store price: %s", out.Price)
+			return err
+		}),
+	},
 }
 
 var CashChequeCmd = &cmds.Command{

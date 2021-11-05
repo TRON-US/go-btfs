@@ -1,6 +1,8 @@
 package chequebook
 
 import (
+	"fmt"
+	"io"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -28,4 +30,10 @@ var ChequeBookBalanceCmd = &cmds.Command{
 		})
 	},
 	Type: &ChequeBookBalanceCmdRet{},
+	Encoders: cmds.EncoderMap{
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeBookBalanceCmdRet) error {
+			_, err := fmt.Fprintf(w, "the chequebook available balance: %s", out.Balance)
+			return err
+		}),
+	},
 }
