@@ -382,7 +382,7 @@ const ERC20SimpleSwapABI = `[
 			},
 			{
 				"inputs": [],
-				"name": "totakbalance",
+				"name": "totalbalance",
 				"outputs": [
 					{
 						"internalType": "uint256",
