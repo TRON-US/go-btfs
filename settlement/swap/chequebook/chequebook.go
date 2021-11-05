@@ -48,7 +48,7 @@ type Service interface {
 	Withdraw(ctx context.Context, amount *big.Int) (hash common.Hash, err error)
 	// WaitForDeposit waits for the deposit transaction to confirm and verifies the result.
 	WaitForDeposit(ctx context.Context, txHash common.Hash) error
-	// Balance returns the token balance of the chequebook.
+	// TotalBalance returns the token balance of the chequebook.
 	TotalBalance(ctx context.Context) (*big.Int, error)
 	// LiquidBalance returns the token balance of the chequebook sub stake amount.
 	LiquidBalance(ctx context.Context) (*big.Int, error)
