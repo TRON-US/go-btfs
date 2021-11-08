@@ -53,6 +53,7 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	prometheus "github.com/prometheus/client_golang/prometheus"
 	promauto "github.com/prometheus/client_golang/prometheus/promauto"
+	cp "github.com/tron-us/go-btfs-common/crypto"
 	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
@@ -84,7 +85,6 @@ const (
 	enableDataCollection      = "dc"
 	enableStartupTest         = "enable-startup-test"
 	swarmPortKwd              = "swarm-port"
-	initialDeposit            = "initial-deposit"
 	deploymentGasPrice        = "deployment-gasPrice"
 	chainID                   = "chain-id"
 	// apiAddrKwd    = "address-api"
@@ -211,7 +211,6 @@ Headers.
 		cmds.BoolOption(enableDataCollection, "Allow BTFS to collect and send out node statistics."),
 		cmds.BoolOption(enableStartupTest, "Allow BTFS to perform start up test.").WithDefault(false),
 		cmds.StringOption(swarmPortKwd, "Override existing announced swarm address with external port in the format of [WAN:LAN]."),
-		cmds.StringOption(initialDeposit, "Initial deposit if deploying a new chequebook."),
 		cmds.StringOption(deploymentGasPrice, "gas price in unit to use for deployment and funding."),
 		cmds.StringOption(chainID, "The ID of blockchain to deploy."),
 		// TODO: add way to override addresses. tricky part: updating the config if also --init.
@@ -366,19 +365,30 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	fmt.Printf("Repo location: %s\n", cctx.ConfigRoot)
 	fmt.Printf("Peer identity: %s\n", cfg.Identity.PeerID)
 
-	fmt.Printf("private key identity: %s\n", cfg.Identity.PrivKey)
+	privKey, err := cp.ToPrivKey(cfg.Identity.PrivKey)
+	if err != nil {
+		return err
+	}
+
+	keys, err := cp.FromIcPrivateKey(privKey)
+	if err != nil {
+		return err
+	}
 
 	// decode from string
 	pkbytesOri, err := base64.StdEncoding.DecodeString(cfg.Identity.PrivKey)
 	if err != nil {
 		return err
 	}
-
-	//pkStr := hex.EncodeToString(pkbytesOri[4:])
-
 	//new singer
 	pk := crypto.Secp256k1PrivateKeyFromBytes(pkbytesOri[4:])
 	singer := crypto.NewDefaultSigner(pk)
+
+	address0x, _ := singer.EthereumAddress()
+
+	fmt.Println("the private key of wallet import format is: ", keys.HexPrivateKey)
+	fmt.Println("the address of Bttc format is: ", address0x)
+	fmt.Println("the address of Tron format is: ", keys.Base58Address)
 
 	fmt.Printf("init statestore\n")
 	//chain init
@@ -423,11 +433,6 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		}
 	}
 
-	initialDeposit, found := req.Options[initialDeposit].(string)
-	if !found {
-		initialDeposit = chainInfo.Chainconfig.InitailDeposit
-	}
-
 	deployGasPrice, found := req.Options[deploymentGasPrice].(string)
 	if !found {
 		deployGasPrice = chainInfo.Chainconfig.DeploymentGas
@@ -435,7 +440,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 
 	fmt.Println("init settle")
 	/*settleinfo*/
-	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, initialDeposit, deployGasPrice, chainInfo.ChainID)
+	_, err = chain.InitSettlement(context.Background(), statestore, chainInfo, deployGasPrice, chainInfo.ChainID)
 	if err != nil {
 		fmt.Println("init settlement err: ", err)
 		return err

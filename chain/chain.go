@@ -106,7 +106,6 @@ func InitSettlement(
 	ctx context.Context,
 	stateStore storage.StateStorer,
 	chaininfo *ChainInfo,
-	initialDeposit string,
 	deployGasPrice string,
 	chainID int64,
 ) (*SettleInfo, error) {
@@ -127,7 +126,6 @@ func InitSettlement(
 		chaininfo.OverlayAddress,
 		chaininfo.TransactionService,
 		factory,
-		initialDeposit,
 		deployGasPrice,
 	)
 
@@ -227,15 +225,9 @@ func initChequebookService(
 	overlayEthAddress common.Address,
 	transactionService transaction.Service,
 	chequebookFactory chequebook.Factory,
-	initialDeposit string,
 	deployGasPrice string,
 ) (chequebook.Service, error) {
 	chequeSigner := chequebook.NewChequeSigner(signer, chainID)
-
-	deposit, ok := new(big.Int).SetString(initialDeposit, 10)
-	if !ok {
-		return nil, fmt.Errorf("initial swap deposit \"%s\" cannot be parsed", initialDeposit)
-	}
 
 	if deployGasPrice != "" {
 		gasPrice, ok := new(big.Int).SetString(deployGasPrice, 10)
@@ -249,7 +241,6 @@ func initChequebookService(
 		ctx,
 		chequebookFactory,
 		stateStore,
-		deposit,
 		transactionService,
 		backend,
 		chainID,

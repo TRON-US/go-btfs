@@ -24,13 +24,12 @@ const (
 	chequebookKey           = "swap_chequebook"
 	ChequebookDeploymentKey = "swap_chequebook_transaction_deployment"
 
-	balanceCheckBackoffDuration = 20 * time.Second
+	balanceCheckBackoffDuration = 60 * time.Second
 	balanceCheckMaxRetries      = 10
 )
 
 func checkBalance(
 	ctx context.Context,
-	swapInitialDeposit *big.Int,
 	swapBackend transaction.Backend,
 	chainId int64,
 	overlayEthAddress common.Address,
@@ -39,11 +38,6 @@ func checkBalance(
 	timeoutCtx, cancel := context.WithTimeout(ctx, balanceCheckBackoffDuration*time.Duration(balanceCheckMaxRetries))
 	defer cancel()
 	for {
-		erc20Balance, err := erc20Token.BalanceOf(timeoutCtx, overlayEthAddress)
-		if err != nil {
-			return err
-		}
-
 		ethBalance, err := swapBackend.BalanceAt(timeoutCtx, overlayEthAddress, nil)
 		if err != nil {
 			return err
@@ -54,39 +48,16 @@ func checkBalance(
 			return err
 		}
 
-		minimumEth := gasPrice.Mul(gasPrice, big.NewInt(250000))
+		minimumEth := gasPrice.Mul(gasPrice, big.NewInt(300000))
 
-		insufficientERC20 := erc20Balance.Cmp(swapInitialDeposit) < 0
 		insufficientETH := ethBalance.Cmp(minimumEth) < 0
 
-		if insufficientERC20 || insufficientETH {
-			neededERC20, mod := new(big.Int).DivMod(swapInitialDeposit, big.NewInt(10000000000000000), new(big.Int))
-			if mod.Cmp(big.NewInt(0)) > 0 {
-				// always round up the division as the bzzaar cannot handle decimals
-				neededERC20.Add(neededERC20, big.NewInt(1))
-			}
-
-			if insufficientETH && insufficientERC20 {
-				log.Info("cannot continue until there is sufficient BTT (for Gas) and at least %d WBTT available on %x", neededERC20, overlayEthAddress)
-				fmt.Printf("cannot continue until there is sufficient BTT (for Gas) and at least %d WBTT available on %x \n", neededERC20, overlayEthAddress)
-			} else if insufficientETH {
-				fmt.Printf("cannot continue until there is sufficient BTT (for Gas) available on %x \n", overlayEthAddress)
-				log.Info("cannot continue until there is sufficient BTT (for Gas) available on %x", overlayEthAddress)
-			} else {
-				fmt.Printf("cannot continue until there is at least %d WBTT available on %x \n", neededERC20, overlayEthAddress)
-				log.Info("cannot continue until there is at least %d WBTT available on %x", neededERC20, overlayEthAddress)
-			}
-			if chainId == 5 {
-				log.Info("learn how to fund your node by visiting our docs at")
-			}
+		if insufficientETH {
+			fmt.Printf("cannot continue until there is sufficient BTT (for Gas) available on 0x%x \n", overlayEthAddress)
 			select {
 			case <-time.After(balanceCheckBackoffDuration):
 			case <-timeoutCtx.Done():
-				if insufficientERC20 {
-					return fmt.Errorf("insufficient WBTT for initial deposit")
-				} else {
-					return fmt.Errorf("insufficient BTT for initial deposit")
-				}
+				return fmt.Errorf("insufficient BTT for initial deposit")
 			}
 			continue
 		}
@@ -100,7 +71,6 @@ func Init(
 	ctx context.Context,
 	chequebookFactory Factory,
 	stateStore storage.StateStorer,
-	swapInitialDeposit *big.Int,
 	transactionService transaction.Service,
 	swapBackend transaction.Backend,
 	chainId int64,
@@ -135,7 +105,7 @@ func Init(
 
 		if err == storage.ErrNotFound {
 			log.Infof("no chequebook found, deploying new one.")
-			err = checkBalance(ctx, swapInitialDeposit, swapBackend, chainId, overlayEthAddress, erc20Service)
+			err = checkBalance(ctx, swapBackend, chainId, overlayEthAddress, erc20Service)
 			if err != nil {
 				return nil, err
 			}
@@ -167,7 +137,7 @@ func Init(
 			return nil, err
 		}
 
-		log.Infof("deployed chequebook at address %x", chequebookAddress)
+		log.Infof("deployed chequebook at address 0x%x", chequebookAddress)
 
 		// save the address for later use
 		err = stateStore.Put(chequebookKey, chequebookAddress)
@@ -179,32 +149,16 @@ func Init(
 		if err != nil {
 			return nil, err
 		}
-
-		if swapInitialDeposit.Cmp(big.NewInt(0)) != 0 {
-			log.Infof("depositing %d token into new chequebook", swapInitialDeposit)
-			depositHash, err := chequebookService.Deposit(ctx, swapInitialDeposit)
-			if err != nil {
-				return nil, err
-			}
-
-			log.Infof("sent deposit transaction %x", depositHash)
-			err = chequebookService.WaitForDeposit(ctx, depositHash)
-			if err != nil {
-				return nil, err
-			}
-
-			log.Info("successfully deposited to chequebook")
-		}
 	} else {
 		chequebookService, err = New(transactionService, chequebookAddress, overlayEthAddress, stateStore, chequeSigner, erc20Service)
 		if err != nil {
 			return nil, err
 		}
 
-		log.Infof("using existing chequebook %x", chequebookAddress)
+		log.Infof("using existing chequebook 0x%x", chequebookAddress)
 	}
 
-	fmt.Printf("self chequebook: %x \n", chequebookAddress)
+	fmt.Printf("self chequebook: 0x%x \n", chequebookAddress)
 
 	// regardless of how the chequebook service was initialised make sure that the chequebook is valid
 	err = chequebookFactory.VerifyChequebook(ctx, chequebookService.Address())
