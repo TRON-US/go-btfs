@@ -150,7 +150,7 @@ func GetShardHashesCopy(params *ContextParams, fileHash string, copyNum int) (sh
 	shardSize = fileSize
 
 	shardHashes = make([]string, 0)
-	for i:=0; i<copyNum + 1; i++ {
+	for i := 0; i < copyNum+1; i++ {
 		shardHashes = append(shardHashes, fileHash)
 	}
 
