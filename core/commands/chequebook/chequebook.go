@@ -11,10 +11,11 @@ var ChequeBookCmd = &cmds.Command{
 Chequebook services include balance, address, withdraw, deposit operations.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"balance":  ChequeBookBalanceCmd,
-		"address":  ChequeBookAddrCmd,
-		"withdraw": ChequeBookWithdrawCmd,
-		"deposit":  ChequeBookDepositCmd,
-		"receiver": ChequeBookReceiverCmd,
+		"balance":     ChequeBookBalanceCmd,
+		"address":     ChequeBookAddrCmd,
+		"withdraw":    ChequeBookWithdrawCmd,
+		"deposit":     ChequeBookDepositCmd,
+		"receiver":    ChequeBookReceiverCmd,
+		"setreceiver": ChequeBookSetReceiverCmd,
 	},
 }

@@ -64,6 +64,8 @@ type Service interface {
 	LastCheques() (map[common.Address]*SignedCheque, error)
 	// Receiver returns receiver address
 	Receiver() (common.Address, error)
+	// SetReceiver set new receiver
+	SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error)
 	// PreWithdraw
 	PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	// GetWithdrawTime returns the time can withdraw
@@ -411,4 +413,8 @@ func (s *service) GetWithdrawTime(ctx context.Context) (*big.Int, error) {
 	}
 
 	return time, nil
+}
+
+func (s *service) SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error) {
+	return s.contract.SetReceiver(ctx, newReceiver)
 }
