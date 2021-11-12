@@ -34,9 +34,9 @@ var ChequeBookWbttBalanceCmd = &cmds.Command{
 			Balance: balance.String(),
 		})
 	},
-	Type: &ChequeBookBalanceCmdRet{},
+	Type: &ChequeBookWbttBalanceCmdRet{},
 	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeBookBalanceCmdRet) error {
+		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeBookWbttBalanceCmdRet) error {
 			_, err := fmt.Fprintf(w, "the chequebook available balance: %s", out.Balance)
 			return err
 		}),
