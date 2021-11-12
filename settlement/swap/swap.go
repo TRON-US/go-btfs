@@ -55,6 +55,7 @@ type Interface interface {
 	CashCheque(ctx context.Context, peer string) (common.Hash, error)
 	// CashoutStatus gets the status of the latest cashout transaction for the peers chequebook
 	CashoutStatus(ctx context.Context, peer string) (*chequebook.CashoutStatus, error)
+	HasCashoutAction(ctx context.Context, peer string) (bool, error)
 }
 
 // Service is the implementation of the swap settlement layer.
@@ -132,7 +133,6 @@ func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *cheque
 	return s.accounting.NotifyPaymentReceived(peer, amount)
 }
 
-
 // ReceiveCheque is called by the swap protocol if a cheque is received.
 func (s *Service) PutChequebookWhenSendCheque(peer string, chequebook common.Address) (err error) {
 	// check this is the same chequebook for this peer as previously
@@ -150,7 +150,6 @@ func (s *Service) PutChequebookWhenSendCheque(peer string, chequebook common.Add
 
 	return nil
 }
-
 
 // Pay initiates a payment to the given peer
 func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
@@ -449,4 +448,15 @@ func (s *Service) ReceivedChequeRecordsAll() ([]chequebook.ChequeRecord, error) 
 
 func (s *Service) Beneficiary(peer string) (beneficiary common.Address, known bool, err error) {
 	return s.addressbook.Beneficiary(peer)
+}
+
+func (s *Service) HasCashoutAction(ctx context.Context, peer string) (bool, error) {
+	chequebook, known, err := s.addressbook.Chequebook(peer)
+	if err != nil {
+		return false, err
+	}
+	if !known {
+		return false, fmt.Errorf("unkonw peer")
+	}
+	return s.cashout.HasCashoutAction(ctx, chequebook)
 }

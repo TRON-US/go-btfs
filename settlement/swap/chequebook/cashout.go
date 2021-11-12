@@ -30,6 +30,7 @@ type CashoutService interface {
 	CashCheque(ctx context.Context, chequebook common.Address) (common.Hash, error)
 	// CashoutStatus gets the status of the latest cashout transaction for the chequebook
 	CashoutStatus(ctx context.Context, chequebookAddress common.Address) (*CashoutStatus, error)
+	HasCashoutAction(ctx context.Context, peer common.Address) (bool, error)
 }
 
 type cashoutService struct {
@@ -131,7 +132,7 @@ func (s *cashoutService) paidOut(ctx context.Context, chequebook, beneficiary co
 
 // CashCheque sends a cashout transaction for the last cheque of the chequebook
 func (s *cashoutService) CashCheque(ctx context.Context, chequebook common.Address) (common.Hash, error) {
-		cheque, err := s.chequeStore.LastReceivedCheque(chequebook)
+	cheque, err := s.chequeStore.LastReceivedCheque(chequebook)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -305,4 +306,17 @@ func (r *CashChequeResult) Equal(o *CashChequeResult) bool {
 		return false
 	}
 	return true
+}
+
+func (s *cashoutService) HasCashoutAction(ctx context.Context, peer common.Address) (bool, error) {
+	var action cashoutAction
+	err := s.store.Get(cashoutActionKey(peer), &action)
+
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

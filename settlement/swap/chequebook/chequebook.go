@@ -64,10 +64,16 @@ type Service interface {
 	LastCheques() (map[common.Address]*SignedCheque, error)
 	// Receiver returns receiver address
 	Receiver() (common.Address, error)
+	// SetReceiver set new receiver
+	SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error)
 	// PreWithdraw
 	PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	// GetWithdrawTime returns the time can withdraw
 	GetWithdrawTime(ctx context.Context) (*big.Int, error)
+	// WbttBalanceOf retrieve the addr balance
+	WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.Int, error)
+	// BTTBalanceOf retrieve the btt balance of addr
+	BTTBalanceOf(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error)
 }
 
 type service struct {
@@ -411,4 +417,16 @@ func (s *service) GetWithdrawTime(ctx context.Context) (*big.Int, error) {
 	}
 
 	return time, nil
+}
+
+func (s *service) SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error) {
+	return s.contract.SetReceiver(ctx, newReceiver)
+}
+
+func (s *service) WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.Int, error) {
+	return s.erc20Service.BalanceOf(ctx, addr)
+}
+
+func (s *service) BTTBalanceOf(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error) {
+	return s.transactionService.BttBalanceAt(ctx, address, block)
 }

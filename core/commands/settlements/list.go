@@ -1,6 +1,7 @@
 package settlement
 
 import (
+	"context"
 	"math/big"
 	"time"
 
@@ -16,9 +17,10 @@ type settlementResponse struct {
 }
 
 type settlementsResponse struct {
-	TotalSettlementReceived *bigint.BigInt       `json:"totalReceived"`
-	TotalSettlementSent     *bigint.BigInt       `json:"totalSent"`
-	Settlements             []settlementResponse `json:"settlements"`
+	TotalSettlementReceived  *bigint.BigInt       `json:"totalReceived"`
+	TotalSettlementSent      *bigint.BigInt       `json:"totalSent"`
+	SettlementReceivedCashed *bigint.BigInt       `json:"settlement_received_cashed"`
+	Settlements              []settlementResponse `json:"settlements"`
 }
 
 var ListSettlementCmd = &cmds.Command{
@@ -37,6 +39,7 @@ var ListSettlementCmd = &cmds.Command{
 		}
 
 		totalReceived := big.NewInt(0)
+		totalReceivedCashed := big.NewInt(0)
 		totalSent := big.NewInt(0)
 
 		settlementResponses := make(map[string]settlementResponse)
@@ -63,6 +66,9 @@ var ListSettlementCmd = &cmds.Command{
 				}
 			}
 			totalReceived.Add(b, totalReceived)
+			if has, err := chain.SettleObject.SwapService.HasCashoutAction(context.Background(), a); err == nil && has {
+				totalReceivedCashed.Add(b, totalReceivedCashed)
+			}
 		}
 		settlementResponsesArray := make([]settlementResponse, len(settlementResponses))
 		i := 0
@@ -72,9 +78,10 @@ var ListSettlementCmd = &cmds.Command{
 		}
 
 		rsp := settlementsResponse{
-			TotalSettlementReceived: bigint.Wrap(totalReceived),
-			TotalSettlementSent:     bigint.Wrap(totalSent),
-			Settlements:             settlementResponsesArray,
+			TotalSettlementReceived:  bigint.Wrap(totalReceived),
+			TotalSettlementSent:      bigint.Wrap(totalSent),
+			SettlementReceivedCashed: bigint.Wrap(totalReceivedCashed),
+			Settlements:              settlementResponsesArray,
 		}
 
 		return cmds.EmitOnce(res, &rsp)
