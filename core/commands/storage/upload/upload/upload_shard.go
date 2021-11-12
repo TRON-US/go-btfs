@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
@@ -17,6 +18,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 	storageLength int,
 	offlineSigning bool, renterId peer.ID, fileSize int64, shardIndexes []int, rp *RepairParams) {
 	for index, shardHash := range rss.ShardHashes {
+		fmt.Println("UploadShard index-shardHash: ", index, shardHash)
+
 		go func(i int, h string) {
 			err := backoff.Retry(func() error {
 				select {
@@ -26,6 +29,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					break
 				}
 				host, err := hp.NextValidHost(price)
+				host = "16Uiu2HAm9FuG2UfhH5ihKUP5PehzkoTRbHNSUsNofqufJ8QUvdSW"
 				if err != nil {
 					terr := rss.To(sessions.RssToErrorEvent, err)
 					if terr != nil {
@@ -34,26 +38,32 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					}
 					return nil
 				}
+				fmt.Println("hp.NextValidHost host = ", host)
+
 				contractId := helper.NewContractID(rss.SsId)
 				cb := make(chan error)
 				ShardErrChanMap.Set(contractId, cb)
 				tp := helper.TotalPay(shardSize, price, storageLength)
-				var escrowCotractBytes []byte
+
 				errChan := make(chan error, 2)
-				go func() {
-					tmp := func() error {
-						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
-						if err != nil {
-							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
-							return err
-						}
-						return nil
-					}()
-					errChan <- tmp
-				}()
+				//var escrowCotractBytes []byte
+				//go func() {
+				//	tmp := func() error {
+				//		escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
+				//		if err != nil {
+				//			log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
+				//			return err
+				//		}
+				//		return nil
+				//	}()
+				//	errChan <- tmp
+				//}()
+
 				var guardContractBytes []byte
 				go func() {
 					tmp := func() error {
+						fmt.Println("1 RenterSignGuardContract host = ", host)
+
 						guardContractBytes, err = RenterSignGuardContract(rss, &ContractParams{
 							ContractId:    contractId,
 							RenterPid:     renterId.Pretty(),
@@ -71,20 +81,33 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 							log.Errorf("shard %s signs guard_contract error: %s", h, err.Error())
 							return err
 						}
+
+						fmt.Println("2 RenterSignGuardContract host = ", host)
 						return nil
 					}()
 					errChan <- tmp
 				}()
 				c := 0
+
+				fmt.Println("3.1 RenterSignGuardContract c = ", c)
+
 				for err := range errChan {
 					c++
+
+					fmt.Println("3.2 RenterSignGuardContract c = ", c)
+
 					if err != nil {
 						return err
 					}
-					if c == 2 {
+
+					fmt.Println("4 RenterSignGuardContract c = ", c)
+					//if c == 2 {
+					if c >= 1 {
 						break
 					}
 				}
+
+				fmt.Println("5 RenterSignGuardContract c = ", c)
 
 				hostPid, err := peer.IDB58Decode(host)
 				if err != nil {
@@ -92,13 +115,15 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					return err
 				}
 				go func() {
+					fmt.Println("1 /storage/upload/init host = ", host)
+
 					ctx, _ := context.WithTimeout(rss.Ctx, 10*time.Second)
 					_, err := remote.P2PCall(ctx, rss.CtxParams.N, rss.CtxParams.Api, hostPid, "/storage/upload/init",
 						rss.SsId,
 						rss.Hash,
 						h,
 						price,
-						escrowCotractBytes,
+						nil,
 						guardContractBytes,
 						storageLength,
 						shardSize,
@@ -108,6 +133,8 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					if err != nil {
 						cb <- err
 					}
+
+					fmt.Println("2 /storage/upload/init host, err = ", host, err)
 				}()
 				// host needs to send recv in 30 seconds, or the contract will be invalid.
 				tick := time.Tick(30 * time.Second)
@@ -137,10 +164,15 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 				log.Info("session", rss.SsId, "contractNum", completeNum, "errorNum", errorNum)
 				if completeNum == numShards {
+					fmt.Println("1 Submit, rss.SsId = ", rss.SsId)
+
+					//所有shard全部转账成功，然后确认并返回
 					err := Submit(rss, fileSize, offlineSigning)
 					if err != nil {
 						_ = rss.To(sessions.RssToErrorEvent, err)
 					}
+
+					fmt.Println("2 Submit, rss.SsId = ", rss.SsId)
 					return
 				} else if errorNum > 0 {
 					_ = rss.To(sessions.RssToErrorEvent, errors.New("there are some error shards"))

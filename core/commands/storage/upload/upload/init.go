@@ -9,7 +9,6 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
 	"github.com/TRON-US/go-btfs/core/commands/storage/helper"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/escrow"
 	uh "github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
@@ -58,12 +57,15 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("storage host api not enabled")
 		}
 
+		fmt.Println("1 recv upload init ")
 		// reject contract if holding contracts is above threshold
 		hm := NewHostManager(ctxParams.Cfg)
 		shardSize, err := strconv.ParseInt(req.Arguments[7], 10, 64)
 		if err != nil {
 			return err
 		}
+		fmt.Println("2 recv upload init, shardSize = ", shardSize)
+
 		accept, err := hm.AcceptContract(ctxParams.N.Repo.Datastore(), ctxParams.N.Identity.String(), shardSize)
 		if err != nil {
 			return err
@@ -72,10 +74,14 @@ the shard and replies back to client for the next challenge step.`,
 			return errors.New("too many initialized contracts")
 		}
 
+		fmt.Println("3 recv upload init, shardSize = ", shardSize)
+
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
 		}
+
+		fmt.Println("4 recv upload init, shardSize, price = ", shardSize, price)
 		settings, err := helper.GetHostStorageConfig(ctxParams.Ctx, ctxParams.N)
 		if err != nil {
 			return err
@@ -83,6 +89,8 @@ the shard and replies back to client for the next challenge step.`,
 		if uint64(price) < settings.StoragePriceAsk {
 			return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
 		}
+		fmt.Println("5 recv upload init, shardSize, settings = ", shardSize, settings)
+
 		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
 			return fmt.Errorf("fail to get peer ID from request")
@@ -100,6 +108,8 @@ the shard and replies back to client for the next challenge step.`,
 		if err != nil {
 			return err
 		}
+
+		fmt.Println("6 recv upload init, shardSize, requestPid, shardIndex = ", shardSize, requestPid, shardIndex)
 
 		halfSignedEscrowContString := req.Arguments[4]
 		halfSignedGuardContString := req.Arguments[5]
@@ -121,6 +131,8 @@ the shard and replies back to client for the next challenge step.`,
 		if peerId = pid.String(); len(req.Arguments) >= 10 {
 			peerId = req.Arguments[9]
 		}
+
+		fmt.Println("7 recv upload init, shardSize = ", shardSize)
 		payerPubKey, err := crypto.GetPubKeyFromPeerId(peerId)
 		if err != nil {
 			return err
@@ -134,33 +146,36 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
-		var signedEscrowContractBytes []byte
-		if halfSignedEscrowContString != "" {
-			var halfSignedEscrowContBytes []byte
-			halfSignedEscrowContBytes = []byte(halfSignedEscrowContString)
-			halfSignedEscrowContract := &escrowpb.SignedEscrowContract{}
-			err = proto.Unmarshal(halfSignedEscrowContBytes, halfSignedEscrowContract)
-			if err != nil {
-				return err
-			}
-			escrowContract := halfSignedEscrowContract.GetContract()
-			ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
-			if !ok || err != nil {
-				return fmt.Errorf("can't verify escrow contract: %v", err)
-			}
-			// Verify price
-			storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
-			totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
-			if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
-				return errors.New("invalid contract")
-			}
-			// Sign on the contract
-			signedEscrowContractBytes, err = signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
-				ctxParams.N.PrivateKey)
-			if err != nil {
-				return err
-			}
-		}
+		fmt.Println("8 recv upload init, shardSize = ", shardSize)
+
+		//
+		//var signedEscrowContractBytes []byte
+		//if halfSignedEscrowContString != "" {
+		//	var halfSignedEscrowContBytes []byte
+		//	halfSignedEscrowContBytes = []byte(halfSignedEscrowContString)
+		//	halfSignedEscrowContract := &escrowpb.SignedEscrowContract{}
+		//	err = proto.Unmarshal(halfSignedEscrowContBytes, halfSignedEscrowContract)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	escrowContract := halfSignedEscrowContract.GetContract()
+		//	ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
+		//	if !ok || err != nil {
+		//		return fmt.Errorf("can't verify escrow contract: %v", err)
+		//	}
+		//	// Verify price
+		//	storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
+		//	totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
+		//	if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
+		//		return errors.New("invalid contract")
+		//	}
+		//	// Sign on the contract
+		//	signedEscrowContractBytes, err = signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
+		//		ctxParams.N.PrivateKey)
+		//	if err != nil {
+		//		return err
+		//	}
+		//}
 		signedGuardContract, err := signGuardContract(&guardContractMeta, halfSignedGuardContract, ctxParams.N.PrivateKey)
 		if err != nil {
 			return err
@@ -170,22 +185,30 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
+		fmt.Println("9 recv upload init, shardSize = ", shardSize)
+
 		go func() {
 			tmp := func() error {
 				shard, err := sessions.GetHostShard(ctxParams, signedGuardContract.ContractId)
 				if err != nil {
 					return err
 				}
+
+				fmt.Println("1 /storage/upload/recvcontract, requestPid = ", requestPid)
+
 				_, err = remote.P2PCall(ctxParams.Ctx, ctxParams.N, ctxParams.Api, requestPid, "/storage/upload/recvcontract",
 					ssId,
 					shardHash,
 					shardIndex,
-					signedEscrowContractBytes,
+					nil,
 					signedGuardContractBytes,
 				)
 				if err != nil {
 					return err
 				}
+
+				fmt.Println("2 /storage/upload/recvcontract, requestPid = ", requestPid)
+
 				// check payment
 				signedContractID, err := signContractID(signedGuardContract.ContractId, ctxParams.N.PrivateKey)
 				if err != nil {
@@ -194,6 +217,7 @@ the shard and replies back to client for the next challenge step.`,
 				// check payment
 				if halfSignedEscrowContString != "" {
 					paidIn := make(chan bool)
+					fmt.Println("3 checkPaymentFromClient, requestPid = ", requestPid)
 					go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
 					paid := <-paidIn
 					if !paid {
@@ -205,22 +229,32 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
-				err = shard.Contract(signedEscrowContractBytes, tmp)
-				if err != nil {
-					return err
-				}
+				//err = shard.Contract(signedEscrowContractBytes, tmp)
+				//if err != nil {
+				//	return err
+				//}
+
+				fmt.Println("4 downloadShardFromClient, requestPid = ", requestPid)
+
 				fileHash := req.Arguments[1]
 				err = downloadShardFromClient(ctxParams, halfSignedGuardContract, fileHash, shardHash)
 				if err != nil {
 					return err
 				}
+
+				fmt.Println("5 challengeShard, requestPid = ", requestPid)
+
 				err = challengeShard(ctxParams, fileHash, false, &guardContractMeta)
 				if err != nil {
 					return err
 				}
+
+				fmt.Println("5 Complete, requestPid = ", requestPid)
 				if err := shard.Complete(); err != nil {
 					return err
 				}
+
+				fmt.Println("6 Completed, requestPid = ", requestPid)
 				return nil
 			}()
 			if tmp != nil {
@@ -327,22 +361,22 @@ func challengeShard(ctxParams *uh.ContextParams, fileHash string, isRepair bool,
 	return nil
 }
 
-func signEscrowContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
-	privKey ic.PrivKey) ([]byte, error) {
-	sig, err := crypto.Sign(privKey, contract)
-	if err != nil {
-		return nil, err
-	}
-	if signedContract == nil {
-		signedContract = escrow.NewSignedContract(contract)
-	}
-	signedContract.SellerSignature = sig
-	signedBytes, err := proto.Marshal(signedContract)
-	if err != nil {
-		return nil, err
-	}
-	return signedBytes, nil
-}
+//func signEscrowContractAndMarshal(contract *escrowpb.EscrowContract, signedContract *escrowpb.SignedEscrowContract,
+//	privKey ic.PrivKey) ([]byte, error) {
+//	sig, err := crypto.Sign(privKey, contract)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if signedContract == nil {
+//		signedContract = escrow.NewSignedContract(contract)
+//	}
+//	signedContract.SellerSignature = sig
+//	signedBytes, err := proto.Marshal(signedContract)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return signedBytes, nil
+//}
 
 func signGuardContract(meta *guardpb.ContractMeta, cont *guardpb.Contract, privKey ic.PrivKey) (*guardpb.Contract, error) {
 	signedBytes, err := crypto.Sign(privKey, meta)
@@ -361,23 +395,23 @@ func signGuardContract(meta *guardpb.ContractMeta, cont *guardpb.Contract, privK
 	return cont, err
 }
 
-func signGuardContractAndMarshal(meta *guardpb.ContractMeta, cont *guardpb.Contract, privKey ic.PrivKey) ([]byte, error) {
-	signedBytes, err := crypto.Sign(privKey, meta)
-	if err != nil {
-		return nil, err
-	}
-
-	if cont == nil {
-		cont = &guardpb.Contract{
-			ContractMeta:   *meta,
-			LastModifyTime: time.Now(),
-		}
-	} else {
-		cont.LastModifyTime = time.Now()
-	}
-	cont.HostSignature = signedBytes
-	return proto.Marshal(cont)
-}
+//func signGuardContractAndMarshal(meta *guardpb.ContractMeta, cont *guardpb.Contract, privKey ic.PrivKey) ([]byte, error) {
+//	signedBytes, err := crypto.Sign(privKey, meta)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	if cont == nil {
+//		cont = &guardpb.Contract{
+//			ContractMeta:   *meta,
+//			LastModifyTime: time.Now(),
+//		}
+//	} else {
+//		cont.LastModifyTime = time.Now()
+//	}
+//	cont.HostSignature = signedBytes
+//	return proto.Marshal(cont)
+//}
 
 // call escrow service to check if payment is received or not
 func checkPaymentFromClient(ctxParams *uh.ContextParams, paidIn chan bool, contractID *escrowpb.SignedContractID) {
@@ -448,25 +482,27 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 }
 
 func isPaidin(ctxParams *uh.ContextParams, contractID *escrowpb.SignedContractID) (bool, error) {
-	var signedPayinRes *escrowpb.SignedPayinStatus
-	ctx, _ := helper.NewGoContext(ctxParams.Ctx)
-	err := grpc.EscrowClient(ctxParams.Cfg.Services.EscrowDomain).WithContext(ctx,
-		func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
-			res, err := client.IsPaid(ctx, contractID)
-			if err != nil {
-				return err
-			}
-			err = escrow.VerifyEscrowRes(ctxParams.Cfg, res.Status, res.EscrowSignature)
-			if err != nil {
-				return err
-			}
-			signedPayinRes = res
-			return nil
-		})
-	if err != nil {
-		return false, err
-	}
-	return signedPayinRes.Status.Paid, nil
+	//var signedPayinRes *escrowpb.SignedPayinStatus
+	//ctx, _ := helper.NewGoContext(ctxParams.Ctx)
+	//err := grpc.EscrowClient(ctxParams.Cfg.Services.EscrowDomain).WithContext(ctx,
+	//	func(ctx context.Context, client escrowpb.EscrowServiceClient) error {
+	//		res, err := client.IsPaid(ctx, contractID)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		err = escrow.VerifyEscrowRes(ctxParams.Cfg, res.Status, res.EscrowSignature)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		signedPayinRes = res
+	//		return nil
+	//	})
+	//if err != nil {
+	//	return false, err
+	//}
+	//return signedPayinRes.Status.Paid, nil
+
+	return true, nil
 }
 
 func signContractID(id string, privKey ic.PrivKey) (*escrowpb.SignedContractID, error) {

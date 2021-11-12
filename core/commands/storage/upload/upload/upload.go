@@ -102,6 +102,8 @@ Use status command to check for completion:
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		fmt.Println("btfs storage upload fileHash...")
+
 		ssId := uuid.New().String()
 		ctxParams, err := helper.ExtractContextParams(req, env)
 		if err != nil {
@@ -131,6 +133,7 @@ Use status command to check for completion:
 
 		fileHash := req.Arguments[0]
 		shardHashes, fileSize, shardSize, err := helper.GetShardHashes(ctxParams, fileHash)
+		fmt.Println("upload, shardHashes, fileSize, shardSize --- ", shardHashes, fileSize, shardSize)
 		if err != nil {
 			return err
 		}
