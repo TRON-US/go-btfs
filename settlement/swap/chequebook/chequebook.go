@@ -15,7 +15,6 @@ import (
 	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
 	"github.com/TRON-US/go-btfs/transaction"
-	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -341,10 +340,8 @@ func (s *service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Ha
 	request := &transaction.TxRequest{
 		To:          &s.address,
 		Data:        callData,
-		GasPrice:    sctx.GetGasPrice(ctx),
-		GasLimit:    95000,
 		Value:       big.NewInt(0),
-		Description: fmt.Sprintf("chequebook withdrawal of %d BZZ", amount),
+		Description: fmt.Sprintf("chequebook withdrawal of %d WBTT", amount),
 	}
 
 	txHash, err := s.transactionService.Send(ctx, request)
@@ -368,8 +365,6 @@ func (s *service) PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	request := &transaction.TxRequest{
 		To:          &s.address,
 		Data:        callData,
-		GasPrice:    sctx.GetGasPrice(ctx),
-		GasLimit:    95000,
 		Value:       big.NewInt(0),
 		Description: "pre withdraw",
 	}
