@@ -259,19 +259,19 @@ func prepareTransaction(ctx context.Context, request *TxRequest, from common.Add
 		}
 
 		gasLimit += gasLimit / 5 // add 20% on top
-		fmt.Printf("gasLimit%+v", gasLimit)
-
 	} else {
 		gasLimit = request.GasLimit
 	}
 
 	var gasPrice *big.Int
 	if request.GasPrice == nil {
-		gasPrice, err = backend.SuggestGasPrice(ctx)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("gasPrice%+v", gasPrice)
+		/*
+			gasPrice, err = backend.SuggestGasPrice(ctx)
+			if err != nil {
+				return nil, err
+			}
+		*/
+		gasPrice = big.NewInt(300000000000000)
 	} else {
 		gasPrice = request.GasPrice
 	}
