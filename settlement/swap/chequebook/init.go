@@ -53,7 +53,7 @@ func checkBalance(
 		insufficientETH := ethBalance.Cmp(minimumEth) < 0
 
 		if insufficientETH {
-			fmt.Printf("cannot continue until there is sufficient BTT (for Gas) available on 0x%x \n", overlayEthAddress)
+			fmt.Printf("cannot continue until there is sufficient (100 Suggested) BTT (for Gas) available on 0x%x \n", overlayEthAddress)
 			select {
 			case <-time.After(balanceCheckBackoffDuration):
 			case <-timeoutCtx.Done():
