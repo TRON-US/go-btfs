@@ -11,7 +11,6 @@ import (
 	"math/big"
 
 	"github.com/TRON-US/go-btfs/transaction"
-	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -141,16 +140,9 @@ func (s *cashoutService) CashCheque(ctx context.Context, chequebook common.Addre
 	if err != nil {
 		return common.Hash{}, err
 	}
-	lim := sctx.GetGasLimit(ctx)
-	if lim == 0 {
-		// fix for out of gas errors
-		lim = 300000
-	}
 	request := &transaction.TxRequest{
 		To:          &chequebook,
 		Data:        callData,
-		GasPrice:    sctx.GetGasPrice(ctx),
-		GasLimit:    lim,
 		Value:       big.NewInt(0),
 		Description: "cheque cashout",
 	}
