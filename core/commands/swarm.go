@@ -7,6 +7,7 @@ import (
 	"io"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -97,6 +98,14 @@ var swarmPeersCmd = &cmds.Command{
 				Peer: c.ID().Pretty(),
 			}
 
+			s := strings.Split(c.Address().String(), "/")
+			if len(s) >= 4 {
+				ip := s[2]
+				if len(ip) >= 4 {
+					ci.Ip = ip
+				}
+			}
+
 			if verbose || direction {
 				// set direction
 				ci.Direction = c.Direction()
@@ -170,6 +179,7 @@ type connInfo struct {
 	Muxer     string
 	Direction inet.Direction
 	Streams   []streamInfo
+	Ip        string
 }
 
 func (ci *connInfo) Less(i, j int) bool {

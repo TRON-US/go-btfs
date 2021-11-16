@@ -135,6 +135,28 @@ func GetShardHashes(params *ContextParams, fileHash string) (shardHashes []strin
 	return
 }
 
+func GetShardHashesCopy(params *ContextParams, fileHash string, copyNum int) (shardHashes []string, fileSize int64,
+	shardSize int64, err error) {
+
+	fileCid, err := cidlib.Parse(fileHash)
+	if err != nil {
+		return nil, -1, -1, err
+	}
+	sz, err := getNodeSizeFromCid(params.Ctx, fileCid, params.Api)
+	if err != nil {
+		return nil, -1, -1, err
+	}
+	fileSize = int64(sz)
+	shardSize = fileSize
+
+	shardHashes = make([]string, 0)
+	for i := 0; i < copyNum+1; i++ {
+		shardHashes = append(shardHashes, fileHash)
+	}
+
+	return
+}
+
 func GetPriceAndMinStorageLength(params *ContextParams) (price int64, storageLength int, err error) {
 	ns, err := helper.GetHostStorageConfig(params.Ctx, params.N)
 	if err != nil {
