@@ -73,6 +73,8 @@ type Service interface {
 	WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.Int, error)
 	// BTTBalanceOf retrieve the btt balance of addr
 	BTTBalanceOf(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error)
+	// TotalPaidOut return total pay out of the chequebook
+	TotalPaidOut(ctx context.Context) (*big.Int, error)
 }
 
 type service struct {
@@ -424,4 +426,7 @@ func (s *service) WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.
 
 func (s *service) BTTBalanceOf(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error) {
 	return s.transactionService.BttBalanceAt(ctx, address, block)
+}
+func (s *service) TotalPaidOut(ctx context.Context) (*big.Int, error) {
+	return s.contract.TotalPaidOut(ctx)
 }

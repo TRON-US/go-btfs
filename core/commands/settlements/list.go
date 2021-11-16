@@ -19,6 +19,7 @@ type settlementsResponse struct {
 	TotalSettlementReceived  *big.Int             `json:"totalReceived"`
 	TotalSettlementSent      *big.Int             `json:"totalSent"`
 	SettlementReceivedCashed *big.Int             `json:"settlement_received_cashed"`
+	SettlementSentCashed     *big.Int             `json:"settlement_sent_cashed"`
 	Settlements              []settlementResponse `json:"settlements"`
 }
 
@@ -76,10 +77,15 @@ var ListSettlementCmd = &cmds.Command{
 			i++
 		}
 
+		totalPaidOut, err := chain.SettleObject.ChequebookService.TotalPaidOut(context.Background())
+		if err != nil {
+			return err
+		}
 		rsp := settlementsResponse{
 			TotalSettlementReceived:  totalReceived,
 			TotalSettlementSent:      totalSent,
 			SettlementReceivedCashed: totalReceivedCashed,
+			SettlementSentCashed:     totalPaidOut,
 			Settlements:              settlementResponsesArray,
 		}
 
