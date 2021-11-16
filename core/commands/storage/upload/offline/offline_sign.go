@@ -58,16 +58,16 @@ to the upload session.`,
 		switch req.Arguments[4] {
 		case sessions.RssSubmitStatus:
 			cm = uh.BalanceChanMaps
-		case sessions.RssSubmitBalanceReqSignedStatus:
-			cm = uh.SignedChannelCommitChanMaps
-		case sessions.RssPayStatus:
-			cm = uh.PayinReqChanMaps
+		//case sessions.RssSubmitBalanceReqSignedStatus:
+		//	cm = uh.SignedChannelCommitChanMaps
 		case sessions.RssGuardStatus:
 			cm = uh.FileMetaChanMaps
 		case sessions.RssGuardFileMetaSignedStatus:
 			cm = uh.QuestionsChanMaps
 		case sessions.RssWaitUploadStatus:
 			cm = uh.WaitUploadChanMap
+		//case sessions.RssPayStatus:
+			//cm = uh.PayinReqChanMaps
 		default:
 			return errors.New("wrong status:" + req.Arguments[4])
 		}

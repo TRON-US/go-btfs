@@ -111,7 +111,7 @@ the shard and replies back to client for the next challenge step.`,
 
 		fmt.Println("6 recv upload init, shardSize, requestPid, shardIndex = ", shardSize, requestPid, shardIndex)
 
-		halfSignedEscrowContString := req.Arguments[4]
+		//halfSignedEscrowContString := req.Arguments[4]
 		halfSignedGuardContString := req.Arguments[5]
 
 		var halfSignedGuardContBytes []byte
@@ -148,34 +148,6 @@ the shard and replies back to client for the next challenge step.`,
 
 		fmt.Println("8 recv upload init, shardSize = ", shardSize)
 
-		//
-		//var signedEscrowContractBytes []byte
-		//if halfSignedEscrowContString != "" {
-		//	var halfSignedEscrowContBytes []byte
-		//	halfSignedEscrowContBytes = []byte(halfSignedEscrowContString)
-		//	halfSignedEscrowContract := &escrowpb.SignedEscrowContract{}
-		//	err = proto.Unmarshal(halfSignedEscrowContBytes, halfSignedEscrowContract)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	escrowContract := halfSignedEscrowContract.GetContract()
-		//	ok, err = crypto.Verify(payerPubKey, escrowContract, halfSignedEscrowContract.GetBuyerSignature())
-		//	if !ok || err != nil {
-		//		return fmt.Errorf("can't verify escrow contract: %v", err)
-		//	}
-		//	// Verify price
-		//	storageLength := guardContractMeta.RentEnd.Sub(guardContractMeta.RentStart).Hours() / 24
-		//	totalPay := uh.TotalPay(guardContractMeta.ShardFileSize, guardContractMeta.Price, int(storageLength))
-		//	if escrowContract.Amount != guardContractMeta.Amount || totalPay != guardContractMeta.Amount {
-		//		return errors.New("invalid contract")
-		//	}
-		//	// Sign on the contract
-		//	signedEscrowContractBytes, err = signEscrowContractAndMarshal(escrowContract, halfSignedEscrowContract,
-		//		ctxParams.N.PrivateKey)
-		//	if err != nil {
-		//		return err
-		//	}
-		//}
 		signedGuardContract, err := signGuardContract(&guardContractMeta, halfSignedGuardContract, ctxParams.N.PrivateKey)
 		if err != nil {
 			return err
@@ -209,33 +181,6 @@ the shard and replies back to client for the next challenge step.`,
 
 				fmt.Println("2 /storage/upload/recvcontract, requestPid = ", requestPid)
 
-				// check payment
-				signedContractID, err := signContractID(signedGuardContract.ContractId, ctxParams.N.PrivateKey)
-				if err != nil {
-					return err
-				}
-				// check payment
-				if halfSignedEscrowContString != "" {
-					paidIn := make(chan bool)
-					fmt.Println("3 checkPaymentFromClient, requestPid = ", requestPid)
-					go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
-					paid := <-paidIn
-					if !paid {
-						return fmt.Errorf("contract is not paid: %s", signedGuardContract.ContractId)
-					}
-				}
-				tmp := new(guardpb.Contract)
-				err = proto.Unmarshal(signedGuardContractBytes, tmp)
-				if err != nil {
-					return err
-				}
-				//err = shard.Contract(signedEscrowContractBytes, tmp)
-				//if err != nil {
-				//	return err
-				//}
-
-				fmt.Println("4 downloadShardFromClient, requestPid = ", requestPid)
-
 				fileHash := req.Arguments[1]
 				err = downloadShardFromClient(ctxParams, halfSignedGuardContract, fileHash, shardHash)
 				if err != nil {
@@ -248,6 +193,29 @@ the shard and replies back to client for the next challenge step.`,
 				if err != nil {
 					return err
 				}
+
+
+				//// check payment from client, 检测是否收到支票（单独协程去做，让结果通过channel返回）
+				//signedContractID, err := signContractID(signedGuardContract.ContractId, ctxParams.N.PrivateKey)
+				//if err != nil {
+				//	return err
+				//}
+				//// check payment
+				//if halfSignedEscrowContString != "" {
+				//	paidIn := make(chan bool)
+				//	fmt.Println("3 checkPaymentFromClient, requestPid = ", requestPid)
+				//	go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
+				//	paid := <-paidIn
+				//	if !paid {
+				//		return fmt.Errorf("contract is not paid: %s", signedGuardContract.ContractId)
+				//	}
+				//}
+				//tmp := new(guardpb.Contract)
+				//err = proto.Unmarshal(signedGuardContractBytes, tmp)
+				//if err != nil {
+				//	return err
+				//}
+
 
 				fmt.Println("5 Complete, requestPid = ", requestPid)
 				if err := shard.Complete(); err != nil {

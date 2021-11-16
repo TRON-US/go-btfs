@@ -134,6 +134,15 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 	if err != nil {
 		return err
 	}
+
+	if err := rss.To(sessions.RssToPayEvent); err != nil {
+		return err
+	}
+	// pay in cheque
+	if err = payInCheque(rss); err != nil {
+		return err
+	}
+
 	if err := rss.To(sessions.RssToCompleteEvent); err != nil {
 		return err
 	} else {
