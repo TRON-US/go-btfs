@@ -7,7 +7,6 @@ import (
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/bigint"
 	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/settlement"
 )
@@ -56,8 +55,8 @@ var PeerSettlementCmd = &cmds.Command{
 
 		rsp := settlementResponse{
 			Peer:               peerID,
-			SettlementReceived: bigint.Wrap(received),
-			SettlementSent:     bigint.Wrap(sent),
+			SettlementReceived: received,
+			SettlementSent:     sent,
 		}
 		return cmds.EmitOnce(res, &rsp)
 	},

@@ -3,6 +3,7 @@ package cheque
 import (
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -12,7 +13,7 @@ import (
 )
 
 type ChequeBttBalanceCmdRet struct {
-	Balance string `json:"balance"`
+	Balance *big.Int `json:"balance"`
 }
 
 var ChequeBttBalanceCmd = &cmds.Command{
@@ -31,13 +32,13 @@ var ChequeBttBalanceCmd = &cmds.Command{
 		}
 
 		return cmds.EmitOnce(res, &ChequeBttBalanceCmdRet{
-			Balance: balance.String(),
+			Balance: balance,
 		})
 	},
 	Type: &ChequeBttBalanceCmdRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeBttBalanceCmdRet) error {
-			_, err := fmt.Fprintf(w, "the balance is: %s btt", out.Balance)
+			_, err := fmt.Fprintf(w, "the balance is: %v\n", out.Balance)
 			return err
 		}),
 	},
