@@ -6,20 +6,19 @@ import (
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/bigint"
 	"github.com/TRON-US/go-btfs/chain"
 )
 
 type settlementResponse struct {
-	Peer               string         `json:"peer"`
-	SettlementReceived *bigint.BigInt `json:"received"`
-	SettlementSent     *bigint.BigInt `json:"sent"`
+	Peer               string   `json:"peer"`
+	SettlementReceived *big.Int `json:"received"`
+	SettlementSent     *big.Int `json:"sent"`
 }
 
 type settlementsResponse struct {
-	TotalSettlementReceived  *bigint.BigInt       `json:"totalReceived"`
-	TotalSettlementSent      *bigint.BigInt       `json:"totalSent"`
-	SettlementReceivedCashed *bigint.BigInt       `json:"settlement_received_cashed"`
+	TotalSettlementReceived  *big.Int             `json:"totalReceived"`
+	TotalSettlementSent      *big.Int             `json:"totalSent"`
+	SettlementReceivedCashed *big.Int             `json:"settlement_received_cashed"`
 	Settlements              []settlementResponse `json:"settlements"`
 }
 
@@ -47,8 +46,8 @@ var ListSettlementCmd = &cmds.Command{
 		for a, b := range settlementsSent {
 			settlementResponses[a] = settlementResponse{
 				Peer:               a,
-				SettlementSent:     bigint.Wrap(b),
-				SettlementReceived: bigint.Wrap(big.NewInt(0)),
+				SettlementSent:     b,
+				SettlementReceived: big.NewInt(0),
 			}
 			totalSent.Add(b, totalSent)
 		}
@@ -56,13 +55,13 @@ var ListSettlementCmd = &cmds.Command{
 		for a, b := range settlementsReceived {
 			if _, ok := settlementResponses[a]; ok {
 				t := settlementResponses[a]
-				t.SettlementReceived = bigint.Wrap(b)
+				t.SettlementReceived = b
 				settlementResponses[a] = t
 			} else {
 				settlementResponses[a] = settlementResponse{
 					Peer:               a,
-					SettlementSent:     bigint.Wrap(big.NewInt(0)),
-					SettlementReceived: bigint.Wrap(b),
+					SettlementSent:     big.NewInt(0),
+					SettlementReceived: b,
 				}
 			}
 			totalReceived.Add(b, totalReceived)
@@ -78,9 +77,9 @@ var ListSettlementCmd = &cmds.Command{
 		}
 
 		rsp := settlementsResponse{
-			TotalSettlementReceived:  bigint.Wrap(totalReceived),
-			TotalSettlementSent:      bigint.Wrap(totalSent),
-			SettlementReceivedCashed: bigint.Wrap(totalReceivedCashed),
+			TotalSettlementReceived:  totalReceived,
+			TotalSettlementSent:      totalSent,
+			SettlementReceivedCashed: totalReceivedCashed,
 			Settlements:              settlementResponsesArray,
 		}
 
