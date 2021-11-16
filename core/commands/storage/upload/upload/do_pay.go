@@ -1,11 +1,14 @@
 package upload
 
 import (
+	"fmt"
+	"math/big"
+
+	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
-	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 )
 
-func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResult, fileSize int64, offlineSigning bool) error {
+func pay(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) error {
 	if err := rss.To(sessions.RssToPayEvent); err != nil {
 		return err
 	}
@@ -74,7 +77,27 @@ func pay(rss *sessions.RenterSession, result *escrowpb.SignedSubmitContractResul
 
 	//付款给对方
 	{
-		//
+		//chain.SettleObject.SwapService.Settle(peers[0].ID.String(), big.NewInt(10))
+
+		for i, hash := range rss.ShardHashes {
+			shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, hash, i)
+			if err != nil {
+				return err
+			}
+			c, err := shard.Contracts()
+			if err != nil {
+				return err
+			}
+
+			amount := c.SignedGuardContract.Amount
+			host := c.SignedGuardContract.HostPid
+			err = chain.SettleObject.SwapService.Settle(host, big.NewInt(amount))
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("pay Settle, host, amount: ", host, amount)
+		}
 	}
 
 	return doGuard(rss, nil, fileSize, offlineSigning)

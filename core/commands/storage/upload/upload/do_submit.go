@@ -1,10 +1,12 @@
 package upload
 
 import (
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
+	"fmt"
+	"math/big"
 
+	"github.com/TRON-US/go-btfs/chain"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
-	"github.com/tron-us/protobuf/proto"
 )
 
 func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) error {
@@ -20,14 +22,14 @@ func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) er
 		return err
 	}
 
-	res, err := doSubmit(rss, offlineSigning)
+	err := doSubmit(rss)
 	if err != nil {
 		return err
 	}
-	return pay(rss, res, fileSize, offlineSigning)
+	return pay(rss, fileSize, offlineSigning)
 }
 
-func doSubmit(rss *sessions.RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {
+func doSubmitOld(rss *sessions.RenterSession, offlineSigning bool) (*escrowpb.SignedSubmitContractResult, error) {
 	//bs, t, err := prepareContracts(rss, rss.ShardHashes)
 	//if err != nil {
 	//	return nil, err
@@ -52,28 +54,28 @@ func doSubmit(rss *sessions.RenterSession, offlineSigning bool) (*escrowpb.Signe
 	return nil, nil
 }
 
-func prepareContracts(rss *sessions.RenterSession, shardHashes []string) ([]*escrowpb.SignedEscrowContract, int64, error) {
-	var signedContracts []*escrowpb.SignedEscrowContract
-	var totalPrice int64
-	for i, hash := range shardHashes {
-		shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, hash, i)
-		if err != nil {
-			return nil, 0, err
-		}
-		c, err := shard.Contracts()
-		if err != nil {
-			return nil, 0, err
-		}
-		escrowContract := &escrowpb.SignedEscrowContract{}
-		err = proto.Unmarshal(c.SignedEscrowContract, escrowContract)
-		if err != nil {
-			return nil, 0, err
-		}
-		signedContracts = append(signedContracts, escrowContract)
-		totalPrice += c.SignedGuardContract.Amount
-	}
-	return signedContracts, totalPrice, nil
-}
+//func prepareContracts(rss *sessions.RenterSession, shardHashes []string) ([]*escrowpb.SignedEscrowContract, int64, error) {
+//	var signedContracts []*escrowpb.SignedEscrowContract
+//	var totalPrice int64
+//	for i, hash := range shardHashes {
+//		shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, hash, i)
+//		if err != nil {
+//			return nil, 0, err
+//		}
+//		c, err := shard.Contracts()
+//		if err != nil {
+//			return nil, 0, err
+//		}
+//		escrowContract := &escrowpb.SignedEscrowContract{}
+//		err = proto.Unmarshal(c.SignedEscrowContract, escrowContract)
+//		if err != nil {
+//			return nil, 0, err
+//		}
+//		signedContracts = append(signedContracts, escrowContract)
+//		totalPrice += c.SignedGuardContract.Amount
+//	}
+//	return signedContracts, totalPrice, nil
+//}
 //
 //func submitContractToEscrow(ctx context.Context, configuration *config.Config,
 //	request *escrowpb.EscrowContractRequest) (*escrowpb.SignedSubmitContractResult, error) {
@@ -99,3 +101,37 @@ func prepareContracts(rss *sessions.RenterSession, shardHashes []string) ([]*esc
 //		})
 //	return response, err
 //}
+
+
+func prepareAmount(rss *sessions.RenterSession, shardHashes []string) (int64, error) {
+	var totalPrice int64
+	for i, hash := range shardHashes {
+		shard, err := sessions.GetRenterShard(rss.CtxParams, rss.SsId, hash, i)
+		if err != nil {
+			return 0, err
+		}
+		c, err := shard.Contracts()
+		if err != nil {
+			return 0, err
+		}
+		totalPrice += c.SignedGuardContract.Amount
+	}
+	return totalPrice, nil
+}
+
+func doSubmit(rss *sessions.RenterSession) error {
+	amount, err := prepareAmount(rss, rss.ShardHashes)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("doSubmit, prepareAmount ", amount, err)
+	err = chain.SettleObject.ChequebookService.CheckBalance(big.NewInt(amount))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("doSubmit, CheckBalance ", amount, err)
+
+	return nil
+}
