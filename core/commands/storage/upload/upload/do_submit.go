@@ -17,7 +17,7 @@ func Submit(rss *sessions.RenterSession, fileSize int64, offlineSigning bool) er
 	if err != nil {
 		return err
 	}
-	return doGuard(rss, nil, fileSize, offlineSigning)
+	return doGuardAndPay(rss, nil, fileSize, offlineSigning)
 }
 
 func prepareAmount(rss *sessions.RenterSession, shardHashes []string) (int64, error) {

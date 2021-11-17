@@ -20,7 +20,7 @@ import (
 	cidlib "github.com/ipfs/go-cid"
 )
 
-func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
+func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
 	fmt.Println("1 doGuard ")
 	if err := rss.To(sessions.RssToGuardEvent); err != nil {
 		return err

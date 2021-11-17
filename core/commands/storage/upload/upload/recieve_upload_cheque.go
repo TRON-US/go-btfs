@@ -48,6 +48,16 @@ var StorageUploadChequeCmd = &cmds.Command{
 			return err
 		}
 
+		// if receive cheque of contractId, set shard paid status.
+		if contractId := req.Arguments[2]; len(contractId) > 0 {
+			fmt.Println("receive upload cheque, setPaidStatus... contractId ", contractId)
+
+			err := setPaidStatus(ctxParams, contractId)
+			if err != nil{
+				return err
+			}
+		}
+
 		return nil
 	},
 }

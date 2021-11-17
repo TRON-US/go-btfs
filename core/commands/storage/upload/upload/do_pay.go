@@ -20,7 +20,8 @@ func payInCheque(rss *sessions.RenterSession) error {
 
 		amount := c.SignedGuardContract.Amount
 		host := c.SignedGuardContract.HostPid
-		err = chain.SettleObject.SwapService.Settle(host, big.NewInt(amount))
+		contractId := c.SignedGuardContract.ContractId
+		err = chain.SettleObject.SwapService.SettleContractId(host, big.NewInt(amount), contractId)
 		if err != nil {
 			return err
 		}

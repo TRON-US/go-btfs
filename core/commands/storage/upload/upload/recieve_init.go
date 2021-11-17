@@ -449,6 +449,18 @@ func downloadShardFromClient(ctxParams *uh.ContextParams, guardContract *guardpb
 	return nil
 }
 
+func setPaidStatus(ctxParams *uh.ContextParams, contractId string) error {
+	shard, err := sessions.GetHostShard(ctxParams, contractId)
+	if err != nil {
+		return err
+	}
+	if err := shard.ReceivePayCheque(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func isPaidin(ctxParams *uh.ContextParams, contractID *escrowpb.SignedContractID) (bool, error) {
 	//var signedPayinRes *escrowpb.SignedPayinStatus
 	//ctx, _ := helper.NewGoContext(ctxParams.Ctx)

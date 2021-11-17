@@ -25,10 +25,12 @@ const (
 
 	hshInitStatus     = "init"
 	hshContractStatus = "contract"
+	hshPayStatus      = "paid"
 	hshCompleteStatus = "complete"
 	hshErrorStatus    = "error"
 
 	hshToContractEvent = "to-contract"
+	hshToPayEvent = "to-pay"
 	hshToCompleteEvent = "to-complete"
 	hshToErrorEvent    = "to-error"
 )
@@ -36,7 +38,8 @@ const (
 var (
 	hostShardFsmEvents = fsm.Events{
 		{Name: hshToContractEvent, Src: []string{hshInitStatus}, Dst: hshContractStatus},
-		{Name: hshToCompleteEvent, Src: []string{hshContractStatus}, Dst: hshCompleteStatus},
+		{Name: hshToPayEvent, Src: []string{hshContractStatus}, Dst: hshPayStatus},
+		{Name: hshToCompleteEvent, Src: []string{hshPayStatus}, Dst: hshCompleteStatus},
 		{Name: hshToErrorEvent, Src: []string{hshInitStatus, hshContractStatus}, Dst: hshToErrorEvent},
 	}
 	hostShardsInMem = cmap.New()
@@ -119,6 +122,10 @@ func (hs *HostShard) doContract(signedEscrowContract []byte, signedGuardContract
 
 func (hs *HostShard) Contract(signedEscrowContract []byte, signedGuardContract *guardpb.Contract) error {
 	return hs.fsm.Event(hshToContractEvent, signedEscrowContract, signedGuardContract)
+}
+
+func (hs *HostShard) ReceivePayCheque() error {
+	return hs.fsm.Event(hshToPayEvent)
 }
 
 func (hs *HostShard) Complete() error {
