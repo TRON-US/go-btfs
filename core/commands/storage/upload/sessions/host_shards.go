@@ -125,6 +125,7 @@ func (hs *HostShard) Contract(signedEscrowContract []byte, signedGuardContract *
 }
 
 func (hs *HostShard) ReceivePayCheque() error {
+	fmt.Printf("ReceivePayCheque fsm = %+v, cur=%+v \n", hs.fsm, hs.fsm.Current())
 	return hs.fsm.Event(hshToPayEvent)
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"strconv"
 	"strings"
@@ -137,10 +138,18 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		price, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
+
+		//price + N month
+		_, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
 		if err != nil {
 			return err
 		}
+		priceObj, err := chain.SettleObject.OracleService.GetPrice(context.Background())
+		if err != nil {
+			return err
+		}
+		price := priceObj.Int64()
+
 		if !ctxParams.Cfg.Experimental.HostsSyncEnabled {
 			_ = SyncHosts(ctxParams)
 		}
