@@ -226,8 +226,11 @@ LOOP:
 				}
 			}
 			id, err := peer.IDB58Decode(host.NodeId)
-			if err != nil || int64(host.StoragePriceAsk) > price {
-				p.needHigherPrice = true
+			//if err != nil || int64(host.StoragePriceAsk) > price {
+			//	p.needHigherPrice = true
+			//	continue
+			//}
+			if err != nil {
 				continue
 			}
 			ctx, _ := context.WithTimeout(p.ctx, 3*time.Second)

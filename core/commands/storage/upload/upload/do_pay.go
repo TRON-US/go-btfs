@@ -2,10 +2,11 @@ package upload
 
 import (
 	"fmt"
-	"github.com/TRON-US/go-btfs/chain"
-	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 	"math/big"
 	"time"
+
+	"github.com/TRON-US/go-btfs/chain"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
 )
 
 func payInCheque(rss *sessions.RenterSession) error {
@@ -22,6 +23,7 @@ func payInCheque(rss *sessions.RenterSession) error {
 		amount := c.SignedGuardContract.Amount
 		host := c.SignedGuardContract.HostPid
 		contractId := c.SignedGuardContract.ContractId
+
 		fmt.Println("payInCheque Settle, host, amount, contractId: ", host, amount, contractId)
 		err = chain.SettleObject.SwapService.Settle(host, big.NewInt(amount), contractId)
 		if err != nil {

@@ -21,13 +21,9 @@ import (
 )
 
 func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
-	fmt.Println("1 doGuard ")
 	if err := rss.To(sessions.RssToGuardEvent); err != nil {
 		return err
 	}
-
-	fmt.Println("2 doGuard GetRenterShard")
-
 	cts := make([]*guardpb.Contract, 0)
 	selectedHosts := make([]string, 0)
 	for i, h := range rss.ShardHashes {
@@ -45,7 +41,6 @@ func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult,
 		cts = append(cts, contracts.SignedGuardContract)
 		selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)
 	}
-	fmt.Println("3 doGuard NewFileStatus")
 	fsStatus, err := NewFileStatus(cts, rss.CtxParams.Cfg, cts[0].ContractMeta.RenterPid, rss.Hash, fileSize)
 	if err != nil {
 		return err
@@ -83,12 +78,8 @@ func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult,
 			}
 		}()
 	}
-	fmt.Println("4 doGuard Remove")
 	signBytes := <-cb
 	uh.FileMetaChanMaps.Remove(rss.SsId)
-
-	fmt.Println("5 doGuard submitFileMetaHelper")
-
 	if err := rss.To(sessions.RssToGuardFileMetaSignedEvent); err != nil {
 		return err
 	}
@@ -96,15 +87,11 @@ func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult,
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("6 doGuard PrepFileChallengeQuestions")
-
 	qs, err := guard.PrepFileChallengeQuestions(rss, fsStatus, rss.Hash, offlineSigning, fsStatus.RenterPid)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("7 doGuard SendChallengeQuestions")
 	fcid, err := cidlib.Parse(rss.Hash)
 	if err != nil {
 		return err
@@ -113,8 +100,6 @@ func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult,
 	if err != nil {
 		return fmt.Errorf("failed to send challenge questions to guard: [%v]", err)
 	}
-
-	fmt.Println("8 doGuard SendChallengeQuestions")
 	return waitUpload(rss, offlineSigning, fsStatus, false)
 }
 

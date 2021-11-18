@@ -134,7 +134,7 @@ func (hs *HostShard) IsContractStatus() bool {
 }
 
 func (hs *HostShard) ReceivePayCheque() error {
-	fmt.Printf("ReceivePayCheque fsm = %+v, cur=%+v \n", hs.fsm, hs.fsm.Current())
+	fmt.Printf("ReceivePayCheque cur=%+v \n", hs.fsm.Current())
 	return hs.fsm.Event(hshToPayEvent)
 }
 

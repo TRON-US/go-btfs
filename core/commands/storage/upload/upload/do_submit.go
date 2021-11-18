@@ -1,7 +1,6 @@
 package upload
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/TRON-US/go-btfs/chain"
@@ -42,13 +41,9 @@ func doSubmit(rss *sessions.RenterSession) error {
 		return err
 	}
 
-	fmt.Println("doSubmit, prepareAmount ", amount, err)
 	err = chain.SettleObject.ChequebookService.CheckBalance(big.NewInt(amount))
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("doSubmit, CheckBalance ", amount, err)
-
 	return nil
 }
