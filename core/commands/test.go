@@ -31,7 +31,7 @@ var testOptionDesc = "test it, get hosts or send cheque."
 
 var TestCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "test it.",
+		Tagline:          "test it.",
 		ShortDescription: `test it. get hosts or send cheque.`,
 	},
 
@@ -40,8 +40,8 @@ var TestCmd = &cmds.Command{
 	Type:     testCmd.Type,
 
 	Subcommands: map[string]*cmds.Command{
-		"hosts": testHostsCmd,
-		"cheque":  testChequeCmd,
+		"hosts":        testHostsCmd,
+		"cheque":       testChequeCmd,
 		"p2phandshake": testP2pShakeCmd,
 	},
 }
@@ -207,4 +207,3 @@ func testWrite(w io.Writer, prefix string, status string) error {
 	}
 	return nil
 }
-

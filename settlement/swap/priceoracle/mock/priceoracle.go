@@ -12,12 +12,12 @@ import (
 )
 
 type Service struct {
-	rate   *big.Int
+	rate *big.Int
 }
 
 func New(rate *big.Int) Service {
 	return Service{
-		rate:   rate,
+		rate: rate,
 	}
 }
 

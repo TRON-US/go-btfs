@@ -132,7 +132,6 @@ func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *cheque
 	return s.accounting.NotifyPaymentReceived(peer, amount)
 }
 
-
 // ReceiveCheque is called by the swap protocol if a cheque is received.
 func (s *Service) PutChequebookWhenSendCheque(peer string, chequebook common.Address) (err error) {
 	// check this is the same chequebook for this peer as previously
@@ -150,7 +149,6 @@ func (s *Service) PutChequebookWhenSendCheque(peer string, chequebook common.Add
 
 	return nil
 }
-
 
 // Pay initiates a payment to the given peer
 func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int, contractId string) {

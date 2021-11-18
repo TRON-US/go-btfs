@@ -18,9 +18,9 @@ var (
 )
 
 type (
-	HTTPRequestIDKey  struct{}
-	gasPriceKey       struct{}
-	gasLimitKey       struct{}
+	HTTPRequestIDKey struct{}
+	gasPriceKey      struct{}
+	gasLimitKey      struct{}
 )
 
 func SetGasLimit(ctx context.Context, limit uint64) context.Context {

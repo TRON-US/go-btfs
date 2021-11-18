@@ -67,7 +67,7 @@ to the upload session.`,
 		case sessions.RssWaitUploadStatus:
 			cm = uh.WaitUploadChanMap
 		//case sessions.RssPayStatus:
-			//cm = uh.PayinReqChanMaps
+		//cm = uh.PayinReqChanMaps
 		default:
 			return errors.New("wrong status:" + req.Arguments[4])
 		}

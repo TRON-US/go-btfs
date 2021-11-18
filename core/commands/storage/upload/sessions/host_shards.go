@@ -30,7 +30,7 @@ const (
 	hshErrorStatus    = "error"
 
 	hshToContractEvent = "to-contract"
-	hshToPayEvent = "to-pay"
+	hshToPayEvent      = "to-pay"
 	hshToCompleteEvent = "to-complete"
 	hshToErrorEvent    = "to-error"
 )

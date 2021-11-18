@@ -131,7 +131,7 @@ func (s *cashoutService) paidOut(ctx context.Context, chequebook, beneficiary co
 
 // CashCheque sends a cashout transaction for the last cheque of the chequebook
 func (s *cashoutService) CashCheque(ctx context.Context, chequebook common.Address) (common.Hash, error) {
-		cheque, err := s.chequeStore.LastReceivedCheque(chequebook)
+	cheque, err := s.chequeStore.LastReceivedCheque(chequebook)
 	if err != nil {
 		return common.Hash{}, err
 	}

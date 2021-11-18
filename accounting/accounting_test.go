@@ -20,11 +20,10 @@ import (
 )
 
 type paymentCall struct {
-	peer   string
-	amount *big.Int
+	peer       string
+	amount     *big.Int
 	contractId string
 }
-
 
 //TestAccountingCallSettlementTooSoon
 func TestAccountingCallSettlementTooSoon(t *testing.T) {

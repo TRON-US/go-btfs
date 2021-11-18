@@ -14,7 +14,7 @@ import (
 
 var StorageUploadChequeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "receive upload cheque, do with cheque, and return it.",
+		Tagline:          "receive upload cheque, do with cheque, and return it.",
 		ShortDescription: `receive upload cheque, deal it and return it.`,
 	},
 	Arguments: []cmds.Argument{
@@ -54,7 +54,7 @@ var StorageUploadChequeCmd = &cmds.Command{
 		// if receive cheque of contractId, set shard paid status.
 		if contractId := req.Arguments[2]; len(contractId) > 0 {
 			err := setPaidStatus(ctxParams, contractId)
-			if err != nil{
+			if err != nil {
 				return err
 			}
 		}

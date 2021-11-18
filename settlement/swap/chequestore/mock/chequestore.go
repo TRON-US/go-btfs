@@ -8,8 +8,8 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Service is the mock chequeStore service.
