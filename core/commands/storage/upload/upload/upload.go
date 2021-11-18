@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/chain"
+	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/offline"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
@@ -76,6 +77,7 @@ Use status command to check for completion:
 	},
 	Subcommands: map[string]*cmds.Command{
 		"init":              StorageUploadInitCmd,
+		"cheque":            StorageUploadChequeCmd,
 		"recvcontract":      StorageUploadRecvContractCmd,
 		"status":            StorageUploadStatusCmd,
 		"repair":            StorageUploadRepairCmd,
@@ -136,10 +138,9 @@ Use status command to check for completion:
 
 		fileHash := req.Arguments[0]
 		shardHashes, fileSize, shardSize, err = helper.GetShardHashes(ctxParams, fileHash)
-		fmt.Printf("rs get, shardHashes:%v fileSize:%v, shardSize:%v, err:%v \n",
-			shardHashes, fileSize, shardSize, err)
-
-		if len(shardHashes) == 0 && fileSize == -1 && shardSize == -1 &&
+		fmt.Printf("btfs storage upload fileHash: shardHashes:%v fileSize:%v, shardSize:%v, err:%v \n", shardHashes, fileSize, shardSize, err)
+		
+    if len(shardHashes) == 0 && fileSize == -1 && shardSize == -1 &&
 			strings.HasPrefix(err.Error(), "invalid hash: file must be reed-solomon encoded") {
 			if copyNum, ok := req.Options[copyName].(int); ok {
 				shardHashes, fileSize, shardSize, err = helper.GetShardHashesCopy(ctxParams, fileHash, copyNum)
@@ -150,10 +151,18 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		price, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
+
+		//price + N month
+		_, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
 		if err != nil {
 			return err
 		}
+		priceObj, err := chain.SettleObject.OracleService.GetPrice(context.Background())
+		if err != nil {
+			return err
+		}
+		price := priceObj.Int64()
+
 		if !ctxParams.Cfg.Experimental.HostsSyncEnabled {
 			_ = SyncHosts(ctxParams)
 		}
