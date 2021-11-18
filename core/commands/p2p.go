@@ -603,14 +603,7 @@ var P2phandshakeCmd = &cmds.Command{
 		fmt.Printf("receive msg from peer %s, the chain-id is %d OverlayAddress is %x \n", peer_id, chain_id, chain.ChainObject.OverlayAddress)
 
 		output := &pb.Handshake{}
-
 		output.Beneficiary = chain.ChainObject.OverlayAddress.Bytes()
-		//return Beneficiary address
-		receiver, err := chain.SettleObject.ChequebookService.Receiver()
-		if err != nil {
-			return err
-		}
-		output.Receiver = receiver.Bytes()
 
 		return cmds.EmitOnce(res, output)
 	},

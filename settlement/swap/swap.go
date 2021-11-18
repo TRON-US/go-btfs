@@ -26,8 +26,6 @@ var log = logging.Logger("swap")
 var (
 	// ErrWrongChequebook is the error if a peer uses a different chequebook from before.
 	ErrWrongChequebook = errors.New("wrong chequebook")
-	// ErrWrongReceiver is the error if a peer uses a different receiver.
-	ErrWrongReceiver = errors.New("wrong receiver")
 	// ErrUnknownBeneficary is the error if a peer has never announced a beneficiary.
 	ErrUnknownBeneficary = errors.New("unknown beneficiary for peer")
 	// ErrChequeValueTooLow is the error a peer issued a cheque not covering 1 accounting credit
@@ -100,14 +98,6 @@ func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *cheque
 
 	if known && expectedChequebook != cheque.Chequebook {
 		return ErrWrongChequebook
-	}
-
-	receiver, err := s.chequebook.Receiver()
-	if err != nil {
-		return err
-	}
-	if receiver != cheque.Receiver {
-		return ErrWrongReceiver
 	}
 
 	receivedAmount, err := s.chequeStore.ReceiveCheque(ctx, cheque, exchangeRate)
@@ -370,7 +360,7 @@ func (s *Service) CashCheque(ctx context.Context, peer string) (common.Hash, err
 	if !known {
 		return common.Hash{}, chequebook.ErrNoCheque
 	}
-	return s.cashout.CashCheque(ctx, chequebookAddress)
+	return s.cashout.CashCheque(ctx, chequebookAddress, s.chequebook.Address())
 }
 
 // CashoutStatus gets the status of the latest cashout transaction for the peers chequebook

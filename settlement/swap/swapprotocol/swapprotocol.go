@@ -48,7 +48,7 @@ var (
 
 type SendChequeFunc chequebook.SendChequeFunc
 
-type IssueFunc func(ctx context.Context, beneficiary common.Address, receiver common.Address, amount *big.Int, sendChequeFunc chequebook.SendChequeFunc) (*big.Int, error)
+type IssueFunc func(ctx context.Context, beneficiary common.Address, amount *big.Int, sendChequeFunc chequebook.SendChequeFunc) (*big.Int, error)
 
 // (context.Context, common.Address, *big.Int, chequebook.SendChequeFunc) (*big.Int, error)
 
@@ -185,11 +185,10 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 		return nil, ErrGetBeneficiary
 	}
 
-	fmt.Printf("send cheque: /p2p/handshake ok,beneficiary:%v,receiver:%v ", common.BytesToAddress(handshakeInfo.Beneficiary),
-		common.BytesToAddress(handshakeInfo.Receiver))
+	fmt.Println("send cheque: /p2p/handshake ok, ", common.BytesToAddress(handshakeInfo.Beneficiary))
 
 	// issue cheque call with provided callback for sending cheque to finish transaction
-	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary), common.BytesToAddress(handshakeInfo.Receiver), sentAmount, func(cheque *chequebook.SignedCheque) error {
+	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary), sentAmount, func(cheque *chequebook.SignedCheque) error {
 		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
 		encodedCheque, err := json.Marshal(cheque)
 		if err != nil {

@@ -14,7 +14,6 @@ type ChainInfoRet struct {
 	ChainId            int64  `json:"chain_id"`
 	NodeAddr           string `json:"node_addr"`
 	ChequeBookAddr     string `json:"cheque_book_addr"`
-	ReceiverAddr       string `json:"receiver_addr"`
 	WalletImportPrvKey string `json:"wallet_import_prv_key"`
 }
 
@@ -23,10 +22,6 @@ var ChequeChainInfoCmd = &cmds.Command{
 		Tagline: "Show current chain info.",
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		receiver, err := chain.SettleObject.ChequebookService.Receiver()
-		if err != nil {
-			return err
-		}
 		cctx := env.(*oldcmds.Context)
 		cfg, err := cctx.GetConfig()
 		if err != nil {
@@ -45,15 +40,14 @@ var ChequeChainInfoCmd = &cmds.Command{
 			ChainId:            chain.ChainObject.ChainID,
 			NodeAddr:           chain.ChainObject.OverlayAddress.String(),
 			ChequeBookAddr:     chain.SettleObject.ChequebookService.Address().String(),
-			ReceiverAddr:       receiver.String(),
 			WalletImportPrvKey: keys.HexPrivateKey,
 		})
 	},
 	Type: &ChainInfoRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChainInfoRet) error {
-			_, err := fmt.Fprintf(w, "chain id:\t%d\nnode addr:\t%s\nchequebook addr:\t%s\nreceiver addr:\t%s\nwallet import private key:\t%s\n", out.ChainId,
-				out.NodeAddr, out.ChequeBookAddr, out.ReceiverAddr, out.WalletImportPrvKey)
+			_, err := fmt.Fprintf(w, "chain id:\t%d\nnode addr:\t%s\nchequebook addr:\t%s\nwallet import private key:\t%s\n", out.ChainId,
+				out.NodeAddr, out.ChequeBookAddr, out.WalletImportPrvKey)
 			return err
 		}),
 	},

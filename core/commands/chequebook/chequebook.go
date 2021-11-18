@@ -15,8 +15,6 @@ Chequebook services include balance, address, withdraw, deposit operations.`,
 		"address":     ChequeBookAddrCmd,
 		"withdraw":    ChequeBookWithdrawCmd,
 		"deposit":     ChequeBookDepositCmd,
-		"receiver":    ChequeBookReceiverCmd,
-		"setreceiver": ChequeBookSetReceiverCmd,
 		"wbttbalance": ChequeBookWbttBalanceCmd,
 	},
 }
