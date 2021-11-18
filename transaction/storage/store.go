@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("storage: not found")
+	ErrNotFound = errors.New("storage: not found")
 	//ErrInvalidChunk    = errors.New("storage: invalid chunk")
 	//ErrReferenceLength = errors.New("invalid reference length")
 )

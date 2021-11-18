@@ -20,7 +20,7 @@ import (
 var log = logging.Logger("accounting")
 
 // PayFunc is the function used for async monetary settlement
-type PayFunc func(context.Context, string, *big.Int)
+type PayFunc func(context.Context, string, *big.Int, string)
 
 // accountingPeer holds all in-memory accounting information for one peer.
 type accountingPeer struct {
@@ -70,10 +70,10 @@ func (a *Accounting) Close() error {
 }
 
 // Settle to a peer. The lock on the accountingPeer must be held when called.
-func (a *Accounting) Settle(toPeer string, paymentAmount *big.Int) error {
+func (a *Accounting) Settle(toPeer string, paymentAmount *big.Int, contractId string) error {
 	if paymentAmount.Cmp(a.minimumPayment) >= 0 {
 		a.wg.Add(1)
-		go a.payFunction(context.Background(), toPeer, paymentAmount)
+		go a.payFunction(context.Background(), toPeer, paymentAmount, contractId)
 	}
 
 	return nil

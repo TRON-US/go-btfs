@@ -27,7 +27,7 @@ type Interface interface {
 }
 
 type Accounting interface {
-	Settle(peer string, amount *big.Int) error
+	Settle(peer string, amount *big.Int, contractId string) error
 	NotifyPaymentReceived(peer string, amount *big.Int) error
 	NotifyPaymentSent(peer string, amount *big.Int, receivedError error)
 }

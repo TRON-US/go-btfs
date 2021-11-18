@@ -69,6 +69,8 @@ type Service interface {
 	PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	// GetWithdrawTime returns the time can withdraw
 	GetWithdrawTime(ctx context.Context) (*big.Int, error)
+	// CheckBalance
+	CheckBalance(amount *big.Int) (err error)
 	// WbttBalanceOf retrieve the addr balance
 	WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.Int, error)
 	// BTTBalanceOf retrieve the btt balance of addr
@@ -124,6 +126,21 @@ func (s *service) Deposit(ctx context.Context, amount *big.Int) (hash common.Has
 	}
 
 	return s.erc20Service.Transfer(ctx, s.address, amount)
+}
+
+// Deposit starts depositing erc20 token into the chequebook. This returns once the transactions has been broadcast.
+func (s *service) CheckBalance(amount *big.Int) (err error) {
+	balance, err := s.erc20Service.BalanceOf(context.Background(), s.ownerAddress)
+	if err != nil {
+		return err
+	}
+
+	// check we can afford this so we don't waste gas
+	if balance.Cmp(amount) < 0 {
+		return ErrInsufficientFunds
+	}
+
+	return nil
 }
 
 // Balance returns the token balance of the chequebook.
@@ -183,6 +200,7 @@ func (s *service) reserveTotalIssued(ctx context.Context, amount *big.Int) (*big
 
 	availableBalance, err := s.AvailableBalance(ctx)
 	if err != nil {
+		fmt.Println("reserveTotalIssued: availableBalance, err", availableBalance, err)
 		return nil, err
 	}
 

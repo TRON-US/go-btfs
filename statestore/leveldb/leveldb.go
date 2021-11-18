@@ -26,7 +26,7 @@ var _ storage.StateStorer = (*store)(nil)
 
 // store uses LevelDB to store values.
 type store struct {
-	db     *leveldb.DB
+	db *leveldb.DB
 }
 
 func NewInMemoryStateStore() (storage.StateStorer, error) {
@@ -36,7 +36,7 @@ func NewInMemoryStateStore() (storage.StateStorer, error) {
 	}
 
 	s := &store{
-		db:     ldb,
+		db: ldb,
 	}
 
 	if err := migrate(s); err != nil {
@@ -63,7 +63,7 @@ func NewStateStore(path string) (storage.StateStorer, error) {
 	}
 
 	s := &store{
-		db:     db,
+		db: db,
 	}
 
 	if err := migrate(s); err != nil {

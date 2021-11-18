@@ -20,7 +20,7 @@ import (
 	cidlib "github.com/ipfs/go-cid"
 )
 
-func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
+func doGuardAndPay(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileSize int64, offlineSigning bool) error {
 	if err := rss.To(sessions.RssToGuardEvent); err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func doGuard(rss *sessions.RenterSession, res *escrowpb.SignedPayinResult, fileS
 		if err != nil {
 			return err
 		}
-		contracts.SignedGuardContract.EscrowSignature = res.EscrowSignature
-		contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
+		//contracts.SignedGuardContract.EscrowSignature = res.EscrowSignature
+		//contracts.SignedGuardContract.EscrowSignedTime = res.Result.EscrowSignedTime
 		contracts.SignedGuardContract.LastModifyTime = time.Now()
 		cts = append(cts, contracts.SignedGuardContract)
 		selectedHosts = append(selectedHosts, contracts.SignedGuardContract.HostPid)

@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/TRON-US/go-btfs/chain"
+	"github.com/TRON-US/go-btfs/core/commands/storage/hosts"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/offline"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
@@ -131,13 +132,22 @@ Use status command to check for completion:
 
 		fileHash := req.Arguments[0]
 		shardHashes, fileSize, shardSize, err := helper.GetShardHashes(ctxParams, fileHash)
+		fmt.Println("btfs storage upload fileHash:  shardHashes, fileSize, shardSize --- ", shardHashes, fileSize, shardSize)
 		if err != nil {
 			return err
 		}
-		price, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
+
+		//price + N month
+		_, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
 		if err != nil {
 			return err
 		}
+		priceObj, err := chain.SettleObject.OracleService.GetPrice(context.Background())
+		if err != nil {
+			return err
+		}
+		price := priceObj.Int64()
+
 		if !ctxParams.Cfg.Experimental.HostsSyncEnabled {
 			_ = SyncHosts(ctxParams)
 		}

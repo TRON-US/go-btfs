@@ -53,4 +53,3 @@ var ListSendChequesCmd = &cmds.Command{
 		}),
 	},
 }
-
