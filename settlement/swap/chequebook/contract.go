@@ -137,28 +137,6 @@ func (c *chequebookContract) TotalPaidOut(ctx context.Context) (*big.Int, error)
 	return abi.ConvertType(results[0], new(big.Int)).(*big.Int), nil
 }
 
-func (c *chequebookContract) Receiver(ctx context.Context) (common.Address, error) {
-	callData, err := chequebookABI.Pack("receiver")
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	output, err := c.transactionService.Call(ctx, &transaction.TxRequest{
-		To:   &c.address,
-		Data: callData,
-	})
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	results, err := chequebookABI.Unpack("receiver", output)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	return *abi.ConvertType(results[0], new(common.Address)).(*common.Address), nil
-}
-
 func (c *chequebookContract) SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error) {
 	callData, err := chequebookABI.Pack("setReciever", newReceiver)
 	if err != nil {
