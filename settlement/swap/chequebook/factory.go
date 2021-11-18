@@ -12,7 +12,6 @@ import (
 
 	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/transaction"
-	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/net/context"
@@ -73,8 +72,6 @@ func (c *factory) Deploy(ctx context.Context, issuer common.Address, defaultHard
 	request := &transaction.TxRequest{
 		To:          &c.address,
 		Data:        callData,
-		GasPrice:    sctx.GetGasPrice(ctx),
-		GasLimit:    175000,
 		Value:       big.NewInt(0),
 		Description: "chequebook deployment",
 	}

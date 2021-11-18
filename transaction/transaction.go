@@ -86,6 +86,8 @@ type Service interface {
 	ResendTransaction(ctx context.Context, txHash common.Hash) error
 	// CancelTransaction cancels a previously sent transaction by double-spending its nonce with zero-transfer one
 	CancelTransaction(ctx context.Context, originalTxHash common.Hash) (common.Hash, error)
+	// BalanceAt get btt balance from backend
+	BttBalanceAt(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error)
 }
 
 type transactionService struct {
@@ -257,17 +259,19 @@ func prepareTransaction(ctx context.Context, request *TxRequest, from common.Add
 		}
 
 		gasLimit += gasLimit / 5 // add 20% on top
-
 	} else {
 		gasLimit = request.GasLimit
 	}
 
 	var gasPrice *big.Int
 	if request.GasPrice == nil {
-		gasPrice, err = backend.SuggestGasPrice(ctx)
-		if err != nil {
-			return nil, err
-		}
+		/*
+			gasPrice, err = backend.SuggestGasPrice(ctx)
+			if err != nil {
+				return nil, err
+			}
+		*/
+		gasPrice = big.NewInt(300000000000000)
 	} else {
 		gasPrice = request.GasPrice
 	}
@@ -480,4 +484,8 @@ func (t *transactionService) Close() error {
 	t.cancel()
 	t.wg.Wait()
 	return nil
+}
+
+func (t *transactionService) BttBalanceAt(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error) {
+	return t.backend.BalanceAt(ctx, address, block)
 }

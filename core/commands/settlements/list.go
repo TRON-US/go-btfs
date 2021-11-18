@@ -1,24 +1,26 @@
 package settlement
 
 import (
+	"context"
 	"math/big"
 	"time"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	"github.com/TRON-US/go-btfs/bigint"
 	"github.com/TRON-US/go-btfs/chain"
 )
 
 type settlementResponse struct {
-	Peer               string         `json:"peer"`
-	SettlementReceived *bigint.BigInt `json:"received"`
-	SettlementSent     *bigint.BigInt `json:"sent"`
+	Peer               string   `json:"peer"`
+	SettlementReceived *big.Int `json:"received"`
+	SettlementSent     *big.Int `json:"sent"`
 }
 
 type settlementsResponse struct {
-	TotalSettlementReceived *bigint.BigInt       `json:"totalReceived"`
-	TotalSettlementSent     *bigint.BigInt       `json:"totalSent"`
-	Settlements             []settlementResponse `json:"settlements"`
+	TotalSettlementReceived  *big.Int             `json:"totalReceived"`
+	TotalSettlementSent      *big.Int             `json:"totalSent"`
+	SettlementReceivedCashed *big.Int             `json:"settlement_received_cashed"`
+	SettlementSentCashed     *big.Int             `json:"settlement_sent_cashed"`
+	Settlements              []settlementResponse `json:"settlements"`
 }
 
 var ListSettlementCmd = &cmds.Command{
@@ -37,6 +39,7 @@ var ListSettlementCmd = &cmds.Command{
 		}
 
 		totalReceived := big.NewInt(0)
+		totalReceivedCashed := big.NewInt(0)
 		totalSent := big.NewInt(0)
 
 		settlementResponses := make(map[string]settlementResponse)
@@ -44,8 +47,8 @@ var ListSettlementCmd = &cmds.Command{
 		for a, b := range settlementsSent {
 			settlementResponses[a] = settlementResponse{
 				Peer:               a,
-				SettlementSent:     bigint.Wrap(b),
-				SettlementReceived: bigint.Wrap(big.NewInt(0)),
+				SettlementSent:     b,
+				SettlementReceived: big.NewInt(0),
 			}
 			totalSent.Add(b, totalSent)
 		}
@@ -53,16 +56,19 @@ var ListSettlementCmd = &cmds.Command{
 		for a, b := range settlementsReceived {
 			if _, ok := settlementResponses[a]; ok {
 				t := settlementResponses[a]
-				t.SettlementReceived = bigint.Wrap(b)
+				t.SettlementReceived = b
 				settlementResponses[a] = t
 			} else {
 				settlementResponses[a] = settlementResponse{
 					Peer:               a,
-					SettlementSent:     bigint.Wrap(big.NewInt(0)),
-					SettlementReceived: bigint.Wrap(b),
+					SettlementSent:     big.NewInt(0),
+					SettlementReceived: b,
 				}
 			}
 			totalReceived.Add(b, totalReceived)
+			if has, err := chain.SettleObject.SwapService.HasCashoutAction(context.Background(), a); err == nil && has {
+				totalReceivedCashed.Add(b, totalReceivedCashed)
+			}
 		}
 		settlementResponsesArray := make([]settlementResponse, len(settlementResponses))
 		i := 0
@@ -71,10 +77,16 @@ var ListSettlementCmd = &cmds.Command{
 			i++
 		}
 
+		totalPaidOut, err := chain.SettleObject.ChequebookService.TotalPaidOut(context.Background())
+		if err != nil {
+			return err
+		}
 		rsp := settlementsResponse{
-			TotalSettlementReceived: bigint.Wrap(totalReceived),
-			TotalSettlementSent:     bigint.Wrap(totalSent),
-			Settlements:             settlementResponsesArray,
+			TotalSettlementReceived:  totalReceived,
+			TotalSettlementSent:      totalSent,
+			SettlementReceivedCashed: totalReceivedCashed,
+			SettlementSentCashed:     totalPaidOut,
+			Settlements:              settlementResponsesArray,
 		}
 
 		return cmds.EmitOnce(res, &rsp)

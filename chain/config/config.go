@@ -25,19 +25,13 @@ var (
 	tronOracleAddress  = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 	tronBatchAddress   = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 
-	bttcTestFactoryAddress = common.HexToAddress("0x392E3CE1B56c34ae0102C70cE3D640FFB9048A79")
+	bttcTestFactoryAddress = common.HexToAddress("0x50B2a60C256dFaCAa45FC8802aAd68594B5C0E01")
 	bttcTestOracleAddress  = common.HexToAddress("0x70fD2b6b6fEd65c8BC0D9Fd0656502Ffd05B6B0E")
 	bttcTestBatchAddress   = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
 
 	bttcFactoryAddress = common.HexToAddress("0x107742EB846b86CEaAF7528D5C85cddcad3e409A")
 	bttcOracleAddress  = common.HexToAddress("0x70fD2b6b6fEd65c8BC0D9Fd0656502Ffd05B6B0E")
 	bttcBatchAddress   = common.HexToAddress("0x0c9de531dcb38b758fe8a2c163444a5e54ee0db2")
-
-	// initailDeposit
-	ethInitialDeposit  = "100000000000000"
-	tronInitialDeposit = "100"
-	bttcInitialDeposit = "10000000000000000000"
-	testInitialDeposit = "100"
 
 	// deploy gas
 	ethDeploymentGas      = "10"
@@ -61,7 +55,6 @@ type ChainConfig struct {
 	CurrentFactory     common.Address
 	PriceOracleAddress common.Address
 	BatchAddress       common.Address
-	InitailDeposit     string
 	DeploymentGas      string
 	Endpoint           string
 }
@@ -74,7 +67,6 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.CurrentFactory = ethFactoryAddress
 		cfg.PriceOracleAddress = ethOracleAddress
 		cfg.DeploymentGas = ethDeploymentGas
-		cfg.InitailDeposit = ethInitialDeposit
 		cfg.Endpoint = ethEndpoint
 		cfg.BatchAddress = ethBatchAddress
 		return &cfg, true
@@ -83,7 +75,6 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.CurrentFactory = tronFactoryAddress
 		cfg.PriceOracleAddress = tronOracleAddress
 		cfg.DeploymentGas = tronDeploymentGas
-		cfg.InitailDeposit = tronInitialDeposit
 		cfg.Endpoint = tronEndpoint
 		cfg.BatchAddress = tronBatchAddress
 		return &cfg, true
@@ -92,7 +83,6 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.CurrentFactory = bttcFactoryAddress
 		cfg.PriceOracleAddress = bttcOracleAddress
 		cfg.DeploymentGas = bttcDeploymentGas
-		cfg.InitailDeposit = bttcInitialDeposit
 		cfg.Endpoint = bttcEndpoint
 		cfg.BatchAddress = bttcBatchAddress
 		return &cfg, true
@@ -101,7 +91,6 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.CurrentFactory = bttcTestFactoryAddress
 		cfg.PriceOracleAddress = bttcTestOracleAddress
 		cfg.DeploymentGas = bttcTestDeploymentGas
-		cfg.InitailDeposit = bttcInitialDeposit
 		cfg.Endpoint = bttcTestEndpoint
 		cfg.BatchAddress = bttcTestBatchAddress
 		return &cfg, true
@@ -110,7 +99,6 @@ func GetChainConfig(chainID int64) (*ChainConfig, bool) {
 		cfg.CurrentFactory = ethFactoryAddress
 		cfg.PriceOracleAddress = ethOracleAddress
 		cfg.DeploymentGas = testDeploymentGas
-		cfg.InitailDeposit = testInitialDeposit
 		cfg.Endpoint = testEndpoint
 		cfg.BatchAddress = ethBatchAddress
 		return &cfg, true

@@ -15,7 +15,6 @@ import (
 	conabi "github.com/TRON-US/go-btfs/chain/abi"
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
 	"github.com/TRON-US/go-btfs/transaction"
-	"github.com/TRON-US/go-btfs/transaction/sctx"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -64,12 +63,20 @@ type Service interface {
 	LastCheques() (map[common.Address]*SignedCheque, error)
 	// Receiver returns receiver address
 	Receiver() (common.Address, error)
+	// SetReceiver set new receiver
+	SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error)
 	// PreWithdraw
 	PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	// GetWithdrawTime returns the time can withdraw
 	GetWithdrawTime(ctx context.Context) (*big.Int, error)
 	// CheckBalance
 	CheckBalance(amount *big.Int) (err error)
+	// WbttBalanceOf retrieve the addr balance
+	WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.Int, error)
+	// BTTBalanceOf retrieve the btt balance of addr
+	BTTBalanceOf(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error)
+	// TotalPaidOut return total pay out of the chequebook
+	TotalPaidOut(ctx context.Context) (*big.Int, error)
 }
 
 type service struct {
@@ -359,10 +366,8 @@ func (s *service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Ha
 	request := &transaction.TxRequest{
 		To:          &s.address,
 		Data:        callData,
-		GasPrice:    sctx.GetGasPrice(ctx),
-		GasLimit:    95000,
 		Value:       big.NewInt(0),
-		Description: fmt.Sprintf("chequebook withdrawal of %d BZZ", amount),
+		Description: fmt.Sprintf("chequebook withdrawal of %d WBTT", amount),
 	}
 
 	txHash, err := s.transactionService.Send(ctx, request)
@@ -386,8 +391,6 @@ func (s *service) PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	request := &transaction.TxRequest{
 		To:          &s.address,
 		Data:        callData,
-		GasPrice:    sctx.GetGasPrice(ctx),
-		GasLimit:    95000,
 		Value:       big.NewInt(0),
 		Description: "pre withdraw",
 	}
@@ -429,4 +432,19 @@ func (s *service) GetWithdrawTime(ctx context.Context) (*big.Int, error) {
 	}
 
 	return time, nil
+}
+
+func (s *service) SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error) {
+	return s.contract.SetReceiver(ctx, newReceiver)
+}
+
+func (s *service) WBTTBalanceOf(ctx context.Context, addr common.Address) (*big.Int, error) {
+	return s.erc20Service.BalanceOf(ctx, addr)
+}
+
+func (s *service) BTTBalanceOf(ctx context.Context, address common.Address, block *big.Int) (*big.Int, error) {
+	return s.transactionService.BttBalanceAt(ctx, address, block)
+}
+func (s *service) TotalPaidOut(ctx context.Context) (*big.Int, error) {
+	return s.contract.TotalPaidOut(ctx)
 }

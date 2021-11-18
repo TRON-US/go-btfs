@@ -13,7 +13,7 @@ import (
 )
 
 type StorePriceRet struct {
-	Price string `json:"price"`
+	Price *big.Int `json:"price"`
 }
 
 type CashChequeRet struct {
@@ -58,6 +58,7 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 		"receive-history-peer": ChequeReceiveHistoryPeerCmd,
 		"receive-history-list": ChequeReceiveHistoryListCmd,
 		"chaininfo":            ChequeChainInfoCmd,
+		"bttbalance":           ChequeBttBalanceCmd,
 	},
 }
 
@@ -73,13 +74,13 @@ var StorePriceCmd = &cmds.Command{
 		}
 
 		return cmds.EmitOnce(res, &StorePriceRet{
-			Price: price.String(),
+			Price: price,
 		})
 	},
 	Type: StorePriceRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *StorePriceRet) error {
-			_, err := fmt.Fprintf(w, "the btfs store price: %s", out.Price)
+			_, err := fmt.Fprintf(w, "the btfs store price: %v\n", out.Price)
 			return err
 		}),
 	},

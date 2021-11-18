@@ -158,3 +158,20 @@ func (c *chequebookContract) Receiver(ctx context.Context) (common.Address, erro
 
 	return *abi.ConvertType(results[0], new(common.Address)).(*common.Address), nil
 }
+
+func (c *chequebookContract) SetReceiver(ctx context.Context, newReceiver common.Address) (common.Hash, error) {
+	callData, err := chequebookABI.Pack("setReciever", newReceiver)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	hash, err := c.transactionService.Send(ctx, &transaction.TxRequest{
+		To:   &c.address,
+		Data: callData,
+	})
+	if err != nil {
+		return hash, err
+	}
+
+	return hash, nil
+}

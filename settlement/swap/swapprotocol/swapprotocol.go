@@ -65,7 +65,6 @@ type Swap interface {
 	GetChainid() int64
 	PutBeneficiary(peer string, beneficiary common.Address) (common.Address, error)
 	Beneficiary(peer string) (beneficiary common.Address, known bool, err error)
-	PutChequebookWhenSendCheque(peer string, chequebook common.Address) error
 }
 
 // Service is the main implementation of the swap protocol.
@@ -159,7 +158,12 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 				return err
 			}
 
-			s.swap.PutChequebookWhenSendCheque(peerhostPid.String(), common.BytesToAddress(handshakeInfo.Beneficiary))
+			//store beneficiary to db
+			_, err = s.swap.PutBeneficiary(peer, common.BytesToAddress(handshakeInfo.Beneficiary))
+			if err != nil {
+				log.Warnf("put beneficiary (%s) error: %s", handshakeInfo.Beneficiary, err)
+				return err
+			}
 
 			return nil
 		}()
@@ -176,15 +180,14 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 
 	wg.Wait()
 
-	fmt.Printf("send cheque: /p2p/handshake ok,beneficiary:%v,receiver:%v \n", common.BytesToAddress(handshakeInfo.Beneficiary),
+	if times > 5 {
+		fmt.Println("get handshakeInfo from peer error", peerhostPid)
+		return nil, ErrGetBeneficiary
+	}
+
+	fmt.Printf("send cheque: /p2p/handshake ok,beneficiary:%v,receiver:%v ", common.BytesToAddress(handshakeInfo.Beneficiary),
 		common.BytesToAddress(handshakeInfo.Receiver))
 
-	//store beneficiary to db??
-	_, err = s.swap.PutBeneficiary(peer, common.BytesToAddress(handshakeInfo.Beneficiary))
-	if err != nil {
-		log.Warnf("put beneficiary (%s) error: %s", handshakeInfo.Beneficiary, err)
-		return nil, err
-	}
 	// issue cheque call with provided callback for sending cheque to finish transaction
 	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary), common.BytesToAddress(handshakeInfo.Receiver), sentAmount, func(cheque *chequebook.SignedCheque) error {
 		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
