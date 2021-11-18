@@ -193,6 +193,7 @@ func (s *service) reserveTotalIssued(ctx context.Context, amount *big.Int) (*big
 
 	availableBalance, err := s.AvailableBalance(ctx)
 	if err != nil {
+		fmt.Println("reserveTotalIssued: availableBalance, err", availableBalance, err)
 		return nil, err
 	}
 

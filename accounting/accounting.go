@@ -73,6 +73,7 @@ func (a *Accounting) Close() error {
 func (a *Accounting) Settle(toPeer string, paymentAmount *big.Int, contractId string) error {
 	if paymentAmount.Cmp(a.minimumPayment) >= 0 {
 		a.wg.Add(1)
+		fmt.Println("Settle toPeer, contractId = ", toPeer, contractId)
 		go a.payFunction(context.Background(), toPeer, paymentAmount, contractId)
 	}
 

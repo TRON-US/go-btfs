@@ -149,6 +149,7 @@ Use status command to check for completion:
 			return err
 		}
 		price := priceObj.Int64()
+		price = 125000
 
 		if !ctxParams.Cfg.Experimental.HostsSyncEnabled {
 			_ = SyncHosts(ctxParams)

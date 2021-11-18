@@ -390,11 +390,7 @@ func (s *Service) GetChainid() int64 {
 	return s.chainID
 }
 
-func (s *Service) Settle(toPeer string, paymentAmount *big.Int) error {
-	return s.accounting.Settle(toPeer, paymentAmount, "")
-}
-
-func (s *Service) SettleContractId(toPeer string, paymentAmount *big.Int, contractId string) error {
+func (s *Service) Settle(toPeer string, paymentAmount *big.Int, contractId string) error {
 	return s.accounting.Settle(toPeer, paymentAmount, contractId)
 }
 

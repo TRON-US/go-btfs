@@ -176,7 +176,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 
 	wg.Wait()
 
-	fmt.Printf("send cheque: /p2p/handshake ok,beneficiary:%v,receiver:%v ", common.BytesToAddress(handshakeInfo.Beneficiary),
+	fmt.Printf("send cheque: /p2p/handshake ok,beneficiary:%v,receiver:%v \n", common.BytesToAddress(handshakeInfo.Beneficiary),
 		common.BytesToAddress(handshakeInfo.Receiver))
 
 	//store beneficiary to db??
@@ -217,7 +217,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 						return err
 					}
 
-					fmt.Println("send cheque: when /storage/upload/cheque, hostPid = ", hostPid)
+					fmt.Println("begin send cheque: /storage/upload/cheque, hostPid, contractId = ", hostPid, contractId)
 
 					//send cheque
 					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
@@ -226,6 +226,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 						contractId,
 					)
 					if err != nil {
+						fmt.Println("end send cheque: /storage/upload/cheque, hostPid, contractId, err = ", hostPid, contractId, err)
 						return err
 					}
 					return nil

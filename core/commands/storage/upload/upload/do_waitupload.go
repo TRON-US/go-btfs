@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/contracts"
@@ -135,14 +137,26 @@ func waitUpload(rss *sessions.RenterSession, offlineSigning bool, fsStatus *guar
 		return err
 	}
 
+	// pay in cheque
+	var wg sync.WaitGroup
+	wg.Add(1)
 	if err := rss.To(sessions.RssToPayEvent); err != nil {
 		return err
 	}
-	// pay in cheque
-	if err = payInCheque(rss); err != nil {
-		return err
-	}
+	go func(){
+		err = func() error {
+			return payInCheque(rss)
+		}()
+		if err != nil {
+			fmt.Println("payInCheque error:", err)
+		}
+		fmt.Println("payInCheque done")
+		wg.Done()
+	}()
+	wg.Wait()
 
+
+	// Complete
 	if err := rss.To(sessions.RssToCompleteEvent); err != nil {
 		return err
 	} else {

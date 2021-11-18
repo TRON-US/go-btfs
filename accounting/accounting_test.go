@@ -22,6 +22,7 @@ import (
 type paymentCall struct {
 	peer   string
 	amount *big.Int
+	contractId string
 }
 
 
@@ -37,8 +38,8 @@ func TestAccountingCallSettlementTooSoon(t *testing.T) {
 
 	paychan := make(chan paymentCall, 1)
 
-	acc.SetPayFunc(func(ctx context.Context, peer string, amount *big.Int) {
-		paychan <- paymentCall{peer: peer, amount: amount}
+	acc.SetPayFunc(func(ctx context.Context, peer string, amount *big.Int, contractId string) {
+		paychan <- paymentCall{peer: peer, amount: amount, contractId: contractId}
 	})
 
 	peer1Addr := peer.ID("00112233").String()

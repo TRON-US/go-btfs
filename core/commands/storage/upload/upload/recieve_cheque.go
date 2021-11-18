@@ -19,7 +19,8 @@ var StorageUploadChequeCmd = &cmds.Command{
 	},
 	Arguments: []cmds.Argument{
 		cmds.StringArg("encoded-cheque", true, false, "encoded-cheque from peer-id."),
-		cmds.StringArg("upload-peer-id", false, false, "Peer id when upload sign is used."),
+		cmds.StringArg("amount", true, false, "amount"),
+		cmds.StringArg("contract-id", false, false, "contract-id."),
 	},
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -48,10 +49,10 @@ var StorageUploadChequeCmd = &cmds.Command{
 			return err
 		}
 
+		fmt.Printf("****** receive upload cheque, contractId =  %+v len=%v \n", req.Arguments[2], len(req.Arguments))
+
 		// if receive cheque of contractId, set shard paid status.
 		if contractId := req.Arguments[2]; len(contractId) > 0 {
-			fmt.Println("receive upload cheque, setPaidStatus... contractId ", contractId)
-
 			err := setPaidStatus(ctxParams, contractId)
 			if err != nil{
 				return err

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
@@ -57,15 +58,12 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("storage host api not enabled")
 		}
 
-		fmt.Println("1 recv upload init ")
 		// reject contract if holding contracts is above threshold
 		hm := NewHostManager(ctxParams.Cfg)
 		shardSize, err := strconv.ParseInt(req.Arguments[7], 10, 64)
 		if err != nil {
 			return err
 		}
-		fmt.Println("2 recv upload init, shardSize = ", shardSize)
-
 		accept, err := hm.AcceptContract(ctxParams.N.Repo.Datastore(), ctxParams.N.Identity.String(), shardSize)
 		if err != nil {
 			return err
@@ -73,15 +71,10 @@ the shard and replies back to client for the next challenge step.`,
 		if !accept {
 			return errors.New("too many initialized contracts")
 		}
-
-		fmt.Println("3 recv upload init, shardSize = ", shardSize)
-
 		price, err := strconv.ParseInt(req.Arguments[3], 10, 64)
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("4 recv upload init, shardSize, price = ", shardSize, price)
 		settings, err := helper.GetHostStorageConfig(ctxParams.Ctx, ctxParams.N)
 		if err != nil {
 			return err
@@ -89,7 +82,6 @@ the shard and replies back to client for the next challenge step.`,
 		if uint64(price) < settings.StoragePriceAsk {
 			return fmt.Errorf("price invalid: want: >=%d, got: %d", settings.StoragePriceAsk, price)
 		}
-		fmt.Println("5 recv upload init, shardSize, settings = ", shardSize, settings)
 
 		requestPid, ok := remote.GetStreamRequestRemotePeerID(req, ctxParams.N)
 		if !ok {
@@ -109,7 +101,7 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
-		fmt.Println("6 recv upload init, shardSize, requestPid, shardIndex = ", shardSize, requestPid, shardIndex)
+		fmt.Println("------ recv upload init, shardSize, requestPid, shardIndex = ", shardSize, requestPid, shardIndex)
 
 		//halfSignedEscrowContString := req.Arguments[4]
 		halfSignedGuardContString := req.Arguments[5]
@@ -132,7 +124,6 @@ the shard and replies back to client for the next challenge step.`,
 			peerId = req.Arguments[9]
 		}
 
-		fmt.Println("7 recv upload init, shardSize = ", shardSize)
 		payerPubKey, err := crypto.GetPubKeyFromPeerId(peerId)
 		if err != nil {
 			return err
@@ -146,8 +137,6 @@ the shard and replies back to client for the next challenge step.`,
 			return fmt.Errorf("can't verify guard contract: %v", err)
 		}
 
-		fmt.Println("8 recv upload init, shardSize = ", shardSize)
-
 		signedGuardContract, err := signGuardContract(&guardContractMeta, halfSignedGuardContract, ctxParams.N.PrivateKey)
 		if err != nil {
 			return err
@@ -157,16 +146,12 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
-		fmt.Println("9 recv upload init, shardSize = ", shardSize)
-
 		go func() {
 			tmp := func() error {
 				shard, err := sessions.GetHostShard(ctxParams, signedGuardContract.ContractId)
 				if err != nil {
 					return err
 				}
-
-				fmt.Println("1 /storage/upload/recvcontract, requestPid = ", requestPid)
 
 				_, err = remote.P2PCall(ctxParams.Ctx, ctxParams.N, ctxParams.Api, requestPid, "/storage/upload/recvcontract",
 					ssId,
@@ -179,7 +164,9 @@ the shard and replies back to client for the next challenge step.`,
 					return err
 				}
 
-				fmt.Println("2 /storage/upload/recvcontract, requestPid = ", requestPid)
+				if err := shard.Contract(nil, signedGuardContract); err != nil {
+					return err
+				}
 
 				fileHash := req.Arguments[1]
 				err = downloadShardFromClient(ctxParams, halfSignedGuardContract, fileHash, shardHash)
@@ -187,42 +174,34 @@ the shard and replies back to client for the next challenge step.`,
 					return err
 				}
 
-				fmt.Println("5 challengeShard, requestPid = ", requestPid)
-
 				err = challengeShard(ctxParams, fileHash, false, &guardContractMeta)
 				if err != nil {
 					return err
 				}
 
+				fmt.Println("recv upload init, wait for pay status, requestPid, shardIndex = ", requestPid, shardIndex)
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go func() {
+					tick := time.Tick(5 * time.Second)
+					for true {
+						select {
+						case <-tick:
+							if bl := shard.IsPayStatus(); bl {
+								fmt.Println("shard is paid")
+								wg.Done()
+								return
+							}
+						}
+					}
+				}()
+				wg.Wait()
 
-				//// check payment from client, 检测是否收到支票（单独协程去做，让结果通过channel返回）
-				//signedContractID, err := signContractID(signedGuardContract.ContractId, ctxParams.N.PrivateKey)
-				//if err != nil {
-				//	return err
-				//}
-				//// check payment
-				//if halfSignedEscrowContString != "" {
-				//	paidIn := make(chan bool)
-				//	fmt.Println("3 checkPaymentFromClient, requestPid = ", requestPid)
-				//	go checkPaymentFromClient(ctxParams, paidIn, signedContractID)
-				//	paid := <-paidIn
-				//	if !paid {
-				//		return fmt.Errorf("contract is not paid: %s", signedGuardContract.ContractId)
-				//	}
-				//}
-				//tmp := new(guardpb.Contract)
-				//err = proto.Unmarshal(signedGuardContractBytes, tmp)
-				//if err != nil {
-				//	return err
-				//}
-
-
-				fmt.Println("5 Complete, requestPid = ", requestPid)
+				fmt.Println("recv upload init, Complete! requestPid, shardIndex = ", requestPid, shardIndex)
 				if err := shard.Complete(); err != nil {
 					return err
 				}
 
-				fmt.Println("6 Completed, requestPid = ", requestPid)
 				return nil
 			}()
 			if tmp != nil {
@@ -454,8 +433,11 @@ func setPaidStatus(ctxParams *uh.ContextParams, contractId string) error {
 	if err != nil {
 		return err
 	}
-	if err := shard.ReceivePayCheque(); err != nil {
-		return err
+
+	if bl := shard.IsContractStatus(); bl {
+		if err := shard.ReceivePayCheque(); err != nil {
+			return err
+		}
 	}
 
 	return nil

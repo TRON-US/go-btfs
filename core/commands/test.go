@@ -132,7 +132,7 @@ var testChequeCmd = &cmds.Command{
 
 		toPeer := "16Uiu2HAm5TZ8547Xzbqoynt4cXGg6mjkCGoLBWnNxSXcoW7eTBdW"
 		//toPeer := nodes[0].NodeId
-		chain.SettleObject.SwapService.Settle(toPeer, big.NewInt(10))
+		chain.SettleObject.SwapService.Settle(toPeer, big.NewInt(10), "")
 
 		return cmds.EmitOnce(res, &TestOutput{"send cheque ok"})
 	},

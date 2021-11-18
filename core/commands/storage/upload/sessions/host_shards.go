@@ -124,6 +124,15 @@ func (hs *HostShard) Contract(signedEscrowContract []byte, signedGuardContract *
 	return hs.fsm.Event(hshToContractEvent, signedEscrowContract, signedGuardContract)
 }
 
+func (hs *HostShard) IsPayStatus() bool {
+	fmt.Println("IsPayStatus Current(),  hshPayStatus", hs.fsm.Current(), hshPayStatus)
+	return hs.fsm.Current() == hshPayStatus
+}
+func (hs *HostShard) IsContractStatus() bool {
+	fmt.Println("IsContractStatus Current(),  hshContractStatus", hs.fsm.Current(), hshContractStatus)
+	return hs.fsm.Current() == hshContractStatus
+}
+
 func (hs *HostShard) ReceivePayCheque() error {
 	fmt.Printf("ReceivePayCheque fsm = %+v, cur=%+v \n", hs.fsm, hs.fsm.Current())
 	return hs.fsm.Event(hshToPayEvent)
