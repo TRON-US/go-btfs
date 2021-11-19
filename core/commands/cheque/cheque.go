@@ -45,11 +45,9 @@ var ChequeCmd = &cmds.Command{
 Chequebook services include issue cheque to peer, receive cheque and store operations.`,
 	},
 	Subcommands: map[string]*cmds.Command{
-		"cash":        CashChequeCmd,
-		"cashstatus":  ChequeCashStatusCmd,
-		"price":       StorePriceCmd,
-		"prewithdraw": PreWithdrawCmd,
-		//"info":      ChequeInfo,
+		"cash":       CashChequeCmd,
+		"cashstatus": ChequeCashStatusCmd,
+		"price":      StorePriceCmd,
 
 		"send":                 SendChequeCmd,
 		"sendlist":             ListSendChequesCmd,
@@ -99,31 +97,6 @@ var CashChequeCmd = &cmds.Command{
 		// get the peer id
 		peerID := req.Arguments[0]
 		tx_hash, err := chain.SettleObject.SwapService.CashCheque(req.Context, peerID)
-		if err != nil {
-			return err
-		}
-
-		return cmds.EmitOnce(res, &CashChequeRet{
-			TxHash: tx_hash.String(),
-		})
-	},
-	Type: CashChequeRet{},
-	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *CashChequeRet) error {
-			_, err := fmt.Fprintf(w, "the hash of transaction: %s", out.TxHash)
-			return err
-		}),
-	},
-}
-
-var PreWithdrawCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline: "Pre withdraw chequebook balance",
-	},
-
-	RunTimeout: 5 * time.Minute,
-	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		tx_hash, err := chain.SettleObject.ChequebookService.PreWithdraw(req.Context)
 		if err != nil {
 			return err
 		}

@@ -61,8 +61,6 @@ type Service interface {
 	LastCheque(beneficiary common.Address) (*SignedCheque, error)
 	// LastCheque returns the last cheques for all beneficiaries.
 	LastCheques() (map[common.Address]*SignedCheque, error)
-	// PreWithdraw
-	PreWithdraw(ctx context.Context) (hash common.Hash, err error)
 	// GetWithdrawTime returns the time can withdraw
 	GetWithdrawTime(ctx context.Context) (*big.Int, error)
 	// WbttBalanceOf retrieve the addr balance
@@ -344,27 +342,6 @@ func (s *service) Withdraw(ctx context.Context, amount *big.Int) (hash common.Ha
 		Data:        callData,
 		Value:       big.NewInt(0),
 		Description: fmt.Sprintf("chequebook withdrawal of %d WBTT", amount),
-	}
-
-	txHash, err := s.transactionService.Send(ctx, request)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return txHash, nil
-}
-
-func (s *service) PreWithdraw(ctx context.Context) (hash common.Hash, err error) {
-	callData, err := chequebookABI.Pack("preWithdraw")
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	request := &transaction.TxRequest{
-		To:          &s.address,
-		Data:        callData,
-		Value:       big.NewInt(0),
-		Description: "pre withdraw",
 	}
 
 	txHash, err := s.transactionService.Send(ctx, request)
