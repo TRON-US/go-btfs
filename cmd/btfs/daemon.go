@@ -23,6 +23,7 @@ import (
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	config "github.com/TRON-US/go-btfs-config"
 	cserial "github.com/TRON-US/go-btfs-config/serialize"
+	"github.com/TRON-US/go-btfs/bindata"
 	"github.com/TRON-US/go-btfs/chain"
 	cc "github.com/TRON-US/go-btfs/chain/config"
 	utilmain "github.com/TRON-US/go-btfs/cmd/btfs/util"
@@ -444,6 +445,13 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	if err != nil {
 		fmt.Println("init settlement err: ", err)
 		return err
+	}
+
+	// init ip2location db
+	if err := bindata.Init(); err != nil {
+		// log init ip2location err
+		fmt.Println("init ip2location err: ", err)
+		log.Errorf("init ip2location err:%+v", err)
 	}
 
 	hValue, hasHval := req.Options[hValueKwd].(string)
