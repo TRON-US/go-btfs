@@ -47,6 +47,7 @@ type factory struct {
 }
 
 type simpleSwapDeployedEvent struct {
+	Issuer          common.Address
 	ContractAddress common.Address
 }
 

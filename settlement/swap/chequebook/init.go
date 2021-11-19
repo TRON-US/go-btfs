@@ -24,7 +24,7 @@ const (
 	chequebookKey           = "swap_chequebook"
 	ChequebookDeploymentKey = "swap_chequebook_transaction_deployment"
 
-	balanceCheckBackoffDuration = 60 * time.Second
+	balanceCheckBackoffDuration = 20 * time.Second
 	balanceCheckMaxRetries      = 10
 )
 
