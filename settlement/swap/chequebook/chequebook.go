@@ -137,7 +137,7 @@ func (s *service) AvailableBalance(ctx context.Context) (*big.Int, error) {
 		return nil, err
 	}
 
-	balance, err := s.LiquidBalance(ctx)
+	balance, err := s.TotalBalance(ctx)
 	if err != nil {
 		return nil, err
 	}
