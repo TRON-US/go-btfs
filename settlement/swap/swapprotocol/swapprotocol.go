@@ -180,7 +180,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 
 	wg.Wait()
 
-	if times > 5 {
+	if times >= 5 {
 		fmt.Println("get handshakeInfo from peer error", peerhostPid)
 		return nil, ErrGetBeneficiary
 	}
