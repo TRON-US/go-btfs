@@ -31,12 +31,14 @@ require (
 	github.com/ethersphere/go-sw3-abi v0.4.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gabriel-vasile/mimetype v1.1.2
+	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
+	github.com/ip2location/ip2location-go/v9 v9.0.0
 	github.com/ipfs/go-bitswap v0.2.20
 	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.1.3
@@ -119,7 +121,6 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.26.0
 	github.com/shirou/gopsutil/v3 v3.20.12
-	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
@@ -175,5 +176,5 @@ replace github.com/libp2p/go-libp2p => github.com/libp2p/go-libp2p v0.11.0
 replace github.com/libp2p/go-libp2p-circuit => github.com/libp2p/go-libp2p-circuit v0.3.1
 
 replace github.com/libp2p/go-libp2p-quic-transport => github.com/libp2p/go-libp2p-quic-transport v0.8.0
-go 1.14
 
+go 1.14

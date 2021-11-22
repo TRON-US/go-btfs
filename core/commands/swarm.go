@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TRON-US/go-btfs/bindata"
 	commands "github.com/TRON-US/go-btfs/commands"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	repo "github.com/TRON-US/go-btfs/repo"
@@ -124,6 +125,14 @@ var swarmPeersCmd = &cmds.Command{
 					ci.Streams = append(ci.Streams, streamInfo{Protocol: string(s)})
 				}
 			}
+
+			// fill int short country code by ip address
+			if code, err := bindata.CountryShortCode(c.Address()); err != nil {
+				fmt.Printf("get country short code err:%+v", err)
+			} else {
+				ci.CountryShort = code
+			}
+
 			sort.Sort(&ci)
 			out.Peers = append(out.Peers, ci)
 		}
@@ -134,7 +143,7 @@ var swarmPeersCmd = &cmds.Command{
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, ci *connInfos) error {
 			for _, info := range ci.Peers {
-				fmt.Fprintf(w, "%s/%s/%s", info.Addr, "btfs", info.Peer)
+				fmt.Fprintf(w, "%s/%s/%s/%s/%s", info.Addr, "btfs", info.Peer, "country_short", info.CountryShort)
 				if info.Latency != "" {
 					fmt.Fprintf(w, " %s", info.Latency)
 				}
@@ -164,12 +173,13 @@ type streamInfo struct {
 }
 
 type connInfo struct {
-	Addr      string
-	Peer      string
-	Latency   string
-	Muxer     string
-	Direction inet.Direction
-	Streams   []streamInfo
+	Addr         string
+	Peer         string
+	Latency      string
+	Muxer        string
+	CountryShort string
+	Direction    inet.Direction
+	Streams      []streamInfo
 }
 
 func (ci *connInfo) Less(i, j int) bool {
