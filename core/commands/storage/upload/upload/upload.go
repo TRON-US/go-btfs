@@ -31,6 +31,7 @@ const (
 	testOnlyOptionName               = "host-search-local"
 	customizedPayoutOptionName       = "customize-payout"
 	customizedPayoutPeriodOptionName = "customize-payout-period"
+	copyName                         = "copy"
 
 	defaultRepFactor     = 3
 	defaultStorageLength = 30
@@ -100,6 +101,7 @@ Use status command to check for completion:
 		cmds.IntOption(storageLengthOptionName, "len", "File storage period on hosts in days.").WithDefault(defaultStorageLength),
 		cmds.BoolOption(customizedPayoutOptionName, "Enable file storage customized payout schedule.").WithDefault(false),
 		cmds.IntOption(customizedPayoutPeriodOptionName, "Period of customized payout schedule.").WithDefault(1),
+		cmds.IntOption(copyName, "copy num of file hash.").WithDefault(0),
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
@@ -130,15 +132,23 @@ Use status command to check for completion:
 			return nil
 		}, helper.WaitingForPeersBo)
 
-		fileHash := req.Arguments[0]
-		shardHashes, fileSize, shardSize, err := helper.GetShardHashes(ctxParams, fileHash)
-		fmt.Println("btfs storage upload fileHash:  shardHashes, fileSize, shardSize --- ", shardHashes, fileSize, shardSize)
-		if err != nil {
-			return err
-		}
+		var shardHashes []string
+		var fileSize int64
+		var shardSize int64
 
-		//price + N month
-		_, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
+		fileHash := req.Arguments[0]
+		shardHashes, fileSize, shardSize, err = helper.GetShardHashes(ctxParams, fileHash)
+		fmt.Printf("rs get, shardHashes:%v fileSize:%v, shardSize:%v, err:%v \n",
+			shardHashes, fileSize, shardSize, err)
+
+		if len(shardHashes) == 0 && fileSize == -1 && shardSize == -1 &&
+			strings.HasPrefix(err.Error(), "invalid hash: file must be reed-solomon encoded") {
+			if copyNum, ok := req.Options[copyName].(int); ok {
+				shardHashes, fileSize, shardSize, err = helper.GetShardHashesCopy(ctxParams, fileHash, copyNum)
+				fmt.Printf("copy get, shardHashes:%v fileSize:%v, shardSize:%v, copy:%v err:%v \n",
+					shardHashes, fileSize, shardSize, copyNum, err)
+			}
+		}
 		if err != nil {
 			return err
 		}
