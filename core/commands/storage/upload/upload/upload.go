@@ -138,9 +138,6 @@ Use status command to check for completion:
 
 		fileHash := req.Arguments[0]
 		shardHashes, fileSize, shardSize, err = helper.GetShardHashes(ctxParams, fileHash)
-		fmt.Printf("rs get, shardHashes:%v fileSize:%v, shardSize:%v, err:%v \n",
-			shardHashes, fileSize, shardSize, err)
-
 		if len(shardHashes) == 0 && fileSize == -1 && shardSize == -1 &&
 			strings.HasPrefix(err.Error(), "invalid hash: file must be reed-solomon encoded") {
 			if copyNum, ok := req.Options[copyName].(int); ok {

@@ -125,11 +125,11 @@ func (hs *HostShard) Contract(signedEscrowContract []byte, signedGuardContract *
 }
 
 func (hs *HostShard) IsPayStatus() bool {
-	fmt.Println("IsPayStatus Current(),  hshPayStatus", hs.fsm.Current(), hshPayStatus)
+	fmt.Printf("IsPayStatus Current:%v,  hshPayStatus:%v \n", hs.fsm.Current(), hshPayStatus)
 	return hs.fsm.Current() == hshPayStatus
 }
 func (hs *HostShard) IsContractStatus() bool {
-	fmt.Println("IsContractStatus Current(),  hshContractStatus", hs.fsm.Current(), hshContractStatus)
+	fmt.Printf("IsContractStatus Current:%v,  hshContractStatus:%v \n", hs.fsm.Current(), hshContractStatus)
 	return hs.fsm.Current() == hshContractStatus
 }
 

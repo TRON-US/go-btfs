@@ -92,8 +92,6 @@ func (s *Service) SetSwap(swap Swap) {
 }
 
 func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque string, exchangeRate *big.Int) (err error) {
-	fmt.Printf("Handler requestPid:%s exchangeRate:%+v \n", requestPid, exchangeRate)
-
 	var signedCheque *chequebook.SignedCheque
 	err = json.Unmarshal([]byte(encodedCheque), &signedCheque)
 	if err != nil {
@@ -219,8 +217,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 						return err
 					}
 
-					fmt.Println("begin send cheque: /storage/upload/cheque, hostPid, contractId = ", hostPid, contractId)
-
+					//fmt.Println("begin send cheque: /storage/upload/cheque, hostPid, contractId = ", hostPid, contractId)
 					//send cheque
 					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
 						encodedCheque,

@@ -600,7 +600,7 @@ var P2phandshakeCmd = &cmds.Command{
 			return fmt.Errorf("the wrong peer ID: want[%s], get[%s]", requestPid.String(), peer_id)
 		}
 
-		fmt.Printf("receive msg from peer %s, the chain-id is %d OverlayAddress is %x \n", peer_id, chain_id, chain.ChainObject.OverlayAddress)
+		fmt.Printf("receive handshake from peer peer_id:%v, chain_id:%v \n", peer_id, chain_id)
 
 		output := &pb.Handshake{}
 		output.Beneficiary = chain.ChainObject.OverlayAddress.Bytes()

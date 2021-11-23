@@ -127,11 +127,11 @@ func GetRenterSession(ctxParams *uh.ContextParams, ssId string, hash string, sha
 
 var helperText = map[string]string{
 	RssInitStatus:       "Searching for recommended hosts…",
-	RssSubmitStatus:     "Hosts found! Checking wallet balance and submitting contracts to escrow.",
-	RssGuardStatus:      "Payment successful! Preparing meta-data and challenge questions.",
-	RssWaitUploadStatus: "Confirming successful file shard storage by hosts.",
+	RssSubmitStatus:     "Hosts found! Checking chequebook balance, and visiting guard.",
+	RssGuardStatus:      "Preparing meta-data and challenge questions.",
+	RssWaitUploadStatus: "Confirming file shard storage by hosts.",
 	RssPayStatus:        "uploaded, doing the cheque payment.",
-	RssCompleteStatus:   "File storage successful!",
+	RssCompleteStatus:   "Payment successful! File storage successful!",
 }
 
 func (rs *RenterSession) enterState(e *fsm.Event) {

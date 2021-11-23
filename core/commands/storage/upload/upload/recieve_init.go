@@ -101,7 +101,8 @@ the shard and replies back to client for the next challenge step.`,
 			return err
 		}
 
-		fmt.Println("------ recv upload init, shardSize, requestPid, shardIndex = ", shardSize, requestPid, shardIndex)
+		fmt.Printf("--- upload init: start, shardSize:%v, requestPid:%v, shardIndex:%v . \n",
+			shardSize, requestPid, shardIndex)
 
 		//halfSignedEscrowContString := req.Arguments[4]
 		halfSignedGuardContString := req.Arguments[5]
@@ -178,7 +179,9 @@ the shard and replies back to client for the next challenge step.`,
 					return err
 				}
 
-				fmt.Println("recv upload init, wait for pay status, requestPid, shardIndex = ", requestPid, shardIndex)
+				fmt.Printf("upload init: send /storage/upload/recvcontract ok, wait for pay status, requestPid:%v, shardIndex:%v. \n",
+					requestPid, shardIndex)
+
 				var wg sync.WaitGroup
 				wg.Add(1)
 				go func() {
@@ -195,7 +198,7 @@ the shard and replies back to client for the next challenge step.`,
 				}()
 				wg.Wait()
 
-				fmt.Println("recv upload init, Complete! requestPid, shardIndex = ", requestPid, shardIndex)
+				fmt.Printf("upload init: Complete! requestPid:%v, shardIndex:%v. \n", requestPid, shardIndex)
 				if err := shard.Complete(); err != nil {
 					return err
 				}

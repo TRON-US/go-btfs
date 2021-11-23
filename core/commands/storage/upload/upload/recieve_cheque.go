@@ -45,8 +45,7 @@ var StorageUploadChequeCmd = &cmds.Command{
 		encodedCheque := req.Arguments[0]
 		contractId := req.Arguments[2]
 
-		fmt.Printf("****** receive upload cheque, requestPid=%s contractId=%+v len=%v \n",
-			requestPid.String(), contractId, len(req.Arguments))
+		fmt.Printf("receive cheque, requestPid:%s contractId:%+v \n", requestPid.String(), contractId)
 
 		go func() {
 			// decode and deal the cheque
