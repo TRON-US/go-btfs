@@ -152,6 +152,11 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
+
+		_, storageLength, err := helper.GetPriceAndMinStorageLength(ctxParams)
+		if err != nil {
+			return err
+		}
 		priceObj, err := chain.SettleObject.OracleService.GetPrice(context.Background())
 		if err != nil {
 			return err

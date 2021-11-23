@@ -182,12 +182,11 @@ the shard and replies back to client for the next challenge step.`,
 				var wg sync.WaitGroup
 				wg.Add(1)
 				go func() {
-					tick := time.Tick(5 * time.Second)
+					tick := time.Tick(10 * time.Second)
 					for true {
 						select {
 						case <-tick:
 							if bl := shard.IsPayStatus(); bl {
-								fmt.Println("shard is paid")
 								wg.Done()
 								return
 							}

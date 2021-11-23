@@ -24,7 +24,7 @@ const (
 )
 
 type IHostsProvider interface {
-	NextValidHost(price int64) (string, error)
+	NextValidHost() (string, error)
 }
 
 type CustomizedHostsProvider struct {
@@ -34,7 +34,7 @@ type CustomizedHostsProvider struct {
 	sync.Mutex
 }
 
-func (p *CustomizedHostsProvider) NextValidHost(price int64) (string, error) {
+func (p *CustomizedHostsProvider) NextValidHost() (string, error) {
 	for true {
 		if index, err := p.AddIndex(); err == nil {
 			id, err := peer.IDB58Decode(p.hosts[index])
@@ -205,7 +205,7 @@ func (p *HostsProvider) PickFromBackupHosts() (string, error) {
 	return "", errors.New("shouldn't reach here")
 }
 
-func (p *HostsProvider) NextValidHost(price int64) (string, error) {
+func (p *HostsProvider) NextValidHost() (string, error) {
 	endOfBackup := false
 LOOP:
 	for true {
