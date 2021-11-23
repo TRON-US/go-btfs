@@ -189,7 +189,7 @@ type connInfo struct {
 	CountryShort string
 	Direction    inet.Direction
 	Streams      []streamInfo
-	Ip        string
+	Ip           string
 }
 
 func (ci *connInfo) Less(i, j int) bool {
