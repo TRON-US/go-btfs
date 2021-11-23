@@ -142,7 +142,7 @@ func (s *Service) PutChequebookWhenSendCheque(peer string, chequebook common.Add
 }
 
 // Pay initiates a payment to the given peer
-func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
+func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int, contractId string) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -160,7 +160,7 @@ func (s *Service) Pay(ctx context.Context, peer string, amount *big.Int) {
 			return
 		}
 	*/
-	balance, err := s.proto.EmitCheque(ctx, peer, amount, s.chequebook.Issue)
+	balance, err := s.proto.EmitCheque(ctx, peer, amount, contractId, s.chequebook.Issue)
 
 	if err != nil {
 		return
@@ -379,8 +379,8 @@ func (s *Service) GetChainid() int64 {
 	return s.chainID
 }
 
-func (s *Service) Settle(toPeer string, paymentAmount *big.Int) error {
-	return s.accounting.Settle(toPeer, paymentAmount)
+func (s *Service) Settle(toPeer string, paymentAmount *big.Int, contractId string) error {
+	return s.accounting.Settle(toPeer, paymentAmount, contractId)
 }
 
 func (s *Service) PutBeneficiary(peer string, beneficiary common.Address) (common.Address, error) {

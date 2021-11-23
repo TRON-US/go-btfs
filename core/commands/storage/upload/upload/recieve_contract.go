@@ -57,7 +57,8 @@ func doRecv(req *cmds.Request, env cmds.Environment) (contractId string, err err
 		return
 	}
 
-	escrowContractBytes := []byte(req.Arguments[3])
+	//escrowContractBytes := []byte(req.Arguments[3])
+	escrowContractBytes := []byte{}
 	guardContractBytes := []byte(req.Arguments[4])
 	guardContract := new(guardpb.Contract)
 	err = proto.Unmarshal(guardContractBytes, guardContract)

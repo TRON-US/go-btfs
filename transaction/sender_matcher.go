@@ -28,7 +28,7 @@ const (
 )
 
 func peerOverlayKey(peer string, txHash common.Hash) string {
-	return fmt.Sprintf("%s%s_%s", overlayPrefix, peer, txHash.String())  //peer
+	return fmt.Sprintf("%s%s_%s", overlayPrefix, peer, txHash.String()) //peer
 }
 
 var (

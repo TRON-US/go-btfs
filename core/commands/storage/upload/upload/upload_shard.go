@@ -26,6 +26,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					break
 				}
 				host, err := hp.NextValidHost(price)
+				host = "16Uiu2HAm9FuG2UfhH5ihKUP5PehzkoTRbHNSUsNofqufJ8QUvdSW"
 				if err != nil {
 					terr := rss.To(sessions.RssToErrorEvent, err)
 					if terr != nil {
@@ -38,19 +39,9 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				cb := make(chan error)
 				ShardErrChanMap.Set(contractId, cb)
 				tp := helper.TotalPay(shardSize, price, storageLength)
-				var escrowCotractBytes []byte
+
 				errChan := make(chan error, 2)
-				go func() {
-					tmp := func() error {
-						escrowCotractBytes, err = renterSignEscrowContract(rss, h, i, host, tp, offlineSigning, renterId, contractId, storageLength)
-						if err != nil {
-							log.Errorf("shard %s signs escrow_contract error: %s", h, err.Error())
-							return err
-						}
-						return nil
-					}()
-					errChan <- tmp
-				}()
+
 				var guardContractBytes []byte
 				go func() {
 					tmp := func() error {
@@ -81,7 +72,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 					if err != nil {
 						return err
 					}
-					if c == 2 {
+					if c >= 1 {
 						break
 					}
 				}
@@ -98,7 +89,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 						rss.Hash,
 						h,
 						price,
-						escrowCotractBytes,
+						nil,
 						guardContractBytes,
 						storageLength,
 						shardSize,
@@ -137,6 +128,7 @@ func UploadShard(rss *sessions.RenterSession, hp helper.IHostsProvider, price in
 				}
 				log.Info("session", rss.SsId, "contractNum", completeNum, "errorNum", errorNum)
 				if completeNum == numShards {
+					//所有shard全部转账成功，然后确认并返回
 					err := Submit(rss, fileSize, offlineSigning)
 					if err != nil {
 						_ = rss.To(sessions.RssToErrorEvent, err)

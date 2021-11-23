@@ -9,9 +9,9 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/TRON-US/go-btfs/transaction"
 )
 
 type transactionMonitorMock struct {

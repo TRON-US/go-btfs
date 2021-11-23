@@ -26,12 +26,12 @@ import (
 )
 
 type swapProtocolMock struct {
-	emitCheque func(context.Context, string, *big.Int, swapprotocol.IssueFunc) (*big.Int, error)
+	emitCheque func(context.Context, string, *big.Int, string, swapprotocol.IssueFunc) (*big.Int, error)
 }
 
-func (m *swapProtocolMock) EmitCheque(ctx context.Context, peer string, value *big.Int, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
+func (m *swapProtocolMock) EmitCheque(ctx context.Context, peer string, value *big.Int, contractId string, issueFunc swapprotocol.IssueFunc) (*big.Int, error) {
 	if m.emitCheque != nil {
-		return m.emitCheque(ctx, peer, value, issueFunc)
+		return m.emitCheque(ctx, peer, value, contractId, issueFunc)
 	}
 	return nil, errors.New("not implemented")
 }
@@ -75,7 +75,7 @@ func (t *testObserver) NotifyRefreshmentReceived(peer string, amount *big.Int) e
 	return nil
 }
 
-func (t *testObserver) Settle(peer string, amount *big.Int) error {
+func (t *testObserver) Settle(peer string, amount *big.Int, contractId string) error {
 	return nil
 }
 
@@ -386,7 +386,7 @@ func TestPay(t *testing.T) {
 		observer,
 	)
 
-	swap.Pay(context.Background(), peer, amount)
+	swap.Pay(context.Background(), peer, amount, "")
 
 	if !emitCalled {
 		t.Fatal("swap protocol was not called")
@@ -430,7 +430,7 @@ func TestPayIssueError(t *testing.T) {
 	observer := newTestObserver()
 	swap.SetAccounting(observer)
 
-	swap.Pay(context.Background(), peer, amount)
+	swap.Pay(context.Background(), peer, amount, "")
 	select {
 	case call := <-observer.sentCalled:
 
@@ -477,7 +477,7 @@ func TestPayUnknownBeneficiary(t *testing.T) {
 		observer,
 	)
 
-	swapService.Pay(context.Background(), peer, amount)
+	swapService.Pay(context.Background(), peer, amount, "")
 
 	select {
 	case call := <-observer.sentCalled:

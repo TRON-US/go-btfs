@@ -55,7 +55,7 @@ type IssueFunc func(ctx context.Context, beneficiary common.Address, amount *big
 // Interface is the main interface to send messages over swap protocol.
 type Interface interface {
 	// EmitCheque sends a signed cheque to a peer.
-	EmitCheque(ctx context.Context, peer string, amount *big.Int, issue IssueFunc) (balance *big.Int, err error)
+	EmitCheque(ctx context.Context, peer string, amount *big.Int, contractId string, issue IssueFunc) (balance *big.Int, err error)
 }
 
 // Swap is the interface the settlement layer should implement to receive cheques.
@@ -105,7 +105,7 @@ func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque 
 }
 
 // InitiateCheque attempts to send a cheque to a peer.
-func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, issue IssueFunc) (balance *big.Int, err error) {
+func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, contractId string, issue IssueFunc) (balance *big.Int, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -219,14 +219,16 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 						return err
 					}
 
-					fmt.Println("send cheque: when /storage/upload/cheque, hostPid = ", hostPid)
+					fmt.Println("begin send cheque: /storage/upload/cheque, hostPid, contractId = ", hostPid, contractId)
 
 					//send cheque
 					_, err = remote.P2PCall(ctx, ctxParams.N, ctxParams.Api, hostPid, "/storage/upload/cheque",
 						encodedCheque,
 						exchangeRate,
+						contractId,
 					)
 					if err != nil {
+						fmt.Println("end send cheque: /storage/upload/cheque, hostPid, contractId, err = ", hostPid, contractId, err)
 						return err
 					}
 					return nil
