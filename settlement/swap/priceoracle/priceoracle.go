@@ -7,6 +7,8 @@ package priceoracle
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
 	"io"
 	"math/big"
 	"time"
@@ -40,6 +42,7 @@ type Service interface {
 	// GetPrice retrieves latest available information from oracle
 	GetPrice(ctx context.Context) (*big.Int, error)
 	Start()
+	SwitchCurrentRates() (exchangeRate *big.Int, err error)
 }
 
 var (
@@ -127,6 +130,23 @@ func (s *service) CurrentRates() (exchangeRate *big.Int, err error) {
 	if s.exchangeRate.Cmp(big.NewInt(0)) == 0 {
 		return nil, errors.New("exchange rate not yet available")
 	}
+	return s.exchangeRate, nil
+}
+
+func (s *service) SwitchCurrentRates() (exchangeRate *big.Int, err error) {
+	if s.exchangeRate.Cmp(big.NewInt(0)) == 0 {
+		return nil, errors.New("exchange rate not yet available")
+	}
+
+	fmt.Println("SwitchCurrentRates 1: s.exchangeRate ", s.exchangeRate)
+	t := math.Exp(big.NewInt(10), big.NewInt(15))
+	if s.exchangeRate.Cmp(t) > 0 {
+		ret := big.NewInt(0).Div(s.exchangeRate, t)
+
+		fmt.Println("SwitchCurrentRates 2: s.exchangeRate ", ret)
+		return ret, nil
+	}
+
 	return s.exchangeRate, nil
 }
 
