@@ -138,12 +138,13 @@ func (s *service) SwitchCurrentRates() (exchangeRate *big.Int, err error) {
 		return nil, errors.New("exchange rate not yet available")
 	}
 
-	fmt.Println("SwitchCurrentRates 1: s.exchangeRate ", s.exchangeRate)
-	t := math.Exp(big.NewInt(10), big.NewInt(15))
+	t := math.Exp(big.NewInt(10), big.NewInt(13))
+	fmt.Println("CurrentRates: s.exchangeRate ", s.exchangeRate, t)
+
 	if s.exchangeRate.Cmp(t) > 0 {
 		ret := big.NewInt(0).Div(s.exchangeRate, t)
 
-		fmt.Println("SwitchCurrentRates 2: s.exchangeRate ", ret)
+		fmt.Println("SwitchCurrentRates: s.exchangeRate ", ret)
 		return ret, nil
 	}
 
