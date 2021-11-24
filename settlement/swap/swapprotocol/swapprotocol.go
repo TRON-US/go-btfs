@@ -107,14 +107,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// get current global exchangeRate rate
-	checkExchangeRate, err := s.priceOracle.CurrentRates()
-	if err != nil {
-		return nil, err
-	}
-
-	paymentAmount := new(big.Int).Mul(amount, checkExchangeRate)
-	sentAmount := paymentAmount
+	sentAmount := amount
 
 	peerhostPid, err := peerInfo.IDB58Decode(peer)
 	if err != nil {
@@ -193,7 +186,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 			return err
 		}
 
-		exchangeRate, err := s.priceOracle.CurrentRates()
+		exchangeRate, err := s.priceOracle.SwitchCurrentRates()
 		if err != nil {
 			return err
 		}
