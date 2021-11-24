@@ -35,3 +35,12 @@ docs/examples/go-ipfs-as-a-library/example-folder/Qm*
 /parts
 /stage
 /prime
+
+
+cmd/btfs/btfs.bk
+cmd/btfs/config.yaml
+cmd/btfs/config.yaml.bk
+cmd/btfs/config_darwin_amd64.yaml
+cmd/btfs/fs-repo-migrations
+cmd/btfs/fs-repo-migrations.bk
+cmd/btfs/update-darwin-amd64
