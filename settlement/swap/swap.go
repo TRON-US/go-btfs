@@ -9,13 +9,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/TRON-US/go-btfs/settlement"
 	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 	logging "github.com/ipfs/go-log"
-	"math/big"
 	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
@@ -293,8 +294,6 @@ func (s *Service) LastReceivedCheques() (map[string]*chequebook.SignedCheque, er
 		return nil, err
 	}
 
-	fmt.Printf("LastReceivedCheques 1: lastcheques %+v \n", lastcheques)
-
 	resultmap := make(map[string]*chequebook.SignedCheque, len(lastcheques))
 
 	for i, j := range lastcheques {
@@ -303,8 +302,6 @@ func (s *Service) LastReceivedCheques() (map[string]*chequebook.SignedCheque, er
 			resultmap[addr] = j
 		}
 	}
-
-	fmt.Printf("LastReceivedCheques 2: resultmap %+v \n", resultmap)
 
 	return resultmap, nil
 }
@@ -330,7 +327,6 @@ func (s *Service) LastSendCheques() (map[string]*chequebook.SignedCheque, error)
 		return nil, err
 	}
 
-	fmt.Println("LastSendCheques 1 lastcheques:", lastcheques)
 	resultmap := make(map[string]*chequebook.SignedCheque, len(lastcheques))
 
 	for i, j := range lastcheques {
@@ -340,7 +336,6 @@ func (s *Service) LastSendCheques() (map[string]*chequebook.SignedCheque, error)
 		}
 	}
 
-	fmt.Println("LastSendCheques 2 resultmap:", resultmap)
 	return resultmap, nil
 }
 

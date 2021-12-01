@@ -17,7 +17,6 @@ var ListSendChequesCmd = &cmds.Command{
 
 		var listRet ListChequeRet
 		cheques, err := chain.SettleObject.SwapService.LastSendCheques()
-		fmt.Println("ListSendChequesCmd: ", cheques, err)
 
 		if err != nil {
 			return err
