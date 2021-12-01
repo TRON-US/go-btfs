@@ -176,9 +176,15 @@ func GetPriceAndMinStorageLength(params *ContextParams) (price int64, storageLen
 
 func TotalPay(shardSize int64, price int64, storageLength int) int64 {
 	totalPay := int64(float64(shardSize) / float64(units.GiB) * float64(price) * float64(storageLength))
+	fmt.Printf("1 old TotalPay:%v \n", totalPay)
+
 	if totalPay <= 0 {
 		totalPay = 1
 	}
+
+	fmt.Printf("2 new TotalPay:%v \n", totalPay)
+
+	fmt.Printf("size:%v, price:%v, storageLength:%v \n", float64(shardSize) / float64(units.GiB), price, storageLength)
 	return totalPay
 }
 

@@ -51,7 +51,7 @@ type ChequeStore interface {
 	ReceiveCheque(ctx context.Context, cheque *SignedCheque, exchangeRate *big.Int) (*big.Int, error)
 	// LastReceivedCheque returns the last cheque we received from a specific chequebook.
 	LastReceivedCheque(chequebook common.Address) (*SignedCheque, error)
-	// LastReceivedCheques returns the last received cheques from every known chequebook.
+	// LastReceivedCheques return map[chequebook]cheque
 	LastReceivedCheques() (map[common.Address]*SignedCheque, error)
 	// ReceivedChequeRecordsByPeer returns the records we received from a specific chequebook.
 	ReceivedChequeRecordsByPeer(chequebook common.Address) ([]ChequeRecord, error)
@@ -103,7 +103,7 @@ func historyReceivedChequeKey(chequebook common.Address, index uint64) string {
 	return fmt.Sprintf("%s_%x", chequebookStr, index)
 }
 
-// LastCheque returns the last cheque we received from a specific chequebook.
+// LastReceivedCheque map[chequebook]cheque
 func (s *chequeStore) LastReceivedCheque(chequebook common.Address) (*SignedCheque, error) {
 	var cheque *SignedCheque
 	err := s.store.Get(lastReceivedChequeKey(chequebook), &cheque)
@@ -347,7 +347,7 @@ func keyChequebook(key []byte, prefix string) (chequebook common.Address, err er
 	return common.HexToAddress(split[1]), nil
 }
 
-// LastCheques returns the last received cheques from every known chequebook.
+// LastCheques returns map[chequebook]cheque
 func (s *chequeStore) LastReceivedCheques() (map[common.Address]*SignedCheque, error) {
 	result := make(map[common.Address]*SignedCheque)
 	err := s.store.Iterate(lastReceivedChequePrefix, func(key, val []byte) (stop bool, err error) {

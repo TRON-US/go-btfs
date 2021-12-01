@@ -124,13 +124,13 @@ var testChequeCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("get hosts: ", nodes)
+		//fmt.Println("get hosts: ", nodes)
 
 		if len(nodes) <= 0 {
 			return errors.New("get hosts, it is none")
 		}
 
-		toPeer := "16Uiu2HAm5TZ8547Xzbqoynt4cXGg6mjkCGoLBWnNxSXcoW7eTBdW"
+		toPeer := "16Uiu2HAmQ4VAZdAmXJKapZYAib2BZpsSkVQfTwowCYvSqbEyuTnQ"
 		//toPeer := nodes[0].NodeId
 		chain.SettleObject.SwapService.Settle(toPeer, big.NewInt(10), "")
 
@@ -155,7 +155,7 @@ var testP2pShakeCmd = &cmds.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("get hosts: ", nodes)
+		//fmt.Println("get hosts: ", nodes)
 
 		if len(nodes) <= 0 {
 			return errors.New("get hosts, it is none")
