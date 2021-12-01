@@ -604,7 +604,6 @@ var P2phandshakeCmd = &cmds.Command{
 
 		output := &pb.Handshake{}
 		output.Beneficiary = chain.ChainObject.OverlayAddress.Bytes()
-
 		return cmds.EmitOnce(res, output)
 	},
 	Type: pb.Handshake{},

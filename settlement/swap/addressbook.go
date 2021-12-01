@@ -30,7 +30,7 @@ type Addressbook interface {
 	Chequebook(peer string) (chequebookAddress common.Address, known bool, err error)
 	// BeneficiaryPeer returns the peer for a beneficiary.
 	BeneficiaryPeer(beneficiary common.Address) (peer string, known bool, err error)
-	// ChequebookPeer returns the peer for a beneficiary.
+	// ChequebookPeer returns the peer for a chequebook.
 	ChequebookPeer(chequebook common.Address) (peer string, known bool, err error)
 	// PutBeneficiary stores the beneficiary for the given peer.
 	PutBeneficiary(peer string, beneficiary common.Address) error
@@ -121,7 +121,7 @@ func (a *addressbook) Chequebook(peer string) (chequebookAddress common.Address,
 	return chequebookAddress, true, nil
 }
 
-// ChequebookPeer returns the peer for a beneficiary.
+// ChequebookPeer returns the peer for a chequebook.
 func (a *addressbook) ChequebookPeer(chequebook common.Address) (peer string, known bool, err error) {
 	err = a.store.Get(chequebookPeerKey(chequebook), &peer)
 	if err != nil {

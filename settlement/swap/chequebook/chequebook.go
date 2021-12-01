@@ -222,6 +222,7 @@ func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount 
 	}
 	defer s.unreserveTotalIssued(amount)
 
+	fmt.Println("Issue 1")
 	var cumulativePayout *big.Int
 	lastCheque, err := s.LastCheque(beneficiary)
 	if err != nil {
@@ -261,6 +262,8 @@ func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount 
 		return nil, err
 	}
 
+	fmt.Println("Issue 2")
+
 	err = s.store.Put(lastIssuedChequeKey(beneficiary), cheque)
 	if err != nil {
 		return nil, err
@@ -274,6 +277,9 @@ func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount 
 		return nil, err
 	}
 	totalIssued = totalIssued.Add(totalIssued, amount)
+
+	fmt.Println("Issue 3 ", lastIssuedChequeKey(beneficiary), cheque)
+
 	return availableBalance, s.store.Put(totalIssuedKey, totalIssued)
 }
 
@@ -293,6 +299,7 @@ func (s *service) totalIssued() (totalIssued *big.Int, err error) {
 func (s *service) LastCheque(beneficiary common.Address) (*SignedCheque, error) {
 	var lastCheque *SignedCheque
 	err := s.store.Get(lastIssuedChequeKey(beneficiary), &lastCheque)
+	fmt.Println("LastCheque ", lastIssuedChequeKey(beneficiary), lastCheque)
 	if err != nil {
 		if err != storage.ErrNotFound {
 			return nil, err
@@ -316,10 +323,14 @@ func keyBeneficiary(key []byte, prefix string) (beneficiary common.Address, err 
 func (s *service) LastCheques() (map[common.Address]*SignedCheque, error) {
 	result := make(map[common.Address]*SignedCheque)
 	err := s.store.Iterate(lastIssuedChequeKeyPrefix, func(key, val []byte) (stop bool, err error) {
+		fmt.Println("s.store.Iterate 1 ", string(key))
+
 		addr, err := keyBeneficiary(key, lastIssuedChequeKeyPrefix)
 		if err != nil {
 			return false, fmt.Errorf("parse address from key: %s: %w", string(key), err)
 		}
+
+		fmt.Println("s.store.Iterate 2 ", addr)
 
 		if _, ok := result[addr]; !ok {
 
