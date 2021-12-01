@@ -5,6 +5,7 @@ on:
     branches: 
       - 'master'
       - 'release'
+      - 'BTFS2.0-test'
 
 jobs:
   build-push:
