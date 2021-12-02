@@ -154,7 +154,7 @@ Use status command to check for completion:
 		if err != nil {
 			return err
 		}
-		priceObj, err := chain.SettleObject.OracleService.SwitchCurrentRates()
+		priceObj, err := chain.SettleObject.OracleService.CurrentRates()
 		if err != nil {
 			return err
 		}

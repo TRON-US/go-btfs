@@ -276,6 +276,8 @@ var bootstrapListCmd = &cmds.Command{
 		//peerId := "16Uiu2HAm9FuG2UfhH5ihKUP5PehzkoTRbHNSUsNofqufJ8QUvdSW"
 		//chain.SettleObject.SwapService.Settle(peerId, big.NewInt(1), "")
 
+		//return errors.New(fmt.Sprintf("hello world, error!"))
+
 		return cmds.EmitOnce(res, &BootstrapOutput{config.BootstrapPeerStrings(peers)})
 	},
 	Type: BootstrapOutput{},

@@ -186,7 +186,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 			return err
 		}
 
-		exchangeRate, err := s.priceOracle.SwitchCurrentRates()
+		exchangeRate, err := s.priceOracle.CurrentRates()
 		if err != nil {
 			return err
 		}
