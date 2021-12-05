@@ -116,23 +116,6 @@ func InitSettlement(
 		return nil, errors.New("init chequebook factory error")
 	}
 
-	//InitChequebookService
-	chequebookService, err := initChequebookService(
-		ctx,
-		stateStore,
-		chaininfo.Signer,
-		chaininfo.ChainID,
-		chaininfo.Backend,
-		chaininfo.OverlayAddress,
-		chaininfo.TransactionService,
-		factory,
-		deployGasPrice,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("init chequebook service: %w", err)
-	}
-
 	//initChequeStoreCashout
 	chequeStore, cashoutService := initChequeStoreCashout(
 		stateStore,
@@ -148,6 +131,24 @@ func InitSettlement(
 
 	if err != nil {
 		return nil, errors.New("new accounting service error")
+	}
+
+	//InitChequebookService
+	chequebookService, err := initChequebookService(
+		ctx,
+		stateStore,
+		chaininfo.Signer,
+		chaininfo.ChainID,
+		chaininfo.Backend,
+		chaininfo.OverlayAddress,
+		chaininfo.TransactionService,
+		factory,
+		deployGasPrice,
+		chequeStore,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("init chequebook service: %w", err)
 	}
 
 	//InitSwap
@@ -226,6 +227,7 @@ func initChequebookService(
 	transactionService transaction.Service,
 	chequebookFactory chequebook.Factory,
 	deployGasPrice string,
+	chequeStore chequebook.ChequeStore,
 ) (chequebook.Service, error) {
 	chequeSigner := chequebook.NewChequeSigner(signer, chainID)
 
@@ -246,6 +248,7 @@ func initChequebookService(
 		chainID,
 		overlayEthAddress,
 		chequeSigner,
+		chequeStore,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("chequebook init: %w", err)

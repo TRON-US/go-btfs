@@ -59,7 +59,7 @@ type Service interface {
 	Issue(ctx context.Context, beneficiary common.Address, amount *big.Int, sendChequeFunc SendChequeFunc) (*big.Int, error)
 	// LastCheque returns the last cheque we issued for the beneficiary.
 	LastCheque(beneficiary common.Address) (*SignedCheque, error)
-	// LastCheque returns the last cheques for all beneficiaries.
+	// LastCheques returns the last cheques we issued for all beneficiaries.
 	LastCheques() (map[common.Address]*SignedCheque, error)
 	// GetWithdrawTime returns the time can withdraw
 	GetWithdrawTime(ctx context.Context) (*big.Int, error)
@@ -86,10 +86,12 @@ type service struct {
 	store               storage.StateStorer
 	chequeSigner        ChequeSigner
 	totalIssuedReserved *big.Int
+	chequeStore         ChequeStore
 }
 
 // New creates a new chequebook service for the provided chequebook contract.
-func New(transactionService transaction.Service, address, ownerAddress common.Address, store storage.StateStorer, chequeSigner ChequeSigner, erc20Service erc20.Service) (Service, error) {
+func New(transactionService transaction.Service, address, ownerAddress common.Address, store storage.StateStorer,
+	chequeSigner ChequeSigner, erc20Service erc20.Service, chequeStore ChequeStore) (Service, error) {
 	return &service{
 		transactionService:  transactionService,
 		address:             address,
@@ -99,6 +101,7 @@ func New(transactionService transaction.Service, address, ownerAddress common.Ad
 		store:               store,
 		chequeSigner:        chequeSigner,
 		totalIssuedReserved: big.NewInt(0),
+		chequeStore:         chequeStore,
 	}, nil
 }
 
@@ -274,6 +277,13 @@ func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount 
 		return nil, err
 	}
 	totalIssued = totalIssued.Add(totalIssued, amount)
+
+	// store the history issued cheque
+	err = s.chequeStore.StoreSendChequeRecord(s.address, beneficiary, amount)
+	if err != nil {
+		return nil, err
+	}
+
 	return availableBalance, s.store.Put(totalIssuedKey, totalIssued)
 }
 

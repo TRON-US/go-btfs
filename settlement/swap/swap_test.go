@@ -492,6 +492,7 @@ func TestPayUnknownBeneficiary(t *testing.T) {
 		t.Fatal("expected observer to be called")
 	}
 }
+
 //
 //func TestHandshake(t *testing.T) {
 //	store := mockstore.NewStateStore()

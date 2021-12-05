@@ -26,6 +26,8 @@ const (
 	//receivedChequeHistoryIndexPrefix = "swap_chequebook_history_received_cheque_index_"
 	//180 days
 	expireTime = 3600 * 24 * 180
+
+	sendChequeHistoryPrefix = "swap_chequebook_history_send_cheque"
 )
 
 var (
@@ -57,6 +59,13 @@ type ChequeStore interface {
 	ReceivedChequeRecordsByPeer(chequebook common.Address) ([]ChequeRecord, error)
 	// ListReceivedChequeRecords returns the records we received from a specific chequebook.
 	ReceivedChequeRecordsAll() (map[common.Address][]ChequeRecord, error)
+
+	// StoreSendChequeRecord store send cheque records.
+	StoreSendChequeRecord(chequebook, beneficiary common.Address, amount *big.Int) error
+	// SendChequeRecordsByPeer returns the records we send to a specific chequebook.
+	SendChequeRecordsByPeer(beneficiary common.Address) ([]ChequeRecord, error)
+	// SendChequeRecordsAll returns the records we send to a specific chequebook.
+	SendChequeRecordsAll() (map[common.Address][]ChequeRecord, error)
 }
 
 type chequeStore struct {
@@ -385,6 +394,155 @@ func (s *chequeStore) ReceivedChequeRecordsAll() (map[common.Address][]ChequeRec
 
 		if _, ok := result[addr]; !ok {
 			records, err := s.ReceivedChequeRecordsByPeer(addr)
+			if err != nil && err != ErrNoCheque && err != ErrNoChequeRecords {
+				return false, err
+			} else if err == ErrNoCheque || err == ErrNoChequeRecords {
+				return false, nil
+			}
+
+			result[addr] = records
+		}
+		return false, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func historySendChequeIndexKey(beneficiary common.Address) string {
+	return fmt.Sprintf("%s_%x", sendChequeHistoryPrefix, beneficiary)
+}
+
+func historySendChequeKey(beneficiary common.Address, index uint64) string {
+	beneficiaryStr := beneficiary.String()
+	return fmt.Sprintf("%s_%x", beneficiaryStr, index)
+}
+
+//store cheque record
+//Beneficiary common.Address
+func (s *chequeStore) StoreSendChequeRecord(chequebook, beneficiary common.Address, amount *big.Int) error {
+	var indexRange IndexRange
+	err := s.store.Get(historySendChequeIndexKey(beneficiary), &indexRange)
+	if err != nil {
+		if err != storage.ErrNotFound {
+			return err
+		}
+		//not found
+		indexRange.MinIndex = 0
+		indexRange.MaxIndex = 0
+		/*
+			err = s.store.Put(historyReceivedChequeIndexKey(chequebook), indexRange)
+			if err != nil {
+				fmt.Println("put historyReceivedChequeIndexKey err ", err)
+				return err
+			}
+		*/
+	}
+
+	//stroe cheque record with the key: historySendChequeKey(index)
+	chequeRecord := ChequeRecord{
+		chequebook,
+		beneficiary,
+		amount,
+		time.Now().Unix(),
+	}
+
+	err = s.store.Put(historySendChequeKey(beneficiary, indexRange.MaxIndex), chequeRecord)
+	if err != nil {
+		return err
+	}
+
+	//update Max : add one record
+	indexRange.MaxIndex += 1
+	//delete records if these record are old (half year)
+	minIndex, _ := s.deleteSendRecordsExpired(beneficiary, indexRange)
+
+	//uopdate Min: add delete count
+	indexRange.MinIndex = minIndex
+
+	//update index
+	err = s.store.Put(historySendChequeIndexKey(beneficiary), indexRange)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *chequeStore) deleteSendRecordsExpired(beneficiary common.Address, indexRange IndexRange) (uint64, error) {
+	//get the expire time
+	expire := time.Now().Unix() - expireTime
+	var chequeRecord ChequeRecord
+	var endIndex uint64
+
+	//find the last index expired to delete
+	for index := indexRange.MinIndex; index < indexRange.MaxIndex; index++ {
+		err := s.store.Get(historySendChequeKey(beneficiary, index), &chequeRecord)
+		if err != nil {
+			return indexRange.MinIndex, err
+		}
+
+		if chequeRecord.ReceiveTime >= expire {
+			endIndex = index
+			break
+		}
+	}
+
+	//delete [min endIndex) records
+	if endIndex <= indexRange.MinIndex {
+		return indexRange.MinIndex, nil
+	}
+
+	//delete expired records
+	for index := indexRange.MinIndex; index < endIndex; index++ {
+		err := s.store.Delete(historySendChequeKey(beneficiary, index))
+		if err != nil {
+			return indexRange.MinIndex, err
+		}
+		//min++
+		indexRange.MinIndex += 1
+	}
+
+	return indexRange.MinIndex, nil
+}
+
+// SendChequeRecordsByPeer returns the records we received from a specific chequebook.
+func (s *chequeStore) SendChequeRecordsByPeer(beneficiary common.Address) ([]ChequeRecord, error) {
+	var records []ChequeRecord
+	var record ChequeRecord
+	var indexrange IndexRange
+	err := s.store.Get(historySendChequeIndexKey(beneficiary), &indexrange)
+	if err != nil {
+		if err != storage.ErrNotFound {
+			return nil, err
+		}
+		return nil, ErrNoChequeRecords
+	}
+
+	for index := indexrange.MinIndex; index < indexrange.MaxIndex; index++ {
+		err = s.store.Get(historySendChequeKey(beneficiary, index), &record)
+		if err != nil {
+			return nil, err
+		}
+
+		records = append(records, record)
+	}
+
+	return records, nil
+}
+
+// SendChequeRecordsAll returns the last send cheques from every known chequebook.
+func (s *chequeStore) SendChequeRecordsAll() (map[common.Address][]ChequeRecord, error) {
+	result := make(map[common.Address][]ChequeRecord)
+	err := s.store.Iterate(sendChequeHistoryPrefix, func(key, val []byte) (stop bool, err error) {
+		addr, err := keyChequebook(key, sendChequeHistoryPrefix+"_")
+		if err != nil {
+			return false, fmt.Errorf("parse address from key: %s: %w", string(key), err)
+		}
+
+		if _, ok := result[addr]; !ok {
+			records, err := s.SendChequeRecordsByPeer(addr)
 			if err != nil && err != ErrNoCheque && err != ErrNoChequeRecords {
 				return false, err
 			} else if err == ErrNoCheque || err == ErrNoChequeRecords {
