@@ -26,6 +26,7 @@ type SendChequeFunc func(cheque *SignedCheque) error
 const (
 	lastIssuedChequeKeyPrefix = "swap_chequebook_last_issued_cheque_"
 	totalIssuedKey            = "swap_chequebook_total_issued_"
+	totalIssuedCountKey       = "swap_chequebook_total_issued_count_"
 )
 
 var (
@@ -49,6 +50,8 @@ type Service interface {
 	WaitForDeposit(ctx context.Context, txHash common.Hash) error
 	// TotalBalance returns the token balance of the chequebook.
 	TotalBalance(ctx context.Context) (*big.Int, error)
+	// TotalIssuedCount returns total issued count of the chequebook.
+	TotalIssuedCount() (int, error)
 	// LiquidBalance returns the token balance of the chequebook sub stake amount.
 	LiquidBalance(ctx context.Context) (*big.Int, error)
 	// AvailableBalance returns the token balance of the chequebook which is not yet used for uncashed cheques.
@@ -174,6 +177,16 @@ func (s *service) AvailableBalance(ctx context.Context) (*big.Int, error) {
 	return availableBalance, nil
 }
 
+// total send cheque count.  returns the token balance of the chequebook which is not yet used for uncashed cheques.
+func (s *service) TotalIssuedCount() (int, error) {
+	totalIssuedCount, err := s.totalIssuedCount()
+	if err != nil {
+		return 0, err
+	}
+
+	return totalIssuedCount, nil
+}
+
 // WaitForDeposit waits for the deposit transaction to confirm and verifies the result.
 func (s *service) WaitForDeposit(ctx context.Context, txHash common.Hash) error {
 	receipt, err := s.transactionService.WaitForReceipt(ctx, txHash)
@@ -272,18 +285,29 @@ func (s *service) Issue(ctx context.Context, beneficiary common.Address, amount 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	totalIssued, err := s.totalIssued()
-	if err != nil {
-		return nil, err
-	}
-	totalIssued = totalIssued.Add(totalIssued, amount)
-
 	// store the history issued cheque
 	err = s.chequeStore.StoreSendChequeRecord(s.address, beneficiary, amount)
 	if err != nil {
 		return nil, err
 	}
 
+	// total issued count
+	totalIssuedCount, err := s.totalIssuedCount()
+	if err != nil {
+		return nil, err
+	}
+	totalIssuedCount = totalIssuedCount + 1
+	err = s.store.Put(totalIssuedCountKey, totalIssuedCount)
+	if err != nil {
+		return nil, err
+	}
+
+	// totalIssued
+	totalIssued, err := s.totalIssued()
+	if err != nil {
+		return nil, err
+	}
+	totalIssued = totalIssued.Add(totalIssued, amount)
 	return availableBalance, s.store.Put(totalIssuedKey, totalIssued)
 }
 
@@ -297,6 +321,18 @@ func (s *service) totalIssued() (totalIssued *big.Int, err error) {
 		return big.NewInt(0), nil
 	}
 	return totalIssued, nil
+}
+
+// returns the total count in cheques issued so far
+func (s *service) totalIssuedCount() (totalIssuedCount int, err error) {
+	err = s.store.Get(totalIssuedCountKey, &totalIssuedCount)
+	if err != nil {
+		if err != storage.ErrNotFound {
+			return 0, err
+		}
+		return 0, nil
+	}
+	return totalIssuedCount, nil
 }
 
 // LastCheque returns the last cheque we issued for the beneficiary.
