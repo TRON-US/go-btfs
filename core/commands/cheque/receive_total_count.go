@@ -18,8 +18,7 @@ var ReceiveChequesCountCmd = &cmds.Command{
 	},
 
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		count, err := chain.SettleObject.ChequebookService.TotalIssuedCount()
-
+		count, err := chain.SettleObject.SwapService.ReceivedChequeRecordsCount()
 		if err != nil {
 			return err
 		}

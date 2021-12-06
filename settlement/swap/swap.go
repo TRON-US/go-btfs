@@ -42,6 +42,8 @@ type Interface interface {
 	ReceivedChequeRecordsByPeer(peer string) ([]chequebook.ChequeRecord, error)
 	// ReceivedChequeRecordsAll gets the records of the cheque for all chequebook
 	ReceivedChequeRecordsAll() ([]chequebook.ChequeRecord, error)
+	// ReceivedChequeRecordsCount
+	ReceivedChequeRecordsCount() (int, error)
 
 	// LastReceivedCheque returns the last received cheque for the peer
 	LastSendCheque(peer string) (*chequebook.SignedCheque, error)
@@ -344,6 +346,26 @@ func (s *Service) ReceivedChequeRecordsAll() ([]chequebook.ChequeRecord, error) 
 	}
 
 	return records, nil
+}
+
+// ReceivedChequeRecordsCount returns the last received cheque for the peer
+func (s *Service) ReceivedChequeRecordsCount() (int, error) {
+	mp, err := s.chequeStore.ReceivedChequeRecordsAll()
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for comm, _ := range mp {
+		l, err := s.chequeStore.ReceivedChequeRecordsByPeer(comm)
+		if err != nil {
+			return 0, err
+		}
+
+		count += len(l)
+	}
+
+	return count, nil
 }
 
 // LastReceivedCheque returns the last received cheque for the peer

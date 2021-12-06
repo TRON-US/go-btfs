@@ -49,17 +49,20 @@ Chequebook services include issue cheque to peer, receive cheque and store opera
 		"cashstatus": ChequeCashStatusCmd,
 		"price":      StorePriceCmd,
 
-		"send":                 SendChequeCmd,
-		"sendlist":             ListSendChequesCmd,
-		"send-history-peer":    ChequeSendHistoryPeerCmd,
-		"send-history-list":    ChequeSendHistoryListCmd,
-		"send-total-count":     SendChequesCountCmd,
+		"send":              SendChequeCmd,
+		"sendlist":          ListSendChequesCmd,
+		"send-history-peer": ChequeSendHistoryPeerCmd,
+		"send-history-list": ChequeSendHistoryListCmd,
+		"send-total-count":  SendChequesCountCmd,
+
 		"receive":              ReceiveChequeCmd,
 		"receivelist":          ListReceiveChequeCmd,
 		"receive-history-peer": ChequeReceiveHistoryPeerCmd,
 		"receive-history-list": ChequeReceiveHistoryListCmd,
-		"chaininfo":            ChequeChainInfoCmd,
-		"bttbalance":           ChequeBttBalanceCmd,
+		"receive-total-count":  ReceiveChequesCountCmd,
+
+		"chaininfo":  ChequeChainInfoCmd,
+		"bttbalance": ChequeBttBalanceCmd,
 	},
 }
 
