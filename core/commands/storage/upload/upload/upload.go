@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"strconv"
 	"strings"
 	"time"
@@ -105,6 +106,9 @@ Use status command to check for completion:
 	},
 	RunTimeout: 15 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		swapprotocol.Req = req
+		swapprotocol.Env = env
+
 		ssId := uuid.New().String()
 		ctxParams, err := helper.ExtractContextParams(req, env)
 		if err != nil {

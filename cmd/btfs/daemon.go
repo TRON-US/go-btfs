@@ -40,7 +40,6 @@ import (
 	nodeMount "github.com/TRON-US/go-btfs/fuse/node"
 	fsrepo "github.com/TRON-US/go-btfs/repo/fsrepo"
 	migrate "github.com/TRON-US/go-btfs/repo/fsrepo/migrations"
-	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
 	"github.com/TRON-US/go-btfs/spin"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
@@ -236,8 +235,8 @@ func defaultMux(path string) corehttp.ServeOption {
 }
 
 func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment) (_err error) {
-	swapprotocol.Req = req
-	swapprotocol.Env = env
+	//swapprotocol.Req = req
+	//swapprotocol.Env = env
 
 	cctx := env.(*oldcmds.Context)
 	_, b := os.LookupEnv(path.BtfsPathKey)
