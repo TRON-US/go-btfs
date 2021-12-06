@@ -9,7 +9,7 @@ import (
 )
 
 type SendTotalCountRet struct {
-	Count int
+	Count int `json:"count"`
 }
 
 var SendChequesCountCmd = &cmds.Command{
