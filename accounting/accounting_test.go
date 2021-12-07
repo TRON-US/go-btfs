@@ -1,4 +1,4 @@
-// Copyright 2020 The Swarm Authors. All rights reserved.
+// Copyright 2020 The Btfs Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -16,7 +16,6 @@ import (
 	"github.com/TRON-US/go-btfs/statestore/mock"
 
 	peer "github.com/libp2p/go-libp2p-core/peer"
-	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 type paymentCall struct {

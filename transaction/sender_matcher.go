@@ -13,7 +13,6 @@ import (
 	"github.com/TRON-US/go-btfs/transaction/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	//"github.com/ethersphere/bee/pkg/swarm"
 )
 
 type Matcher struct {

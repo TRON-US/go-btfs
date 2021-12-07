@@ -1,8 +1,9 @@
 package upload
 
 import (
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"math/big"
+
+	"github.com/TRON-US/go-btfs/settlement/swap/vault"
 
 	"github.com/TRON-US/go-btfs/chain"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/sessions"
@@ -42,13 +43,13 @@ func doSubmit(rss *sessions.RenterSession) error {
 		return err
 	}
 
-	AvailableBalance, err := chain.SettleObject.ChequebookService.AvailableBalance(rss.Ctx)
+	AvailableBalance, err := chain.SettleObject.VaultService.AvailableBalance(rss.Ctx)
 	if err != nil {
 		return err
 	}
 
 	if AvailableBalance.Cmp(big.NewInt(amount)) < 0 {
-		return chequebook.ErrInsufficientFunds
+		return vault.ErrInsufficientFunds
 	}
 	return nil
 }

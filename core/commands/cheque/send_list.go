@@ -26,7 +26,7 @@ var ListSendChequesCmd = &cmds.Command{
 			var record cheque
 			record.PeerID = k
 			record.Beneficiary = v.Beneficiary.String()
-			record.Chequebook = v.Chequebook.String()
+			record.Vault = v.Vault.String()
 			record.Payout = v.CumulativePayout
 
 			listRet.Cheques = append(listRet.Cheques, record)
@@ -39,11 +39,11 @@ var ListSendChequesCmd = &cmds.Command{
 	Type: ListChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ListChequeRet) error {
-			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:")
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "vault:", "beneficiary:")
 			for iter := 0; iter < out.Len; iter++ {
 				fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d \n",
 					out.Cheques[iter].PeerID,
-					out.Cheques[iter].Chequebook,
+					out.Cheques[iter].Vault,
 					out.Cheques[iter].Beneficiary,
 					out.Cheques[iter].Payout.Uint64(),
 				)

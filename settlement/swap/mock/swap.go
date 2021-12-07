@@ -1,7 +1,3 @@
-// Copyright 2020 The Swarm Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package mock
 
 import (
@@ -11,9 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/TRON-US/go-btfs/settlement/swap"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
-	//"github.com/ethersphere/bee/pkg/swarm"
+	"github.com/TRON-US/go-btfs/settlement/swap/vault"
 )
 
 type Service struct {
@@ -26,17 +21,17 @@ type Service struct {
 	settlementsSentFunc func() (map[string]*big.Int, error)
 	settlementsRecvFunc func() (map[string]*big.Int, error)
 
-	receiveChequeFunc   func(context.Context, string, *chequebook.SignedCheque, *big.Int) error
+	receiveChequeFunc   func(context.Context, string, *vault.SignedCheque, *big.Int) error
 	payFunc             func(context.Context, string, *big.Int)
 	handshakeFunc       func(string, common.Address) error
-	lastSentChequeFunc  func(string) (*chequebook.SignedCheque, error)
-	lastSentChequesFunc func() (map[string]*chequebook.SignedCheque, error)
+	lastSentChequeFunc  func(string) (*vault.SignedCheque, error)
+	lastSentChequesFunc func() (map[string]*vault.SignedCheque, error)
 
-	lastReceivedChequeFunc  func(string) (*chequebook.SignedCheque, error)
-	lastReceivedChequesFunc func() (map[string]*chequebook.SignedCheque, error)
+	lastReceivedChequeFunc  func(string) (*vault.SignedCheque, error)
+	lastReceivedChequesFunc func() (map[string]*vault.SignedCheque, error)
 
 	cashChequeFunc    func(ctx context.Context, peer string) (common.Hash, error)
-	cashoutStatusFunc func(ctx context.Context, peer string) (*chequebook.CashoutStatus, error)
+	cashoutStatusFunc func(ctx context.Context, peer string) (*vault.CashoutStatus, error)
 }
 
 // WithSettlementSentFunc sets the mock settlement function
@@ -65,7 +60,7 @@ func WithSettlementsRecvFunc(f func() (map[string]*big.Int, error)) Option {
 	})
 }
 
-func WithReceiveChequeFunc(f func(context.Context, string, *chequebook.SignedCheque, *big.Int) error) Option {
+func WithReceiveChequeFunc(f func(context.Context, string, *vault.SignedCheque, *big.Int) error) Option {
 	return optionFunc(func(s *Service) {
 		s.receiveChequeFunc = f
 	})
@@ -83,25 +78,25 @@ func WithHandshakeFunc(f func(string, common.Address) error) Option {
 	})
 }
 
-func WithLastSentChequeFunc(f func(string) (*chequebook.SignedCheque, error)) Option {
+func WithLastSentChequeFunc(f func(string) (*vault.SignedCheque, error)) Option {
 	return optionFunc(func(s *Service) {
 		s.lastSentChequeFunc = f
 	})
 }
 
-func WithLastSentChequesFunc(f func() (map[string]*chequebook.SignedCheque, error)) Option {
+func WithLastSentChequesFunc(f func() (map[string]*vault.SignedCheque, error)) Option {
 	return optionFunc(func(s *Service) {
 		s.lastSentChequesFunc = f
 	})
 }
 
-func WithLastReceivedChequeFunc(f func(string) (*chequebook.SignedCheque, error)) Option {
+func WithLastReceivedChequeFunc(f func(string) (*vault.SignedCheque, error)) Option {
 	return optionFunc(func(s *Service) {
 		s.lastReceivedChequeFunc = f
 	})
 }
 
-func WithLastReceivedChequesFunc(f func() (map[string]*chequebook.SignedCheque, error)) Option {
+func WithLastReceivedChequesFunc(f func() (map[string]*vault.SignedCheque, error)) Option {
 	return optionFunc(func(s *Service) {
 		s.lastReceivedChequesFunc = f
 	})
@@ -113,7 +108,7 @@ func WithCashChequeFunc(f func(ctx context.Context, peer string) (common.Hash, e
 	})
 }
 
-func WithCashoutStatusFunc(f func(ctx context.Context, peer string) (*chequebook.CashoutStatus, error)) Option {
+func WithCashoutStatusFunc(f func(ctx context.Context, peer string) (*vault.CashoutStatus, error)) Option {
 	return optionFunc(func(s *Service) {
 		s.cashoutStatusFunc = f
 	})
@@ -200,28 +195,28 @@ func (s *Service) Handshake(peer string, beneficiary common.Address) error {
 	return nil
 }
 
-func (s *Service) LastSentCheque(address string) (*chequebook.SignedCheque, error) {
+func (s *Service) LastSentCheque(address string) (*vault.SignedCheque, error) {
 	if s.lastSentChequeFunc != nil {
 		return s.lastSentChequeFunc(address)
 	}
 	return nil, nil
 }
 
-func (s *Service) LastSentCheques() (map[string]*chequebook.SignedCheque, error) {
+func (s *Service) LastSentCheques() (map[string]*vault.SignedCheque, error) {
 	if s.lastSentChequesFunc != nil {
 		return s.lastSentChequesFunc()
 	}
 	return nil, nil
 }
 
-func (s *Service) LastReceivedCheque(address string) (*chequebook.SignedCheque, error) {
+func (s *Service) LastReceivedCheque(address string) (*vault.SignedCheque, error) {
 	if s.lastReceivedChequeFunc != nil {
 		return s.lastReceivedChequeFunc(address)
 	}
 	return nil, nil
 }
 
-func (s *Service) LastReceivedCheques() (map[string]*chequebook.SignedCheque, error) {
+func (s *Service) LastReceivedCheques() (map[string]*vault.SignedCheque, error) {
 	if s.lastReceivedChequesFunc != nil {
 		return s.lastReceivedChequesFunc()
 	}
@@ -235,14 +230,14 @@ func (s *Service) CashCheque(ctx context.Context, peer string) (common.Hash, err
 	return common.Hash{}, nil
 }
 
-func (s *Service) CashoutStatus(ctx context.Context, peer string) (*chequebook.CashoutStatus, error) {
+func (s *Service) CashoutStatus(ctx context.Context, peer string) (*vault.CashoutStatus, error) {
 	if s.cashoutStatusFunc != nil {
 		return s.cashoutStatusFunc(ctx, peer)
 	}
 	return nil, nil
 }
 
-func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) (err error) {
+func (s *Service) ReceiveCheque(ctx context.Context, peer string, cheque *vault.SignedCheque, exchangeRate *big.Int) (err error) {
 	if s.receiveChequeFunc != nil {
 		return s.receiveChequeFunc(ctx, peer, cheque, exchangeRate)
 	}

@@ -28,7 +28,7 @@ var SendChequeCmd = &cmds.Command{
 			}
 
 			record.Beneficiary = chequeTmp.Beneficiary.String()
-			record.Chequebook = chequeTmp.Chequebook.String()
+			record.Vault = chequeTmp.Vault.String()
 			record.Payout = chequeTmp.CumulativePayout
 			record.PeerID = peer_id
 		}
@@ -39,10 +39,10 @@ var SendChequeCmd = &cmds.Command{
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *cheque) error {
 			//fmt.Fprintln(w, "cheque status:")
-			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:")
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\tamount: \n", "peerID:", "vault:", "beneficiary:")
 			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d \n",
 				out.PeerID,
-				out.Chequebook,
+				out.Vault,
 				out.Beneficiary,
 				out.Payout.Uint64(),
 			)

@@ -1,7 +1,3 @@
-// Copyright 2020 The Swarm Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package swapprotocol
 
 import (
@@ -17,11 +13,10 @@ import (
 
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/helper"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol/pb"
+	"github.com/TRON-US/go-btfs/settlement/swap/vault"
 
-	//"github.com/ethersphere/bee/pkg/swarm"
 	"github.com/ethereum/go-ethereum/common"
 	logging "github.com/ipfs/go-log"
 	peerInfo "github.com/libp2p/go-libp2p-core/peer"
@@ -46,11 +41,11 @@ var (
 	ErrGetBeneficiary = errors.New("get beneficiary err")
 )
 
-type SendChequeFunc chequebook.SendChequeFunc
+type SendChequeFunc vault.SendChequeFunc
 
-type IssueFunc func(ctx context.Context, beneficiary common.Address, amount *big.Int, sendChequeFunc chequebook.SendChequeFunc) (*big.Int, error)
+type IssueFunc func(ctx context.Context, beneficiary common.Address, amount *big.Int, sendChequeFunc vault.SendChequeFunc) (*big.Int, error)
 
-// (context.Context, common.Address, *big.Int, chequebook.SendChequeFunc) (*big.Int, error)
+// (context.Context, common.Address, *big.Int, vault.SendChequeFunc) (*big.Int, error)
 
 // Interface is the main interface to send messages over swap protocol.
 type Interface interface {
@@ -61,7 +56,7 @@ type Interface interface {
 // Swap is the interface the settlement layer should implement to receive cheques.
 type Swap interface {
 	// ReceiveCheque is called by the swap protocol if a cheque is received.
-	ReceiveCheque(ctx context.Context, peer string, cheque *chequebook.SignedCheque, exchangeRate *big.Int) error
+	ReceiveCheque(ctx context.Context, peer string, cheque *vault.SignedCheque, exchangeRate *big.Int) error
 	GetChainid() int64
 	PutBeneficiary(peer string, beneficiary common.Address) (common.Address, error)
 	Beneficiary(peer string) (beneficiary common.Address, known bool, err error)
@@ -92,7 +87,7 @@ func (s *Service) SetSwap(swap Swap) {
 }
 
 func (s *Service) Handler(ctx context.Context, requestPid string, encodedCheque string, exchangeRate *big.Int) (err error) {
-	var signedCheque *chequebook.SignedCheque
+	var signedCheque *vault.SignedCheque
 	err = json.Unmarshal([]byte(encodedCheque), &signedCheque)
 	if err != nil {
 		return err
@@ -179,7 +174,7 @@ func (s *Service) EmitCheque(ctx context.Context, peer string, amount *big.Int, 
 	fmt.Println("send cheque: /p2p/handshake ok, ", common.BytesToAddress(handshakeInfo.Beneficiary))
 
 	// issue cheque call with provided callback for sending cheque to finish transaction
-	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary), sentAmount, func(cheque *chequebook.SignedCheque) error {
+	balance, err = issue(ctx, common.BytesToAddress(handshakeInfo.Beneficiary), sentAmount, func(cheque *vault.SignedCheque) error {
 		// for simplicity we use json marshaller. can be replaced by a binary encoding in the future.
 		encodedCheque, err := json.Marshal(cheque)
 		if err != nil {

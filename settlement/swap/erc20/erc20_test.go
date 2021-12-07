@@ -1,7 +1,3 @@
-// Copyright 2021 The Swarm Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package erc20_test
 
 import (
@@ -9,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	//"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/erc20"
 	"github.com/TRON-US/go-btfs/transaction"
 	backendmock "github.com/TRON-US/go-btfs/transaction/backendmock"
@@ -475,46 +470,6 @@ func getChainID(client *ethclient.Client) (*big.Int, error) {
 	return chainID, nil
 }
 
-/*
-func initchain() (*ethclient.Client, common.Address, int64, transaction.Monitor, transaction.Service, error) {
-	var (
-		swapBackend        *ethclient.Client
-		overlayEthAddress  common.Address
-		chainID            int64
-		transactionService transaction.Service
-		transactionMonitor transaction.Monitor
-		//chequebookFactory  chequebook.Factory
-		//chequebookService  chequebook.Service
-		//chequeStore        chequebook.ChequeStore
-		//cashoutService     chequebook.CashoutService
-		pollingInterval = time.Duration(20) * time.Second
-	)
-
-	store := storemock.NewStateStore()
-
-	//get privateKey
-	privateKey, err := cr.HexToECDSA(defaultPrivateKey)
-	if err != nil {
-		return nil, common.Address{}, 0, nil, nil, err
-	}
-	signer := crypto.NewDefaultSigner(privateKey)
-	publicKey := &privateKey.PublicKey
-
-	swapBackend, overlayEthAddress, chainID, transactionMonitor, transactionService, err = chain.InitChain(
-		context.Background(),
-		store,
-		endPoint,
-		signer,
-		pollingInterval,
-	)
-	if err != nil {
-		return nil, common.Address{}, 0, nil, nil, err
-	}
-
-	return swapBackend, overlayEthAddress, chainID, transactionMonitor, transactionService, nil
-}
-*/
-
 func TestBalanceOf(t *testing.T) {
 	erc20Address := common.HexToAddress("00")
 	account := common.HexToAddress("01")
@@ -585,28 +540,6 @@ func TestRealBalance(t *testing.T) {
 
 	t.Log("real balance is: ", balance)
 }
-
-/*
-
-//目前还未调通，这个测试例便以失败，跑单测时，可以先注释掉
-func TestBanalcefromChain(t *testing.T) {
-	swapBackend, overlayEthAddress, _, _, transactionService, err := initchain()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	erc20Service := erc20.New(swapBackend, transactionService, erc20Add)
-
-	balance, err := erc20Service.BalanceOf(context.Background(), overlayEthAddress)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Log("BanalcefromChain is: ", balance)
-}
-*/
 
 func TestTransfer(t *testing.T) {
 	address := common.HexToAddress("0xabcd")

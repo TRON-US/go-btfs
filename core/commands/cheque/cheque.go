@@ -8,7 +8,7 @@ import (
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/chain"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
+	"github.com/TRON-US/go-btfs/settlement/swap/vault"
 	"golang.org/x/net/context"
 )
 
@@ -23,7 +23,7 @@ type CashChequeRet struct {
 type cheque struct {
 	PeerID       string
 	Beneficiary  string
-	Chequebook   string
+	Vault        string
 	Payout       *big.Int
 	CashedAmount *big.Int
 }
@@ -34,15 +34,15 @@ type ListChequeRet struct {
 }
 
 type ChequeRecords struct {
-	Records []chequebook.ChequeRecord
+	Records []vault.ChequeRecord
 	Len     int
 }
 
 var ChequeCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline: "Interact with chequebook services on BTFS.",
+		Tagline: "Interact with vault services on BTFS.",
 		ShortDescription: `
-Chequebook services include issue cheque to peer, receive cheque and store operations.`,
+Vault services include issue cheque to peer, receive cheque and store operations.`,
 	},
 	Subcommands: map[string]*cmds.Command{
 		"cash":       CashChequeCmd,

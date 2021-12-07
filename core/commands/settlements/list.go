@@ -77,7 +77,7 @@ var ListSettlementCmd = &cmds.Command{
 			i++
 		}
 
-		totalPaidOut, err := chain.SettleObject.ChequebookService.TotalPaidOut(context.Background())
+		totalPaidOut, err := chain.SettleObject.VaultService.TotalPaidOut(context.Background())
 		if err != nil {
 			return err
 		}

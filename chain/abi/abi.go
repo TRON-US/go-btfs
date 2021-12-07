@@ -1,6 +1,6 @@
 package abi
 
-const ERC20SimpleSwapABI = `[
+const VaultABI = `[
 	{
 		"anonymous": false,
 		"inputs": [],
@@ -58,55 +58,10 @@ const ERC20SimpleSwapABI = `[
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "recipient",
-				"type": "address"
-			}
-		],
-		"name": "DecreaseStake",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "IncreaseStake",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
 			}
 		],
 		"name": "Withdraw",
 		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "CASHOUT_TYPEHASH",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -145,44 +100,6 @@ const ERC20SimpleSwapABI = `[
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "beneficiary",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "recipient",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "cumulativePayout",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes",
-				"name": "beneficiarySig",
-				"type": "bytes"
-			},
-			{
-				"internalType": "uint256",
-				"name": "callerPayout",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes",
-				"name": "issuerSig",
-				"type": "bytes"
-			}
-		],
-		"name": "cashCheque",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -311,107 +228,107 @@ const ERC20SimpleSwapABI = `[
 		"type": "function"
 	}
 ]`
-const SimpleSwapFactoryABI = `[
+const VaultFactoryABI = `[
+	{
+		"inputs": [
 			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "_TokenAddress",
-						"type": "address"
-					}
-				],
-				"stateMutability": "nonpayable",
-				"type": "constructor"
-			},
-			{
-				"anonymous": false,
-				"inputs": [
-					{
-						"indexed": false,
-						"internalType": "address",
-						"name": "issuer",
-						"type": "address"
-					},
-					{
-						"indexed": false,
-						"internalType": "address",
-						"name": "contractAddress",
-						"type": "address"
-					}
-				],
-				"name": "SimpleSwapDeployed",
-				"type": "event"
-			},
-			{
-				"inputs": [],
-				"name": "TokenAddress",
-				"outputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "issuer",
-						"type": "address"
-					},
-					{
-						"internalType": "bytes32",
-						"name": "salt",
-						"type": "bytes32"
-					}
-				],
-				"name": "deploySimpleSwap",
-				"outputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
-				"name": "deployedContracts",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "master",
-				"outputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
+				"internalType": "address",
+				"name": "_TokenAddress",
+				"type": "address"
 			}
-		]`
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "issuer",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "contractAddress",
+				"type": "address"
+			}
+		],
+		"name": "VaultDeployed",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "TokenAddress",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "issuer",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "salt",
+				"type": "bytes32"
+			}
+		],
+		"name": "deployVault",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "deployedContracts",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "master",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]`
 const Erc20ABI = `[
 			{
 				"anonymous": false,
@@ -876,4 +793,4 @@ const OracleAbi = `[
 	}
 ]`
 
-const FactoryDeployedBin = "608060405234801561001057600080fd5b506004361061004c5760003560e01c8063c2cba30614610051578063c70242ad1461006f578063dca267331461009f578063ee97f7f3146100cf575b600080fd5b6100596100ed565b60405161006691906104b0565b60405180910390f35b6100896004803603810190610084919061040f565b610113565b604051610096919061051d565b60405180910390f35b6100b960048036038101906100b49190610438565b610133565b6040516100c691906104b0565b60405180910390f35b6100d76102b5565b6040516100e491906104b0565b60405180910390f35b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b60006020528060005260406000206000915054906101000a900460ff1681565b60008061018a600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16338560405160200161016f9291906104cb565b604051602081830303815290604052805190602001206102db565b90508073ffffffffffffffffffffffffffffffffffffffff1663f09a401685600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff166040518363ffffffff1660e01b81526004016101e99291906104f4565b600060405180830381600087803b15801561020357600080fd5b505af1158015610217573d6000803e3d6000fd5b5050505060016000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548160ff0219169083151502179055507f149fb5d19dcb0cd8305563fe14592a64aeea322777c227bf3b7751ce158a494e84826040516102a39291906104f4565b60405180910390a18091505092915050565b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b60006040517f3d602d80600a3d3981f3363d3d373d3d3d363d7300000000000000000000000081528360601b60148201527f5af43d82803e903d91602b57fd5bf300000000000000000000000000000000006028820152826037826000f5915050600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1614156103df576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004018080602001828103825260178152602001807f455243313136373a2063726561746532206661696c656400000000000000000081525060200191505060405180910390fd5b92915050565b6000813590506103f481610592565b92915050565b600081359050610409816105a9565b92915050565b60006020828403121561042157600080fd5b600061042f848285016103e5565b91505092915050565b6000806040838503121561044b57600080fd5b6000610459858286016103e5565b925050602061046a858286016103fa565b9150509250929050565b61047d8161054a565b82525050565b61048c81610538565b82525050565b61049b8161055c565b82525050565b6104aa81610568565b82525050565b60006020820190506104c56000830184610483565b92915050565b60006040820190506104e06000830185610474565b6104ed60208301846104a1565b9392505050565b60006040820190506105096000830185610483565b6105166020830184610483565b9392505050565b60006020820190506105326000830184610492565b92915050565b600061054382610572565b9050919050565b600061055582610572565b9050919050565b60008115159050919050565b6000819050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b61059b81610538565b81146105a657600080fd5b50565b6105b281610568565b81146105bd57600080fd5b5056fea264697066735822122032a03c1e21ac699be615a2c7f2b8b3a3b075236c0cecfd79e89418db7f4ddba764736f6c63430007060033"
+const FactoryDeployedBin = "608060405234801561001057600080fd5b506004361061004c5760003560e01c806368027f2714610051578063c2cba30614610081578063c70242ad1461009f578063ee97f7f3146100cf575b600080fd5b61006b60048036038101906100669190610405565b6100ed565b60405161007891906104ae565b60405180910390f35b61008961026f565b60405161009691906104ae565b60405180910390f35b6100b960048036038101906100b491906103dc565b610295565b6040516100c6919061051b565b60405180910390f35b6100d76102b5565b6040516100e491906104ae565b60405180910390f35b600080610144600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1633856040516020016101299291906104f2565b604051602081830303815290604052805190602001206102db565b90508073ffffffffffffffffffffffffffffffffffffffff1663f09a401685600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff166040518363ffffffff1660e01b81526004016101a39291906104c9565b600060405180830381600087803b1580156101bd57600080fd5b505af11580156101d1573d6000803e3d6000fd5b5050505060016000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060006101000a81548160ff0219169083151502179055507f09d75e12e349f79020715b0ea7b2c707e8acf1889b6d6f1337fce7f4e1b9e5c7848260405161025d9291906104c9565b60405180910390a18091505092915050565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b60006020528060005260406000206000915054906101000a900460ff1681565b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b60006040517f3d602d80600a3d3981f3363d3d373d3d3d363d7300000000000000000000000081528360601b60148201527f5af43d82803e903d91602b57fd5bf300000000000000000000000000000000006028820152826037826000f5915050600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1614156103ac576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016103a390610536565b60405180910390fd5b92915050565b6000813590506103c1816105af565b92915050565b6000813590506103d6816105c6565b92915050565b6000602082840312156103ee57600080fd5b60006103fc848285016103b2565b91505092915050565b6000806040838503121561041857600080fd5b6000610426858286016103b2565b9250506020610437858286016103c7565b9150509250929050565b61044a81610567565b82525050565b61045981610579565b82525050565b61046881610585565b82525050565b600061047b601783610556565b91507f455243313136373a2063726561746532206661696c65640000000000000000006000830152602082019050919050565b60006020820190506104c36000830184610441565b92915050565b60006040820190506104de6000830185610441565b6104eb6020830184610441565b9392505050565b60006040820190506105076000830185610441565b610514602083018461045f565b9392505050565b60006020820190506105306000830184610450565b92915050565b6000602082019050818103600083015261054f8161046e565b9050919050565b600082825260208201905092915050565b60006105728261058f565b9050919050565b60008115159050919050565b6000819050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6105b881610567565b81146105c357600080fd5b50565b6105cf81610585565b81146105da57600080fd5b5056fea26469706673582212200b2e787fe8945250799a4180c176391684526030a474955e8ce669afa192114264736f6c63430008000033"

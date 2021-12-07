@@ -26,9 +26,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elgris/jsondiff v0.0.0-20160530203242-765b5c24c302
 	github.com/ethereum/go-ethereum v1.10.3
-	//github.com/ethersphere/bee v1.1.0
-	github.com/ethersphere/go-price-oracle-abi v0.1.0
-	github.com/ethersphere/go-sw3-abi v0.4.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/go-bindata/go-bindata v3.1.2+incompatible

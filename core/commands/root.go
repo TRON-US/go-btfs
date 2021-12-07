@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/TRON-US/go-btfs/core/commands/cheque"
-	"github.com/TRON-US/go-btfs/core/commands/chequebook"
 	cmdenv "github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
 	name "github.com/TRON-US/go-btfs/core/commands/name"
@@ -14,6 +13,7 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
 	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	unixfs "github.com/TRON-US/go-btfs/core/commands/unixfs"
+	"github.com/TRON-US/go-btfs/core/commands/vault"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
 	logging "github.com/ipfs/go-log"
@@ -167,7 +167,7 @@ var rootSubcommands = map[string]*cmds.Command{
 	"wallet":     WalletCmd,
 	"tron":       TronCmd,
 	"cheque":     cheque.ChequeCmd,
-	"chequebook": chequebook.ChequeBookCmd,
+	"vault":      vault.VaultCmd,
 	"settlement": settlement.SettlementCmd,
 	//"update":    ExternalBinary(),
 }

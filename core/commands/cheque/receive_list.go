@@ -58,10 +58,10 @@ var ListReceiveChequeCmd = &cmds.Command{
 			var record cheque
 			record.PeerID = k
 			record.Beneficiary = v.Beneficiary.String()
-			record.Chequebook = v.Chequebook.String()
+			record.Vault = v.Vault.String()
 			record.Payout = v.CumulativePayout
 
-			cashStatus, err := chain.SettleObject.CashoutService.CashoutStatus(context.Background(), v.Chequebook)
+			cashStatus, err := chain.SettleObject.CashoutService.CashoutStatus(context.Background(), v.Vault)
 			if err != nil {
 				return err
 			}
@@ -78,12 +78,12 @@ var ListReceiveChequeCmd = &cmds.Command{
 	Type: ListChequeRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ListChequeRet) error {
-			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%-46s\tamount: \n", "peerID:", "chequebook:", "beneficiary:", "cashout_amount:")
+			fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%-46s\tamount: \n", "peerID:", "vault:", "beneficiary:", "cashout_amount:")
 			for iter := 0; iter < out.Len; iter++ {
 				fmt.Fprintf(w, "\t%-55s\t%-46s\t%-46s\t%d\t%d \n",
 					out.Cheques[iter].PeerID,
 					out.Cheques[iter].Beneficiary,
-					out.Cheques[iter].Chequebook,
+					out.Cheques[iter].Vault,
 					out.Cheques[iter].Payout.Uint64(),
 					out.Cheques[iter].CashedAmount.Uint64(),
 				)

@@ -37,14 +37,14 @@ var ChequeSendHistoryPeerCmd = &cmds.Command{
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChequeRecords) error {
 			var tm time.Time
-			fmt.Fprintf(w, "\t%-46s\t%-46s\t%-10s\ttimestamp: \n", "beneficiary:", "chequebook:", "amount:")
+			fmt.Fprintf(w, "\t%-46s\t%-46s\t%-10s\ttimestamp: \n", "beneficiary:", "vault:", "amount:")
 			for index := 0; index < out.Len; index++ {
 				tm = time.Unix(out.Records[index].ReceiveTime, 0)
 				year, mon, day := tm.Date()
 				h, m, s := tm.Clock()
 				fmt.Fprintf(w, "\t%-46s\t%-46s\t%-10d\t%d-%d-%d %02d:%02d:%02d \n",
 					out.Records[index].Beneficiary,
-					out.Records[index].Chequebook,
+					out.Records[index].Vault,
 					out.Records[index].Amount.Uint64(),
 					year, mon, day, h, m, s)
 			}

@@ -2,7 +2,7 @@ package swap
 
 var (
 	PeerKey            = peerKey
-	ChequebookPeerKey  = chequebookPeerKey
+	VaultPeerKey       = vaultPeerKey
 	PeerBeneficiaryKey = peerBeneficiaryKey
 	BeneficiaryPeerKey = beneficiaryPeerKey
 	PeerDeductedByKey  = peerDeductedByKey

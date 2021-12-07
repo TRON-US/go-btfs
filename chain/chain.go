@@ -13,9 +13,9 @@ import (
 	"github.com/TRON-US/go-btfs/chain/config"
 	"github.com/TRON-US/go-btfs/settlement"
 	"github.com/TRON-US/go-btfs/settlement/swap"
-	"github.com/TRON-US/go-btfs/settlement/swap/chequebook"
 	"github.com/TRON-US/go-btfs/settlement/swap/priceoracle"
 	"github.com/TRON-US/go-btfs/settlement/swap/swapprotocol"
+	"github.com/TRON-US/go-btfs/settlement/swap/vault"
 	"github.com/TRON-US/go-btfs/transaction"
 	"github.com/TRON-US/go-btfs/transaction/crypto"
 	"github.com/TRON-US/go-btfs/transaction/sctx"
@@ -48,12 +48,12 @@ type ChainInfo struct {
 }
 
 type SettleInfo struct {
-	Factory           chequebook.Factory
-	ChequebookService chequebook.Service
-	ChequeStore       chequebook.ChequeStore
-	CashoutService    chequebook.CashoutService
-	SwapService       *swap.Service
-	OracleService     priceoracle.Service
+	Factory        vault.Factory
+	VaultService   vault.Service
+	ChequeStore    vault.ChequeStore
+	CashoutService vault.CashoutService
+	SwapService    *swap.Service
+	OracleService  priceoracle.Service
 }
 
 // InitChain will initialize the Ethereum backend at the given endpoint and
@@ -109,11 +109,11 @@ func InitSettlement(
 	deployGasPrice string,
 	chainID int64,
 ) (*SettleInfo, error) {
-	//InitChequebookFactory
-	factory, err := initChequebookFactory(chaininfo.Backend, chaininfo.ChainID, chaininfo.TransactionService, chaininfo.Chainconfig.CurrentFactory.String())
+	//InitVaultFactory
+	factory, err := initVaultFactory(chaininfo.Backend, chaininfo.ChainID, chaininfo.TransactionService, chaininfo.Chainconfig.CurrentFactory.String())
 
 	if err != nil {
-		return nil, errors.New("init chequebook factory error")
+		return nil, errors.New("init vault factory error")
 	}
 
 	//initChequeStoreCashout
@@ -133,8 +133,8 @@ func InitSettlement(
 		return nil, errors.New("new accounting service error")
 	}
 
-	//InitChequebookService
-	chequebookService, err := initChequebookService(
+	//InitVaultService
+	vaultService, err := initVaultService(
 		ctx,
 		stateStore,
 		chaininfo.Signer,
@@ -148,14 +148,14 @@ func InitSettlement(
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("init chequebook service: %w", err)
+		return nil, fmt.Errorf("init vault service: %w", err)
 	}
 
 	//InitSwap
 	swapService, priceOracleService, err := initSwap(
 		stateStore,
 		chaininfo.OverlayAddress,
-		chequebookService,
+		vaultService,
 		chequeStore,
 		cashoutService,
 		accounting,
@@ -171,25 +171,25 @@ func InitSettlement(
 	accounting.SetPayFunc(swapService.Pay)
 
 	SettleObject = SettleInfo{
-		Factory:           factory,
-		ChequebookService: chequebookService,
-		ChequeStore:       chequeStore,
-		CashoutService:    cashoutService,
-		SwapService:       swapService,
-		OracleService:     priceOracleService,
+		Factory:        factory,
+		VaultService:   vaultService,
+		ChequeStore:    chequeStore,
+		CashoutService: cashoutService,
+		SwapService:    swapService,
+		OracleService:  priceOracleService,
 	}
 
 	return &SettleObject, nil
 }
 
-// InitChequebookFactory will initialize the chequebook factory with the given
+// InitVaultFactory will initialize the vault factory with the given
 // chain backend.
-func initChequebookFactory(
+func initVaultFactory(
 	backend transaction.Backend,
 	chainID int64,
 	transactionService transaction.Service,
 	factoryAddress string,
-) (chequebook.Factory, error) {
+) (vault.Factory, error) {
 	var currentFactory common.Address
 
 	chainCfg, found := config.GetChainConfig(chainID)
@@ -208,16 +208,16 @@ func initChequebookFactory(
 		log.Infof("using custom factory address: %x", currentFactory)
 	}
 
-	return chequebook.NewFactory(
+	return vault.NewFactory(
 		backend,
 		transactionService,
 		currentFactory,
 	), nil
 }
 
-// InitChequebookService will initialize the chequebook service with the given
-// chequebook factory and chain backend.
-func initChequebookService(
+// InitVaultService will initialize the vault service with the given
+// vault factory and chain backend.
+func initVaultService(
 	ctx context.Context,
 	stateStore storage.StateStorer,
 	signer crypto.Signer,
@@ -225,11 +225,11 @@ func initChequebookService(
 	backend transaction.Backend,
 	overlayEthAddress common.Address,
 	transactionService transaction.Service,
-	chequebookFactory chequebook.Factory,
+	vaultFactory vault.Factory,
 	deployGasPrice string,
-	chequeStore chequebook.ChequeStore,
-) (chequebook.Service, error) {
-	chequeSigner := chequebook.NewChequeSigner(signer, chainID)
+	chequeStore vault.ChequeStore,
+) (vault.Service, error) {
+	chequeSigner := vault.NewChequeSigner(signer, chainID)
 
 	if deployGasPrice != "" {
 		gasPrice, ok := new(big.Int).SetString(deployGasPrice, 10)
@@ -239,9 +239,9 @@ func initChequebookService(
 		ctx = sctx.SetGasPrice(ctx, gasPrice)
 	}
 
-	chequebookService, err := chequebook.Init(
+	vaultService, err := vault.Init(
 		ctx,
-		chequebookFactory,
+		vaultFactory,
 		stateStore,
 		transactionService,
 		backend,
@@ -251,30 +251,30 @@ func initChequebookService(
 		chequeStore,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("chequebook init: %w", err)
+		return nil, fmt.Errorf("vault init: %w", err)
 	}
 
-	return chequebookService, nil
+	return vaultService, nil
 }
 
 func initChequeStoreCashout(
 	stateStore storage.StateStorer,
 	swapBackend transaction.Backend,
-	chequebookFactory chequebook.Factory,
+	vaultFactory vault.Factory,
 	chainID int64,
 	overlayEthAddress common.Address,
 	transactionService transaction.Service,
-) (chequebook.ChequeStore, chequebook.CashoutService) {
-	chequeStore := chequebook.NewChequeStore(
+) (vault.ChequeStore, vault.CashoutService) {
+	chequeStore := vault.NewChequeStore(
 		stateStore,
-		chequebookFactory,
+		vaultFactory,
 		chainID,
 		overlayEthAddress,
 		transactionService,
-		chequebook.RecoverCheque,
+		vault.RecoverCheque,
 	)
 
-	cashout := chequebook.NewCashoutService(
+	cashout := vault.NewCashoutService(
 		stateStore,
 		swapBackend,
 		transactionService,
@@ -288,9 +288,9 @@ func initChequeStoreCashout(
 func initSwap(
 	stateStore storage.StateStorer,
 	overlayEthAddress common.Address,
-	chequebookService chequebook.Service,
-	chequeStore chequebook.ChequeStore,
-	cashoutService chequebook.CashoutService,
+	vaultService vault.Service,
+	chequeStore vault.ChequeStore,
+	cashoutService vault.CashoutService,
 	accounting settlement.Accounting,
 	priceOracleAddress string,
 	chainID int64,
@@ -316,7 +316,7 @@ func initSwap(
 	swapService := swap.New(
 		swapProtocol,
 		stateStore,
-		chequebookService,
+		vaultService,
 		chequeStore,
 		swapAddressBook,
 		chainID,
@@ -332,15 +332,15 @@ func initSwap(
 
 func GetTxHash(stateStore storage.StateStorer) ([]byte, error) {
 	var txHash common.Hash
-	key := chequebook.ChequebookDeploymentKey
+	key := vault.VaultDeploymentKey
 	if err := stateStore.Get(key, &txHash); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, errors.New("chequebook deployment transaction hash not found, please specify the transaction hash manually")
+			return nil, errors.New("vault deployment transaction hash not found, please specify the transaction hash manually")
 		}
 		return nil, err
 	}
 
-	log.Infof("using the chequebook transaction hash %x", txHash)
+	log.Infof("using the vault transaction hash %x", txHash)
 	return txHash.Bytes(), nil
 }
 

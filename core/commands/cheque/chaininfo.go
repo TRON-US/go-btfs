@@ -13,7 +13,7 @@ import (
 type ChainInfoRet struct {
 	ChainId            int64  `json:"chain_id"`
 	NodeAddr           string `json:"node_addr"`
-	ChequeBookAddr     string `json:"cheque_book_addr"`
+	VaultAddr          string `json:"vault_addr"`
 	WalletImportPrvKey string `json:"wallet_import_prv_key"`
 }
 
@@ -39,15 +39,15 @@ var ChequeChainInfoCmd = &cmds.Command{
 		return cmds.EmitOnce(res, &ChainInfoRet{
 			ChainId:            chain.ChainObject.ChainID,
 			NodeAddr:           chain.ChainObject.OverlayAddress.String(),
-			ChequeBookAddr:     chain.SettleObject.ChequebookService.Address().String(),
+			VaultAddr:          chain.SettleObject.VaultService.Address().String(),
 			WalletImportPrvKey: keys.HexPrivateKey,
 		})
 	},
 	Type: &ChainInfoRet{},
 	Encoders: cmds.EncoderMap{
 		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *ChainInfoRet) error {
-			_, err := fmt.Fprintf(w, "chain id:\t%d\nnode addr:\t%s\nchequebook addr:\t%s\nwallet import private key:\t%s\n", out.ChainId,
-				out.NodeAddr, out.ChequeBookAddr, out.WalletImportPrvKey)
+			_, err := fmt.Fprintf(w, "chain id:\t%d\nnode addr:\t%s\nvault addr:\t%s\nwallet import private key:\t%s\n", out.ChainId,
+				out.NodeAddr, out.VaultAddr, out.WalletImportPrvKey)
 			return err
 		}),
 	},

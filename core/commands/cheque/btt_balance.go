@@ -26,7 +26,7 @@ var ChequeBttBalanceCmd = &cmds.Command{
 	RunTimeout: 5 * time.Minute,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		addr := req.Arguments[0]
-		balance, err := chain.SettleObject.ChequebookService.BTTBalanceOf(context.Background(), common.HexToAddress(addr), nil)
+		balance, err := chain.SettleObject.VaultService.BTTBalanceOf(context.Background(), common.HexToAddress(addr), nil)
 		if err != nil {
 			return err
 		}
