@@ -1,4 +1,4 @@
-##***Welcome to try the BTFS 2.0 testnet https://github.com/bittorrent/go-btfs***
+## ***Welcome to try the BTFS 2.0 testnet https://github.com/bittorrent/go-btfs***
 
 # go-btfs
 
