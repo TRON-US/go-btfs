@@ -27,7 +27,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-multierror v1.1.0
@@ -131,7 +131,7 @@ require (
 	go.uber.org/zap v1.16.0
 	go4.org v0.0.0-20200411211856-f5505b9728dd
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20201112073958-5cba982894dd
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
