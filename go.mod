@@ -111,8 +111,8 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.8.0
-	github.com/prometheus/common v0.14.0
+	github.com/prometheus/client_golang v1.11.1
+	github.com/prometheus/common v0.26.0
 	github.com/shirou/gopsutil/v3 v3.20.12
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.6.1
@@ -131,8 +131,8 @@ require (
 	go.uber.org/zap v1.16.0
 	go4.org v0.0.0-20200411211856-f5505b9728dd
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-	golang.org/x/sys v0.0.0-20201112073958-5cba982894dd
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
 	gopkg.in/cheggaaa/pb.v1 v1.0.28
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
